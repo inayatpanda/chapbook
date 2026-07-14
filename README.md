@@ -10,12 +10,7 @@ webhook, the GitHub device-flow relay, and trial requests.
 
 ## Fork base
 
-This repository is a hard fork of the Helm Studio codebase with a fresh git
-history. Fork base = helm snapshot at "/Users/inayatsmac/Desktop/Transferred to
-new mac/Inayat-website/helm", branch feat/literature-decoded, commit 259544d
-(2026-07-08) plus uncommitted working-tree edits through 2026-07-12; canonical
-Air 2 offline at fork time; go-live commit 64fb912 reconstructed as the live Buy
-link; reconcile against Air 2 when it returns.
+**Fork base (recorded verbatim):** `helm` snapshot at `/Users/inayatsmac/Desktop/Transferred to new mac/Inayat-website/helm`, branch `feat/literature-decoded`, commit `259544d` (2026-07-08) **plus uncommitted working-tree edits through 2026-07-12**. Canonical Air 2 offline at fork time; go-live commit `64fb912` reconstructed as: Buy link → `https://buy.stripe.com/5kQeVd0C06t7aSLf3IgUM05?client_reference_id=studio`. Reconcile against Air 2 when it returns.
 
 ## Build, test, and deploy
 
