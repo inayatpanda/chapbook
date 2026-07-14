@@ -11,7 +11,7 @@ const tA = async (name, fn) => { try { await fn(); pass++; console.log('  ok  ' 
 const { listStickers, STICKER_GENRES } = await import('./stickers.js');
 const { sanitise } = await import('./svg.js');
 const studio = await import('../studio.js');
-const { makeRouter } = await import('../../studio-app/router.js');
+const { makeRouter } = await import('../../router.js');
 const stickers = await import('./stickers.js');
 
 // The ORIGINAL six genres (back-compat) + the full advertised set (all 16, from the modules).

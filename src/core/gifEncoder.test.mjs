@@ -4,7 +4,7 @@
    can't catch packing bugs. */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { encodeGif } from '../../public/studio/vendor/gifenc.esm.js';
+import { encodeGif } from '../../src/vendor/gifenc.esm.js';
 
 /* tiny synthetic frame: RGBA buffer painted with a function of (x,y) */
 function frame(w, h, paint) {

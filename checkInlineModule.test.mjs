@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import { extractInlineModules, parseCheckModule, assertInlineModulesParse } from './checkInlineModule.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const INDEX = join(__dirname, '..', 'public', 'studio', 'index.html');
+const INDEX = join(__dirname, 'src', 'index.html');
 
 // The regression guard: the real Studio inline module must PARSE. This is exactly the
 // check that was missing when a duplicate `fmtBytes` shipped a blank page.
