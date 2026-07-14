@@ -8,6 +8,7 @@ test('chatFieldFor maps every wordy block type', () => {
   assert.deepEqual(chatFieldFor({ type: 'quote' }), { field: 'html', label: 'quote', md: true });
   assert.equal(chatFieldFor({ type: 'image' }).field, 'caption');
   assert.equal(chatFieldFor({ type: 'embed' }).field, 'caption');
+  assert.equal(chatFieldFor({ type: 'video' }).field, 'caption');
   assert.equal(chatFieldFor({ type: 'figure' }).field, 'caption');
 });
 

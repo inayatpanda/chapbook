@@ -16,6 +16,7 @@ export function chatFieldFor(block) {
     case 'quote':   return { field: 'html', label: 'quote', md: true };
     case 'image':   return { field: 'caption', label: 'image caption', md: false };
     case 'embed':   return { field: 'caption', label: 'video caption', md: false };
+    case 'video':   return { field: 'caption', label: 'video caption', md: false };
     case 'figure':  return { field: 'caption', label: 'figure caption', md: false };
     case 'playground':
       return (block.template && block.template.familyId)

@@ -3317,11 +3317,11 @@
     <div id="tsMsg" class="msg"></div>
   </section>
 
-  <!-- ===== HOME (launchpad + owner apps dashboard) =====
+  <!-- ===== HOME (launchpad) =====
        Home is a LAUNCHPAD for everyone: friendly, tappable action cards → the main
-       tabs (each just calls goSection()). When the Studio is backed by a Helm
-       (videoHelmReachable()) it ALSO shows "Your apps" — status + quick access, no
-       data browser. Onboarding no longer lives here; it moved to #v-setup below. -->
+       tabs (each just calls goSection()). Onboarding no longer lives here; it moved
+       to #v-setup below. (The legacy "Your apps" panel below is a server-backed
+       feature with no place in this self-owned build — it stays hidden.) -->
   <section class="view" id="v-getting-started">
     <div class="bar"><h1>Home</h1></div>
     <p class="sub" style="margin:-.2rem 0 1rem">What would you like to do?</p>
@@ -3356,9 +3356,8 @@
       </button>
     </div>
 
-    <!-- Owner Helm dashboard: status + quick access for the apps this Helm backs.
-         Hidden entirely in pure BYOK (videoHelmReachable()===false). Populated by
-         loadHomeApps() via GET /api/apps. -->
+    <!-- Legacy server-backed apps dashboard (GET /api/apps). No backend in this
+         self-owned build, so it stays hidden — kept only so old deep-links don't 404. -->
     <div id="homeApps" style="display:none;margin-top:1.7rem">
       <div class="bar" style="border:0;padding-bottom:.3rem"><h1 style="font-size:.95rem">Your apps</h1></div>
       <p class="sub" style="margin:0 0 .6rem">Your connected apps — status and quick access.</p>
@@ -3965,108 +3964,9 @@
   </div>
 </div>
 
-<!-- ===== STORYBOARD / MAKE A VIDEO (overlay) ===== -->
-<div id="videoPanel" class="pp-overlay" hidden>
-  <div class="pp-card vid-card">
-    <div class="pp-head"><span aria-hidden="true">🎬</span><strong id="vidTitle">Make a video</strong><button class="pp-x" id="vidClose" aria-label="Close" onclick="closeVideo()">✕</button></div>
-    <div class="pp-body">
-      <div id="vidLocalOnly" class="vid-local" hidden>
-        <p>Video rendering isn't available in this hosted app — it needs a server-side renderer. You can still upload finished clips through a post's <strong>Video</strong> block.</p>
-      </div>
-      <div id="vidEditor">
-        <!-- Mode: a regular storyboard (title/point/figure) vs a caption-centric
-             Reel (vertical 9:16, large word-revealed captions). Reel uses buildReel. -->
-        <div class="vid-mode" id="vidMode" role="group" aria-label="Mode">
-          <button type="button" data-mode="story" class="on">Storyboard</button>
-          <button type="button" data-mode="reel">Reel</button>
-        </div>
-        <div class="vid-fmt" id="vidFmt" role="group" aria-label="Format">
-          <button type="button" data-fmt="9:16" class="on">9:16</button>
-          <button type="button" data-fmt="1:1">1:1</button>
-          <button type="button" data-fmt="16:9">16:9</button>
-        </div>
-        <div class="vid-opt">
-          <label class="vid-opt-lbl" for="vidTransition">Transition</label>
-          <div class="vid-trans" id="vidTransition" role="group" aria-label="Transition style">
-            <button type="button" data-trans="fade" class="on">Fade</button>
-            <button type="button" data-trans="slide">Slide</button>
-            <button type="button" data-trans="wipe">Wipe</button>
-            <button type="button" data-trans="none">Cut</button>
-          </div>
-        </div>
-        <div class="vid-opt vid-music">
-          <label class="vid-opt-lbl">Music</label>
-          <div class="vid-music-row">
-            <button class="btn ghost sm" type="button" id="vidMusicBtn" onclick="pickMusic()">♪ Add music</button>
-            <span class="vid-music-name" id="vidMusicName" hidden></span>
-            <button class="btn ghost sm vid-music-x" type="button" id="vidMusicClear" onclick="clearMusic()" hidden aria-label="Remove music">✕</button>
-          </div>
-          <input type="file" id="vidMusicFile" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac" hidden>
-          <p class="vid-music-hint sub">Your own audio file (mp3/wav/m4a/aac/ogg/flac). It plays from the start and fades out at the end.</p>
-        </div>
-        <p class="sub" id="vidHint">Edit the storyboard, then render. Each card becomes a scene. Drag the arrows to reorder.</p>
-        <div id="vidScenes" class="vid-scenes"></div>
-        <div class="vid-add">
-          <button class="btn ghost sm" type="button" onclick="addScene('caption')">+ Caption</button>
-          <button class="btn ghost sm" type="button" onclick="addScene('point')">+ Point</button>
-          <button class="btn ghost sm" type="button" onclick="addScene('title')">+ Title</button>
-          <button class="btn ghost sm" type="button" onclick="addScene('outro')">+ Outro</button>
-        </div>
-      </div>
-      <div id="vidProgress" class="vid-progress" hidden>
-        <div class="vid-bar"><div id="vidBarFill" class="vid-bar-fill"></div></div>
-        <p class="sub" id="vidProgressMsg">Rendering…</p>
-      </div>
-      <div id="vidResult" class="vid-result" hidden>
-        <video id="vidPlayer" controls playsinline style="width:100%;border-radius:12px;background:#000"></video>
-        <div class="vid-result-actions">
-          <a id="vidDownload" class="btn" download>Download MP4</a>
-          <button class="btn ghost" type="button" id="vidShareBtn" onclick="shareVideo()" hidden>Share</button>
-          <button class="btn ghost" type="button" onclick="resetVideoResult()">Back to storyboard</button>
-        </div>
-      </div>
-    </div>
-    <div class="pp-foot">
-      <button class="btn ghost" type="button" onclick="closeVideo()">Close</button>
-      <button class="btn" type="button" id="vidRenderBtn" onclick="renderVideo()">Render video</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== STICKER-OVERLAY PICKER (bottom-sheet) — pick a sticker → add it as an
-         overlay on the selected scene, choosing a corner + size. Reuses the
-         retro sticker catalogue (the same /figures/stickers source). ===== -->
-<div class="picker-scrim" id="ovScrim" onclick="closeOverlayPicker()"></div>
-<div class="picker-sheet ov-sheet" id="ovSheet">
-  <div class="picker-grab"></div>
-  <h3>Add a sticker overlay</h3>
-  <p class="sub" id="ovHint">Pick a sticker, choose a corner and size.</p>
-  <div class="ov-controls">
-    <div class="ov-ctl">
-      <label class="vid-opt-lbl">Corner</label>
-      <div class="ov-pos" id="ovPos" role="group" aria-label="Corner">
-        <button type="button" data-pos="tl" class="on">↖</button>
-        <button type="button" data-pos="tr">↗</button>
-        <button type="button" data-pos="c">●</button>
-        <button type="button" data-pos="bl">↙</button>
-        <button type="button" data-pos="br">↘</button>
-      </div>
-    </div>
-    <div class="ov-ctl">
-      <label class="vid-opt-lbl">Size</label>
-      <div class="ov-size" id="ovSize" role="group" aria-label="Size">
-        <button type="button" data-size="0.16">S</button>
-        <button type="button" data-size="0.24" class="on">M</button>
-        <button type="button" data-size="0.34">L</button>
-      </div>
-    </div>
-  </div>
-  <input class="ai-input fig-sticker-search" id="ovSearch" type="search"
-    placeholder="Search stickers — plane, atom, heart…" autocomplete="off" />
-  <div class="fig-stickers-grid-wrap" id="ovBody">
-    <p class="fig-compose-note" id="ovLoading">Loading stickers…</p>
-  </div>
-</div>
+<!-- The "Make a video" storyboard overlay + its sticker-overlay picker were removed:
+     that feature needed a server-side (Remotion) video renderer, which this self-owned
+     build has no backend for. Video posts now come from the R2-backed Video block. -->
 
 <!-- ===== BLOCK PICKER (bottom-sheet) ===== -->
 <div class="picker-scrim" id="pickerScrim"></div>
@@ -4079,7 +3979,8 @@
     <button class="ptile" data-type="image"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-photo"/></svg><span class="nm">Image</span></button>
     <button class="ptile" data-type="quote"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-quote"/></svg><span class="nm">Quote</span></button>
     <button class="ptile" data-type="gallery"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-library-photo"/></svg><span class="nm">Gallery</span></button>
-    <button class="ptile" data-type="embed"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-video"/></svg><span class="nm">Video</span></button>
+    <button class="ptile" data-type="__video"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-video"/></svg><span class="nm">Video</span></button>
+    <button class="ptile" data-type="embed"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-video"/></svg><span class="nm">Embed (YouTube/Vimeo)</span></button>
     <button class="ptile" data-type="table"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-table"/></svg><span class="nm">Table</span></button>
     <button class="ptile" data-type="playground"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-terminal-2"/></svg><span class="nm">Playground</span></button>
     <button class="ptile" id="tplLibTile" data-type="__tpllib"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-wand"/></svg><span class="nm">Interactive (template)</span></button>
@@ -4983,10 +4884,10 @@ function openDarkroom(){
 }
 window.openDarkroom=openDarkroom;
 
-/* ── Home: "Your apps" dashboard (owner Helm only) ──────────────────────────
-   Shown only when the Studio is backed by a Helm (videoHelmReachable()); pure
-   BYOK Studios never see it. Status + quick access only — NO data browser.
-   GET /api/apps → [{ id, name, clinical, url, exists, records, users, sizeBytes }]. */
+/* ── Home: "Your apps" dashboard (legacy server-backed feature) ─────────────
+   Needed a server (GET /api/apps) that this self-owned build doesn't have, so the
+   panel stays hidden. renderAppCard/loadHomeApps are kept as inert stubs only so the
+   Home nav loader (_navLoad) can still call loadHomeApps() without a ReferenceError. */
 /* NOTE: fmtBytes(n) is already declared once in this module (near the crop editor)
    and is hoisted, so the app cards below reuse it directly. Do NOT redeclare it —
    a second top-level `function fmtBytes` in this type="module" script is a fatal
@@ -5019,7 +4920,8 @@ function renderAppCard(a){
 async function loadHomeApps(){
   const wrap = $('homeApps'), grid = $('homeAppsGrid');
   if(!wrap || !grid) return;
-  if(!videoHelmReachable()){ wrap.style.display='none'; return; }   // pure BYOK → hide entirely
+  wrap.style.display='none'; return;   // self-owned build has no /api/apps backend → always hidden
+  // eslint-disable-next-line no-unreachable
   wrap.style.display='';
   grid.innerHTML = '<p class="sub" style="margin:0">Loading your apps…</p>';
   try{
@@ -6040,7 +5942,6 @@ function makePostRow(p){
       <button class="pm-act" data-act="edit">Edit</button>
       ${scheduled?'<button class="pm-act" data-act="reschedule">Reschedule</button><button class="pm-act" data-act="unschedule">Cancel schedule</button>':''}
       ${p.draft?'':'<button class="pm-act" data-act="share">Share / Social</button>'}
-      <button class="pm-act" data-act="video">Make a video</button>
       ${scheduled?'':`<button class="pm-act" data-act="toggle">${p.draft?'Publish':'Take down'}</button>`}
       <button class="pm-act" data-act="dup">Duplicate</button>
       <button class="pm-act danger" data-act="del">Delete</button>
@@ -6057,7 +5958,6 @@ function makePostRow(p){
   row.querySelector('.pm-selcb')?.addEventListener('change',toggleSel);
   row.querySelector('[data-act="edit"]').addEventListener('click',()=>{ if(_postSelect.mode){ toggleSel(); return; } openBlockEditor(p.slug); });
   row.querySelector('[data-act="share"]')?.addEventListener('click',()=>shareFromPost(p));
-  row.querySelector('[data-act="video"]').addEventListener('click',()=>{ if(_postSelect.mode){ toggleSel(); return; } makeVideo(p); });
   row.querySelector('[data-act="reschedule"]')?.addEventListener('click',async()=>{ if(_postSelect.mode){ toggleSel(); return; } await openBlockEditor(p.slug); openSchedule(); });
   row.querySelector('[data-act="unschedule"]')?.addEventListener('click',()=>unschedulePost(p));
   row.querySelector('[data-act="toggle"]')?.addEventListener('click',()=>togglePost(p));
@@ -6945,13 +6845,11 @@ function loadR2Settings(){
   if($('r2-worker-url')) $('r2-worker-url').value = w.url||'';
   if($('r2-worker-secret')){ $('r2-worker-secret').value=''; $('r2-worker-secret').placeholder = w.secret ? '•••• set (leave blank to keep)' : 'paste the UPLOAD_SECRET'; }
   if($('r2WorkerFields')) $('r2WorkerFields').style.display = on ? '' : 'none';
-  // Mode-aware optimise note: only mention a backend transcode path when a server-side
-  // backend is actually reachable. In pure BYOK there is no backend, so don't imply one.
+  // Uploads are raw (no transcode) — there is no server in this self-owned build. A large
+  // videos hint + the UK SNI-filter note (VPN/WARP) are the only caveats worth surfacing.
   const optNote=$('r2OptimiseNote');
   if(optNote){
-    optNote.innerHTML = videoHelmReachable()
-      ? 'Note: this is a raw upload — no transcode. A server-side optimise path archives the original and makes a web copy + poster. On a UK ISP/mobile network, R2 uploads can be blocked by SNI filtering — turn on a VPN/WARP if an upload fails to connect.'
-      : 'Note: this is a raw upload — no transcode (the clip is stored as-is). On a UK ISP/mobile network, R2 uploads can be blocked by SNI filtering — turn on a VPN/WARP if an upload fails to connect.';
+    optNote.innerHTML = 'Note: this is a raw upload — no transcode (the clip is stored as-is). Large videos slow your blog — under ~100 MB recommended. On a UK ISP/mobile network, R2 uploads can be blocked by SNI filtering — turn on a VPN/WARP if an upload fails to connect.';
   }
 }
 window.loadR2Settings=loadR2Settings;
@@ -7713,6 +7611,7 @@ function blockEditor(b, isSel){
     case 'quote':    return edQuote(b, isSel);
     case 'gallery':  return edGallery(b, isSel);
     case 'embed':    return edEmbed(b, isSel);
+    case 'video':    return edVideo(b, isSel);
     case 'playground': return edPlayground(b, isSel);
     case 'figure':   return edFigure(b, isSel);
     case 'table':    return edTable(b, isSel);
@@ -8558,6 +8457,7 @@ function chatFieldFor(block){
     case 'quote':   return { field:'html', label:'quote', md:true };
     case 'image':   return { field:'caption', label:'image caption', md:false };
     case 'embed':   return { field:'caption', label:'video caption', md:false };
+    case 'video':   return { field:'caption', label:'video caption', md:false };
     case 'figure':  return { field:'caption', label:'figure caption', md:false };
     case 'playground':
       return (block.template && block.template.familyId) ? { field:'title', label:'interactive title', md:false } : null;
@@ -9438,116 +9338,10 @@ function edEmbed(b, isSel){
   title.addEventListener('input', () => { b.title = title.value; markDirty(); });
   wrap.appendChild(title);
 
-  // Helm-mode: upload a local video → Helm archives the original, transcodes a web
-  // copy + poster, pushes to the media host, and fills this block with the public URLs.
-  // Capability-probed: on 503/VIDEO_LOCAL_ONLY (BYOK, no server backend) the control hides,
-  // leaving BYOK users the paste-a-URL path. Filling the block leaves it a DRAFT — the
-  // owner still publishes the POST explicitly (never auto-published here).
-  const up = document.createElement('div');
-  up.className = 'be-embed-upload';
-  const upBtn = document.createElement('button');
-  upBtn.type = 'button'; upBtn.className = 'btn ghost'; upBtn.textContent = '⬆ Upload a video (server)';
-  const fileIn = document.createElement('input');
-  fileIn.type = 'file'; fileIn.accept = 'video/*'; fileIn.capture = 'environment'; fileIn.style.display = 'none';
-  const bar = document.createElement('div'); bar.className = 'be-embed-prog'; bar.hidden = true;
-  const fill = document.createElement('div'); fill.className = 'be-embed-prog-fill'; bar.appendChild(fill);
-  const upMsg = document.createElement('div'); upMsg.className = 'be-embed-note';
-  upBtn.addEventListener('click', (e) => { e.stopPropagation(); fileIn.click(); });
-  fileIn.addEventListener('click', (e) => e.stopPropagation());
-  fileIn.addEventListener('change', async () => {
-    const file = fileIn.files && fileIn.files[0];
-    if (!file) return;
-    upBtn.disabled = true;
-    bar.hidden = false; const setP = (p, m) => { fill.style.width = Math.round((p || 0) * 100) + '%'; if (m) upMsg.textContent = m; };
-    try {
-      // 1) Upload (multipart). api() routes to the server backend when present; a
-      //    FormData body keeps the browser's own multipart Content-Type (boundary).
-      setP(0.05, 'Uploading…');
-      const fd = new FormData(); fd.append('file', file, file.name);
-      const { id } = await api('/media/video/upload', { method: 'POST', body: fd });
-      // 2) Transcode + poll (mirrors the AI-video render progress).
-      setP(0.2, 'Transcoding…');
-      await api('/media/video/' + id + '/transcode', { method: 'POST' });
-      await new Promise((resolve, reject) => {
-        const tick = async () => {
-          try {
-            const st = await api('/media/video/' + id + '/status');
-            if (st.status === 'transcoding') { setP(0.2 + 0.6 * (st.progress || 0), 'Transcoding… ' + Math.round((st.progress || 0) * 100) + '%'); setTimeout(tick, 1200); return; }
-            if (st.status === 'transcoded') return resolve();
-            reject(new Error(st.error || 'Transcode failed'));
-          } catch (e) { reject(e); }
-        };
-        tick();
-      });
-      // 3) Publish to the media host.
-      setP(0.85, 'Publishing…');
-      const pub = await api('/media/video/' + id + '/publish', { method: 'POST' });
-      // 4) Fill the block (DRAFT — the owner still publishes the POST explicitly).
-      b.provider = 'video'; b.src = pub.publicUrl; b.poster = pub.posterUrl || ''; b.videoId = '';
-      if (pub.durationS != null) b.durationS = pub.durationS;
-      url.value = pub.publicUrl;
-      setP(1, 'Done'); markDirty(); renderPreview();
-      setTimeout(() => { bar.hidden = true; }, 800);
-    } catch (err) {
-      bar.hidden = true;
-      if (err && (err.status === 503 || err.code === 'VIDEO_LOCAL_ONLY')) { up.hidden = true; upMsg.className = 'be-embed-note'; upMsg.textContent = ''; }
-      else { upMsg.className = 'be-embed-note err'; upMsg.textContent = 'Upload failed: ' + (err.message || err); }
-    } finally { fileIn.value = ''; upBtn.disabled = false; }
-  });
-  up.appendChild(upBtn); up.appendChild(fileIn); up.appendChild(bar); up.appendChild(upMsg);
-  wrap.appendChild(up);
-
-  // BYOK upload to the USER's own Cloudflare R2 — no Helm, no server. Shown when R2 OR the
-  // Worker route is configured (r2.isConfigured()). On file-select the seam picks the path:
-  // a Cloudflare Worker PUT (R2 binding — preferred when S3 is blocked) when configured,
-  // else a direct SigV4 S3 PUT (aws4fetch, browser-signed). Either sets src = ${publicBase}/${key}.
-  // Single PUT is fine for typical phone clips; raw upload (no transcode — Helm optimises).
-  const r2 = (typeof window !== 'undefined' && window.__studioR2) || null;
-  if (r2 && r2.isConfigured && r2.isConfigured()) {
-    const r2up = document.createElement('div');
-    r2up.className = 'be-embed-upload';
-    const r2Btn = document.createElement('button');
-    r2Btn.type = 'button'; r2Btn.className = 'btn ghost'; r2Btn.textContent = '⬆ Upload to R2 (your bucket)';
-    const r2File = document.createElement('input');
-    r2File.type = 'file'; r2File.accept = 'video/*'; r2File.capture = 'environment'; r2File.style.display = 'none';
-    const r2Bar = document.createElement('div'); r2Bar.className = 'be-embed-prog'; r2Bar.hidden = true;
-    const r2Fill = document.createElement('div'); r2Fill.className = 'be-embed-prog-fill'; r2Bar.appendChild(r2Fill);
-    const r2Msg = document.createElement('div'); r2Msg.className = 'be-embed-note';
-    const r2Cors = document.createElement('div'); r2Cors.className = 'be-embed-note'; r2Cors.style.display = 'none';
-    r2Btn.addEventListener('click', (e) => { e.stopPropagation(); r2File.click(); });
-    r2File.addEventListener('click', (e) => e.stopPropagation());
-    r2File.addEventListener('change', async () => {
-      const file = r2File.files && r2File.files[0];
-      if (!file) return;
-      r2Btn.disabled = true; r2Cors.style.display = 'none'; r2Cors.innerHTML = '';
-      r2Bar.hidden = false; const setP = (p, m) => { r2Fill.style.width = Math.round((p || 0) * 100) + '%'; if (m) { r2Msg.className = 'be-embed-note'; r2Msg.textContent = m; } };
-      try {
-        const res = await r2.upload({ file, onProgress: setP });
-        // Fill the block (DRAFT — the owner still publishes the POST explicitly). The blog
-        // renders an absolute <video src>, so the public R2 URL works as-is. Mirror the URL
-        // into the visible field (`url` is this block's URL <input>) so the owner sees it.
-        b.provider = 'video'; b.src = res.url; b.poster = ''; b.videoId = '';
-        url.value = res.url;
-        setP(1, 'Uploaded ✓'); markDirty(); renderPreview();
-        setTimeout(() => { r2Bar.hidden = true; }, 800);
-      } catch (err) {
-        r2Bar.hidden = true;
-        const info = r2.classifyError ? r2.classifyError(err) : { kind: 'unknown', message: (err && err.message) || 'Upload failed.' };
-        r2Msg.className = 'be-embed-note err';
-        r2Msg.textContent = info.message;
-        // CORS/blocked → show the copy-pasteable bucket CORS policy + where to add it.
-        if (info.kind === 'blocked' || info.kind === 'forbidden') {
-          const c = r2.corsPolicy(window.location.origin);
-          r2Cors.style.display = '';
-          r2Cors.innerHTML =
-            '<div style="margin:.4rem 0 .25rem">If the network is fine, add this CORS policy to your bucket (' + esc(c.where) + '):</div>' +
-            '<textarea readonly rows="9" style="width:100%;font:.72rem monospace;white-space:pre">' + esc(c.json) + '</textarea>';
-        }
-      } finally { r2File.value = ''; r2Btn.disabled = false; }
-    });
-    r2up.appendChild(r2Btn); r2up.appendChild(r2File); r2up.appendChild(r2Bar); r2up.appendChild(r2Msg); r2up.appendChild(r2Cors);
-    wrap.appendChild(r2up);
-  }
+  // The embed block is for THIRD-PARTY embeds (YouTube / Vimeo) and pasting an existing
+  // direct video URL. Uploading a clip to your OWN Cloudflare R2 — with a client-captured
+  // poster — now lives in the dedicated `video` block (startVideoInsert). The old
+  // server-side upload+transcode path (Helm) has been removed; there is no server here.
 
   // Height cap — only meaningful for self-hosted <video> (YouTube/Vimeo embeds
   // keep their fixed 16:9 container).
@@ -9555,6 +9349,241 @@ function edEmbed(b, isSel){
 
   wrap.appendChild(preview);
   renderPreview();
+
+  return wrap;
+}
+
+/* ── video block (self-hosted on the USER's OWN Cloudflare R2) ───────────────
+   Model: { id, type:'video', url, poster, caption?, alt? } — url/poster are full
+   public https URLs on the user's bucket. There is NO server transcode: the clip is
+   uploaded as-is and the poster is a frame captured client-side (canvas → JPEG) and
+   uploaded alongside it. Reuses the SAME R2 seam the image path uses (window.__studioR2).
+   Gated on R2 configured; the insert flow routes to Settings when it isn't. */
+
+// Route to the R2 setup section (Settings → Video storage) with the standard nudge.
+function routeToVideoStorage(){
+  toast('Video needs your R2 media storage — set it up in Settings');
+  if(typeof closePicker === 'function') closePicker();
+  go('settings');
+  if(typeof loadSettings === 'function') loadSettings();
+  requestAnimationFrame(() => { const el = $('r2-endpoint'); if(el){ try{ el.scrollIntoView({ behavior:'smooth', block:'center' }); el.focus(); }catch{} } });
+}
+
+// A small centred status pill for the (block-less) upload, since there is no block to
+// host a progress bar until the upload succeeds. set(msg) shows/updates; done() removes.
+function videoUploadPill(){
+  let el = document.getElementById('vidUpPill');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'vidUpPill';
+    el.style.cssText = 'position:fixed;left:50%;bottom:88px;transform:translateX(-50%);z-index:9600;background:var(--card,#111827);color:var(--ink,#e5e7eb);border:1px solid var(--line,#1c2433);border-radius:12px;padding:.65rem 1rem;font:600 .85rem system-ui,sans-serif;box-shadow:0 10px 34px rgba(0,0,0,.45);max-width:88vw;text-align:center';
+    document.body.appendChild(el);
+  }
+  return { set(msg){ el.textContent = msg; }, done(){ try{ el.remove(); }catch{} } };
+}
+
+// Pick a single video file (mp4 / mov). Resolves the File, or null if cancelled.
+function pickVideoFile(){
+  return new Promise((resolve) => {
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = 'video/mp4,video/quicktime';
+    inp.style.display = 'none';
+    inp.addEventListener('change', () => { const f = inp.files && inp.files[0]; try{ inp.remove(); }catch{} resolve(f || null); }, { once:true });
+    document.body.appendChild(inp);
+    inp.click();
+  });
+}
+
+// Load a video File's metadata into an off-DOM <video>. Resolves { video, url } when it
+// is decodable (loadedmetadata), rejects on the media 'error' event (undecodable → the
+// caller warns + falls back to a placeholder poster). Never hangs (timeout guard).
+function loadVideoMeta(file){
+  return new Promise((resolve, reject) => {
+    const v = document.createElement('video');
+    v.preload = 'metadata'; v.muted = true; v.playsInline = true;
+    const url = URL.createObjectURL(file);
+    let settled = false;
+    const to = setTimeout(() => { if(!settled){ settled = true; reject(new Error('probe-timeout')); } }, 8000);
+    v.addEventListener('loadedmetadata', () => { if(settled) return; settled = true; clearTimeout(to); resolve({ video:v, url }); }, { once:true });
+    v.addEventListener('error', () => { if(settled) return; settled = true; clearTimeout(to); try{ URL.revokeObjectURL(url); }catch{} reject(new Error('decode')); }, { once:true });
+    v.src = url;
+  });
+}
+
+// canvas → JPEG File (quality ~0.85). Promise so both the real capture + the placeholder
+// share one path. Never rejects (falls back to a 1x1 on the rare toBlob null).
+function canvasToJpegFile(canvas, name){
+  return new Promise((resolve) => {
+    try{
+      canvas.toBlob((blob) => {
+        if(blob) resolve(new File([blob], name, { type:'image/jpeg' }));
+        else resolve(new File([new Uint8Array([255,216,255,217])], name, { type:'image/jpeg' }));
+      }, 'image/jpeg', 0.85);
+    }catch{ resolve(new File([new Uint8Array([255,216,255,217])], name, { type:'image/jpeg' })); }
+  });
+}
+
+// A neutral placeholder poster (used when the clip can't be decoded to grab a frame).
+function placeholderPosterFile(stem){
+  const c = document.createElement('canvas'); c.width = 1280; c.height = 720;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#0b1220'; ctx.fillRect(0, 0, c.width, c.height);
+  ctx.fillStyle = '#2dd4bf';
+  ctx.beginPath(); ctx.moveTo(568, 300); ctx.lineTo(568, 420); ctx.lineTo(712, 360); ctx.closePath(); ctx.fill();
+  return canvasToJpegFile(c, stem + '-poster.jpg');
+}
+
+// Capture a poster from a decodable <video>: seek to ~0.5s (a representative frame, not the
+// black first frame), draw to a canvas scaled to ≤1280px wide, export JPEG. Falls back to
+// the placeholder on any draw error. Always resolves to a File.
+function captureVideoPoster(video, stem){
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (f) => { if(settled) return; settled = true; resolve(f); };
+    const draw = async () => {
+      try{
+        const vw = video.videoWidth || 1280, vh = video.videoHeight || 720;
+        const scale = Math.min(1, 1280 / vw);
+        const cw = Math.max(1, Math.round(vw * scale)), ch = Math.max(1, Math.round(vh * scale));
+        const canvas = document.createElement('canvas'); canvas.width = cw; canvas.height = ch;
+        canvas.getContext('2d').drawImage(video, 0, 0, cw, ch);
+        finish(await canvasToJpegFile(canvas, stem + '-poster.jpg'));
+      }catch{ finish(await placeholderPosterFile(stem)); }
+    };
+    setTimeout(() => { if(!settled) placeholderPosterFile(stem).then(finish); }, 5000);   // never hang
+    const dur = video.duration;
+    const target = (isFinite(dur) && dur > 0) ? Math.min(0.5, dur / 2) : 0.5;
+    video.addEventListener('seeked', draw, { once:true });
+    try{ video.currentTime = target; }catch{ draw(); }
+  });
+}
+
+// Core: probe playability (warn, non-blocking) → capture a poster client-side → upload BOTH
+// the clip and the poster JPEG to the user's R2 via the existing seam. Returns { url, poster }
+// (two public https URLs). `pill` gives status feedback. Throws (classified) on upload failure.
+async function uploadVideoWithPoster(file, pill){
+  const r2 = window.__studioR2;
+  const stem = String(file.name || 'video').replace(/\.[^.]+$/, '').replace(/[^\w.-]+/g, '-') || 'video';
+  let posterFile;
+  pill.set('Reading video…');
+  try{
+    const { video, url } = await loadVideoMeta(file);          // probe BEFORE upload
+    posterFile = await captureVideoPoster(video, stem);
+    try{ URL.revokeObjectURL(url); video.src = ''; }catch{}
+  }catch{
+    // Undecodable in this browser → warn (non-blocking) and still upload, with a placeholder poster.
+    toast('This file may not play in all browsers — export as MP4 (H.264) for safety');
+    posterFile = await placeholderPosterFile(stem);
+  }
+  pill.set('Uploading video…');
+  const vres = await r2.upload({ file, onProgress:(p, m) => pill.set(m || 'Uploading video…') });
+  pill.set('Uploading poster…');
+  const pres = await r2.upload({ file: posterFile, onProgress:(p, m) => pill.set(m || 'Uploading poster…') });
+  return { url: vres.url, poster: pres.url };
+}
+
+// Insert a video block at `at` (or the end): gate on R2, pick a clip, upload clip+poster, insert.
+async function startVideoInsert(at){
+  const r2 = (typeof window !== 'undefined' && window.__studioR2) || null;
+  if(!(r2 && r2.isConfigured && r2.isConfigured())){ routeToVideoStorage(); return; }
+  const file = await pickVideoFile();
+  if(!file) return;
+  if(file.size > 100 * 1024 * 1024) toast('Large videos slow your blog — under ~100 MB recommended');
+  const pill = videoUploadPill();
+  try{
+    const { url, poster } = await uploadVideoWithPoster(file, pill);
+    pill.done();
+    const nb = { id: mkId(), type:'video', url, poster, caption:'', alt:'' };
+    pushHistory();
+    const idx = at == null ? doc.blocks.length : at;
+    doc.blocks.splice(idx, 0, nb);
+    markDirty(); renderBlocks(); selectBlock(nb.id);
+    toast('Video added ✓');
+  }catch(err){
+    pill.done();
+    const info = r2.classifyError ? r2.classifyError(err) : { message:(err && err.message) || 'Upload failed.' };
+    showError(new Error(info.message), { title:'Video upload failed' });
+  }
+}
+window.startVideoInsert = startVideoInsert;
+
+function edVideo(b, isSel){
+  const wrap = document.createElement('div');
+  wrap.className = 'be-video';
+
+  // Preview (or an empty-state prompt when the block has no clip yet).
+  if(b.url){
+    const v = document.createElement('video');
+    v.controls = true; v.preload = 'metadata'; v.playsInline = true;
+    v.style.cssText = 'width:100%;border-radius:12px;background:#000;max-height:360px';
+    if(b.poster) v.poster = b.poster;
+    v.src = b.url;
+    v.addEventListener('click', e => e.stopPropagation());
+    wrap.appendChild(v);
+    const ref = document.createElement('div');
+    ref.style.cssText = 'font-size:.72rem;color:var(--acc);margin:.25rem 0 .1rem;word-break:break-all';
+    ref.textContent = '↪ On your R2: ' + b.url;
+    wrap.appendChild(ref);
+  } else {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'font-size:.8rem;color:var(--faint);padding:.6rem 0';
+    empty.textContent = 'No clip yet — tap “Upload video” to add one from your R2.';
+    wrap.appendChild(empty);
+  }
+
+  // Upload / Replace — reruns the pick → probe → poster → upload flow into THIS block.
+  const actRow = document.createElement('div');
+  actRow.style.cssText = 'display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin:.3rem 0';
+  const rep = document.createElement('button');
+  rep.type = 'button'; rep.className = 'be-img-replace';
+  rep.textContent = b.url ? '↻ Replace video' : '⬆ Upload video';
+  rep.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const r2 = window.__studioR2;
+    if(!(r2 && r2.isConfigured && r2.isConfigured())){ routeToVideoStorage(); return; }
+    const file = await pickVideoFile();
+    if(!file) return;
+    if(file.size > 100 * 1024 * 1024) toast('Large videos slow your blog — under ~100 MB recommended');
+    const pill = videoUploadPill();
+    try{
+      const { url, poster } = await uploadVideoWithPoster(file, pill);
+      pill.done();
+      b.url = url; b.poster = poster;
+      markDirty(); rerenderBlock(b);
+      toast('Video ' + (b.url ? 'ready' : 'added') + ' ✓');
+    }catch(err){
+      pill.done();
+      const info = r2.classifyError ? r2.classifyError(err) : { message:(err && err.message) || 'Upload failed.' };
+      showError(new Error(info.message), { title:'Video upload failed' });
+    }
+  });
+  actRow.appendChild(rep);
+  wrap.appendChild(actRow);
+
+  // Size guidance (persistent, visible in the block UI).
+  const hint = document.createElement('p');
+  hint.className = 'be-embed-note';
+  hint.style.cssText = 'color:var(--faint);font-size:.74rem;margin:.1rem 0 .4rem';
+  hint.textContent = 'Large videos slow your blog — under ~100 MB recommended';
+  wrap.appendChild(hint);
+
+  // Caption + Alt fields (same pattern as the image block).
+  const fields = document.createElement('div');
+  fields.className = 'be-img-fields';
+  const mkField = (labelText, key, ph) => {
+    const grp = document.createElement('div');
+    const lbl = document.createElement('div'); lbl.className = 'be-img-lbl'; lbl.textContent = labelText;
+    grp.appendChild(lbl);
+    const inp = document.createElement('input'); inp.type = 'text'; inp.value = b[key] || ''; inp.placeholder = ph;
+    inp.addEventListener('click', e => e.stopPropagation());
+    inp.addEventListener('input', () => { b[key] = inp.value; markDirty(); });
+    grp.appendChild(inp);
+    return grp;
+  };
+  fields.appendChild(mkField('Caption', 'caption', 'Describe the clip…'));
+  fields.appendChild(mkField('Alt text', 'alt', 'For screen readers…'));
+  wrap.appendChild(fields);
 
   return wrap;
 }
@@ -11582,6 +11611,7 @@ $('pickerGrid').addEventListener('click', e => {
   closePicker();
   if(tile.dataset.type === '__tpllib'){ openTplLib(at); return; }
   if(tile.dataset.type === '__figure'){ openFigLib(at); return; }
+  if(tile.dataset.type === '__video'){ startVideoInsert(at); return; }
   addBlock(tile.dataset.type, at);
 });
 
@@ -11700,7 +11730,8 @@ const INSERT_ACTIONS = [
   { ic:'separator',     label:'Divider',     key:'divider rule hr separator',    insert:(at)=>addBlock('divider', at) },
   { ic:'photo',         label:'Image',       key:'image photo picture',          insert:(at)=>addBlock('image', at) },
   { ic:'library-photo', label:'Gallery',     key:'gallery images grid',          insert:(at)=>addBlock('gallery', at) },
-  { ic:'video',         label:'Video',       key:'video embed youtube vimeo',    insert:(at)=>addBlock('embed', at) },
+  { ic:'video',         label:'Video',       key:'video upload clip mp4 r2 self-hosted', insert:(at)=>startVideoInsert(at) },
+  { ic:'video',         label:'Embed (YouTube/Vimeo)', key:'embed youtube vimeo video url', insert:(at)=>addBlock('embed', at) },
   { ic:'table',         label:'Table',       key:'table grid columns rows',      insert:(at)=>addBlock('table', at) },
   { ic:'code',          label:'Code / Raw',  key:'code raw html block',          insert:(at)=>addBlock('raw', at) },
   { ic:'terminal-2',    label:'Playground',  key:'playground interactive code',  insert:(at)=>addBlock('playground', at) },
@@ -11927,7 +11958,6 @@ function cmdkActions(){
     a.push({ ic:'speakerphone', label:'Share preview', key:'share seo preview social card', group:'Editor', run:()=>openSharePreview() });
     a.push({ ic:'eye', label:'Live preview', key:'preview view', group:'Editor', run:()=>$('previewBtn')?.click() });
     a.push({ ic:'clock', label:'Version history', key:'history versions snapshot', group:'Editor', run:()=>openHistory() });
-    a.push({ ic:'movie', label:'Make a video', key:'video render shorts', group:'Editor', run:()=>{ if(!currentSlug){ toast('Save the post first'); return; } makeVideo({ slug: currentSlug, title: meta.title }); } });
     a.push({ ic:'focus-2', label:(focusModeOn()?'Exit focus mode':'Toggle focus mode'), key:'focus mode distraction', group:'Editor', run:()=>toggleFocusMode() });
   }
   // ----- sync -----
@@ -17971,35 +18001,23 @@ $('figSaveLibBtn')?.addEventListener('click', e=>{ e.stopPropagation(); saveCurr
 $('tplLibSaveLibBtn')?.addEventListener('click', e=>{ e.stopPropagation(); saveCurrentInteractiveToLibrary(); });
 
 /* ── Video library (Media › Video) ──────────────────────────────────────────
-   Browse videos uploaded via the editor's Video block. Videos are uploaded,
-   transcoded and self-hosted by the LOCAL Helm; the hosted BYOK Studio has no
-   video backend. Best-effort: tries GET /media/video/list; on a missing endpoint
-   (older Helm), a 503 VIDEO_LOCAL_ONLY (BYOK/hosted), an empty list, or any
-   error, it shows a tasteful explainer. It NEVER fabricates videos. */
+   Browse the clips in the user's OWN Cloudflare R2 bucket (uploaded via a post's
+   Video block). Lists the bucket's videos/ prefix through the R2 Worker's GET /list
+   route (Settings → Video storage). Without a configured Worker-list, or on an empty
+   list / error, it shows a tasteful explainer. It NEVER fabricates videos. */
 let _videoLibLoaded = false;
 function initVideoLibrary(){ setVideoLibIntro(); loadVideoLibrary(); }
 window.initVideoLibrary = initVideoLibrary;
 
-// Mode-aware library intro: backend wording only when a backend is actually reachable;
-// in BYOK mode phrase it in terms of the user's own R2 storage (no backend).
+// Library intro — phrased in terms of the user's own R2 storage (there is no backend).
 function setVideoLibIntro(){
   const el = $('videoLibIntro'); if(!el) return;
-  el.innerHTML = videoHelmReachable()
-    ? `Videos you've uploaded through a post's <b>Video</b> block — transcoded and self-hosted for you. Add new clips from inside a post.`
-    : `Videos in your Cloudflare R2 storage — add new clips from a post's <b>Video</b> block.`;
+  el.innerHTML = `Videos in your Cloudflare R2 storage — add new clips from a post's <b>Video</b> block.`;
 }
 
 function videoLibExplainer(html){
   const body = $('videoLibBody'); if(!body) return;
   body.innerHTML = `<div class="media-empty" style="text-align:left;line-height:1.55">${html}</div>`;
-}
-
-// Is a Helm backend reachable for this Studio session? Only the local same-origin
-// Helm build counts; the hosted product (window.__studioConfig present) is pure BYOK
-// with no server-side render, so it returns false.
-function videoHelmReachable(){
-  if(!window.__studioConfig) return true;                                  // local same-origin Helm build
-  return false;                                                            // hosted product, BYOK mode
 }
 
 // Product name for the document title + app-header masthead. Single-mode: always
@@ -18016,52 +18034,31 @@ async function loadVideoLibrary(){
   body.innerHTML = '<p class="media-loading">Loading videos…</p>';
   let list = null;
 
-  // BYOK fallback: no Helm, but the user has configured an R2 Worker (url+secret+publicBase).
-  // List their bucket's videos/ prefix via the Worker's GET /list and render the SAME grid.
-  // If neither Helm nor a configured Worker-list is available we keep the existing explainer.
-  if(!videoHelmReachable()){
-    const r2 = window.__studioR2;
-    if(r2 && typeof r2.listVideos === 'function' && r2.isWorker && r2.isWorker()){
-      try{
-        list = await r2.listVideos();
-      }catch(err){
-        videoLibExplainer(
-          `<b>Couldn't list your videos.</b><br>The R2 Worker didn't answer (check the Worker URL + secret in <b>Settings → Video storage</b>, and that the Worker is deployed). Your uploads are safe — this is just the listing.`
-        );
-        _videoLibLoaded = false;
-        return;
-      }
-    } else {
+  // List the user's OWN bucket via the R2 Worker's GET /list (url+secret+publicBase).
+  // Without a configured Worker-list route there is nothing to enumerate — show the setup
+  // explainer. (Uploads still work over the direct S3 path; only listing needs the Worker.)
+  const r2 = window.__studioR2;
+  if(r2 && typeof r2.listVideos === 'function' && r2.isWorker && r2.isWorker()){
+    try{
+      list = await r2.listVideos();
+    }catch(err){
       videoLibExplainer(
-        `<b>Set up video storage to see your clips here.</b><br>Add your Cloudflare&nbsp;R2 keys in <b>Settings → Video storage</b> (the <b>R2 Worker</b> route is recommended). Then upload clips from inside a post's <b>Video</b> block and they'll appear in this library.`
+        `<b>Couldn't list your videos.</b><br>The R2 Worker didn't answer (check the Worker URL + secret in <b>Settings → Video storage</b>, and that the Worker is deployed). Your uploads are safe — this is just the listing.`
       );
       _videoLibLoaded = false;
       return;
     }
   } else {
-  try{
-    const r = await api('/media/video/list');
-    list = Array.isArray(r) ? r : (r && Array.isArray(r.videos) ? r.videos : []);
-  }catch(e){
-    // 503/local-only (BYOK, no server backend) → explain where video lives; otherwise a
-    // missing endpoint / network blip → the same gentle empty state (no fake rows).
-    if(e && (e.status === 503 || e.code === 'VIDEO_LOCAL_ONLY')){
-      videoLibExplainer(
-        `<b>Video isn't available in this hosted app.</b><br>Uploading and transcoding need a server-side backend. Store finished clips in your own Cloudflare R2 bucket instead — set it up in <b>Settings → Video storage</b>.`
-      );
-    } else {
-      videoLibExplainer(
-        `<b>No videos yet.</b><br>Add a video from inside a post: open the editor, drop in a <b>Video</b> block, and upload a clip. It's transcoded and self-hosted for you — then it'll appear here.`
-      );
-    }
+    videoLibExplainer(
+      `<b>Set up video storage to see your clips here.</b><br>Add your Cloudflare&nbsp;R2 keys in <b>Settings → Video storage</b> (the <b>R2 Worker</b> route is recommended). Then upload clips from inside a post's <b>Video</b> block and they'll appear in this library.`
+    );
     _videoLibLoaded = false;
     return;
   }
-  } // end Helm-mode listing
   _videoLibLoaded = true;
   if(!list.length){
     videoLibExplainer(
-      `<b>No videos yet.</b><br>Add a video from inside a post: open the editor, drop in a <b>Video</b> block, and upload a clip${videoHelmReachable() ? '. It\'s transcoded and self-hosted for you' : ' to your R2 bucket'} — then it'll appear here.`
+      `<b>No videos yet.</b><br>Add a video from inside a post: open the editor, drop in a <b>Video</b> block, and upload a clip to your R2 bucket — then it'll appear here.`
     );
     return;
   }
@@ -18407,323 +18404,9 @@ $('libIconCatChips')?.addEventListener('click',e=>{ const b=e.target.closest('[d
 $('libIconMore')?.addEventListener('click',()=>renderLibIcons(false));
 $('libIconGrid')?.addEventListener('click',e=>{ const t=e.target.closest('.gp-tile'); if(!t) return; const tok='icon:'+t.dataset.n; (navigator.clipboard&&navigator.clipboard.writeText(tok)); toast('Copied “'+tok+'”'); });
 
-/* ══ MAKE A VIDEO — storyboard editor + local render job ═══════════════════════
-   Derive a storyboard from a post (server buildStoryboard), let the owner edit the
-   ordered scene cards (add / remove / reorder / per-scene seconds + format), then
-   render the Remotion PostVideo to an MP4 via the LOCAL render-job route and poll to
-   done → preview + download + (Web Share where available). Rendering is local-only;
-   the BYOK app (no server backend) reports a 503 and we show the friendly local-only message. */
-const _vid = { storyboard:null, scenes:[], format:'9:16', transition:'fade', audio:null, pollTimer:null, blobUrl:null, slug:null, mode:'story' };
-
-async function makeVideo(p){
-  _vid.slug = p.slug;
-  $('vidTitle').textContent = 'Make a video — '+(p.title||p.slug);
-  resetVideoResult(); $('vidProgress').hidden=true; $('vidEditor').hidden=false; $('vidLocalOnly').hidden=true;
-  clearMusic(); _vid.transition='fade'; _vid.mode='story';
-  openVideo(); syncModeUI();
-  await loadStoryboard();
-}
-window.makeVideo=makeVideo;
-
-// Fetch the storyboard for the current mode: a regular storyboard, or a
-// caption-centric Reel (buildReel). Called on open + when the mode toggles.
-async function loadStoryboard(){
-  const reel = _vid.mode==='reel';
-  $('vidScenes').innerHTML='<p class="sub">Deriving a '+(reel?'reel':'storyboard')+'…</p>';
-  try{
-    const r = await api('/video/'+(reel?'reel':'storyboard')+'/'+_vid.slug);
-    const sb = r.storyboard || r;
-    _vid.storyboard = sb;
-    _vid.format = sb.format || (reel?'9:16':'9:16');
-    _vid.transition = sb.transition || 'fade';
-    _vid.scenes = (sb.scenes||[]).map(s=>({...s, ...(Array.isArray(s.overlays)?{overlays:s.overlays.map(o=>({...o}))}:{})}));
-    syncFmtUI(); syncTransUI(); renderScenes();
-  }catch(e){
-    // local-only (503) → show the friendly message instead of an error
-    if(e && (e.status===503 || e.code==='VIDEO_LOCAL_ONLY')){ showLocalOnly(); }
-    else { $('vidScenes').innerHTML=`<p class="sub" style="color:#f472b6">${esc(e.message||'Could not build a storyboard')}</p>`; }
-  }
-}
-
-function showLocalOnly(){ $('vidEditor').hidden=true; $('vidProgress').hidden=true; $('vidResult').hidden=true; $('vidLocalOnly').hidden=false; $('vidRenderBtn').style.display='none'; }
-function openVideo(){ const ov=$('videoPanel'); ov.hidden=false; $('vidRenderBtn').style.display=''; requestAnimationFrame(()=>$('vidClose').focus()); }
-function closeVideo(){ const ov=$('videoPanel'); if(ov) ov.hidden=true; stopVideoPoll(); }
-window.closeVideo=closeVideo;
-
-function syncFmtUI(){ document.querySelectorAll('#vidFmt button').forEach(b=>b.classList.toggle('on',b.dataset.fmt===_vid.format)); }
-$('vidFmt')?.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; _vid.format=b.dataset.fmt; syncFmtUI(); });
-
-// Storyboard / Reel mode. Switching re-derives the scenes from the post via the
-// matching server route (buildStoryboard vs buildReel). Reel implies 9:16.
-function syncModeUI(){ document.querySelectorAll('#vidMode button').forEach(b=>b.classList.toggle('on',b.dataset.mode===_vid.mode)); }
-$('vidMode')?.addEventListener('click',async e=>{ const b=e.target.closest('button'); if(!b||b.dataset.mode===_vid.mode) return; _vid.mode=b.dataset.mode; syncModeUI(); await loadStoryboard(); });
-
-// Transition style picker (fade | slide | wipe | none).
-function syncTransUI(){ document.querySelectorAll('#vidTransition button').forEach(b=>b.classList.toggle('on',b.dataset.trans===_vid.transition)); }
-$('vidTransition')?.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; _vid.transition=b.dataset.trans; syncTransUI(); });
-
-// Music picker — read the owner's own audio file as base64 (sent in the render
-// payload). NO TTS; this is only ever a file the owner chooses.
-const MAX_MUSIC_BYTES=25*1024*1024;
-function pickMusic(){ $('vidMusicFile').click(); }
-window.pickMusic=pickMusic;
-function clearMusic(){ _vid.audio=null; const f=$('vidMusicFile'); if(f) f.value=''; const n=$('vidMusicName'); if(n){ n.hidden=true; n.textContent=''; } const x=$('vidMusicClear'); if(x) x.hidden=true; }
-window.clearMusic=clearMusic;
-$('vidMusicFile')?.addEventListener('change',e=>{
-  const file=e.target.files&&e.target.files[0]; if(!file) return;
-  if(file.size>MAX_MUSIC_BYTES){ showError('Audio file is too large (max 25 MB).'); e.target.value=''; return; }
-  const rd=new FileReader();
-  rd.onload=()=>{
-    // result is "data:audio/..;base64,...."; the server accepts the full data-URL.
-    _vid.audio={ data:String(rd.result||''), type:file.type||'', name:file.name||'music' };
-    const n=$('vidMusicName'); if(n){ n.textContent=file.name; n.hidden=false; }
-    const x=$('vidMusicClear'); if(x) x.hidden=false;
-  };
-  rd.onerror=()=>showError('Could not read that audio file.');
-  rd.readAsDataURL(file);
-});
-
-const SCENE_LABEL={title:'Title',point:'Point',caption:'Caption',figure:'Figure',outro:'Outro'};
-// Mirror of the Remotion Figure scene's flipbook detection: a flipbook SVG
-// carries `<g class="fb-frame …">` groups. Static / line-draw figures don't.
-function isFlipbookFigureSvg(svg){ return /class\s*=\s*["'][^"']*\bfb-frame\b/.test(String(svg||'')); }
-function renderScenes(){
-  const wrap=$('vidScenes'); wrap.innerHTML='';
-  if(!_vid.scenes.length){ wrap.innerHTML='<p class="sub">No scenes — add one below.</p>'; return; }
-  _vid.scenes.forEach((s,i)=>wrap.appendChild(makeSceneCard(s,i)));
-}
-function makeSceneCard(s,i){
-  const c=document.createElement('div'); c.className='vsc';
-  const last=_vid.scenes.length-1;
-  c.innerHTML=`
-    <div class="vsc-hd">
-      <span class="vsc-type">${SCENE_LABEL[s.type]||s.type}</span>
-      <span class="sp"></span>
-      <button data-mv="up" ${i===0?'disabled':''} aria-label="Move up">↑</button>
-      <button data-mv="down" ${i===last?'disabled':''} aria-label="Move down">↓</button>
-      <button data-mv="del" class="danger" aria-label="Remove">✕</button>
-    </div>`;
-  // body per type
-  if(s.type==='title'){
-    const k=document.createElement('input'); k.type='text'; k.placeholder='Kicker (optional)'; k.value=s.kicker||'';
-    k.addEventListener('input',()=>{ s.kicker=k.value; });
-    const t=document.createElement('textarea'); t.value=s.text||''; t.placeholder='Title text';
-    t.addEventListener('input',()=>{ s.text=t.value; });
-    c.appendChild(k); c.appendChild(t);
-  } else if(s.type==='figure'){
-    const fig=document.createElement('div'); fig.className='vsc-fig'; fig.innerHTML=s.svg||'';
-    c.appendChild(fig);
-    const cap=document.createElement('input'); cap.type='text'; cap.placeholder='Caption (optional)'; cap.value=s.caption||'';
-    cap.style.marginTop='.4rem';
-    cap.addEventListener('input',()=>{ s.caption=cap.value; });
-    c.appendChild(cap);
-    // Flipbook figures (animated frame groups) get a playback-speed control. A
-    // static / line-draw figure has no fb-frame groups → no control shown.
-    if(isFlipbookFigureSvg(s.svg)){
-      const sp=document.createElement('div'); sp.className='vsc-fps';
-      sp.innerHTML='<label>Flipbook speed (fps)</label>';
-      const fi=document.createElement('input'); fi.type='number'; fi.min='1'; fi.max='24'; fi.step='1';
-      fi.value=s.flipbookFps!=null?s.flipbookFps:''; fi.placeholder='auto';
-      fi.addEventListener('input',()=>{ const v=parseFloat(fi.value); s.flipbookFps=(v>0)?v:undefined; });
-      sp.appendChild(fi); c.appendChild(sp);
-    }
-  } else { // point / caption / outro
-    const t=document.createElement('textarea'); t.value=s.text||'';
-    t.placeholder = s.type==='outro' ? 'Outro text (optional)'
-      : s.type==='caption' ? 'Caption text (the hero line — words reveal in sequence)'
-      : 'Point text';
-    if(s.type==='caption') t.rows=2;
-    t.addEventListener('input',()=>{ s.text=t.value; });
-    c.appendChild(t);
-  }
-  // per-scene seconds
-  const sec=document.createElement('div'); sec.className='vsc-secs';
-  sec.innerHTML = '<label>Seconds</label>';
-  const si=document.createElement('input'); si.type='number'; si.min='0.5'; si.max='30'; si.step='0.5';
-  si.value=s.seconds!=null?s.seconds:''; si.placeholder = s.type==='caption' ? 'auto (by length)' : 'auto';
-  si.addEventListener('input',()=>{ const v=parseFloat(si.value); s.seconds = (v>0)?v:undefined; });
-  sec.appendChild(si); c.appendChild(sec);
-  // per-scene sticker overlays: chips for each + a "+ Sticker" button to add one.
-  c.appendChild(makeOverlayRow(s,i));
-  // header actions
-  c.querySelector('[data-mv="up"]').addEventListener('click',()=>moveScene(i,-1));
-  c.querySelector('[data-mv="down"]').addEventListener('click',()=>moveScene(i,1));
-  c.querySelector('[data-mv="del"]').addEventListener('click',()=>{ _vid.scenes.splice(i,1); renderScenes(); });
-  return c;
-}
-
-// The overlay track for one scene card: a chip (sticker thumbnail + remove) for
-// each existing overlay, plus a "+ Sticker" button that opens the picker.
-function makeOverlayRow(s,i){
-  const row=document.createElement('div'); row.className='vsc-overlays';
-  const overlays=Array.isArray(s.overlays)?s.overlays:[];
-  overlays.forEach((o,oi)=>{
-    const chip=document.createElement('span'); chip.className='vsc-ov-chip';
-    chip.innerHTML=(o.svg||'')+'<button type="button" class="x" aria-label="Remove overlay">✕</button>';
-    chip.querySelector('.x').addEventListener('click',()=>{ s.overlays.splice(oi,1); if(!s.overlays.length) delete s.overlays; renderScenes(); });
-    row.appendChild(chip);
-  });
-  const add=document.createElement('button'); add.type='button'; add.className='vsc-ov-add'; add.textContent='+ Sticker';
-  add.addEventListener('click',()=>openOverlayPicker(i));
-  row.appendChild(add);
-  return row;
-}
-function moveScene(i,dir){ const j=i+dir; if(j<0||j>=_vid.scenes.length) return; const t=_vid.scenes[i]; _vid.scenes[i]=_vid.scenes[j]; _vid.scenes[j]=t; renderScenes(); }
-
-/* ── STICKER-OVERLAY PICKER ────────────────────────────────────────────────
-   Pick a sticker from the genre palette → add it as an overlay on the selected
-   scene, at a chosen corner + size. Reuses the cached sticker catalogue
-   (_figStickers via ensureFigStickers). Corner → normalised centre anchor (x,y);
-   size → sticker width as a fraction of the frame width. Frame-driven entrance
-   + wobble happen in the Remotion Overlay component; here we only pick props. */
-const OV_CORNERS={ tl:{x:0.18,y:0.16}, tr:{x:0.82,y:0.16}, c:{x:0.5,y:0.5}, bl:{x:0.18,y:0.84}, br:{x:0.82,y:0.84} };
-const _ov={ sceneIndex:-1, pos:'tl', size:0.24 };
-
-async function openOverlayPicker(sceneIndex){
-  _ov.sceneIndex=sceneIndex;
-  $('ovScrim').classList.add('open'); $('ovSheet').classList.add('open');
-  syncOvControls();
-  $('ovBody').innerHTML='<p class="fig-compose-note" id="ovLoading">Loading stickers…</p>';
-  await ensureFigStickers();
-  renderOvStickers($('ovSearch')?$('ovSearch').value:'');
-}
-function closeOverlayPicker(){ $('ovScrim').classList.remove('open'); $('ovSheet').classList.remove('open'); _ov.sceneIndex=-1; }
-window.closeOverlayPicker=closeOverlayPicker;
-
-function syncOvControls(){
-  document.querySelectorAll('#ovPos button').forEach(b=>b.classList.toggle('on',b.dataset.pos===_ov.pos));
-  document.querySelectorAll('#ovSize button').forEach(b=>b.classList.toggle('on',parseFloat(b.dataset.size)===_ov.size));
-}
-$('ovPos')?.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; _ov.pos=b.dataset.pos; syncOvControls(); });
-$('ovSize')?.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; _ov.size=parseFloat(b.dataset.size); syncOvControls(); });
-$('ovSearch')?.addEventListener('input',()=>renderOvStickers($('ovSearch').value));
-
-/* Render the sticker grid in the overlay picker (grouped by genre, like the
-   figure palette). Tapping a sticker adds it as an overlay + closes the sheet. */
-function renderOvStickers(query){
-  const body=$('ovBody'); if(!body) return;
-  const q=String(query||'').trim().toLowerCase();
-  const list=(_figStickers||[]).filter(s=>!q
-    || (s.name||'').toLowerCase().includes(q)
-    || (s.id||'').toLowerCase().includes(q)
-    || (s.genre||'').toLowerCase().includes(q)
-    || (FIG_STICKER_GENRE_LABELS[s.genre]||'').toLowerCase().includes(q));
-  if(!list.length){ body.innerHTML='<p class="fig-sticker-empty">'+(q?'No stickers match “'+esc(q)+'”.':'No stickers available.')+'</p>'; return; }
-  const order=[], byGenre=new Map();
-  for(const s of list){ if(!byGenre.has(s.genre)){ byGenre.set(s.genre,[]); order.push(s.genre); } byGenre.get(s.genre).push(s); }
-  body.innerHTML=order.map(g=>{
-    const cells=byGenre.get(g).map(s=>
-      '<button type="button" class="fig-sticker-cell" data-ov-sticker="'+esc(s.id)+'" title="'+esc(s.name)+'">'
-      +(s.svg||'')+'<span class="lbl">'+esc(s.name)+'</span></button>').join('');
-    return '<div class="fig-sticker-group-lbl">'+esc(FIG_STICKER_GENRE_LABELS[g]||g)+'</div>'
-      +'<div class="fig-sticker-grid">'+cells+'</div>';
-  }).join('');
-}
-$('ovBody')?.addEventListener('click',e=>{ const cell=e.target.closest('[data-ov-sticker]'); if(!cell) return; addOverlayFromSticker(cell.dataset.ovSticker); });
-
-function addOverlayFromSticker(id){
-  const s=(_figStickers||[]).find(x=>x.id===id);
-  if(!s||!s.svg){ closeOverlayPicker(); return; }
-  const scene=_vid.scenes[_ov.sceneIndex];
-  if(!scene){ closeOverlayPicker(); return; }
-  const anchor=OV_CORNERS[_ov.pos]||OV_CORNERS.tl;
-  if(!Array.isArray(scene.overlays)) scene.overlays=[];
-  scene.overlays.push({ svg:s.svg, x:anchor.x, y:anchor.y, scale:_ov.size });
-  closeOverlayPicker();
-  renderScenes();
-  toast('Sticker added to scene');
-}
-function addScene(type){
-  const base = type==='title' ? {type:'title',text:_vid.storyboard?.title||'Title'}
-    : type==='outro' ? {type:'outro',text:'Read the full post'}
-    : type==='caption' ? {type:'caption',text:''}
-    : {type:'point',text:''};
-  // insert mid-scenes before the outro if one exists; titles go first
-  if(type==='title') _vid.scenes.unshift(base);
-  else { const oi=_vid.scenes.findIndex(s=>s.type==='outro'); if(type!=='outro'&&oi>=0) _vid.scenes.splice(oi,0,base); else _vid.scenes.push(base); }
-  renderScenes();
-}
-window.addScene=addScene;
-
-function stopVideoPoll(){ if(_vid.pollTimer){ clearTimeout(_vid.pollTimer); _vid.pollTimer=null; } }
-function resetVideoResult(){
-  $('vidResult').hidden=true; $('vidEditor').hidden=false;
-  if(_vid.blobUrl){ URL.revokeObjectURL(_vid.blobUrl); _vid.blobUrl=null; }
-  $('vidShareBtn').hidden=true;
-}
-window.resetVideoResult=resetVideoResult;
-
-async function renderVideo(){
-  // build props from the edited storyboard
-  const scenes=_vid.scenes
-    .map(s=>{ const o={type:s.type}; if(s.text!=null&&s.text!=='') o.text=s.text; if(s.kicker) o.kicker=s.kicker; if(s.svg) o.svg=s.svg; if(s.caption) o.caption=s.caption; if(s.flipbookFps>0) o.flipbookFps=s.flipbookFps; if(s.seconds>0) o.seconds=s.seconds;
-      if(Array.isArray(s.overlays)&&s.overlays.length) o.overlays=s.overlays.map(ov=>({svg:ov.svg,x:ov.x,y:ov.y,scale:ov.scale,...(ov.from>0?{from:ov.from}:{})})); return o; })
-    .filter(s=>s.type==='figure'?!!s.svg:(s.type==='outro'||s.type==='title'||!!(s.text&&s.text.trim())));
-  if(!scenes.length){ showError('Add at least one scene before rendering.'); return; }
-  const props={ title:_vid.storyboard?.title||'Video', format:_vid.format, scenes };
-  if(_vid.transition&&_vid.transition!=='fade') props.transition=_vid.transition;
-  const payload={ props };
-  if(_vid.audio&&_vid.audio.data) payload.audio=_vid.audio;
-  const btn=$('vidRenderBtn'); setBusy(btn,true);
-  $('vidEditor').hidden=true; $('vidResult').hidden=true; $('vidProgress').hidden=false;
-  setVidProgress(0,'Starting render…');
-  try{
-    const r=await api('/video/render',{method:'POST',body:JSON.stringify(payload)});
-    if(!r||!r.jobId) throw new Error('Render did not start');
-    pollVideo(r.jobId);
-  }catch(e){
-    setBusy(btn,false); $('vidProgress').hidden=true;
-    if(e && (e.status===503 || e.code==='VIDEO_LOCAL_ONLY')){ showLocalOnly(); }
-    else { $('vidEditor').hidden=false; showError(e,{onRetry:renderVideo}); }
-  }
-}
-window.renderVideo=renderVideo;
-
-function setVidProgress(p,msg){ $('vidBarFill').style.width=Math.round((p||0)*100)+'%'; if(msg) $('vidProgressMsg').textContent=msg; }
-
-function pollVideo(jobId){
-  stopVideoPoll();
-  const tick=async()=>{
-    try{
-      const j=await api('/video/render/'+jobId);
-      if(j.status==='rendering'){ setVidProgress(j.progress||0,'Rendering… '+Math.round((j.progress||0)*100)+'%'); _vid.pollTimer=setTimeout(tick,1200); return; }
-      if(j.status==='done'){ setVidProgress(1,'Done'); setBusy($('vidRenderBtn'),false); await showVideoResult(jobId); return; }
-      // error
-      setBusy($('vidRenderBtn'),false); $('vidProgress').hidden=true; $('vidEditor').hidden=false;
-      showError(j.error||'Render failed',{onRetry:renderVideo});
-    }catch(e){ setBusy($('vidRenderBtn'),false); $('vidProgress').hidden=true; $('vidEditor').hidden=false; showError(e,{onRetry:renderVideo}); }
-  };
-  tick();
-}
-
-async function showVideoResult(jobId){
-  // fetch the MP4 as a blob so the <video> and Download both work off a blob: URL.
-  // (Server-side render is a local-Helm-only feature; unreachable in the BYOK product.)
-  const url='/api/video/file/'+jobId;
-  try{
-    const resp=await fetch(url);
-    if(!resp.ok) throw new Error('Could not fetch the rendered video');
-    const blob=await resp.blob();
-    if(_vid.blobUrl) URL.revokeObjectURL(_vid.blobUrl);
-    _vid.blobUrl=URL.createObjectURL(blob);
-    $('vidPlayer').src=_vid.blobUrl;
-    const dl=$('vidDownload'); dl.href=_vid.blobUrl; dl.download=(_vid.slug||'post')+'-'+_vid.format.replace(':','x')+'.mp4';
-    _vid._blob=blob; _vid._file=dl.download;
-    // Web Share (files) where supported
-    const sBtn=$('vidShareBtn');
-    const file=new File([blob],dl.download,{type:'video/mp4'});
-    sBtn.hidden=!(navigator.canShare&&navigator.canShare({files:[file]}));
-    $('vidProgress').hidden=true; $('vidResult').hidden=false;
-  }catch(e){ $('vidProgress').hidden=true; $('vidEditor').hidden=false; showError(e); }
-}
-
-async function shareVideo(){
-  if(!_vid._blob) return;
-  const file=new File([_vid._blob],_vid._file||'video.mp4',{type:'video/mp4'});
-  try{ if(navigator.share) await navigator.share({files:[file],title:'Video'}); }
-  catch(e){ if(e.name!=='AbortError') toast('Could not share: '+e.message); }
-}
-window.shareVideo=shareVideo;
+/* "Make a video" (storyboard → server render) was removed — it required a Helm/Remotion
+   backend this self-owned build does not have. Self-hosted video now lives in the R2-backed
+   `video` block (startVideoInsert / edVideo / serialiseBlock('video')). */
 
 /* ── Anonymous usage ping ─────────────────────────────────────────────────
    Fire-and-forget, at most once per browser per type (localStorage once-flag).
@@ -18747,10 +18430,10 @@ window.addEventListener('appinstalled',()=>{ _pingMetric('install'); });
 $('installBtn').addEventListener('click',async()=>{ if(deferredPrompt){deferredPrompt.prompt();deferredPrompt=null;$('installBtn').style.display='none';} });
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('/sw.js').catch(()=>{}); }
 
-// Brand the title + mastheads now that the mode (window.__studioConfig) is known:
-// the engine bundle (studio.js) is a module loaded before this one, so it has
-// already set that global → videoHelmReachable() is accurate here. Runs ahead of the
-// boot gate below (which may show onboarding or the app), so every path is branded.
+// Brand the title + mastheads now that config (window.__studioConfig) is known: the
+// engine bundle (studio.js) is a module loaded before this one, so it has already set
+// that global. Runs ahead of the boot gate below (which may show onboarding or the
+// app), so every path is branded.
 applyBrandName();
 
 /* ── MOBILE CHAT-LIKE EDITOR ──────────────────────────────────────────────────

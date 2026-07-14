@@ -2,7 +2,7 @@
 import { sanitise, SAFE_IMAGE_DATA_URL } from './figures/svg.js';
 import { sanitiseHtml } from './sanitise.js';
 
-const KNOWN = new Set(['heading', 'text', 'image', 'quote', 'divider', 'raw', 'gallery', 'embed', 'playground', 'table', 'figure']);
+const KNOWN = new Set(['heading', 'text', 'image', 'quote', 'divider', 'raw', 'gallery', 'embed', 'playground', 'table', 'figure', 'video']);
 
 function decodeEntities(s) {
   return s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
@@ -116,6 +116,15 @@ function imageFigure(b, slug) {
   return `<figure${cls}${resizeAttrs(b)}><img src="${escAttr(src)}" alt="${escAttr(b.alt)}" loading="lazy"${heightCapStyle(b)}>${cap}</figure>`;
 }
 
+// A `video` block is a self-hosted clip on the user's OWN Cloudflare R2 (Task 13): both
+// `url` (the clip) and `poster` (a client-captured still, same bucket) are full public
+// https URLs. No server transcode. Fixed markup — a `post-video` figure the site styles;
+// url/poster are attribute-escaped exactly like the image serialiser escapes its src.
+function videoFigure(b) {
+  const cap = b.caption ? `<figcaption>${escHtml(b.caption)}</figcaption>` : '';
+  return `<figure class="post-video"><video controls playsinline preload="metadata" poster="${escAttr(b.poster)}" src="${escAttr(b.url)}"></video>${cap}</figure>`;
+}
+
 // Inner markup for a figure block: optional base raster (the still backdrop), the
 // inline overlay SVG, optional figcaption. Shared by the serialiser + preview. The
 // base supports a published `base.file` (→ /images/posts/{slug}/{file}, same path
@@ -165,6 +174,7 @@ export function serialiseBlock(block, ctx = {}) {
     }
     case 'divider': return '---';
     case 'image': return imageFigure(block, ctx.slug || 'post');
+    case 'video': return videoFigure(block);
     case 'figure': return figureBlock(block, ctx.slug || 'post');
     case 'raw': return String(block.content || '');
     case 'gallery': {
@@ -321,6 +331,12 @@ export function renderPreviewHtml(blocks, ctx = {}) {
       case 'quote': { const body = String(b.html != null ? b.html : (b.text || '')); return `<blockquote>${body}${b.cite ? `<cite>— ${escHtml(b.cite)}</cite>` : ''}</blockquote>`; }
       case 'divider': return '<hr>';
       case 'image': return (b.url || b.file || b.base64 || b.src) ? figure(b) : '';
+      case 'video': {
+        if (!b.url) return '';
+        const cap = b.caption ? `<figcaption>${escHtml(b.caption)}</figcaption>` : '';
+        const poster = b.poster ? ` poster="${escAttr(b.poster)}"` : '';
+        return `<figure class="post-video"><video controls playsinline preload="metadata"${poster} src="${escAttr(b.url)}"></video>${cap}</figure>`;
+      }
       case 'figure': {
         if (!b.svg) return '';
         const place = b.placement === 'wide' ? 'wide' : b.placement === 'left' ? 'left' : b.placement === 'right' ? 'right' : 'default';
@@ -376,6 +392,18 @@ export function renderPreviewHtml(blocks, ctx = {}) {
 const SAFE_IMAGE_REF = /^\/images\/posts\/[A-Za-z0-9._\-\/]+$/;
 const isSafeImageRef = (url) => SAFE_IMAGE_REF.test(String(url || '')) && !String(url).split('/').includes('..');
 
+// A `video` block's url/poster point at the user's OWN R2 bucket, so — unlike an image
+// `url` reference (a same-site /images/posts path) — they are FULL public https URLs.
+// Same spirit as isSafeImageRef: accept only an https:// URL with no whitespace or
+// quote/angle/backslash chars (which could break out of the <video> attribute or inject
+// markup) and no `..` path segment. This rejects http:, javascript:/data: schemes,
+// protocol-relative //host, and same-site /images paths (video is never repo-committed).
+const SAFE_HTTPS_URL = /^https:\/\/[^\s"'<>\\]+$/i;
+const isSafeHttpsRef = (url) => {
+  const s = String(url || '');
+  return SAFE_HTTPS_URL.test(s) && !s.split('/').includes('..');
+};
+
 // An image `file` is a BARE filename that gets joined onto /images/posts/<slug>/ (see
 // serialiseBlock). A value containing a path separator or `..` could climb out of that
 // directory (e.g. `../../.github/workflows/x.yml`), so reject any such filename. Applies
@@ -403,6 +431,13 @@ export function validateDoc(doc) {
       }
     }
     if (b.type === 'figure' && (typeof b.svg !== 'string' || b.svg.trim() === '')) throw Object.assign(new Error('figure block needs a non-empty svg string'), { status: 400 });
+    // A video block is a self-hosted clip on the user's OWN R2 — both the clip `url` and
+    // the `poster` still must be safe public https URLs (validated as https refs, NOT the
+    // filename-traversal guard which is for bare image filenames). Reject missing/non-https.
+    if (b.type === 'video') {
+      if (!isSafeHttpsRef(b.url)) throw Object.assign(new Error('video block needs an https url on your R2'), { status: 400 });
+      if (!isSafeHttpsRef(b.poster)) throw Object.assign(new Error('video block needs an https poster on your R2'), { status: 400 });
+    }
   }
   return true;
 }
