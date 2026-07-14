@@ -76,9 +76,9 @@ mkdirSync(DIST, { recursive: true });
 let html = readFileSync(`${SRC}/index.html`, 'utf8');
 
 // (a0) inject the PUBLIC OAuth Client ID + relay base for Device-Flow sign-in.
-//      The Client ID is public (safe to embed). Empty → the sign-in UI hides (PAT-only).
+//      The Client ID is public (safe to embed); env var overrides the embedded default.
 //      Placed before the engine bundle so the globals exist when app.js runs.
-const GH_CLIENT_ID = process.env.STUDIO_GH_CLIENT_ID || '';
+const GH_CLIENT_ID = process.env.STUDIO_GH_CLIENT_ID || 'Ov23liB0NzXKQmhnlPng';
 const RELAY_BASE = process.env.STUDIO_RELAY_BASE || '/.netlify/functions/gh-device';
 // Visible build stamp (vYYYYMMDD-<gitshortsha>) — scripts/deploy-studio.sh sets
 // STUDIO_BUILD_STAMP; surfaced in the Studio's Settings footer (#buildStamp).
@@ -86,7 +86,7 @@ const RELAY_BASE = process.env.STUDIO_RELAY_BASE || '/.netlify/functions/gh-devi
 const BUILD_STAMP = process.env.STUDIO_BUILD_STAMP || '';
 html = html.replace('</head>',
   `  <script>window.__STUDIO_GH_CLIENT_ID=${JSON.stringify(GH_CLIENT_ID)};window.__STUDIO_RELAY_BASE=${JSON.stringify(RELAY_BASE)};window.__STUDIO_BUILD=${JSON.stringify(BUILD_STAMP)};</script>\n</head>`);
-console.log('device-flow client id:', GH_CLIENT_ID ? 'injected' : '(none — PAT-only)');
+console.log('device-flow client id:', GH_CLIENT_ID || '(none)');
 console.log('build stamp:', BUILD_STAMP || '(none — local build)');
 
 // (a) load the engine bundle before the inline module
