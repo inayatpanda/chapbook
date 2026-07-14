@@ -6889,7 +6889,7 @@ function saveR2Settings(){
     v = (r2 && r2.validate) ? r2.validate(cfg.getR2()) : { ok:true, errors:[] };
   }
   if(!v.ok){ msg('r2Msg', v.errors[0]||'Check the fields.', 'err'); }
-  else { msg('r2Msg', workerOn ? 'Saved. Uploads now go through your Worker.' : 'Saved. The video block now offers “Upload to R2”.','ok'); }
+  else { msg('r2Msg', workerOn ? 'Saved. Uploads now go through your Worker.' : 'Saved. You can now upload video and image media to your R2.','ok'); }
   loadR2Settings();                                          // re-render; secret fields reset to empty
 }
 window.saveR2Settings=saveR2Settings;

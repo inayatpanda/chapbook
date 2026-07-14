@@ -26,6 +26,7 @@ const PATTERNS = [
   /hosted Studio/,
   /\/admin\/api\/login/,
   /buy\.stripe\.com\/test_/,
+  /videoHelmReachable/,
 ];
 
 // Binary/asset extensions the text gate should not read.
