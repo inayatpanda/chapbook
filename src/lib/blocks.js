@@ -293,14 +293,16 @@ export function serialiseBlocks(blocks, ctx = {}) {
   return appendCitationDefs(body, ctx.citations);
 }
 
-// Render a block doc to FINAL HTML for the in-Helm live preview (mirrors the site's
+// Render a block doc to FINAL HTML for the in-app live preview (mirrors the site's
 // output). Playgrounds are emitted verbatim with a runnable <script> (not the
 // application/pg variant) so the preview is genuinely interactive. NOT used for
-// publishing — serialiseBlocks owns that. Owner-previewing-own-content, so block.html
+// publishing — serialiseBlocks owns that. Previewing your own content, so block.html
 // (contenteditable) passes through.
 export function renderPreviewHtml(blocks, ctx = {}) {
   const slug = ctx.slug || 'post';
-  const origin = ctx.siteOrigin || 'https://inayatpanda.com';
+  // No owner default: without a configured site origin, root-relative image refs stay
+  // root-relative in the preview iframe (data/base64 uploads render regardless).
+  const origin = ctx.siteOrigin || '';
   // A fresh data URL (owned upload in progress) wins; then a reference `url` to an
   // already-committed image; then the editor src; finally the conventional per-slug
   // path. url/file are root-relative, so prefix the preview origin for them.

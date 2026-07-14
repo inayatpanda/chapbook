@@ -70,31 +70,9 @@ rmSync(DIST, { recursive: true, force: true });
 mkdirSync(DIST, { recursive: true });
 
 // --- transform index.html → dist/index.html ---
+// The product is branded "Chapbook" at source (index.html / manifest.json), so the
+// build no longer does any brand string-surgery — it only injects config + rewrites paths.
 let html = readFileSync(`${SRC}/index.html`, 'utf8');
-
-// (brand) The hosted dist is the product for OTHER users → brand it "Studio". The local
-// server-backed public/studio/index.html stays "The Helm" (the owner's own app). Only the
-// three brand surfaces are renamed — help text/comments that refer to the local Helm stay.
-const BRAND = 'Chapbook';   // the product name for the hosted, sellable build
-for (const [from, to] of [
-  ['<title>The Helm</title>', `<title>${BRAND}</title>`],
-  ['<h1 id="appHeaderTitle">The Helm</h1>', `<h1 id="appHeaderTitle">${BRAND}</h1>`],
-  ['<meta name="apple-mobile-web-app-title" content="Studio" />', `<meta name="apple-mobile-web-app-title" content="${BRAND}" />`],
-  ['<h1>Activate Studio</h1>', `<h1>Activate ${BRAND}</h1>`],
-  ['Enter your Studio-access key to use the Studio.', `Enter your ${BRAND}-access key to use ${BRAND}.`],
-]) {
-  if (!html.includes(from)) throw new Error(`build: brand string not found for rename (index.html changed?): ${from}`);
-  html = html.replaceAll(from, to);
-}
-// Softer brand touch-ups in help/footer/video copy (may recur; non-fatal if the source drifts).
-html = html
-  .replaceAll('the Studio picks that provider', `${BRAND} picks that provider`)
-  .replaceAll('Studio · local build', `${BRAND} · local build`)
-  .replaceAll("'Studio '+b", `'${BRAND} '+b`)
-  .replaceAll('hosted Studio', `hosted ${BRAND}`)
-  .replaceAll('Open Studio on', `Open ${BRAND} on`)
-  .replaceAll("videoHelmReachable() ? 'The Helm' : 'Studio'", `videoHelmReachable() ? 'The Helm' : '${BRAND}'`);
-console.log(`brand: hosted dist renamed → "${BRAND}"`);
 
 // (a0) inject the PUBLIC OAuth Client ID + relay base for Device-Flow sign-in.
 //      The Client ID is public (safe to embed). Empty → the sign-in UI hides (PAT-only).
@@ -124,9 +102,10 @@ writeFileSync(`${DIST}/index.html`, html);
 
 // --- text assets: rewrite /studio/ → / ---
 // manifest.json: hosted paths /studio/ → / AND bare "/studio" (start_url/scope, no trailing
-// slash) → "/" so the installed PWA opens the served root (not a 404); brand → "Helm Studio".
+// slash) → "/" so the installed PWA opens the served root (not a 404). Brand is already
+// "Chapbook" in the source manifest — no rename here.
 writeFileSync(`${DIST}/manifest.json`,
-  readFileSync(`${SRC}/manifest.json`, 'utf8').split('/studio/').join('/').split('"/studio"').join('"/"').split('"The Helm"').join(`"${BRAND}"`));
+  readFileSync(`${SRC}/manifest.json`, 'utf8').split('/studio/').join('/').split('"/studio"').join('"/"'));
 writeFileSync(`${DIST}/sw.js`, readFileSync(`${SRC}/sw.js`, 'utf8').split('/studio/').join('/'));
 // --- copy the rest verbatim ---
 for (const f of ['studio.js', 'darkroom-upload.js', 'preview.css', 'resize.js', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icons-manifest.json', 'icons-sprite.svg']) {

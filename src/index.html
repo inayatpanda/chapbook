@@ -10,14 +10,14 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Studio" />
+<meta name="apple-mobile-web-app-title" content="Chapbook" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
-<title>The Helm</title>
+<title>Chapbook</title>
 <style>
   /* ── THEME VARIABLES ─────────────────────────────────────────────────────── */
-  /* Dark is the default — The Helm is a first-party companion to the (dark) site.
+  /* Dark is the default — a first-party companion to the (dark) published site.
      A [data-theme="light"] override keeps the toggle working for anyone who wants it. */
   :root {
     --bg:       #04060c;
@@ -68,7 +68,7 @@
     font:16px/1.6 var(--font-body);font-weight:430;
     padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 90px);min-height:100vh;
     transition:background .2s,color .2s;-webkit-font-smoothing:antialiased}
-  /* atmospheric depth — fixed radial glows like inayatpanda.com, never scroll-jank */
+  /* atmospheric depth — fixed radial glows, never scroll-jank */
   body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
     background:
       radial-gradient(60% 50% at 12% 0%,rgba(45,212,191,.10),transparent 70%),
@@ -2674,8 +2674,8 @@
 
 <!-- ===== LICENCE GATE (shown before everything when no valid key is stored) ===== -->
 <div id="licence" class="wrap" style="display:none">
-  <h1>Activate Studio</h1>
-  <p class="sub">Enter your Studio-access key to use the Studio. Contact the author to obtain one.</p>
+  <h1>Activate Chapbook</h1>
+  <p class="sub">Enter your Chapbook-access key to use Chapbook. Contact the author to obtain one.</p>
   <input id="licKey" type="text" placeholder="IPL1.…" autocomplete="off" spellcheck="false" />
   <button class="btn" onclick="submitLicence()">Activate</button>
   <div id="licMsg" class="msg err"></div>
@@ -2692,7 +2692,7 @@
 <div class="wrap">
   <header>
     <div>
-      <h1 id="appHeaderTitle">The Helm</h1>
+      <h1 id="appHeaderTitle">Chapbook</h1>
       <div class="sub" id="appHeaderSub" style="margin:0">draft · approve · share</div>
     </div>
     <div style="display:flex;align-items:center;gap:.5rem">
@@ -2778,9 +2778,10 @@
       <div class="rv-link">
         <label style="margin-bottom:.3rem">Link to the full post <span style="text-transform:none;letter-spacing:0;color:var(--faint);font-weight:400">— attached to Share & Social pack</span></label>
         <div class="rv-link-row">
-          <input id="shareUrl" type="text" inputmode="url" placeholder="inayatpanda.com/blog/…" autocomplete="off" />
+          <input id="shareUrl" type="text" inputmode="url" placeholder="yourblog.example/blog/…" autocomplete="off" />
           <select id="sharePostPick" aria-label="Pick a published post"><option value="">Pick a post…</option></select>
         </div>
+        <div id="shareLinkHint" class="sub" style="display:none;margin:.35rem 0 0;color:var(--faint)">Set your site URL in Settings to enable sharing.</div>
       </div>
       <!-- Images to include: the post's own (cover + blocks) + Add image. Tap to toggle. -->
       <div class="share-imgs">
@@ -3053,7 +3054,7 @@
     <div class="info">
       <div id="connStatus">Checking…</div>
       <p>Origin: <code id="connOrigin"></code></p>
-      <p style="margin-top:.8rem;color:var(--faint);font-size:.82rem">Set-up: see CONNECT.md on the laptop.</p>
+      <p style="margin-top:.8rem;color:var(--faint);font-size:.82rem">Chapbook talks to GitHub with the token and repo you set in <b>Settings</b>. If the status above is not reachable, open Settings and reconnect.</p>
     </div>
   </section>
 
@@ -3091,7 +3092,7 @@
 
     <button class="btn" id="aiSaveBtn" onclick="saveSettings()">Save keys</button>
     <div id="settingsMsg" class="msg"></div>
-    <p class="sub" style="margin-top:.6rem">Paste a key and tap <b>Use this</b> — the Studio picks that provider's current model automatically. Keys are write-only (never shown again); save a new key before testing it.</p>
+    <p class="sub" style="margin-top:.6rem">Paste a key and tap <b>Use this</b> — Chapbook picks that provider's current model automatically. Keys are write-only (never shown again); save a new key before testing it.</p>
 
     <!-- ===== About you / Your voice (the author profile that steers every AI feature) ===== -->
     <div id="profileCard" class="card" style="margin-top:1.1rem">
@@ -3184,8 +3185,8 @@
 
     <!-- ===== Build / version stamp (unobtrusive) — set from window.__STUDIO_BUILD, which
              the deploy pipeline injects at build time (scripts/deploy-studio.sh). ===== -->
-    <p class="sub" id="buildStamp" style="margin-top:1.6rem;opacity:.5;font:.72rem var(--font-mono,ui-monospace,monospace)">Studio · local build</p>
-    <script>(function(){var b=window.__STUDIO_BUILD,el=document.getElementById('buildStamp');if(el)el.textContent=b?('Studio '+b):'Studio · local build';})();</script>
+    <p class="sub" id="buildStamp" style="margin-top:1.6rem;opacity:.5;font:.72rem var(--font-mono,ui-monospace,monospace)">Chapbook · local build</p>
+    <script>(function(){var b=window.__STUDIO_BUILD,el=document.getElementById('buildStamp');if(el)el.textContent=b?('Chapbook '+b):'Chapbook · local build';})();</script>
   </section>
 
   <!-- ===== SITE SETTINGS ===== -->
@@ -3357,7 +3358,7 @@
          loadHomeApps() via GET /studio/api/apps. -->
     <div id="homeApps" style="display:none;margin-top:1.7rem">
       <div class="bar" style="border:0;padding-bottom:.3rem"><h1 style="font-size:.95rem">Your apps</h1></div>
-      <p class="sub" style="margin:0 0 .6rem">The apps this Helm backs — status and quick access.</p>
+      <p class="sub" style="margin:0 0 .6rem">Your connected apps — status and quick access.</p>
       <div id="homeAppsGrid" class="apps-grid"></div>
     </div>
 
@@ -3401,14 +3402,6 @@
         <div class="sub" style="margin:0">Your GitHub token and AI key are saved in your browser.</div>
       </div>
       <button class="btn ghost" type="button" onclick="go('connect');loadConnect()">Connect</button>
-    </div>
-
-    <div class="set-row" style="margin-top:.75rem">
-      <div>
-        <strong>Put it online</strong>
-        <div class="sub" style="margin:0">GitHub Pages, Cloudflare Pages, or Netlify — step-by-step.</div>
-      </div>
-      <a class="btn ghost" href="https://github.com/inayatpanda/inayatpanda-site/blob/main/BUILD-YOUR-OWN.md" target="_blank" rel="noopener">Open the guide</a>
     </div>
 
     <button class="btn" style="margin-top:1.25rem;width:100%" type="button" onclick="dismissGettingStarted()">Done — don't show again</button>
@@ -3508,15 +3501,15 @@
   </section>
 
   <!-- ===== VIDEO LIBRARY (Media › Video) ===== -->
-  <!-- Browse videos uploaded via the editor's Video block. Videos are uploaded,
-       transcoded and published by the LOCAL Helm (npm start) — the hosted BYOK
-       Studio has no video backend, so this shows a tasteful explainer there.
+  <!-- Browse videos uploaded via the editor's Video block. Clips are stored in the
+       user's own Cloudflare R2 bucket (BYOK) and listed through the R2 Worker; until
+       storage is configured this shows a tasteful explainer.
        Best-effort listing: if no list endpoint/videos exist yet, the empty/
        explainer state is shown. No data is fabricated. -->
   <section class="view" id="v-video">
     <div class="wrap">
       <div class="bar"><h1>Video</h1></div>
-      <p class="sub" id="videoLibIntro" style="margin-top:-.3rem">Videos you've uploaded through a post's <b>Video</b> block — transcoded and self-hosted by your Helm. Add new clips from inside a post.</p>
+      <p class="sub" id="videoLibIntro" style="margin-top:-.3rem">Videos you've uploaded through a post's <b>Video</b> block — stored in your Cloudflare R2 bucket. Add new clips from inside a post.</p>
       <div id="videoLibBody"><p class="media-loading">Loading videos…</p></div>
     </div>
   </section>
@@ -3566,12 +3559,12 @@
     <button class="pub-btn" id="editorPublishBtn">Publish</button>
   </div>
   <!-- Schedule for later (overlay) — commits a hidden draft + publishAt; the site's
-       GitHub Action flips it live on the date. Your laptop need NOT be on. -->
+       GitHub Action flips it live on the date. Nothing local needs to be running. -->
   <div id="schedulePanel" class="pp-overlay" hidden>
     <div class="pp-card">
       <div class="pp-head"><strong>Schedule this post</strong><button class="pp-x" id="schClose" aria-label="Close">✕</button></div>
       <div class="pp-body">
-        <p class="sub">Pick when it goes live. It's committed as a hidden draft now and published automatically on the date — your laptop does not need to be on. Nothing is visible until then.</p>
+        <p class="sub">Pick when it goes live. It's committed as a hidden draft now and published automatically on the date — your computer does not need to be on. Nothing is visible until then.</p>
         <label for="schWhen" style="display:block;font:600 .7rem 'Space Grotesk',system-ui;letter-spacing:.06em;text-transform:uppercase;color:#aebbd2;margin:.8rem 0 .3rem">Go live at</label>
         <input id="schWhen" type="datetime-local" style="width:100%;background:#080c16;border:1px solid rgba(140,160,200,.2);border-radius:10px;color:#f4f7fd;padding:.6em .7em;font:inherit">
         <p class="sub" id="schHint" style="margin:.5rem 0 0"></p>
@@ -3714,7 +3707,7 @@
                    placeholder="Paste a DOI or PubMed ID — e.g. 10.1001/jama.2020.1234 or 32511637">
             <button class="btn" id="refsLookupBtn">Look up</button>
           </div>
-          <p class="refs-lookup-hint">DOI works anywhere (Crossref). PubMed ID needs the local Helm.</p>
+          <p class="refs-lookup-hint">DOI works anywhere (Crossref). For a PubMed ID, paste the full reference and use ✦ Tidy instead.</p>
         </div>
         <ol id="refsList" class="refs-list"><!-- live --></ol>
         <div class="refs-add">
@@ -3975,7 +3968,7 @@
     <div class="pp-head"><span aria-hidden="true">🎬</span><strong id="vidTitle">Make a video</strong><button class="pp-x" id="vidClose" aria-label="Close" onclick="closeVideo()">✕</button></div>
     <div class="pp-body">
       <div id="vidLocalOnly" class="vid-local" hidden>
-        <p>Video rendering runs in your <strong>local Helm</strong> (<code>npm start</code>), not the hosted Studio. Open Studio on the machine running Helm to render and download a video.</p>
+        <p>Video rendering isn't available in this hosted app — it needs a server-side renderer. You can still upload finished clips through a post's <strong>Video</strong> block.</p>
       </div>
       <div id="vidEditor">
         <!-- Mode: a regular storyboard (title/point/figure) vs a caption-centric
@@ -4692,11 +4685,10 @@ function classifyError({ status, payload, raw } = {}){
   const e = new Error();
   e.status = status || (raw && raw.status) || 0;
   e.detail = String(rawMsg || (status ? 'HTTP '+status : '') || '').slice(0,400);
-  // network / offline: a fetch that never reached the server (TypeError), or no
-  // status at all (status 0 — e.g. a remote-Helm tunnel that's down, blocked by
-  // CORS, or the laptop is offline/asleep).
+  // network / offline: a fetch that never reached GitHub (TypeError), or no status
+  // at all (status 0 — request blocked by CORS, or the device is offline).
   if((raw && (raw.name === 'TypeError' || /failed to fetch|networkerror|load failed/.test(low))) || (e.status===0 && !low.includes('not configured')) ){
-    e.kind='network'; e.message='Could not reach your Helm — check the laptop is running Helm + the tunnel (or your connection).'; e.retry=true; return e;
+    e.kind='network'; e.message='Could not reach GitHub — check your connection.'; e.retry=true; return e;
   }
   // auth / key problems (GitHub token or AI key missing / invalid)
   if(/ai_no_key|no api key|missing.*key|set.*key|configure.*ai/.test(low)){
@@ -5032,7 +5024,7 @@ async function loadHomeApps(){
     const apps = (j && j.apps) || [];
     grid.innerHTML = apps.length
       ? apps.map(renderAppCard).join('')
-      : '<p class="sub" style="margin:0">No apps configured on this Helm.</p>';
+      : '<p class="sub" style="margin:0">No apps configured yet.</p>';
   }catch(e){
     grid.innerHTML = '<p class="sub" style="margin:0">Couldn’t load your apps right now.</p>';
   }
@@ -5109,16 +5101,16 @@ window.regen=regen;
    dist build); the local same-origin server build loads no bundle, so MIRROR the
    same logic inline. Keep the two in step — see studio-app/core/shareIntents.js. */
 const SHARE = (typeof window!=='undefined' && window.__studioShare) || (function(){
-  const DEFAULT_ORIGIN='https://inayatpanda.com';
+  const DEFAULT_ORIGIN='';   // no owner default: empty origin → sharing disabled until the site URL is set
   function normaliseOrigin(o){ const raw=String(o||'').trim(); if(!raw) return DEFAULT_ORIGIN;
     let u; try{ u=new URL(/^https?:\/\//i.test(raw)?raw:'https://'+raw); }catch{ return DEFAULT_ORIGIN; }
     return (u.origin&&u.origin!=='null')?u.origin:DEFAULT_ORIGIN; }
   function displayShareUrl(url){ const s=String(url||'').trim(); return s?s.replace(/^https?:\/\//i,''):''; }
   function shareableUrl(url){ const s=String(url||'').trim(); if(!s) return '';
     if(/^[a-z][a-z0-9+.-]*:\/\//i.test(s)||/^(mailto|tel):/i.test(s)) return s; return 'https://'+s.replace(/^\/+/,''); }
-  function postLiveUrl(slug,origin){ const s=String(slug||'').replace(/^\/+|\/+$/g,''); return s?normaliseOrigin(origin)+'/blog/'+s+'/':''; }
+  function postLiveUrl(slug,origin){ const s=String(slug||'').replace(/^\/+|\/+$/g,''); if(!s) return ''; const o=normaliseOrigin(origin); return o?o+'/blog/'+s+'/':null; }
   function absoluteImageUrl(ref,origin){ const r=String(ref||'').trim(); if(!r) return '';
-    if(/^data:/i.test(r)||/^https?:\/\//i.test(r)) return r; if(r.startsWith('/')) return normaliseOrigin(origin)+r; return ''; }
+    if(/^data:/i.test(r)||/^https?:\/\//i.test(r)) return r; if(r.startsWith('/')){ const o=normaliseOrigin(origin); return o?o+r:null; } return ''; }
   function postImageUrls(doc,data,{slug='',origin}={}){ const out=[],seen=new Set();
     const push=(ref,label)=>{ const url=absoluteImageUrl(ref,origin); if(!url||seen.has(url)) return; seen.add(url); out.push({url,label}); };
     const fileUrl=(file)=>(slug&&file?'/images/posts/'+slug+'/'+file:'');
@@ -5146,8 +5138,16 @@ const SHARE = (typeof window!=='undefined' && window.__studioShare) || (function
   function shareSheetText(lines,url){ const t=String(lines||'').trim(),u=String(url||'').trim(); return (t&&u)?t+'\n\n'+u:(t||u); }
   return { normaliseOrigin, displayShareUrl, shareableUrl, postLiveUrl, absoluteImageUrl, postImageUrls, PLATFORM_CAP, SHARE_PLATFORMS, buildIntent, shareIntents, shareSheetText };
 })();
-// The configured live-site origin (src/data/site.json `url`); falls back to the default.
+// The configured live-site origin (the user's site `url`); '' until they set it.
 function _siteOrigin(){ return SHARE.normaliseOrigin((_siteCfgCache && _siteCfgCache.url) || ''); }
+// Sharing derives live links from the configured site origin. When it's unset, the
+// post-picker can't build URLs → show a hint and disable it (manual paste still works).
+function _refreshShareLinkUI(){
+  const on = !!_siteOrigin();
+  const hint = $('shareLinkHint'); if(hint) hint.style.display = on ? 'none' : '';
+  const pick = $('sharePostPick'); if(pick) pick.disabled = !on;
+}
+window._refreshShareLinkUI = _refreshShareLinkUI;
 
 /* ── Share image picker ─────────────────────────────────────────────────────
    The post's own images (cover + image/gallery/figure blocks) plus any freshly
@@ -5201,7 +5201,7 @@ async function _shareImageToFile(im){
 }
 
 /* The "Link to the full post" field DISPLAYS the URL without its scheme
-   (e.g. inayatpanda.com/blog/…), but every share/intent/queue link must carry
+   (e.g. example.com/blog/…), but every share/intent/queue link must carry
    https://. _shareLink() reads the field and re-adds the scheme when missing, so
    what gets posted always has it. Writes into the field go through SHARE.displayShareUrl. */
 function _shareLink(){ return SHARE.shareableUrl(($('shareUrl')?.value||'').trim()); }
@@ -5435,9 +5435,14 @@ async function makeShareCard(){
     lines.forEach((ln,i)=>ctx.fillText(ln, pad, startY+i*lh));
     ctx.fillStyle=acc; ctx.fillRect(pad, startY+lines.length*lh-lh*0.35+26*k, 140*k, 10*k);
   }
-  // footer: name + site, quiet
-  ctx.fillStyle='#717d99'; ctx.font=`500 ${Math.round(26*k)}px "Inter", system-ui`;
-  ctx.fillText('Inayat Panda · inayatpanda.com', pad, footY);
+  // footer: author + site host from the user's config; skip the line when nothing is set
+  {
+    const _c=_siteCfgCache||{};
+    const _author=String(_c.name||'').trim();
+    let _host=''; const _o=_siteOrigin(); if(_o){ try{ _host=new URL(_o).host; }catch{} }
+    const _foot=[_author,_host].filter(Boolean).join(' · ');
+    if(_foot){ ctx.fillStyle='#717d99'; ctx.font=`500 ${Math.round(26*k)}px "Inter", system-ui`; ctx.fillText(_foot, pad, footY); }
+  }
   const blob=await new Promise(r=>cv.toBlob(r,'image/png'));
   _cardState.blob=blob;
   _cardState.dataUrl=cv.toDataURL('image/png');
@@ -5539,8 +5544,11 @@ async function loadSharePicks(){
   if(_sharePicksLoaded) return; _sharePicksLoaded=true;
   try{
     await ensureSiteCfg();
-    const posts=await api('/posts'); const sel=$('sharePostPick'); if(!sel) return;
-    (posts||[]).filter(p=>!p.draft).forEach(p=>{ const o=document.createElement('option'); o.value=SHARE.postLiveUrl(p.slug, _siteOrigin()); o.textContent=p.title||p.slug; sel.appendChild(o); });
+    _refreshShareLinkUI();
+    const sel=$('sharePostPick'); if(!sel) return;
+    if(!_siteOrigin()){ _sharePicksLoaded=false; return; }   // no site URL → can't derive live links
+    const posts=await api('/posts');
+    (posts||[]).filter(p=>!p.draft).forEach(p=>{ const url=SHARE.postLiveUrl(p.slug, _siteOrigin()); if(!url) return; const o=document.createElement('option'); o.value=url; o.textContent=p.title||p.slug; sel.appendChild(o); });
   }catch{ _sharePicksLoaded=false; }
 }
 // after publishing anywhere, remember the URL and pre-fill the share-link field
@@ -5576,13 +5584,18 @@ function showPublishBar(url, source){
   // The publish routes return a site-relative /blog/<slug>/ — absolutise it
   // against the configured live-site origin so "View live" is a genuine link.
   const u=String(url||'');
+  const o=_siteOrigin();
   const live = /^[a-z][a-z0-9+.-]*:\/\//i.test(u) ? u
-    : (u.startsWith('/') ? _siteOrigin()+u : SHARE.shareableUrl(u));
+    : (u.startsWith('/') ? (o ? o+u : '') : SHARE.shareableUrl(u));
+  // Only show "View live" when we could build an absolute link (needs the site URL).
+  const viewLive = /^https?:\/\//i.test(live)
+    ? '<a class="pb-btn" href="'+esc(live)+'" target="_blank" rel="noopener">View live '+tico('external-link')+'</a>'
+    : '';
   const bar=document.createElement('div');
   bar.id='pubBar'; bar.setAttribute('role','status');
   bar.innerHTML =
     '<span class="pb-msg">'+tico('circle-check')+'Published</span>'
-    +'<a class="pb-btn" href="'+esc(live)+'" target="_blank" rel="noopener">View live '+tico('external-link')+'</a>'
+    +viewLive
     +'<button type="button" class="pb-btn" id="pubBarSocial">Draft social posts</button>'
     +'<button type="button" class="pb-x" aria-label="Dismiss">'+tico('x')+'</button>';
   bar.querySelector('#pubBarSocial').addEventListener('click',()=>{ dismissPublishBar(); announceFlow(url, source||''); });
@@ -6015,7 +6028,7 @@ function makePostRow(p){
       <div class="pm-title">${esc(p.title||p.slug)}</div>
       <div class="pm-meta">
         <span class="pm-status ${statusCls}">${statusTxt}</span>
-        ${scheduled?`<span title="Goes live automatically — your laptop need not be on">🗓 ${esc(schLabel)}</span>`:`<span>${esc(p.date||'—')}</span>`}
+        ${scheduled?`<span title="Goes live automatically — your computer need not be on">🗓 ${esc(schLabel)}</span>`:`<span>${esc(p.date||'—')}</span>`}
         ${p.photoCount?`<span>${p.photoCount} photo${p.photoCount===1?'':'s'}</span>`:''}
         ${topics.slice(0,4).map(t=>`<span class="chip">${esc(t)}</span>`).join('')}
       </div>
@@ -6055,7 +6068,8 @@ function makePostRow(p){
    the few-lines box seeded with a short summary (edit, or AI-draft). NEVER posts. */
 async function shareFromPost(p){
   await ensureSiteCfg();                       // warm the configured site origin
-  const url=SHARE.postLiveUrl(p.slug, _siteOrigin());
+  _refreshShareLinkUI();
+  const url=SHARE.postLiveUrl(p.slug, _siteOrigin());  // null when no site URL is configured
   let doc=null, data=null;
   try{ const r=await api('/posts/'+p.slug+'/blocks'); doc=(r&&r.doc)||null; data=(r&&r.data)||null; }catch{}
   const summary=docToText(doc||{}).slice(0,1500);
@@ -6907,8 +6921,8 @@ window.saveSettings=saveSettings;
 
 /* ── R2 video storage (BYOK direct-to-R2) ──────────────────────────────────
    Pure browser concern: reads/writes window.__studioConfig (config.r2). Only
-   shown in the hosted Studio (where __studioConfig exists); the local same-origin
-   Helm build uses its server config instead. The secret is browser-only. */
+   shown in the hosted app (where __studioConfig exists); a local server build
+   would use its server config instead. The secret is browser-only. */
 function loadR2Settings(){
   const row=$('r2Row'); if(!row) return;
   const cfg=window.__studioConfig;
@@ -6928,12 +6942,12 @@ function loadR2Settings(){
   if($('r2-worker-url')) $('r2-worker-url').value = w.url||'';
   if($('r2-worker-secret')){ $('r2-worker-secret').value=''; $('r2-worker-secret').placeholder = w.secret ? '•••• set (leave blank to keep)' : 'paste the UPLOAD_SECRET'; }
   if($('r2WorkerFields')) $('r2WorkerFields').style.display = on ? '' : 'none';
-  // Mode-aware optimise note: only mention a backend transcode path when one is actually
-  // reachable (remote-Helm mode). In pure BYOK there is no Helm, so don't imply one.
+  // Mode-aware optimise note: only mention a backend transcode path when a server-side
+  // backend is actually reachable. In pure BYOK there is no backend, so don't imply one.
   const optNote=$('r2OptimiseNote');
   if(optNote){
     optNote.innerHTML = videoHelmReachable()
-      ? 'Note: this is a raw upload — no transcode. Your Helm remains the optimise path (it archives the original, makes a web copy + poster). On a UK ISP/mobile network, R2 uploads can be blocked by SNI filtering — turn on a VPN/WARP if an upload fails to connect.'
+      ? 'Note: this is a raw upload — no transcode. A server-side optimise path archives the original and makes a web copy + poster. On a UK ISP/mobile network, R2 uploads can be blocked by SNI filtering — turn on a VPN/WARP if an upload fails to connect.'
       : 'Note: this is a raw upload — no transcode (the clip is stored as-is). On a UK ISP/mobile network, R2 uploads can be blocked by SNI filtering — turn on a VPN/WARP if an upload fails to connect.';
   }
 }
@@ -7229,7 +7243,7 @@ async function saveCustomDomain() {
   done.style.display = 'none';
 
   if (!co) {
-    msg('ssDomainMsg', 'This needs the GitHub connection on this device (BYOK). On a phone connected to your Helm, set the domain from the laptop that holds your keys.', 'err');
+    msg('ssDomainMsg', 'This needs your GitHub connection on this device. Open Settings and connect your GitHub token, then set the domain again.', 'err');
     return;
   }
   const raw = ($('ss-domain').value || '').trim();
@@ -7291,7 +7305,7 @@ async function verifyCustomDomain() {
   const co = ghCoords();
   const btn = $('ssDomainVerifyBtn');
   if (!co || !gh || typeof gh.getPages !== 'function') {
-    msg('ssDomainVerifyMsg', 'Verifying needs the GitHub connection on this device (BYOK). On a phone connected to your Helm, verify from the laptop that holds your keys.', 'err');
+    msg('ssDomainVerifyMsg', 'Verifying needs your GitHub connection on this device. Open Settings and connect your GitHub token, then verify again.', 'err');
     return;
   }
   // Prefer the typed domain; fall back to whatever GitHub already has.
@@ -7990,7 +8004,7 @@ async function lookupReference(){
   try{
     if(doi){
       // Crossref: public + CORS-enabled. Polite mailto helps NCBI/Crossref rate-limit nicely.
-      const url=`https://api.crossref.org/works/${encodeURIComponent(doi)}?mailto=studio@inayatpanda.com`;
+      const url=`https://api.crossref.org/works/${encodeURIComponent(doi)}?mailto=support@rqai.co.uk`;
       let res;
       try{ res=await fetch(url,{headers:{Accept:'application/json'}}); }
       catch(e){ throw new Error('Could not reach Crossref. Check your connection, or paste the reference and use ✦ Tidy.'); }
@@ -8010,7 +8024,7 @@ async function lookupReference(){
         const status=err&&err.status;
         // 404 here means either "no such PMID" OR "route absent" (BYOK). Guide the owner either way.
         if(status===404 || /not found/i.test(err.message||'')){
-          toast('PubMed lookup needs the local Helm. Paste the reference and use ✦ Tidy, or use a DOI.');
+          toast('PubMed lookup is not available here. Paste the reference and use ✦ Tidy, or use a DOI.');
         } else { throw err; }
       }
     }
@@ -9423,13 +9437,13 @@ function edEmbed(b, isSel){
 
   // Helm-mode: upload a local video → Helm archives the original, transcodes a web
   // copy + poster, pushes to the media host, and fills this block with the public URLs.
-  // Capability-probed: on 503/VIDEO_LOCAL_ONLY (BYOK / hosted Studio) the control hides,
+  // Capability-probed: on 503/VIDEO_LOCAL_ONLY (BYOK, no server backend) the control hides,
   // leaving BYOK users the paste-a-URL path. Filling the block leaves it a DRAFT — the
   // owner still publishes the POST explicitly (never auto-published here).
   const up = document.createElement('div');
   up.className = 'be-embed-upload';
   const upBtn = document.createElement('button');
-  upBtn.type = 'button'; upBtn.className = 'btn ghost'; upBtn.textContent = '⬆ Upload a video (Helm)';
+  upBtn.type = 'button'; upBtn.className = 'btn ghost'; upBtn.textContent = '⬆ Upload a video (server)';
   const fileIn = document.createElement('input');
   fileIn.type = 'file'; fileIn.accept = 'video/*'; fileIn.capture = 'environment'; fileIn.style.display = 'none';
   const bar = document.createElement('div'); bar.className = 'be-embed-prog'; bar.hidden = true;
@@ -9443,7 +9457,7 @@ function edEmbed(b, isSel){
     upBtn.disabled = true;
     bar.hidden = false; const setP = (p, m) => { fill.style.width = Math.round((p || 0) * 100) + '%'; if (m) upMsg.textContent = m; };
     try {
-      // 1) Upload (multipart). api() routes to local Helm or remote-Helm tunnel; a
+      // 1) Upload (multipart). api() routes to the server backend when present; a
       //    FormData body keeps the browser's own multipart Content-Type (boundary).
       setP(0.05, 'Uploading…');
       const fd = new FormData(); fd.append('file', file, file.name);
@@ -10997,7 +11011,7 @@ async function runLinkCheck(onPublish){
     const polishEl = $('ppBody').querySelector('.pp-polish');
     if(polishEl){
       const note = lint.externalSkipped
-        ? '<div class="pp-links-state">External-link reachability is only checked in your local Helm.</div>'
+        ? '<div class="pp-links-state">External-link reachability is not checked in this hosted app.</div>'
         : '';
       polishEl.outerHTML = renderPolish(lint, note);
     }
@@ -11169,8 +11183,8 @@ $('editorPublishBtn').addEventListener('click', async ()=>{
 /* ── scheduled publishing ───────────────────────────────────────────────────
    "Schedule" commits the post as a HIDDEN draft (draft:true) carrying a publishAt
    ISO date. The site's GitHub Action (cron, hourly) flips draft→false once publishAt
-   is due, which triggers the normal deploy. The laptop need NOT be on; nothing can
-   go live before the date because the commit is draft:true until the Action runs. */
+   is due, which triggers the normal deploy. Nothing local needs to be running; nothing
+   can go live before the date because the commit is draft:true until the Action runs. */
 function openSchedule(){
   // default to the existing schedule (re-schedule) or one hour from now, rounded to the hour
   let when = meta.publishAt ? new Date(meta.publishAt) : null;
@@ -13754,12 +13768,23 @@ function renderMediaGroups(container, groups, { onPick, copyOnly, filter } = {})
       cell.type = 'button';
       cell.className = 'media-cell';
       cell.title = im.url;
-      const pic = document.createElement('img');
-      pic.loading = 'lazy';
-      // committed images live at inayatpanda.com; show the live URL as the thumbnail.
-      pic.src = 'https://inayatpanda.com' + im.url;
-      pic.alt = im.file;
-      cell.appendChild(pic);
+      // Committed images live on the user's published site; resolve the live URL from
+      // the configured site origin. No site URL set → show a neutral placeholder tile.
+      const abs = SHARE.absoluteImageUrl(im.url, _siteOrigin());
+      if(abs){
+        const pic = document.createElement('img');
+        pic.loading = 'lazy';
+        pic.src = abs;
+        pic.alt = im.file;
+        cell.appendChild(pic);
+      } else {
+        const ph = document.createElement('div');
+        ph.className = 'media-cell-ph';
+        ph.setAttribute('aria-hidden','true');
+        ph.textContent = '🖼';
+        ph.style.cssText = 'display:flex;align-items:center;justify-content:center;font-size:1.4rem;opacity:.5;min-height:72px';
+        cell.appendChild(ph);
+      }
       const fn = document.createElement('span');
       fn.className = 'media-fn';
       fn.textContent = im.file;
@@ -17300,7 +17325,7 @@ function _siteHostLabel(){
   return _siteMasthead();
 }
 
-/* Build the satori-style OG mock — replicates inayatpanda-site/src/lib/og.ts:
+/* Build the satori-style OG mock — mirrors the site's OG-image layout:
    near-black #04060c bg, the teal→cyan→violet accent line, the masthead, the
    big white title, the byline + topic eyebrow in accent. The masthead, author
    name and role all come from the user's site config (generic fallbacks). */
@@ -17499,8 +17524,8 @@ function ptRenderStarters(){
 // Show quick-starts only on an empty thread (fresh/new session); hide once chatting.
 function ptToggleStarters(){ const el=$('ptStarters'); if(!el) return; const empty=!$('ptThread').children.length; el.hidden=!empty; }
 function ptAddMsg(role, text){ const t=$('ptThread'); const d=document.createElement('div'); d.className='pt-msg '+(role==='user'?'user':'ai'); d.textContent=text; t.appendChild(d); t.scrollTop=t.scrollHeight; ptToggleStarters(); }
-// Render the post as it'll look live. The CSS MUST be inlined, not linked: a
-// <base href="inayatpanda.com"> (or the about:srcdoc base) makes a root-relative
+// Render the post as it'll look live. The CSS MUST be inlined, not linked: the
+// about:srcdoc base makes a root-relative
 // <link href="/studio/preview.css"> resolve off-document and 404, leaving default
 // black text on the dark iframe background. Mirror the editor preview exactly —
 // inline preview.css + the data-post-theme="dark" article wrapper.
@@ -17555,7 +17580,8 @@ function initPartner(){
   $('ptNew').addEventListener('click',ptNew);
   $('ptUndo').addEventListener('click',async()=>{ if(!ptSession) return; const s=await api('/partner/'+ptSession); const v=(s.versions.length||1)-1; if(v<1){ toast('Nothing earlier to undo to'); return; } const r=await api('/partner/'+ptSession+'/revert',{method:'POST',body:JSON.stringify({version:v})}); ptAddMsg('ai','↩ reverted to turn '+v); await ptRenderDoc(r&&r.doc); });
   $('ptPublish').addEventListener('click',async()=>{ if(!ptSession) return;
-    if(!confirm('Publish this post to inayatpanda.com now?\n\nIt will be live in ~2 minutes. You can take it down again from Posts.')) return;
+    let _pubHost=''; { const _o=_siteOrigin(); if(_o){ try{ _pubHost=new URL(_o).host; }catch{} } }
+    if(!confirm('Publish this post to '+(_pubHost||'your blog')+' now?\n\nIt will be live in ~2 minutes. You can take it down again from Posts.')) return;
     const r=await api('/partner/'+ptSession+'/publish',{method:'POST'});
     if(r.ok){ let src=''; try{ src=($('ptFrame').contentDocument.body.innerText||'').trim().slice(0,1500); }catch{} await offerAnnounce(r.url, src); }
     else toast((r.errors||[]).map(e=>e.message).join('; ')); });
@@ -17815,12 +17841,12 @@ let _videoLibLoaded = false;
 function initVideoLibrary(){ setVideoLibIntro(); loadVideoLibrary(); }
 window.initVideoLibrary = initVideoLibrary;
 
-// Mode-aware library intro: Helm wording only when a backend is actually reachable;
-// in BYOK mode phrase it in terms of the user's own R2 storage (no backend Helm).
+// Mode-aware library intro: backend wording only when a backend is actually reachable;
+// in BYOK mode phrase it in terms of the user's own R2 storage (no backend).
 function setVideoLibIntro(){
   const el = $('videoLibIntro'); if(!el) return;
   el.innerHTML = videoHelmReachable()
-    ? `Videos you've uploaded through a post's <b>Video</b> block — transcoded and self-hosted by your Helm. Add new clips from inside a post.`
+    ? `Videos you've uploaded through a post's <b>Video</b> block — transcoded and self-hosted for you. Add new clips from inside a post.`
     : `Videos in your Cloudflare R2 storage — add new clips from a post's <b>Video</b> block.`;
 }
 
@@ -17837,15 +17863,11 @@ function videoHelmReachable(){
   return false;                                                            // hosted product, BYOK mode
 }
 
-// Mode-aware product name. Local Helm (or a remote tunnel to one) → "The Helm";
-// the hosted, pure-BYOK Studio → "Studio". Drives the document title and BOTH
-// mastheads (login/onboarding + the app header). Single colour by markup (no <b>).
-// Called once the mode is known (the boot gate / boot()), and re-callable if the
-// mode changes (e.g. after connecting to a remote Helm).
+// Product name for the document title + app-header masthead. Single-mode: always
+// "Chapbook". Called once the mode is known (the boot gate / boot()).
 function applyBrandName(){
-  const name = videoHelmReachable() ? 'The Helm' : 'Studio';
+  const name = 'Chapbook';
   document.title = name;
-  const login = document.getElementById('loginBrand');     if(login)  login.textContent  = name;
   const header = document.getElementById('appHeaderTitle'); if(header) header.textContent = name;
 }
 window.applyBrandName = applyBrandName;
@@ -17882,15 +17904,15 @@ async function loadVideoLibrary(){
     const r = await api('/media/video/list');
     list = Array.isArray(r) ? r : (r && Array.isArray(r.videos) ? r.videos : []);
   }catch(e){
-    // 503/local-only (BYOK or hosted Studio) → explain where video lives; otherwise a
+    // 503/local-only (BYOK, no server backend) → explain where video lives; otherwise a
     // missing endpoint / network blip → the same gentle empty state (no fake rows).
     if(e && (e.status === 503 || e.code === 'VIDEO_LOCAL_ONLY')){
       videoLibExplainer(
-        `<b>Video lives on your local Helm.</b><br>Uploading, transcoding and self-hosting clips runs in the Helm on your Mac (<code>npm&nbsp;start</code>), not the hosted Studio. Open Studio on that machine to browse and add videos.`
+        `<b>Video isn't available in this hosted app.</b><br>Uploading and transcoding need a server-side backend. Store finished clips in your own Cloudflare R2 bucket instead — set it up in <b>Settings → Video storage</b>.`
       );
     } else {
       videoLibExplainer(
-        `<b>No videos yet.</b><br>Add a video from inside a post: open the editor, drop in a <b>Video</b> block, and upload a clip. Your Helm transcodes and self-hosts it — then it'll appear here.`
+        `<b>No videos yet.</b><br>Add a video from inside a post: open the editor, drop in a <b>Video</b> block, and upload a clip. It's transcoded and self-hosted for you — then it'll appear here.`
       );
     }
     _videoLibLoaded = false;
@@ -17900,7 +17922,7 @@ async function loadVideoLibrary(){
   _videoLibLoaded = true;
   if(!list.length){
     videoLibExplainer(
-      `<b>No videos yet.</b><br>Add a video from inside a post: open the editor, drop in a <b>Video</b> block, and upload a clip${videoHelmReachable() ? '. Your Helm transcodes and self-hosts it' : ' to your R2 bucket'} — then it'll appear here.`
+      `<b>No videos yet.</b><br>Add a video from inside a post: open the editor, drop in a <b>Video</b> block, and upload a clip${videoHelmReachable() ? '. It\'s transcoded and self-hosted for you' : ' to your R2 bucket'} — then it'll appear here.`
     );
     return;
   }
@@ -18251,7 +18273,7 @@ $('libIconGrid')?.addEventListener('click',e=>{ const t=e.target.closest('.gp-ti
    ordered scene cards (add / remove / reorder / per-scene seconds + format), then
    render the Remotion PostVideo to an MP4 via the LOCAL render-job route and poll to
    done → preview + download + (Web Share where available). Rendering is local-only;
-   the BYOK hosted Studio reports a 503 and we show the friendly local-only message. */
+   the BYOK app (no server backend) reports a 503 and we show the friendly local-only message. */
 const _vid = { storyboard:null, scenes:[], format:'9:16', transition:'fade', audio:null, pollTimer:null, blobUrl:null, slug:null, mode:'story' };
 
 async function makeVideo(p){
@@ -18677,8 +18699,7 @@ applyBrandName();
    using WebCrypto Ed25519 (same algorithm as the CLI's node:crypto signing).
 
    NOTE: client-side verification is a DETERRENT, not tamper-proof — a determined
-   user can edit the bundle in their own browser. The real gate is the Helm
-   startup check (server/index.js); this stops casual use of the hosted Studio.
+   user can edit the bundle in their own browser. It stops casual use, nothing more.
 
    Modes:
      • LOCAL Helm (server-backed build): try GET /studio/api/licence first, so the

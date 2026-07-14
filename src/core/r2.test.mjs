@@ -74,13 +74,13 @@ test('contentTypeFor prefers file.type, falls back by extension', () => {
   assert.equal(contentTypeFor({ name: 'a.bin' }), 'application/octet-stream');
 });
 
-test('buildCorsPolicy returns a valid R2 policy for the Studio origin', () => {
+test('buildCorsPolicy returns a valid R2 policy for the default origin', () => {
   const c = buildCorsPolicy();
-  assert.equal(c.origin, 'https://inayat-studio.netlify.app');
+  assert.equal(c.origin, 'https://chapbook.rqai.co.uk');
   const parsed = JSON.parse(c.json);
   assert.equal(Array.isArray(parsed), true);
   const rule = parsed[0];
-  assert.deepEqual(rule.AllowedOrigins, ['https://inayat-studio.netlify.app']);
+  assert.deepEqual(rule.AllowedOrigins, ['https://chapbook.rqai.co.uk']);
   assert.deepEqual(rule.AllowedMethods, ['PUT', 'GET']);
   assert.deepEqual(rule.AllowedHeaders, ['*']);
   assert.deepEqual(rule.ExposeHeaders, ['ETag']);

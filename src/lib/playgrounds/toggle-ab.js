@@ -40,7 +40,7 @@ export default {
       name: 'Cloud vs on-device',
       params: {
         title: 'Where does the data live?',
-        stateA: { label: 'On-device', accent: '#2dd4bf', caption: 'The record never leaves the laptop. No round trip, nothing to intercept.',
+        stateA: { label: 'On-device', accent: '#2dd4bf', caption: 'The record never leaves the device. No round trip, nothing to intercept.',
           readouts: [{ label: 'Latency', value: 'instant' }, { label: 'Who can read it', value: 'only you' }, { label: 'Offline', value: 'still works' }] },
         stateB: { label: 'Cloud', accent: '#f472b6', caption: 'Every save is a return flight to a building you will never see.',
           readouts: [{ label: 'Latency', value: 'round trip' }, { label: 'Who can read it', value: 'you + the vendor' }, { label: 'Offline', value: 'broken' }] },

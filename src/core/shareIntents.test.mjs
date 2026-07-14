@@ -8,7 +8,7 @@ import {
 
 /* ── share-link display: strip the scheme for display, re-add it for sharing ── */
 test('displayShareUrl: strips http(s):// for a cleaner display value', () => {
-  assert.equal(displayShareUrl('https://inayatpanda.com/blog/x/'), 'inayatpanda.com/blog/x/');
+  assert.equal(displayShareUrl('https://example.com/blog/x/'), 'example.com/blog/x/');
   assert.equal(displayShareUrl('http://example.com'), 'example.com');
   assert.equal(displayShareUrl('  https://example.com/p  '), 'example.com/p'); // trims first
   assert.equal(displayShareUrl(''), '');
@@ -17,7 +17,7 @@ test('displayShareUrl: strips http(s):// for a cleaner display value', () => {
 });
 
 test('shareableUrl: re-adds https:// when the displayed value lacks a scheme', () => {
-  assert.equal(shareableUrl('inayatpanda.com/blog/x/'), 'https://inayatpanda.com/blog/x/');
+  assert.equal(shareableUrl('example.com/blog/x/'), 'https://example.com/blog/x/');
   assert.equal(shareableUrl('example.com'), 'https://example.com');
   assert.equal(shareableUrl('https://example.com/p'), 'https://example.com/p'); // already has one → kept
   assert.equal(shareableUrl('http://example.com'), 'http://example.com');       // http preserved
@@ -26,30 +26,30 @@ test('shareableUrl: re-adds https:// when the displayed value lacks a scheme', (
 });
 
 test('share-link round-trips: display(strip) → shareable(re-add) is lossless for https', () => {
-  for (const u of ['https://inayatpanda.com/blog/the-knee/', 'https://example.com', 'https://a.b/c?d=e']) {
+  for (const u of ['https://example.com/blog/the-knee/', 'https://example.com', 'https://a.b/c?d=e']) {
     assert.equal(shareableUrl(displayShareUrl(u)), u, 'round-trip preserves the original https URL');
   }
   // The posted link ALWAYS carries a scheme even when the field shows none.
-  assert.ok(/^https:\/\//.test(shareableUrl('inayatpanda.com/blog/x/')));
+  assert.ok(/^https:\/\//.test(shareableUrl('example.com/blog/x/')));
   // And buildIntent gets a real, schemed link from the re-added value.
   const intent = buildIntent('x', { lines: 'hi', url: shareableUrl(displayShareUrl('https://example.com/p')) });
   assert.ok(intent.href.includes(encodeURIComponent('https://example.com/p')));
 });
 
 /* ── normaliseOrigin ──────────────────────────────────────────────────────── */
-test('normaliseOrigin: trims, drops trailing slash, defaults on junk', () => {
+test('normaliseOrigin: trims, drops trailing slash, empty on junk (no owner default)', () => {
   assert.equal(normaliseOrigin('https://example.com/'), 'https://example.com');
   assert.equal(normaliseOrigin('  https://example.com  '), 'https://example.com');
   assert.equal(normaliseOrigin('example.com'), 'https://example.com');     // adds scheme
-  assert.equal(normaliseOrigin(''), 'https://inayatpanda.com');            // empty → default
-  assert.equal(normaliseOrigin(null), 'https://inayatpanda.com');
-  assert.equal(normaliseOrigin('::::'), 'https://inayatpanda.com');        // unparseable → default
+  assert.equal(normaliseOrigin(''), '');                                   // empty → '' (sharing disabled)
+  assert.equal(normaliseOrigin(null), '');
+  assert.equal(normaliseOrigin('::::'), '');                               // unparseable → ''
 });
 
 /* ── postLiveUrl ──────────────────────────────────────────────────────────── */
 test('postLiveUrl: <origin>/blog/<slug>/ — the real blog path', () => {
   assert.equal(postLiveUrl('my-post', 'https://example.com'), 'https://example.com/blog/my-post/');
-  assert.equal(postLiveUrl('my-post'), 'https://inayatpanda.com/blog/my-post/'); // default origin
+  assert.equal(postLiveUrl('my-post'), null);                              // no configured origin → null
   assert.equal(postLiveUrl('/my-post/', 'https://example.com'), 'https://example.com/blog/my-post/'); // strips slashes
   assert.equal(postLiveUrl('', 'https://example.com'), '');                 // no slug → empty
 });
@@ -59,6 +59,7 @@ test('absoluteImageUrl: passes data/http through, absolutises root-relative', ()
   assert.equal(absoluteImageUrl('data:image/jpeg;base64,AAA'), 'data:image/jpeg;base64,AAA');
   assert.equal(absoluteImageUrl('https://cdn.test/x.jpg'), 'https://cdn.test/x.jpg');
   assert.equal(absoluteImageUrl('/images/posts/p/a.jpg', 'https://example.com'), 'https://example.com/images/posts/p/a.jpg');
+  assert.equal(absoluteImageUrl('/images/posts/p/a.jpg'), null); // root-relative, no origin → null (can't absolutise)
   assert.equal(absoluteImageUrl('relative/x.jpg', 'https://example.com'), ''); // unanchored → dropped
   assert.equal(absoluteImageUrl(''), '');
 });

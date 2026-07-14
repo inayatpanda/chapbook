@@ -75,7 +75,7 @@ export function contentTypeFor(file) {
 // R2 rejects a browser PUT unless the bucket allows the Studio origin. We can't set
 // this for the user (no account API on the BYOK path), so on a CORS/preflight failure
 // we surface this copy-pasteable policy + where to paste it.
-export function buildCorsPolicy(origin = 'https://inayat-studio.netlify.app') {
+export function buildCorsPolicy(origin = 'https://chapbook.rqai.co.uk') {
   const policy = [
     {
       AllowedOrigins: [origin],

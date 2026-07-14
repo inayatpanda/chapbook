@@ -13,10 +13,12 @@
 //      / figure blocks) out of its block doc + frontmatter, as absolute URLs, for the
 //      tap-to-include image grid.
 
-const DEFAULT_ORIGIN = 'https://inayatpanda.com';
+// No owner default: until the user sets their site URL, the origin is empty and
+// sharing is disabled (the UI prompts them to set it in Settings).
+const DEFAULT_ORIGIN = '';
 
-// Normalise a site origin (from src/data/site.json `url`, or a fallback) to a bare
-// scheme+host with no trailing slash. Junk / empty → the default origin.
+// Normalise a site origin (from the user's configured site `url`) to a bare
+// scheme+host with no trailing slash. Junk / empty → '' (sharing disabled).
 export function normaliseOrigin(origin) {
   const raw = String(origin || '').trim();
   if (!raw) return DEFAULT_ORIGIN;
@@ -27,7 +29,7 @@ export function normaliseOrigin(origin) {
 }
 
 // ── Share-link display: show the URL WITHOUT its scheme in the "Link to the full
-//    post" field (cleaner: "inayatpanda.com/blog/…"), but ALWAYS share the real
+//    post" field (cleaner: "example.com/blog/…"), but ALWAYS share the real
 //    https:// link. displayShareUrl strips a leading http(s):// for display;
 //    shareableUrl re-adds https:// when a displayed value lacks a scheme, so the
 //    posted/intent link is never schemeless. data: / mailto: etc. are left as-is.
@@ -45,20 +47,28 @@ export function shareableUrl(url) {
 }
 
 // A published post's live URL: <origin>/blog/<slug>/  (the site's real blog path).
+// Returns '' for an empty slug, and null when no site origin is configured (sharing
+// is disabled until the user sets their site URL in Settings).
 export function postLiveUrl(slug, origin) {
   const s = String(slug || '').replace(/^\/+|\/+$/g, '');
   if (!s) return '';
-  return normaliseOrigin(origin) + '/blog/' + s + '/';
+  const o = normaliseOrigin(origin);
+  if (!o) return null;
+  return o + '/blog/' + s + '/';
 }
 
 // Absolutise an image reference against the site origin. data: URLs and full
-// http(s) URLs are returned untouched; root-relative paths (/images/posts/…) are
-// prefixed with the origin; anything else → ''.
+// http(s) URLs are returned untouched (no origin needed); root-relative paths
+// (/images/posts/…) are prefixed with the origin, or → null when no origin is
+// configured (can't build an absolute URL); anything else → ''.
 export function absoluteImageUrl(ref, origin) {
   const r = String(ref || '').trim();
   if (!r) return '';
   if (/^data:/i.test(r) || /^https?:\/\//i.test(r)) return r;
-  if (r.startsWith('/')) return normaliseOrigin(origin) + r;
+  if (r.startsWith('/')) {
+    const o = normaliseOrigin(origin);
+    return o ? o + r : null;
+  }
   return '';
 }
 

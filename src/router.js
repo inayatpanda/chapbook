@@ -142,7 +142,7 @@ export function makeRouter(deps) {
     // is cheap, but rendering/transcoding is the point, so both are gated to local.)
     if (a === 'video' || a === 'media') {
       throw Object.assign(
-        new Error('Video upload + transcode run in your local Helm (npm start), not the hosted Studio.'),
+        new Error('Video upload and transcoding need a server-side backend, which this app does not have. Use the BYOK R2 route in Settings → Video storage.'),
         { status: 503, code: 'VIDEO_LOCAL_ONLY' },
       );
     }

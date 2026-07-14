@@ -1,6 +1,6 @@
-/* preview.css — mirrors inayatpanda.com reading styles so the Helm live preview
+/* preview.css — mirrors the published site's reading styles so the live preview
    shows a post as it'll actually look (dark frame, prose, parchment sheet, playgrounds).
-   Keep roughly in sync with inayatpanda-site/src/styles/global.css. */
+   Keep roughly in sync with the site's global stylesheet. */
 :root{
   --bg-0:#04060c; --bg-1:#080c16; --bg-2:#0d1322; --bg-3:#131b2f;
   --ink:#f4f7fd; --ink-dim:#c0c9da; --ink-faint:#9aa7c4;

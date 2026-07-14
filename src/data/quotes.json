@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "note": "Curated public-domain / widely-attributed quotations for the Studio Quote Library. Every author is long-deceased (text in the public domain) or the line is a widely-attributed aphorism. No modern copyrighted lyrics or book passages. themes: Life, Love, Work & ambition, Creativity & art, Science & knowledge, Failure & resilience, Time, Nature, Wisdom, Humour, Freedom, Courage. tone: inspiring, wry, reflective, defiant, tender.",
+  "note": "Curated public-domain / widely-attributed quotations for the Quote Library. Every author is long-deceased (text in the public domain) or the line is a widely-attributed aphorism. No modern copyrighted lyrics or book passages. themes: Life, Love, Work & ambition, Creativity & art, Science & knowledge, Failure & resilience, Time, Nature, Wisdom, Humour, Freedom, Courage. tone: inspiring, wry, reflective, defiant, tender.",
   "quotes": [
     { "text": "The unexamined life is not worth living.", "author": "Socrates", "themes": ["Life", "Wisdom"], "tone": "reflective" },
     { "text": "I know that I know nothing.", "author": "Socrates", "themes": ["Wisdom", "Science & knowledge"], "tone": "reflective" },

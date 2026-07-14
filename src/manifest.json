@@ -1,6 +1,6 @@
 {
-  "name": "The Helm",
-  "short_name": "The Helm",
+  "name": "Chapbook",
+  "short_name": "Chapbook",
   "description": "Capture an idea, draft a post, publish.",
   "start_url": "/studio",
   "scope": "/studio",

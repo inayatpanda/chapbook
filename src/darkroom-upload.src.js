@@ -327,7 +327,7 @@ async function archiveOriginals(slug, btn) {
       toast('Could not archive the original for ' + (p.filename || 'a photo') + ' — publishing the resized copy only');
     }
   }
-  if (archived) toast('Archived ' + archived + ' original' + (archived > 1 ? 's' : '') + ' on your Helm ✓');
+  if (archived) toast('Archived ' + archived + ' original' + (archived > 1 ? 's' : '') + ' ✓');
 }
 
 // ---- commit ---------------------------------------------------------------
@@ -340,7 +340,7 @@ async function commit() {
   // route the repo read + commit through the server's stored token. Neither → the friendly prompt.
   const gh = resolveGh();
   if (!gh) {
-    return toast('Uploading photos needs your GitHub token (the “This device only” / BYOK setup) or a connected Helm. Open Settings to connect.');
+    return toast('Uploading photos needs your GitHub token — open Settings to connect.');
   }
 
   const n = photos.length;
