@@ -2682,15 +2682,6 @@
   <p class="sub" style="margin-top:14px">No key yet? <a href="https://buy.stripe.com/5kQeVd0C06t7aSLf3IgUM05?client_reference_id=studio" target="_blank" rel="noopener noreferrer">Buy a key &rarr;</a></p>
 </div>
 
-<!-- ===== LOGIN ===== -->
-<div id="login" class="wrap" style="display:none">
-  <h1 id="loginBrand">The Helm</h1>
-  <p class="sub">Enter your Helm admin password.</p>
-  <input id="pw" type="password" placeholder="Password" autocomplete="current-password" />
-  <button class="btn" onclick="login()">Unlock</button>
-  <div id="loginMsg" class="msg err"></div>
-</div>
-
 <!-- ===== MAIN APP ===== -->
 <div id="app" style="display:none">
 <!-- Section sub-navigation: a pill bar that switches between the views WITHIN the
@@ -4665,7 +4656,6 @@ function tico(name, cls){
   if(!/^[a-z0-9-]+$/.test(n)) return '<span class="ic">' + n + '</span>';
   return '<svg class="tico' + (cls ? ' ' + cls : '') + '" aria-hidden="true"><use href="' + TICO_SPRITE + '#ti-' + n + '"/></svg>';
 }
-let TOKEN=localStorage.getItem('studio_token')||'';
 let state={platform:'linkedin', idea:'', post:'', hooks:[], imageDataUrl:null, imageFile:null};
 
 /* ── theme system ───────────────────────────────────────────────────────── */
@@ -4747,32 +4737,17 @@ function classifyError({ status, payload, raw } = {}){
 }
 
 /* ── api helper ───────────────────────────────────────────────────────────
-   Single chokepoint for server calls. Routing order:
-     1. "Connect to my Helm" — window.__studioRemote.active → real fetch to the
-        laptop's tunnelled Helm (X-Admin-Token), so the phone sees its REAL state.
-     2. BYOK — window.__studioApi (the client-side router) does GitHub/AI locally.
-     3. Local Studio (served by Helm same-origin) — hits /studio/api directly.
-   Every failure path is routed through classifyError() → a friendly, typed Error. */
+   Single chokepoint for data calls. In the public product every call is served
+   by the BYOK client-side router (window.__studioApi), which does the GitHub/AI
+   work locally in the browser — no server, no tunnel. Every failure is routed
+   through classifyError() → a friendly, typed Error. */
 const api=async(path,opts={})=>{
-  if(window.__studioRemote&&window.__studioRemote.active){
-    try{ return await window.__studioRemote.request(path,opts); }
-    catch(err){ throw classifyError({ status: err && err.status, raw: err, payload: err && err.payload }); }
-  }
   if(window.__studioApi){
     try{ return await window.__studioApi(path,opts); }
     catch(err){ throw classifyError({ raw: err, status: err && err.status }); }
   }
-  let r;
-  // A FormData body (the Helm-mode video upload) must keep the browser's own multipart
-  // Content-Type — it carries the boundary. Forcing application/json breaks the upload.
-  const _isForm = (typeof FormData!=='undefined') && (opts.body instanceof FormData);
-  const _baseHeaders = _isForm ? {} : {'Content-Type':'application/json'};
-  try{
-    r=await fetch('/studio/api'+path,{...opts,headers:{..._baseHeaders,'X-Admin-Token':TOKEN,...(opts.headers||{})}});
-  }catch(err){ throw classifyError({ raw: err }); }
-  const j=await r.json().catch(()=>({}));
-  if(!r.ok) throw classifyError({ status:r.status, payload:j });
-  return j;
+  // The client router isn't ready yet — surface a friendly error rather than hang.
+  throw classifyError({ raw: new Error('Chapbook is still loading — try again in a moment.') });
 };
 
 /* ── msg helper (existing, by element id) ───────────────────────────────── */
@@ -4822,21 +4797,14 @@ function setBusy(btn, busy){
 }
 window.setBusy = setBusy;
 
-/* ── auth ───────────────────────────────────────────────────────────────── */
-async function login(){
-  try{
-    const r=await fetch('/admin/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:$('pw').value})});
-    const j=await r.json(); if(!r.ok)throw new Error(j.error||'Wrong password');
-    TOKEN=j.token; localStorage.setItem('studio_token',TOKEN); boot();
-  }catch(e){msg('loginMsg',e.message,'err');}
-}
-window.login=login;
-$('pw').addEventListener('keydown',e=>e.key==='Enter'&&login());
-
+/* ── boot ─────────────────────────────────────────────────────────────────
+   Reached only once the config is ready (repo + token present — see the boot
+   gate). Validates the connection, then reveals the app. On failure (bad token,
+   GitHub unreachable) it re-opens onboarding so the user can fix their keys. */
 async function boot(){
   applyBrandName();   // keep the title + app-header name correct for the live mode
-  try{ await api('/drafts'); // validates token
-    $('login').style.display='none'; $('app').style.display='block'; $('nav').style.display='flex';
+  try{ await api('/drafts'); // validates the GitHub connection
+    $('app').style.display='block'; $('nav').style.display='flex';
     if($('camFab')) $('camFab').style.display='flex';   // reveal the always-reachable camera
     loadPosts();
     // Home is the launchpad for EVERYONE and never auto-opens onboarding. By the time we
@@ -4854,7 +4822,7 @@ async function boot(){
     // was created (window.__studioTour.shouldAutoOpen). Clear the pending flag on open so
     // a reload mid-tour won't re-trigger; "done" is set on Finish/Skip.
     setTimeout(()=>{ try{ const T=window.__studioTour; if(T&&T.shouldAutoOpen()){ T.clearPending(); openFirstPostTour(); } }catch{} }, 1100);
-  }catch(e){ localStorage.removeItem('studio_token'); $('login').style.display='block'; $('app').style.display='none'; $('nav').style.display='none'; if($('camFab')) $('camFab').style.display='none'; }
+  }catch(e){ $('app').style.display='none'; $('nav').style.display='none'; if($('camFab')) $('camFab').style.display='none'; if(window.__studioOnboard) window.__studioOnboard(); }
 }
 
 function dismissGettingStarted(){
@@ -6708,17 +6676,15 @@ async function latestModelFor(id){
 }
 let _aiModels={}; // last-loaded model per provider, to detect changes on save
 
-// Connection-mode status (hosted Studio only). Shows "Connected to your Helm ✓"
-// in remote mode, or "Local-only (this device)" in BYOK. Hidden in the local build.
+// Connection status (hosted product). BYOK is the only mode — keys live in this
+// browser, so it always reads "Local-only". Hidden in the local same-origin build.
 function refreshConnStatus(){
   const row=$('connRow'); if(!row) return;
   const cfg=window.__studioConfig;
-  if(!cfg){ row.style.display='none'; return; } // local same-origin build: no mode switch
+  if(!cfg){ row.style.display='none'; return; } // local same-origin build: no connection row
   row.style.display='';
-  const remote=window.__studioRemote&&window.__studioRemote.active;
   const st=$('connStatus');
-  if(remote){ const r=cfg.getRemoteHelm?cfg.getRemoteHelm():{}; st.textContent='Connected to your Helm ✓ — '+(r.baseUrl||''); st.style.color='var(--acc)'; }
-  else { st.textContent='Local-only (this device · bring your own keys)'; st.style.color=''; }
+  st.textContent='Local-only (this device · bring your own keys)'; st.style.color='';
 }
 window.refreshConnStatus=refreshConnStatus;
 
@@ -17863,13 +17829,12 @@ function videoLibExplainer(html){
   body.innerHTML = `<div class="media-empty" style="text-align:left;line-height:1.55">${html}</div>`;
 }
 
-// Is a Helm backend reachable for this Studio session? Mirrors helmReachable() in
-// studio-app/app.js: remote-tunnel-to-Helm OR the local same-origin Helm build count;
-// the hosted Studio in pure-BYOK mode (window.__studioConfig present, not remote) does not.
+// Is a Helm backend reachable for this Studio session? Only the local same-origin
+// Helm build counts; the hosted product (window.__studioConfig present) is pure BYOK
+// with no server-side render, so it returns false.
 function videoHelmReachable(){
-  if(window.__studioRemote && window.__studioRemote.active) return true;   // remote tunnel → local Helm
   if(!window.__studioConfig) return true;                                  // local same-origin Helm build
-  return false;                                                            // hosted Studio, BYOK mode
+  return false;                                                            // hosted product, BYOK mode
 }
 
 // Mode-aware product name. Local Helm (or a remote tunnel to one) → "The Helm";
@@ -18571,11 +18536,11 @@ function pollVideo(jobId){
 }
 
 async function showVideoResult(jobId){
-  // fetch the MP4 as a blob (the file route requires the admin token) so the <video>
-  // and Download both work without leaking the token into a plain src URL.
+  // fetch the MP4 as a blob so the <video> and Download both work off a blob: URL.
+  // (Server-side render is a local-Helm-only feature; unreachable in the BYOK product.)
   const url='/studio/api/video/file/'+jobId;
   try{
-    const resp=await fetch(url,{headers:{'X-Admin-Token':TOKEN}});
+    const resp=await fetch(url);
     if(!resp.ok) throw new Error('Could not fetch the rendered video');
     const blob=await resp.blob();
     if(_vid.blobUrl) URL.revokeObjectURL(_vid.blobUrl);
@@ -18605,10 +18570,10 @@ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPro
 $('installBtn').addEventListener('click',async()=>{ if(deferredPrompt){deferredPrompt.prompt();deferredPrompt=null;$('installBtn').style.display='none';} });
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('/studio/sw.js').catch(()=>{}); }
 
-// Brand the title + mastheads now that the mode (__studioConfig/__studioRemote) is
-// known: the engine bundle (studio.js) is a module loaded before this one, so it has
-// already set those globals → videoHelmReachable() is accurate here. Runs ahead of the
-// boot gate below (which may show login/onboard/app), so every path is branded correctly.
+// Brand the title + mastheads now that the mode (window.__studioConfig) is known:
+// the engine bundle (studio.js) is a module loaded before this one, so it has
+// already set that global → videoHelmReachable() is accurate here. Runs ahead of the
+// boot gate below (which may show onboarding or the app), so every path is branded.
 applyBrandName();
 
 /* ── MOBILE CHAT-LIKE EDITOR ──────────────────────────────────────────────────
@@ -18779,10 +18744,11 @@ async function submitLicence(){
 window.submitLicence=submitLicence;
 $('licKey')&&$('licKey').addEventListener('keydown',e=>e.key==='Enter'&&submitLicence());
 
-/* The ORIGINAL boot dispatch — runs only once the licence has passed.
-   (Kept verbatim so the hosted build's boot-gate rewrite still matches.) */
+/* Boot dispatch — runs only once the licence has passed. BYOK single-mode:
+   if the user's GitHub repo + token are configured, boot the app; otherwise
+   open onboarding. (Both globals are set by the engine bundle, studio.js.) */
 function proceedAfterLicence(){
-if(TOKEN) boot(); else $('login').style.display='block';
+if(window.__studioConfig && window.__studioConfig.isReady()){ boot(); } else { window.__studioOnboard(); }
 }
 
 /* Entry point: gate everything behind a valid licence. */

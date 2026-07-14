@@ -78,7 +78,6 @@ let html = readFileSync(`${SRC}/index.html`, 'utf8');
 const BRAND = 'Chapbook';   // the product name for the hosted, sellable build
 for (const [from, to] of [
   ['<title>The Helm</title>', `<title>${BRAND}</title>`],
-  ['<h1 id="loginBrand">The Helm</h1>', `<h1 id="loginBrand">${BRAND}</h1>`],
   ['<h1 id="appHeaderTitle">The Helm</h1>', `<h1 id="appHeaderTitle">${BRAND}</h1>`],
   ['<meta name="apple-mobile-web-app-title" content="Studio" />', `<meta name="apple-mobile-web-app-title" content="${BRAND}" />`],
   ['<h1>Activate Studio</h1>', `<h1>Activate ${BRAND}</h1>`],
@@ -114,19 +113,12 @@ console.log('build stamp:', BUILD_STAMP || '(none — local build)');
 // (a) load the engine bundle before the inline module
 html = html.replace('</head>', '  <script type="module" src="./studio.js"></script>\n</head>');
 
-// (b) api() already delegates to the client router / remote-Helm seam in source,
-//     so no rewrite is needed here. Just sanity-check both branches are present.
+// (b) api() delegates to the BYOK client router (window.__studioApi) in source, and
+//     the boot gate (window.__studioConfig.isReady()) is baked into index.html too,
+//     so no rewrite is needed here. Just sanity-check the client-router branch is present.
 if (!html.includes('if(window.__studioApi){')) throw new Error('build: api() no longer delegates to window.__studioApi — index.html changed?');
-if (!html.includes('window.__studioRemote.active')) throw new Error('build: api() no longer consults window.__studioRemote (remote-Helm mode) — index.html changed?');
 
-// (c) boot gate: BYOK or remote-Helm config instead of the server login.
-//     isReady() = remote-Helm configured OR BYOK keys present.
-const bootOld = `if(TOKEN) boot(); else $('login').style.display='block';`;
-const bootNew = `if(window.__studioConfig){ if(window.__studioConfig.isReady()){ boot(); } else { window.__studioOnboard(); } } else if(TOKEN){ boot(); } else { $('login').style.display='block'; }`;
-if (!html.includes(bootOld)) throw new Error('build: boot gate not found — index.html changed?');
-html = html.replace(bootOld, bootNew);
-
-// (d) assets live at the subdomain root, not /studio/
+// (c) assets live at the subdomain root, not /studio/
 html = html.split('/studio/').join('/');
 writeFileSync(`${DIST}/index.html`, html);
 

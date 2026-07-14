@@ -4,7 +4,6 @@ import { config } from './seams/config.js';
 import { makeGithub } from './seams/github.js';
 import { makeDeviceAuth } from './seams/deviceAuth.js';
 import { makeAi } from './seams/ai.js';
-import { makeRemote } from './seams/remote.js';
 import { makeR2 } from './seams/r2.js';
 import { storage } from './seams/storage.js';
 import { makePosts } from './core/posts.js';
@@ -38,15 +37,6 @@ export function buildApi() {
   return router.api;
 }
 
-// Remote-Helm seam: when "Connect to my Helm" is configured, the index.html api()
-// shim consults window.__studioRemote.active FIRST and does a real fetch to the
-// laptop's tunnelled Helm — bypassing the BYOK client router entirely.
-const remote = makeRemote(() => config.getRemoteHelm());
-export function refreshRemote() {
-  if (typeof window === 'undefined') return;
-  window.__studioRemote = { active: config.isRemoteHelm(), request: remote.request, test: remote.test };
-}
-
 export function refresh() {
   if (typeof window === 'undefined') return;
   window.__studioApi = buildApi();
@@ -54,7 +44,7 @@ export function refresh() {
   // Darkroom uploader needs the GitHub seam DIRECTLY (read meta.json + one atomic binary
   // commit) — the api()/router surface is post-shaped, not a generic getFile/commitMany.
   // Expose a tiny BYOK-only handle alongside __studioApi. Only the contents methods the
-  // uploader uses are surfaced. Absent/empty in remote-Helm mode (no repo token here).
+  // uploader uses are surfaced. Absent/empty until the user connects a repo (no token yet).
   const gh = makeGithub(config.getGithub());
   window.__studioGh = {
     byok: config.isConfigured(),
@@ -74,17 +64,13 @@ export function refresh() {
   // BYOK direct-to-R2 video upload seam (aws4fetch, browser-signed). Independent of Helm —
   // the video block surfaces "Upload to R2" whenever R2 keys are configured here.
   window.__studioR2 = makeR2(config);
-  refreshRemote();
 }
 
-// Onboarding/settings overlay — two connection modes:
-//   • "This device only" (BYOK): keys live only in this browser.
-//   • "Connect to my Helm": thin client of the laptop's local Helm over a tunnel.
+// Onboarding/settings overlay — single mode (BYOK): the user's GitHub + AI keys
+// live only in this browser and the client-side router does the work locally.
 export function renderOnboarding() {
   if (typeof document === 'undefined' || document.getElementById('byok-overlay')) return;
   const c = config.all();
-  const r = config.getRemoteHelm();
-  const startMode = config.isRemoteHelm() ? 'remote' : 'byok';
 
   // Manual owner/repo/branch/token fields — the power-user PAT path. Rendered exactly
   // once: inside the sign-in disclosure when a Client ID is injected, else directly.
@@ -191,11 +177,6 @@ export function renderOnboarding() {
     #byok-overlay button.ghost{margin-top:.6rem;background:transparent;border:1px solid rgba(140,160,200,.3);color:#aebbd2}
     #byok-overlay .hint{font-size:.74rem;color:#6f7e98;margin-top:.6rem}
     #byok-overlay .msg{font-size:.8rem;margin-top:.6rem;min-height:1em}
-    #byok-overlay .modes{display:flex;gap:.5rem;margin:.2rem 0 1rem}
-    #byok-overlay .modes button{flex:1;margin:0;padding:.65em .4em;font:700 .82rem 'Space Grotesk',system-ui;border-radius:12px;cursor:pointer;
-      background:#080c16;border:1px solid rgba(140,160,200,.22);color:#aebbd2}
-    #byok-overlay .modes button[aria-pressed="true"]{background:linear-gradient(95deg,rgba(45,212,191,.18),rgba(34,211,238,.16));border-color:#22d3ee;color:#f4f7fd}
-    #byok-overlay [data-pane]{display:none}#byok-overlay [data-pane].on{display:block}
     #byok-overlay #gh-create{border:1px solid rgba(140,160,200,.18);border-radius:14px;padding:.9rem 1rem;background:rgba(8,12,22,.5)}
     #byok-overlay .cb-head{font:700 1rem 'Space Grotesk',system-ui;color:#f4f7fd}
     #byok-overlay .cb-or{display:flex;align-items:center;gap:.6rem;margin:1rem 0 .2rem;font-size:.72rem;color:#6f7e98;text-transform:uppercase;letter-spacing:.08em}
@@ -207,14 +188,10 @@ export function renderOnboarding() {
     #byok-overlay .no-gh a.no-gh-back{display:inline-block;margin:.45rem 0 0;color:#2dd4bf;text-decoration:none;font-weight:700;white-space:normal}
   </style>
   <div class="bc">
-    <h2>Set up your <b>Studio</b></h2>
-    <p>Choose how this device works. You can switch any time in Settings.</p>
-    <div class="modes" role="group" aria-label="Connection mode">
-      <button type="button" id="mode-byok" data-mode="byok" aria-pressed="${startMode === 'byok'}">This device only<br><span style="font-weight:400;font-size:.72rem;opacity:.8">bring your own keys</span></button>
-      <button type="button" id="mode-remote" data-mode="remote" aria-pressed="${startMode === 'remote'}">Connect to my&nbsp;Helm<br><span style="font-weight:400;font-size:.72rem;opacity:.8">use the laptop's state</span></button>
-    </div>
+    <h2>Set up <b>Chapbook</b></h2>
+    <p>Connect your GitHub account and (optionally) an AI provider. Everything stays in this browser.</p>
 
-    <div data-pane="byok" class="${startMode === 'byok' ? 'on' : ''}">
+    <div>
       <p style="margin-top:-.4rem">Your keys are stored only in this browser — never on a server. They go straight to GitHub and your AI provider.</p>
       ${GH_CLIENT_ID ? signinBlock : manualFields}
       <label>AI provider</label>
@@ -227,30 +204,11 @@ export function renderOnboarding() {
       <button id="byok-save">Save &amp; start</button>
       <div class="msg" id="byok-msg"></div>
     </div>
-
-    <div data-pane="remote" class="${startMode === 'remote' ? 'on' : ''}">
-      <p style="margin-top:-.4rem">Run <b>npm&nbsp;run&nbsp;tunnel</b> on your laptop, paste the printed URL below, and your phone edits the laptop's real Studio — drafts, queue, posts. Keys stay on the laptop.</p>
-      <label>Helm URL (your tunnel)</label><input id="helm-url" inputmode="url" autocapitalize="off" autocomplete="off" placeholder="https://helm-xxxx.trycloudflare.com" value="${r.baseUrl || ''}">
-      <div class="hint" style="margin:.35rem 0 0">Only paste your own Helm/tunnel URL — the admin token is sent to it.</div>
-      <label>Admin token</label><input id="helm-token" type="password" autocomplete="off" placeholder="from config/config.json" value="${r.token || ''}">
-      <button class="ghost" id="helm-test" style="margin-top:.9rem">Test connection</button>
-      <button id="helm-save">Connect &amp; start</button>
-      <div class="msg" id="helm-msg"></div>
-    </div>
     <div class="hint">You can change these any time in Settings.</div>
   </div>`;
   document.body.appendChild(ov);
   const $ = (id) => document.getElementById(id);
   const v = (id) => ($(id).value || '').trim();
-
-  // mode switch
-  const setMode = (m) => {
-    $('mode-byok').setAttribute('aria-pressed', String(m === 'byok'));
-    $('mode-remote').setAttribute('aria-pressed', String(m === 'remote'));
-    ov.querySelectorAll('[data-pane]').forEach((el) => el.classList.toggle('on', el.dataset.pane === m));
-  };
-  $('mode-byok').addEventListener('click', () => setMode('byok'));
-  $('mode-remote').addEventListener('click', () => setMode('remote'));
 
   // BYOK save
   $('byok-save').addEventListener('click', () => {
@@ -391,40 +349,12 @@ export function renderOnboarding() {
       }
     });
   }
-
-  // Remote: Test connection (probes GET /studio/api/posts via the remote seam)
-  $('helm-test').addEventListener('click', async () => {
-    const msg = $('helm-msg');
-    if (!v('helm-url') || !v('helm-token')) { msg.textContent = 'Enter the Helm URL and admin token.'; msg.style.color = '#f472b6'; return; }
-    msg.textContent = 'Testing…'; msg.style.color = '#aebbd2';
-    const probe = makeRemote(() => ({ baseUrl: v('helm-url').replace(/\/+$/, ''), token: v('helm-token') }));
-    const res = await probe.test();
-    if (res.ok) { msg.textContent = 'Connected to your Helm ✓'; msg.style.color = '#2dd4bf'; }
-    else { msg.textContent = res.message || 'Connection failed.'; msg.style.color = '#f472b6'; }
-  });
-
-  // Remote: Connect & start
-  $('helm-save').addEventListener('click', async () => {
-    const msg = $('helm-msg');
-    if (!v('helm-url') || !v('helm-token')) { msg.textContent = 'Enter the Helm URL and admin token.'; msg.style.color = '#f472b6'; return; }
-    msg.textContent = 'Connecting…'; msg.style.color = '#aebbd2';
-    const probe = makeRemote(() => ({ baseUrl: v('helm-url').replace(/\/+$/, ''), token: v('helm-token') }));
-    const res = await probe.test();
-    if (!res.ok) { msg.textContent = res.message || 'Connection failed.'; msg.style.color = '#f472b6'; return; }
-    config.saveRemoteHelm({ baseUrl: v('helm-url'), token: v('helm-token') });
-    refresh();
-    msg.textContent = 'Connected ✓ Loading…'; msg.style.color = '#2dd4bf';
-    setTimeout(() => location.reload(), 400);
-  });
-
-  setMode(startMode);
 }
 
 if (typeof window !== 'undefined') {
   window.__studioConfig = config;       // the static index's boot gate reads this
   window.__studioRefresh = refresh;     // rebuild seams after the repo/keys change
   window.__studioOnboard = renderOnboarding;
-  window.__studioMakeRemote = makeRemote; // for ad-hoc Test-connection probes in the UI
   window.__studioDomain = domain;        // pure custom-domain helpers for the Site-settings panel
   window.__studioTour = tour;            // pure first-run tour state/step model (index.html renders it)
   window.__studioQuotes = quotes;        // curated quote library + pure facet/search helpers for the Quote block

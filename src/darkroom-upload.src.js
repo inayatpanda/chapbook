@@ -46,17 +46,14 @@ let busy = false;
 const $ = (id) => document.getElementById(id);
 const mkId = () => 'dk-' + Math.random().toString(36).slice(2, 9);
 
-// Is a Helm backend reachable for this Studio session? Two cases archive originals server-side:
-//   1. Hosted Studio in "Connect to my Helm" mode (window.__studioRemote.active) — api() tunnels
-//      /media/image/* to the laptop's local Helm.
-//   2. The local same-origin Helm build (no hosted config object) — api() hits this Helm directly.
-// Pure BYOK (hosted Studio, "this device only") has NO Helm, so there is NO local archive — it
-// stays browser-resize → GitHub exactly as before (documented limitation).
+// Is a Helm backend reachable for this Studio session? Only the local same-origin Helm build
+// (no hosted config object) archives originals server-side via api() /media/image/*.
+// The hosted product is pure BYOK ("this device only") — NO Helm, so there is NO local archive;
+// it stays browser-resize → GitHub exactly as before (documented limitation).
 function helmReachable() {
   if (typeof window === 'undefined') return false;
-  if (window.__studioRemote && window.__studioRemote.active) return true;     // remote tunnel to local Helm
   if (!window.__studioConfig) return true;                                    // local same-origin Helm build
-  return false;                                                               // hosted Studio in BYOK mode
+  return false;                                                               // hosted product in BYOK mode
 }
 
 // A Helm-backed `gh` seam. When the Studio is connected to a Helm (local same-origin, or a phone

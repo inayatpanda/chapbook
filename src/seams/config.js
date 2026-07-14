@@ -1,12 +1,8 @@
 // Config seam — the user's repo coordinates + BYOK tokens, stored only in their browser.
 // Factory takes a localStorage-shaped object so tests can inject a fake.
 //
-// Two connection modes (mutually exclusive):
-//   • BYOK ("this device only") — keys live in this browser; the client-side
-//     router (window.__studioApi) does the GitHub/AI work locally.
-//   • Remote Helm ("connect to my Helm") — the user enters their laptop's
-//     tunnel URL + admin token; the Studio becomes a thin client that calls the
-//     REAL local Helm over the tunnel, so it sees the laptop's actual state.
+// Single mode (BYOK) — the user's GitHub + AI keys live only in this browser and
+// the client-side router (window.__studioApi) does the GitHub/AI work locally.
 const KEY = 'helm.studio.config.v1';
 
 const trimSlash = (u) => (u || '').trim().replace(/\/+$/, '');
@@ -71,16 +67,8 @@ export function makeConfig(ls) {
     // True iff a Worker URL + secret are set AND publicBase is present (needed to form the src).
     isR2WorkerConfigured() { const w = this.getR2Worker(); const r = this.getR2(); return !!(w.url && w.secret && r.publicBase); },
 
-    // --- remote-Helm mode (phone access to the laptop's local state) ---
-    // Stored under a distinct mode flag so it can't be confused with BYOK keys.
-    getRemoteHelm() { const c = read(); return { baseUrl: trimSlash(c.helmBaseUrl), token: c.helmToken || '' }; },
-    // True only when the user has explicitly chosen remote mode AND given a url+token.
-    isRemoteHelm() { const c = read(); const r = this.getRemoteHelm(); return c.mode === 'remote' && !!(r.baseUrl && r.token); },
-    saveRemoteHelm({ baseUrl, token }) { return this.save({ mode: 'remote', helmBaseUrl: trimSlash(baseUrl), helmToken: (token || '').trim() }); },
-    // Switch back to local/BYOK without wiping the saved tunnel details.
-    useLocal() { return this.save({ mode: 'byok' }); },
-    // Either mode counts as "ready to boot".
-    isReady() { return this.isRemoteHelm() || this.isConfigured(); },
+    // Ready to boot once the user's GitHub repo + token are configured (BYOK).
+    isReady() { return this.isConfigured(); },
   };
 }
 
