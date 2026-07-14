@@ -30,3 +30,8 @@ The GitHub device-flow client id is supplied at deploy time via the
 ## Helm boundary
 
 (filled in a later task)
+
+> **Cross-boundary security note:** the Stripe webhook whitelists the buyer name via
+> `safeName` before it enters the mint command or the sales queue. Helm-side
+> `scripts/fulfil-sales.mjs` consumes queue `name` fields — apply the same `safeName`
+> whitelist there when Air 2 is back (tracked, out of this repo).

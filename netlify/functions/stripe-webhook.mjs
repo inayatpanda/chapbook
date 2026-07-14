@@ -73,10 +73,22 @@ export function extractBuyer(session = {}) {
   return { name, email };
 }
 
+// Whitelist a buyer-supplied name to a safe charset BEFORE it enters any command
+// string or queue record. Stripe puts the buyer's typed name here, so `$(…)`, back-
+// ticks, `"` and `\` would otherwise execute as shell on the machine that holds the
+// Ed25519 signing key (the owner runs the printed `licence:mint` command locally).
+// Allow only word chars, space, dot, @, apostrophe and hyphen; collapse whitespace;
+// cap length; fall back to a neutral label when nothing safe remains.
+export function safeName(raw) {
+  const s = String(raw || '').replace(/[^\w .@'-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 80);
+  return s || 'New customer';
+}
+
 // The exact command the owner runs on their Mac to mint this buyer's key. Perpetual
-// by default; the owner can append `--expires YYYY-MM-DD` for a fixed term.
+// by default; the owner can append `--expires YYYY-MM-DD` for a fixed term. The name
+// is whitelisted via safeName so a crafted checkout cannot inject shell.
 export function mintCommand({ name, email } = {}) {
-  const who = String(name || email || 'New customer').replace(/["\\]/g, '\\$&');
+  const who = safeName(name || email);
   return `npm run licence:mint -- --name "${who}"`;
 }
 
@@ -91,7 +103,9 @@ export function saleRecord(session = {}, { now = Date.now() } = {}) {
   return {
     type: 'sale',
     product: (session.metadata && session.metadata.product) || session.client_reference_id || null,
-    name, email,
+    // Whitelisted before it lands in the queue: the Helm's fulfilment worker builds a
+    // shell `licence:mint` from this field, so a raw buyer name would be RCE there too.
+    name: safeName(name || email), email,
     amountTotal: session.amount_total ?? null,
     currency: session.currency || null,
     sessionId: session.id || null,
