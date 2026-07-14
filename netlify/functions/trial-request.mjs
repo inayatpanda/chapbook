@@ -27,6 +27,11 @@ const DEFAULT_QUEUE_REPO = 'inayatpanda/rqai-sales';
 // the delivery itself — a bad address just never receives the key.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Only products we actually fulfil may be queued. An omitted product (null) is
+// still allowed — it means "no product", not an unknown one. Anything else is
+// rejected up front, before it is ever written to the queue or logged.
+const ALLOWED_PRODUCTS = new Set(['studio']);
+
 // The paid apps' public origins may call this from the browser.
 const ALLOWED_ORIGINS = new Set([
   'https://topp.rqai.co.uk',
@@ -71,6 +76,12 @@ export default async function handler(req) {
   const rawEmail = payload && typeof payload.email === 'string' ? payload.email : '';
   const email = rawEmail.trim().toLowerCase();
   const product = payload && typeof payload.product === 'string' ? payload.product : null;
+
+  // Product allowlist — reject an unknown product BEFORE it reaches the queue or
+  // any log line. A null (omitted) product is permitted.
+  if (product !== null && !ALLOWED_PRODUCTS.has(product)) {
+    return json(400, { error: 'unknown product' }, origin);
+  }
 
   if (!EMAIL_RE.test(email)) {
     return json(400, { ok: false, error: 'invalid_email' }, origin);
