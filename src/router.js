@@ -115,14 +115,14 @@ export function makeRouter(deps) {
     }
     // Quality lint. The hosted BYOK client can't HEAD/GET cross-origin (CORS), so it
     // runs the synchronous checkDoc (internal links validated) and marks the external
-    // check as skipped — the UI shows "external links checked only in your local Helm".
+    // check as skipped — the UI shows "external links aren't checked in this hosted app".
     if (a === 'posts' && (b === 'lint' || c === 'lint')) {
       const slug = (b === 'lint') ? (body.slug || 'post') : b;
       let knownSlugs = null;
       try { knownSlugs = (await posts.listPosts()).map((p) => p.slug); } catch { /* offline */ }
       const res = prepublish.checkDoc({ doc: body.doc, meta: body.meta, slug, knownSlugs });
       const note = (res.externalCount || 0)
-        ? `${res.externalCount} external link${res.externalCount === 1 ? '' : 's'} — reachability is only checked in your local Helm.`
+        ? `${res.externalCount} external link${res.externalCount === 1 ? '' : 's'} — reachability isn't checked in this hosted app.`
         : 'No external links to check.';
       return { ...res, polish: [...res.polish, { group: 'External links', level: 'green', items: [note] }], externalChecked: 0, externalSkipped: true };
     }
