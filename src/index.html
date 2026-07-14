@@ -18586,9 +18586,25 @@ async function shareVideo(){
 }
 window.shareVideo=shareVideo;
 
+/* ── Anonymous usage ping ─────────────────────────────────────────────────
+   Fire-and-forget, at most once per browser per type (localStorage once-flag).
+   Sends ONLY {type} to a relative function path — no PII, no IP, no licence key.
+   Fully wrapped so it can NEVER block or break the caller (activation/install). */
+function _pingMetric(type){
+  try{
+    var flag='chapbook.pinged.'+type;
+    if(localStorage.getItem(flag)) return;
+    if(navigator.sendBeacon){
+      navigator.sendBeacon('/.netlify/functions/metrics', JSON.stringify({type:type}));
+      localStorage.setItem(flag,'1');
+    }
+  }catch(_){/* private mode / no beacon — telemetry is best-effort, never fatal */}
+}
+
 /* ── PWA install ────────────────────────────────────────────────────────── */
 let deferredPrompt=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;$('installBtn').style.display='inline-block';});
+window.addEventListener('appinstalled',()=>{ _pingMetric('install'); });
 $('installBtn').addEventListener('click',async()=>{ if(deferredPrompt){deferredPrompt.prompt();deferredPrompt=null;$('installBtn').style.display='none';} });
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('/sw.js').catch(()=>{}); }
 
@@ -18769,6 +18785,7 @@ $('licKey')&&$('licKey').addEventListener('keydown',e=>e.key==='Enter'&&submitLi
    if the user's GitHub repo + token are configured, boot the app; otherwise
    open onboarding. (Both globals are set by the engine bundle, studio.js.) */
 function proceedAfterLicence(){
+_pingMetric('activate'); // anonymous, once-per-browser; fire-and-forget (see _pingMetric)
 if(window.__studioConfig && window.__studioConfig.isReady()){ boot(); } else { window.__studioOnboard(); }
 }
 
