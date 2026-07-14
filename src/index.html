@@ -2709,6 +2709,9 @@
   <section class="view" id="v-newpost">
     <div class="bar"><h1>New post</h1></div>
     <p class="sub" style="margin:-.2rem 0 1rem">Pick a template to start, or go blank — then write and publish straight to your repo.</p>
+    <!-- P3c: recoverable titleless draft. Populated by refreshUntitledRecovery() when a
+         body-first post was autosaved under the provisional slug; hidden otherwise. -->
+    <div id="untitledRecovery" hidden></div>
     <div class="btn-row" style="margin-bottom:1.25rem">
       <button class="btn" type="button" onclick="openNewPost()">＋ Start a new post</button>
       <!-- Goblin idea-spark lives in Write: it throws blog-post ideas at you when
@@ -10466,6 +10469,14 @@ let _saveDebounce = null;
 let _wordCountDebounce = null;
 let _topicsCache = null;
 let _lastLocalSaveTs = 0;  // ms of the last successful local autosave (this session)
+// P3c — titleless-draft safety net. A post written body-first has no reserved slug,
+// so its work used to live only in memory (a tab crash lost it). We autosave such
+// work under ONE constant provisional slug, surface it for recovery, and fold it into
+// the real slug the moment a title reserves one. `_ownsProvisional` is true when THIS
+// editor session is the writer of the provisional record (so we never clobber a
+// foreign untitled draft that already holds the single slot).
+const PROVISIONAL_SLUG = '__untitled__';
+let _ownsProvisional = false;
 
 /* relative-time formatter for History + draft recovery ("2 min ago") */
 function relTime(iso){
@@ -10491,7 +10502,7 @@ window.openNewPost = openNewPost;
    "＋ Start a new post" button, the Goblin idea-spark, and the Partner CTA are
    all there. The template picker opens ONLY when the user clicks "Start a new
    post" (openNewPost), never automatically. */
-function enterNewPost(){ /* land on #v-newpost; do NOT auto-open the picker */ }
+function enterNewPost(){ refreshUntitledRecovery(); /* land on #v-newpost; do NOT auto-open the picker. Surface any recoverable titleless draft (P3c). */ }
 window.enterNewPost = enterNewPost;
 
 /* Bootstrap a fresh editor for a new post. `seedDoc` (optional) is a doc to
@@ -10500,6 +10511,7 @@ window.enterNewPost = enterNewPost;
 async function startNewPost(seedDoc){
   editorSection = 'write';   // a brand-new post belongs to the Write tab (back → New-post landing)
   currentSlug = null;
+  _ownsProvisional = false;  // P3c: a fresh post claims the provisional slot only once it has content AND the slot is free
   doc = seedDoc || { version:1, blocks:[ { id:mkId(), type:'text', html:'' } ] };
   meta = { title:'', tags:[], accent:'#2dd4bf', draft:true, description:'', theme:'dark', template:'observatory', glyph:'', image:'', citations:[], series:'', seriesPart:null, publishAt:'' };
   selectedId = null;
@@ -10546,6 +10558,7 @@ function metaFromData(slug, data){
 async function openBlockEditor(slug){
   editorSection = 'posts';   // editing an existing post belongs to the Posts tab (back → Posts list)
   currentSlug = slug;
+  _ownsProvisional = false;  // P3c: editing a titled post never writes the provisional slot
   doc = { version:1, blocks:[] };
   selectedId = null;
   _dirty = false; _lastLocalSaveTs = 0;
@@ -10860,9 +10873,111 @@ async function reserveSlug(){
   if(title.length < 2) return;
   try{
     const r = await api('/slug?title='+encodeURIComponent(title));
-    if(!currentSlug) currentSlug = r.slug; // only set if still null
+    if(!currentSlug){
+      currentSlug = r.slug; // only set if still null
+      // P3c: fold any titleless work saved under the provisional slug into this real
+      // slug, so there is exactly one draft (not an orphaned '__untitled__').
+      await migrateProvisionalDraft(currentSlug);
+    }
   }catch{}
 }
+
+/* ── P3c: titleless-draft helpers ─────────────────────────────────────────────
+   A provisional record ('__untitled__') exists iff GET /blocks reports source
+   'draft' for it (a committed post can never own that slug). */
+async function provisionalDraftExists(){
+  try{ const r = await api('/posts/'+PROVISIONAL_SLUG+'/blocks'); return !!(r && r.source === 'draft'); }
+  catch{ return false; }
+}
+
+/* Fold the provisional record into a freshly-reserved real slug, then delete it.
+   The current in-memory doc/meta IS the work, so we write it under the real slug
+   (crash-safe even if the next autosave never fires) before dropping '__untitled__'. */
+async function migrateProvisionalDraft(realSlug){
+  if(!realSlug || realSlug === PROVISIONAL_SLUG) return;
+  if(!_ownsProvisional) return;                            // a foreign untitled draft is not ours to fold/delete
+  if(!(await provisionalDraftExists())) return;            // nothing titleless to migrate
+  // Guard (edge b): never overwrite a draft that already lives at the reserved slug.
+  let existing = null;
+  try{ existing = await api('/posts/'+realSlug+'/blocks'); }catch{ existing = null; }
+  if(existing && existing.source === 'draft'){ _ownsProvisional = false; refreshUntitledRecovery(); return; }
+  try{
+    await api('/posts/'+realSlug+'/blocks', { method:'PUT', body: JSON.stringify({ doc, meta }) });
+    await api('/posts/'+PROVISIONAL_SLUG+'/blocks', { method:'DELETE' });
+  }catch{ return; }   // copy failed → leave the provisional record so work stays recoverable
+  _ownsProvisional = false;
+  refreshUntitledRecovery();
+}
+
+/* Does the editor hold anything worth keeping? A pristine single empty text block
+   is not — we don't want to mint a provisional record for an untouched new post. */
+function editorHasContent(){
+  const blocks = (doc && Array.isArray(doc.blocks)) ? doc.blocks : [];
+  for(const b of blocks){
+    if(!b || typeof b !== 'object') continue;
+    if(b.type === 'text' || b.type === 'quote'){ if(String(b.html||'').replace(/<[^>]+>/g,'').trim()) return true; }
+    else if(b.type === 'heading'){ if(String(b.text||'').trim()) return true; }
+    else return true;   // any non-text block (image, gallery, embed, table, playground…) is content
+  }
+  return false;
+}
+
+/* Open the recoverable titleless draft. Loads its body under the provisional slug
+   in Write mode with NO reserved slug (currentSlug stays null), so adding a title
+   reserves a real slug and migrates the record — leaving exactly one draft. */
+async function openUntitledDraft(){
+  let saved = null;
+  try{ saved = await api('/posts/'+PROVISIONAL_SLUG+'/blocks'); }catch{ saved = null; }
+  if(!saved || saved.source !== 'draft'){ toast('That untitled draft is no longer available.'); refreshUntitledRecovery(); return; }
+  editorSection = 'write';
+  currentSlug = null;
+  _ownsProvisional = true;               // this session continues the single provisional slot
+  _composeAnchorId = null;
+  doc = saved.doc || { version:1, blocks:[ { id:mkId(), type:'text', html:'' } ] };
+  meta = metaFromData('', saved.data);
+  meta.title = '';                       // keep it titleless so titling reserves a real slug
+  selectedId = null;
+  _dirty = false; _lastLocalSaveTs = 0;
+  $('editorTitle').value = '';
+  setMetaDescUI(meta.description);
+  setSeriesUI();
+  setSaveState('saved','Unsaved title · draft kept');
+  renderBlocks();
+  updateWordCount();
+  go('editor');
+  await loadEditorSettings();
+}
+window.openUntitledDraft = openUntitledDraft;
+
+/* Surface (or hide) the titleless-draft recovery card on the New-post landing.
+   Called on boot into #v-newpost (enterNewPost) and after any provisional change. */
+async function refreshUntitledRecovery(){
+  const host = $('untitledRecovery'); if(!host) return;
+  let saved = null;
+  try{ saved = await api('/posts/'+PROVISIONAL_SLUG+'/blocks'); }catch{ saved = null; }
+  if(!saved || saved.source !== 'draft'){ host.hidden = true; host.innerHTML = ''; return; }
+  const when = saved.draftSavedAt ? relTime(saved.draftSavedAt) : '';
+  host.hidden = false;
+  host.innerHTML =
+    '<div class="draftItem" style="margin-bottom:1.25rem">'
+    + '<div class="meta"><span class="chip">Untitled draft</span>'
+    + (when ? '<span>kept '+esc(when)+'</span>' : '') + '</div>'
+    + '<p>You started a post without a title — your writing was saved and can be picked up here.</p>'
+    + '<div class="btn-row" style="margin-top:.6rem">'
+    + '<button class="btn" type="button" onclick="openUntitledDraft()">Open untitled draft</button>'
+    + '<button class="btn ghost" type="button" onclick="discardUntitledDraft()">Discard</button>'
+    + '</div></div>';
+}
+window.refreshUntitledRecovery = refreshUntitledRecovery;
+
+async function discardUntitledDraft(){
+  if(!confirm('Discard the untitled draft? This can’t be undone.')) return;
+  try{ await api('/posts/'+PROVISIONAL_SLUG+'/blocks', { method:'DELETE' }); }catch{}
+  _ownsProvisional = false;
+  toast('Untitled draft discarded');
+  refreshUntitledRecovery();
+}
+window.discardUntitledDraft = discardUntitledDraft;
 
 /* ── back button ───────────────────────────────────────────────────────────
    Context-aware: a new post (editorSection==='write') returns to the New-post
@@ -10876,7 +10991,7 @@ $('editorBackBtn').addEventListener('click', ()=>{
   // flush any pending autosave so work isn't left only in the debounce timer
   if(_dirty && currentSlug){ clearTimeout(_saveDebounce); autosaveDraft(); }
   _dirty = false; // in-app nav is not data loss
-  if(editorSection === 'write'){ go('newpost'); }   // back to the New-post landing (no auto-picker)
+  if(editorSection === 'write'){ go('newpost'); refreshUntitledRecovery(); }   // back to the New-post landing (no auto-picker); refresh any titleless-draft recovery card (P3c)
   else { go('posts'); loadPosts(); }
 });
 
@@ -10904,9 +11019,33 @@ function markDirty(){
 
 async function autosaveDraft(){
   if(!currentSlug){
-    // Try to reserve slug first if we have a title
+    // Try to reserve a slug first if we have a title (this also migrates any
+    // provisional record into the reserved slug).
     await reserveSlug();
-    if(!currentSlug){ setSaveState('dirty','Unsaved · add a title to save'); return; }
+    if(!currentSlug){
+      // Still no title → keep the work under the provisional slug so a crash/reload
+      // can't lose it (P3c). Nothing worth keeping for a pristine, empty new post.
+      if(!editorHasContent()){ setSaveState('idle','New post'); return; }
+      // Only ONE untitled draft may exist. If a FOREIGN one already holds the single
+      // slot, don't clobber it — the user can add a title here (→ real slug), or open
+      // / discard the other from the New-post landing. beforeunload still guards this
+      // in-memory work until it's resolved.
+      if(!_ownsProvisional && await provisionalDraftExists()){
+        setSaveState('dirty','Unsaved · add a title to save'); return;
+      }
+      setSaveState('saving');
+      try{
+        await api('/posts/'+PROVISIONAL_SLUG+'/blocks', { method:'PUT', body: JSON.stringify({ doc, meta }) });
+        _ownsProvisional = true;
+        _lastLocalSaveTs = Date.now();
+        setSaveState('saved','Unsaved title · draft kept');
+        refreshUntitledRecovery();
+      }catch(e){
+        setSaveState('error');
+        toast('Autosave failed — '+(e.message||'will retry on next edit'));
+      }
+      return;
+    }
   }
   setSaveState('saving');
   try{
