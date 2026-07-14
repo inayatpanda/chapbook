@@ -37,7 +37,7 @@ Helm; and Chapbook runs fully when Helm is offline.
 | # | Touchpoint | Direction | Mechanism | Helm offline? |
 |---|---|---|---|---|
 | 1 | **Licence mint** (purchase / trial) | Chapbook → Helm | Stripe checkout → `netlify/functions/stripe-webhook.mjs` → append a record to the private queue repo `inayatpanda/rqai-sales` → Air 2 Helm worker mints the Ed25519 key locally + emails the buyer | Queue accumulates; fulfilled on return |
-| 2 | **Licence revoke check** (refunds) | Helm → Chapbook | Helm publishes a signed `revoked.json` at a static URL; the licence gate fetches it, read-only | Fails open (last cached list; never-fetched ⇒ allowed) |
+| 2 | **Licence revoke check** (refunds) | Helm → Chapbook | Helm publishes a signed `revoked.json` at a static URL; **⚠️ not yet wired into the shipped app** (see §2 caveat) | N/A (not currently implemented; design: fails open) |
 | 3 | **Usage metrics** | Chapbook → Helm | `netlify/functions/metrics.mjs` increments per-day counters in a Netlify Blobs store; Helm **pulls** the tally on its own schedule | Events still counted; Helm reads later |
 
 ### 1. Licence mint — Chapbook → Helm (async, queued)
@@ -58,6 +58,8 @@ simply accumulates and is fulfilled when the machine returns. Without a
 owner a pre-filled `licence:mint` command).
 
 ### 2. Licence revoke check — Helm → Chapbook (one-way, read-only, fails open)
+
+> **⚠️ Not yet wired into the shipped app:** the live gate (`src/index.html` `verifyLicence`, ~line 18735) currently verifies signature + expiry only. The revocation fetch logic lives in the Helm-generated `licence-client.js` template (`src/lib/templates/licence-client.js`, with `__REVOKED_URL__` placeholder), which is not currently bundled into `dist/` — so refunded keys are not client-side revoked today. Wiring the revoke check into the inline gate (or bundling `licence-client.js`) is an open follow-up.
 
 Helm publishes a signed revocation list (an `IPLR1.…` token) as static data at:
 
