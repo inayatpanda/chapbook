@@ -1,5 +1,6 @@
 // Block document -> site markdown body. Pure, no I/O, no deps.
 import { sanitise, SAFE_IMAGE_DATA_URL } from './figures/svg.js';
+import { sanitiseHtml } from './sanitise.js';
 
 const KNOWN = new Set(['heading', 'text', 'image', 'quote', 'divider', 'raw', 'gallery', 'embed', 'playground', 'table', 'figure']);
 
@@ -389,7 +390,10 @@ export function validateDoc(doc) {
 }
 
 export function rawDocFromMarkdown(body) {
-  return { version: 1, blocks: [{ id: 'legacy', type: 'raw', content: String(body || '') }] };
+  // The AI "expand into blog post" route (router.js) wraps model output in a `raw`
+  // block that is committed to the public blog verbatim with NO downstream sanitiser,
+  // so the raw content MUST be sanitised here (browser: DOMPurify; node: regex fallback).
+  return { version: 1, blocks: [{ id: 'legacy', type: 'raw', content: sanitiseHtml(String(body || '')) }] };
 }
 
 /* ─── Markdown → blocks (real parser, pure + browser-safe) ──────────────────────
@@ -421,22 +425,17 @@ function escHtmlInline(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// Defence-in-depth strip for raw HTML that arrives via paste / Import-Markdown (C1).
-// The block model passes raw HTML through verbatim and the live blog renders it with
-// NO sanitiser, so pasted/imported HTML must never carry executable markup — even as a
-// draft. Removes <script>/<iframe>/<object>/<embed> elements, on*= handlers, and
-// neutralises javascript: in href/src. Legitimate list/code/structural markup is kept.
+// Sanitise raw HTML that arrives via paste / Import-Markdown / citation text (C1).
+// The block model passes raw HTML through verbatim and the live blog renders it with NO
+// downstream sanitiser, so pasted/imported HTML must never carry executable markup —
+// even as a draft. Delegates to the parser-based sanitiser (sanitise.js): in the browser
+// (the real publish path) this is DOMPurify, which normalises attribute-boundary bypasses
+// like `<img/src=x/onerror=…>` and drops `<svg/onload=…>` that the old regex let through;
+// under node/tests it degrades to the regex fallback. Legitimate list/code/structural
+// markup is preserved by the DOMPurify html profile. Kept as an exported alias so the
+// existing call sites (and the name) stay stable.
 export function stripUnsafeHtml(html) {
-  let s = String(html || '');
-  // whole elements (with or without a close tag) for the dangerous trio + script
-  s = s.replace(/<(script|iframe|object|embed)\b[\s\S]*?<\/\1\s*>/gi, '');
-  // stray / self-closing / unclosed openers of the same tags
-  s = s.replace(/<\/?(?:script|iframe|object|embed)\b[^>]*>/gi, '');
-  // inline event-handler attributes:  onerror="…"  onclick='…'  onload=foo
-  s = s.replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
-  // neutralise javascript: in href / src (drop the whole attribute)
-  s = s.replace(/\s(?:href|src)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]*)/gi, '');
-  return s;
+  return sanitiseHtml(String(html || ''));
 }
 
 export function blocksFromMarkdown(body) {
