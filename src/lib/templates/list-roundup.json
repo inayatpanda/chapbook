@@ -1,0 +1,19 @@
+{
+  "id": "list-roundup",
+  "name": "List / Roundup",
+  "description": "A numbered list or roundup: a quick intro, three entries, and a closing line.",
+  "doc": {
+    "version": 1,
+    "blocks": [
+      { "id": "t1", "type": "text", "html": "Say what the list is, and how you chose what's on it. Readers trust a list more when they know the rule behind it." },
+      { "id": "t2", "type": "heading", "level": 3, "text": "1. First pick" },
+      { "id": "t3", "type": "text", "html": "Name it, then say why it earns its place. One or two sentences." },
+      { "id": "t4", "type": "heading", "level": 3, "text": "2. Second pick" },
+      { "id": "t5", "type": "text", "html": "Same again — what it is, and the reason it's here rather than somewhere else." },
+      { "id": "t6", "type": "heading", "level": 3, "text": "3. Third pick" },
+      { "id": "t7", "type": "text", "html": "Round out the three. Add an image below if a picture sells it better than words." },
+      { "id": "t8", "type": "image", "placement": "standard", "alt": "Optional image for an entry", "caption": "Add a photo for one of the picks (optional)." },
+      { "id": "t9", "type": "text", "html": "Close with the one you'd reach for first, or an honest runner-up that nearly made the cut." }
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "essay",
+  "name": "Essay / Long read",
+  "description": "A longer argument or reflection: intro, a couple of sections, a pull-quote, a close.",
+  "doc": {
+    "version": 1,
+    "blocks": [
+      { "id": "t1", "type": "heading", "level": 2, "text": "Working title" },
+      { "id": "t2", "type": "text", "html": "Open with the central idea, plainly. One or two sentences is enough — say what this is about and why it is worth a few minutes." },
+      { "id": "t3", "type": "heading", "level": 3, "text": "First section" },
+      { "id": "t4", "type": "text", "html": "Make the point, then back it with a concrete example or a bit of evidence. Keep one idea per section." },
+      { "id": "t5", "type": "heading", "level": 3, "text": "Second section" },
+      { "id": "t6", "type": "text", "html": "Build on the first, or push against it. The turn is usually where a piece earns its length." },
+      { "id": "t7", "type": "quote", "html": "Lift one line that carries the argument — a sentence a reader could quote back to you.", "cite": "" },
+      { "id": "t8", "type": "text", "html": "Close with what follows from all this: a practical implication, an open question, or a position you are willing to defend." }
+    ]
+  }
+}

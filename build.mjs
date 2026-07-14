@@ -1,0 +1,154 @@
+// Build the standalone Studio:
+//  1. esbuild-bundle the engine → public/studio/studio.js (browser ESM, no server).
+//  2. emit studio-app/dist/ — a deployable static site (transformed index + rewritten assets)
+//     for a subdomain root like studio.inayatpanda.com. The LOCAL public/studio/index.html
+//     (server-backed) is left untouched.
+import { build } from 'esbuild';
+import { readFileSync, writeFileSync, copyFileSync, mkdirSync, rmSync } from 'node:fs';
+import { AI_DEFAULT_MODELS } from './src/core/aiDefaults.js';
+import { PUBLIC_KEY as LICENCE_PUBLIC_KEY } from './src/lib/licence-pubkey.js';
+import { assertInlineModulesParse } from './checkInlineModule.mjs';
+
+const SRC = 'src';
+const DIST = 'dist';
+
+// Drift guard: the Studio's inline licence-gate key (window.__LICENCE_PUBLIC_KEY)
+// must match server/licence.js PUBLIC_KEY. `npm run licence:init` patches both;
+// this catches a hand-edit that touched only one. (Empty on both = unlicensed
+// build, which is fine.)
+{
+  const idx = readFileSync(`${SRC}/index.html`, 'utf8');
+  const m = idx.match(/window\.__LICENCE_PUBLIC_KEY='([^']*)';/);
+  if (!m) throw new Error('build: window.__LICENCE_PUBLIC_KEY not found in index.html');
+  if (m[1] !== LICENCE_PUBLIC_KEY)
+    throw new Error('build: Studio licence key drifted from server/licence.js — re-run `npm run licence:init` (or sync both).');
+  console.log(`licence verify key: ${LICENCE_PUBLIC_KEY ? 'baked ✓' : '(none — unlicensed build)'}`);
+}
+
+// Sanity-check: the inline provider→default-model map in index.html must match the
+// unit-tested source of truth (core/aiDefaults.js). They're mirrored, not imported
+// (index.html's inline script isn't a module), so guard against silent drift.
+{
+  const idx = readFileSync(`${SRC}/index.html`, 'utf8');
+  const m = idx.match(/const AI_DEFAULT_MODELS\s*=\s*\{([^}]*)\}/);
+  if (!m) throw new Error('build: inline AI_DEFAULT_MODELS not found in index.html');
+  for (const [id, model] of Object.entries(AI_DEFAULT_MODELS)) {
+    if (!new RegExp(`${id}\\s*:\\s*['"]${model.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]`).test(m[1]))
+      throw new Error(`build: inline AI_DEFAULT_MODELS drifted from core/aiDefaults.js for "${id}" (expected "${model}")`);
+  }
+  console.log('AI_DEFAULT_MODELS: inline map matches core/aiDefaults.js ✓');
+}
+
+// Parse-check the inline `<script type="module">` with Node's real ES-module parser.
+// A SyntaxError here (e.g. a duplicate top-level declaration) fails to parse in the
+// browser and blanks the whole app — but is invisible to esbuild (which only bundles
+// app.js) and to string-based HTML transforms. This guard turns it into a build error.
+{
+  const idx = readFileSync(`${SRC}/index.html`, 'utf8');
+  const n = assertInlineModulesParse(idx, 'public/studio/index.html');
+  console.log(`inline module parse-check: ${n} module(s) OK ✓`);
+}
+
+await build({
+  entryPoints: ['src/app.js'], bundle: true, format: 'esm',
+  outfile: `${SRC}/studio.js`, platform: 'browser', target: 'es2022', legalComments: 'none',
+});
+console.log('bundled', `${SRC}/studio.js`);
+
+// Darkroom uploader controller — its own browser-ESM bundle (loaded directly by index.html,
+// not part of the engine bundle). The pure meta-builder (core/darkroomMeta.js) is bundled IN;
+// resize.js + the vendored exifr stay EXTERNAL so they're shared, separate modules resolved by
+// the browser relative to index.html (works at /studio/ locally and at the flattened dist root).
+await build({
+  entryPoints: ['src/darkroom-upload.src.js'], bundle: true, format: 'esm',
+  outfile: `${SRC}/darkroom-upload.js`, platform: 'browser', target: 'es2022', legalComments: 'none',
+  external: ['./resize.js', './vendor/exifr.esm.js'],
+});
+console.log('bundled', `${SRC}/darkroom-upload.js`);
+
+rmSync(DIST, { recursive: true, force: true });
+mkdirSync(DIST, { recursive: true });
+
+// --- transform index.html → dist/index.html ---
+let html = readFileSync(`${SRC}/index.html`, 'utf8');
+
+// (brand) The hosted dist is the product for OTHER users → brand it "Studio". The local
+// server-backed public/studio/index.html stays "The Helm" (the owner's own app). Only the
+// three brand surfaces are renamed — help text/comments that refer to the local Helm stay.
+const BRAND = 'Chapbook';   // the product name for the hosted, sellable build
+for (const [from, to] of [
+  ['<title>The Helm</title>', `<title>${BRAND}</title>`],
+  ['<h1 id="loginBrand">The Helm</h1>', `<h1 id="loginBrand">${BRAND}</h1>`],
+  ['<h1 id="appHeaderTitle">The Helm</h1>', `<h1 id="appHeaderTitle">${BRAND}</h1>`],
+  ['<meta name="apple-mobile-web-app-title" content="Studio" />', `<meta name="apple-mobile-web-app-title" content="${BRAND}" />`],
+  ['<h1>Activate Studio</h1>', `<h1>Activate ${BRAND}</h1>`],
+  ['Enter your Studio-access key to use the Studio.', `Enter your ${BRAND}-access key to use ${BRAND}.`],
+]) {
+  if (!html.includes(from)) throw new Error(`build: brand string not found for rename (index.html changed?): ${from}`);
+  html = html.replaceAll(from, to);
+}
+// Softer brand touch-ups in help/footer/video copy (may recur; non-fatal if the source drifts).
+html = html
+  .replaceAll('the Studio picks that provider', `${BRAND} picks that provider`)
+  .replaceAll('Studio · local build', `${BRAND} · local build`)
+  .replaceAll("'Studio '+b", `'${BRAND} '+b`)
+  .replaceAll('hosted Studio', `hosted ${BRAND}`)
+  .replaceAll('Open Studio on', `Open ${BRAND} on`)
+  .replaceAll("videoHelmReachable() ? 'The Helm' : 'Studio'", `videoHelmReachable() ? 'The Helm' : '${BRAND}'`);
+console.log(`brand: hosted dist renamed → "${BRAND}"`);
+
+// (a0) inject the PUBLIC OAuth Client ID + relay base for Device-Flow sign-in.
+//      The Client ID is public (safe to embed). Empty → the sign-in UI hides (PAT-only).
+//      Placed before the engine bundle so the globals exist when app.js runs.
+const GH_CLIENT_ID = process.env.STUDIO_GH_CLIENT_ID || '';
+const RELAY_BASE = process.env.STUDIO_RELAY_BASE || '/.netlify/functions/gh-device';
+// Visible build stamp (vYYYYMMDD-<gitshortsha>) — scripts/deploy-studio.sh sets
+// STUDIO_BUILD_STAMP; surfaced in the Studio's Settings footer (#buildStamp).
+// Empty when built manually without the deploy script → the footer reads "local build".
+const BUILD_STAMP = process.env.STUDIO_BUILD_STAMP || '';
+html = html.replace('</head>',
+  `  <script>window.__STUDIO_GH_CLIENT_ID=${JSON.stringify(GH_CLIENT_ID)};window.__STUDIO_RELAY_BASE=${JSON.stringify(RELAY_BASE)};window.__STUDIO_BUILD=${JSON.stringify(BUILD_STAMP)};</script>\n</head>`);
+console.log('device-flow client id:', GH_CLIENT_ID ? 'injected' : '(none — PAT-only)');
+console.log('build stamp:', BUILD_STAMP || '(none — local build)');
+
+// (a) load the engine bundle before the inline module
+html = html.replace('</head>', '  <script type="module" src="./studio.js"></script>\n</head>');
+
+// (b) api() already delegates to the client router / remote-Helm seam in source,
+//     so no rewrite is needed here. Just sanity-check both branches are present.
+if (!html.includes('if(window.__studioApi){')) throw new Error('build: api() no longer delegates to window.__studioApi — index.html changed?');
+if (!html.includes('window.__studioRemote.active')) throw new Error('build: api() no longer consults window.__studioRemote (remote-Helm mode) — index.html changed?');
+
+// (c) boot gate: BYOK or remote-Helm config instead of the server login.
+//     isReady() = remote-Helm configured OR BYOK keys present.
+const bootOld = `if(TOKEN) boot(); else $('login').style.display='block';`;
+const bootNew = `if(window.__studioConfig){ if(window.__studioConfig.isReady()){ boot(); } else { window.__studioOnboard(); } } else if(TOKEN){ boot(); } else { $('login').style.display='block'; }`;
+if (!html.includes(bootOld)) throw new Error('build: boot gate not found — index.html changed?');
+html = html.replace(bootOld, bootNew);
+
+// (d) assets live at the subdomain root, not /studio/
+html = html.split('/studio/').join('/');
+writeFileSync(`${DIST}/index.html`, html);
+
+// --- text assets: rewrite /studio/ → / ---
+// manifest.json: hosted paths /studio/ → / AND bare "/studio" (start_url/scope, no trailing
+// slash) → "/" so the installed PWA opens the served root (not a 404); brand → "Helm Studio".
+writeFileSync(`${DIST}/manifest.json`,
+  readFileSync(`${SRC}/manifest.json`, 'utf8').split('/studio/').join('/').split('"/studio"').join('"/"').split('"The Helm"').join(`"${BRAND}"`));
+writeFileSync(`${DIST}/sw.js`, readFileSync(`${SRC}/sw.js`, 'utf8').split('/studio/').join('/'));
+// --- copy the rest verbatim ---
+for (const f of ['studio.js', 'darkroom-upload.js', 'preview.css', 'resize.js', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icons-manifest.json', 'icons-sprite.svg']) {
+  copyFileSync(`${SRC}/${f}`, `${DIST}/${f}`);
+}
+// vendored libs (exifr browser build) live in a subdir — preserve the path so the Darkroom
+// module's external `./vendor/exifr.esm.js` import resolves at the dist root too.
+mkdirSync(`${DIST}/vendor`, { recursive: true });
+copyFileSync(`${SRC}/vendor/exifr.esm.js`, `${DIST}/vendor/exifr.esm.js`);
+
+// The product lives at chapbook.rqai.co.uk ONLY — Netlify serves the *.netlify.app name
+// too but never redirects it by itself, so enforce the canonical host here. (Netlify
+// _redirects host conditions: the 301! forces even though the file exists.)
+writeFileSync(`${DIST}/_redirects`,
+  'https://inayat-studio.netlify.app/* https://chapbook.rqai.co.uk/:splat 301!\n');
+console.log('canonical-host redirect: inayat-studio.netlify.app → chapbook.rqai.co.uk');
+console.log('emitted', DIST, '(deployable static site)');

@@ -1,0 +1,14 @@
+{
+  "id": "interactive",
+  "name": "Interactive",
+  "description": "A post built around a playground — intro, the interactive itself, an explainer, an image.",
+  "doc": {
+    "version": 1,
+    "blocks": [
+      { "id": "t1", "type": "text", "html": "Set up what the reader is about to play with, and what it is meant to show. One or two sentences." },
+      { "id": "t2", "type": "playground", "placement": "standard", "html": "<div class=\"pg-stage\">Replace this with your interactive — an SVG, a canvas, or a few controls.</div>\n<div class=\"pg-controls\">\n  <label>A slider <input type=\"range\" min=\"0\" max=\"100\" value=\"50\" id=\"pg-input\"></label>\n  <output id=\"pg-output\">50</output>\n</div>", "js": "// Runs after each view transition. Wire your controls to the stage here.\nconst input = document.getElementById('pg-input');\nconst output = document.getElementById('pg-output');\nif (input && output) input.addEventListener('input', () => { output.textContent = input.value; });" },
+      { "id": "t3", "type": "text", "html": "Explain the point the playground makes, or tell the reader how to drive it. Keep it short — the interactive is doing the heavy lifting." },
+      { "id": "t4", "type": "image", "placement": "standard", "alt": "Optional still — a screenshot or a related photo", "caption": "Add a fallback image or a related shot here (optional)." }
+    ]
+  }
+}
