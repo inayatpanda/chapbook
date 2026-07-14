@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import handler from './trial-request.mjs';
+import handler from '../../netlify/functions/trial-request.mjs';
 
 // GITHUB_QUEUE_TOKEN is unset for these tests → the function is INERT once a
 // request passes validation, so an ACCEPTED product deterministically reaches the

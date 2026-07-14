@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import handler, { preflight, rateLimitCheck, relay } from './gh-device.mjs';
+import handler, { preflight, rateLimitCheck, relay } from '../../netlify/functions/gh-device.mjs';
 
 // ── (1) preflight — the 204-body release blocker ─────────────────────────────
 // undici rejects a 204 with a non-null body ("" is non-null), which is what the

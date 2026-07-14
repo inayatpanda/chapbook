@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { bump } from './metrics.mjs';
+import { bump } from '../../netlify/functions/metrics.mjs';
 
 test('bump on undefined seeds the counter at 1', () => {
   assert.deepEqual(bump(undefined, 'install'), { install: 1 });
