@@ -164,6 +164,7 @@ async function check3_ghDevicePreflight(origin) {
 }
 
 // Check 4 — metrics POST {"type":"visit"} → 204, then GET ?day=<today UTC> → 200 with visit ≥ 1.
+// Retries GET up to 5 times with backoff to account for Netlify Blobs read-after-write consistency.
 async function check4_metrics(origin) {
   const url = new URL('/.netlify/functions/metrics', origin).href;
   const today = new Date().toISOString().slice(0, 10); // deploy's own today (UTC)
@@ -175,14 +176,42 @@ async function check4_metrics(origin) {
     });
     if (post.status !== 204) return fail(4, 'metrics visit → 204 + count', `POST returned ${post.status}, expected 204`);
 
-    const get = await fetchT(`${url}?day=${today}`);
-    if (get.status !== 200) return fail(4, 'metrics visit → 204 + count', `GET ?day=${today} returned ${get.status}, expected 200`);
-    let data;
-    try { data = await get.json(); } catch (e) { return fail(4, 'metrics visit → 204 + count', `GET body not JSON: ${errStr(e)}`); }
-    const visits = data && typeof data.visit === 'number' ? data.visit : 0;
-    // Tolerate concurrent visits: assert ≥ 1, never == 1.
-    if (!(visits >= 1)) return fail(4, 'metrics visit → 204 + count', `visit count for ${today} is ${visits}, expected ≥ 1`);
-    return pass(4, 'metrics visit → 204 + count', `POST 204; GET ${today} visit=${visits} (≥1)`);
+    // Retry GET up to 5 times with backoff for Netlify Blobs read-after-write consistency.
+    const maxRetries = 5;
+    const backoffs = [500, 1000, 1500, 2000, 2500]; // ms between attempts
+    let get, data, visits;
+    let lastError = null;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      if (attempt > 0) {
+        // Wait before retry
+        await new Promise(r => setTimeout(r, backoffs[attempt - 1]));
+      }
+      try {
+        get = await fetchT(`${url}?day=${today}`);
+        if (get.status !== 200) {
+          lastError = `GET ?day=${today} returned ${get.status}, expected 200`;
+          continue;
+        }
+        try { data = await get.json(); } catch (e) {
+          lastError = `GET body not JSON: ${errStr(e)}`;
+          continue;
+        }
+        visits = data && typeof data.visit === 'number' ? data.visit : 0;
+        // Tolerate concurrent visits: assert ≥ 1, never == 1.
+        if (!(visits >= 1)) {
+          lastError = `visit count for ${today} is ${visits}, expected ≥ 1`;
+          continue;
+        }
+        // Success!
+        return pass(4, 'metrics visit → 204 + count', `POST 204; GET ${today} visit=${visits} (≥1) after ${attempt + 1} attempt(s)`);
+      } catch (e) {
+        lastError = errStr(e);
+      }
+    }
+
+    // All retries exhausted
+    return fail(4, 'metrics visit → 204 + count', lastError || 'GET retries exhausted');
   } catch (e) {
     return fail(4, 'metrics visit → 204 + count', errStr(e));
   }
