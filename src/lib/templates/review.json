@@ -5,7 +5,6 @@
   "doc": {
     "version": 1,
     "blocks": [
-      { "id": "t1", "type": "image", "placement": "wide", "alt": "Photo of the thing being reviewed", "caption": "Add a photo of what you're reviewing." },
       { "id": "t2", "type": "text", "html": "The verdict, up front — what it is, who it's for, and whether it's worth the money. Don't make the reader scroll for the answer." },
       { "id": "t3", "type": "heading", "level": 3, "text": "The good" },
       { "id": "t4", "type": "text", "html": "What it gets right. Be specific — name the thing that actually made a difference, not the spec sheet." },

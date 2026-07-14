@@ -6,8 +6,7 @@
     "version": 1,
     "blocks": [
       { "id": "t1", "type": "heading", "level": 2, "text": "What's the news?" },
-      { "id": "t2", "type": "text", "html": "State it plainly in the first line — what's happening, and when. Then add the one or two things a reader needs to know or do next." },
-      { "id": "t3", "type": "image", "placement": "standard", "alt": "Optional image for the announcement", "caption": "Add an image if it helps (optional)." }
+      { "id": "t2", "type": "text", "html": "State it plainly in the first line — what's happening, and when. Then add the one or two things a reader needs to know or do next." }
     ]
   }
 }

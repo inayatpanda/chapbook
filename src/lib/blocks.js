@@ -376,6 +376,15 @@ export function renderPreviewHtml(blocks, ctx = {}) {
 const SAFE_IMAGE_REF = /^\/images\/posts\/[A-Za-z0-9._\-\/]+$/;
 const isSafeImageRef = (url) => SAFE_IMAGE_REF.test(String(url || '')) && !String(url).split('/').includes('..');
 
+// An image `file` is a BARE filename that gets joined onto /images/posts/<slug>/ (see
+// serialiseBlock). A value containing a path separator or `..` could climb out of that
+// directory (e.g. `../../.github/workflows/x.yml`), so reject any such filename. Applies
+// to the single-image `b.file` AND to each gallery item's `im.file`.
+const isUnsafeFilename = (name) => {
+  const s = String(name);
+  return s.includes('/') || s.includes('\\') || s.includes('..');
+};
+
 export function validateDoc(doc) {
   if (!doc || !Array.isArray(doc.blocks)) throw Object.assign(new Error('block doc must have a blocks array'), { status: 400 });
   for (const b of doc.blocks) {
@@ -384,6 +393,15 @@ export function validateDoc(doc) {
     // url-mode reference (no fresh base64 upload): require a safe same-site image path.
     if (b.type === 'image' && b.url && !b.base64 && !isSafeImageRef(b.url))
       throw Object.assign(new Error('image reference must be a site image path under /images/posts/'), { status: 400 });
+    // Path-traversal guard: image and gallery `file` values must be bare filenames.
+    if (b.type === 'image' && b.file && isUnsafeFilename(b.file))
+      throw Object.assign(new Error('unsafe image filename'), { status: 400 });
+    if (b.type === 'gallery') {
+      for (const im of (b.images || [])) {
+        if (im && im.file && isUnsafeFilename(im.file))
+          throw Object.assign(new Error('unsafe image filename'), { status: 400 });
+      }
+    }
     if (b.type === 'figure' && (typeof b.svg !== 'string' || b.svg.trim() === '')) throw Object.assign(new Error('figure block needs a non-empty svg string'), { status: 400 });
   }
   return true;
