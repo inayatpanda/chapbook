@@ -23,9 +23,12 @@ const ALLOWED_ORIGINS = new Set([
 ]);
 
 // localhost on any port (dev) is also permitted, alongside the fixed allow-list.
+// Netlify deploy-preview subdomains (https://<deploy-id>--inayat-studio.netlify.app) are also allowed.
 function isAllowedOrigin(origin) {
   if (!origin) return false;
   if (ALLOWED_ORIGINS.has(origin)) return true;
+  // Netlify preview subdomains: https://<alphanumeric-and-hyphens>--inayat-studio.netlify.app
+  if (/^https:\/\/[a-z0-9-]+--inayat-studio\.netlify\.app$/.test(origin)) return true;
   try {
     const { hostname } = new URL(origin);
     return hostname === 'localhost' || hostname === '127.0.0.1';

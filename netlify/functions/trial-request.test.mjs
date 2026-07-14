@@ -60,3 +60,19 @@ test('CORS: OPTIONS from an allow-listed origin still returns the correct null-b
   assert.equal(res.status, 204);
   assert.equal(res.headers.get('access-control-allow-origin'), 'https://chapbook.rqai.co.uk');
 });
+
+test('CORS: Netlify deploy-preview origin (https://abc123--inayat-studio.netlify.app) is allowed', async () => {
+  const res = await handler(new Request('https://site/x', {
+    method: 'OPTIONS', headers: { origin: 'https://abc123--inayat-studio.netlify.app' },
+  }));
+  assert.equal(res.status, 204);
+  assert.equal(res.headers.get('access-control-allow-origin'), 'https://abc123--inayat-studio.netlify.app');
+});
+
+test('CORS: evil origin (https://evil.example) is NOT allowed, no ACAO header', async () => {
+  const res = await handler(new Request('https://site/x', {
+    method: 'OPTIONS', headers: { origin: 'https://evil.example' },
+  }));
+  assert.equal(res.status, 204);
+  assert.equal(res.headers.get('access-control-allow-origin'), null);
+});

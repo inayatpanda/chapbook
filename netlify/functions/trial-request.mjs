@@ -43,11 +43,20 @@ const ALLOWED_ORIGINS = new Set([
   'https://chapbook.rqai.co.uk',
 ]);
 
+// Check if an origin is allowed: exact match or Netlify deploy-preview subdomain.
+function isAllowedOrigin(origin) {
+  if (!origin) return false;
+  if (ALLOWED_ORIGINS.has(origin)) return true;
+  // Netlify preview subdomains: https://<alphanumeric-and-hyphens>--inayat-studio.netlify.app
+  if (/^https:\/\/[a-z0-9-]+--inayat-studio\.netlify\.app$/.test(origin)) return true;
+  return false;
+}
+
 // Echo the Origin only when it is allow-listed (never a wildcard). Always Vary on
 // Origin so a CDN never caches one origin's CORS answer for another.
 function corsHeaders(origin) {
   const h = { 'Content-Type': 'application/json', Vary: 'Origin' };
-  if (origin && ALLOWED_ORIGINS.has(origin)) {
+  if (isAllowedOrigin(origin)) {
     h['Access-Control-Allow-Origin'] = origin;
     h['Access-Control-Allow-Methods'] = 'POST, OPTIONS';
     h['Access-Control-Allow-Headers'] = 'Content-Type';

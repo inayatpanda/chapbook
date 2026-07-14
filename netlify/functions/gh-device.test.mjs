@@ -111,3 +111,31 @@ test('handler: 31st POST from one ip in the window → 429 with retry-after: 600
   assert.equal(blocked.headers.get('retry-after'), '600');
   assert.deepEqual(await blocked.json(), { error: 'rate_limited' });
 });
+
+// ── CORS origin allowlist: exact matches + Netlify preview subdomains ──────────
+test('handler: Netlify deploy-preview origin (https://deadbeef123--inayat-studio.netlify.app) is allowed', async () => {
+  const res = await handler(
+    new Request('https://site/x', { method: 'OPTIONS', headers: { origin: 'https://deadbeef123--inayat-studio.netlify.app' } }),
+    {},
+  );
+  assert.equal(res.status, 204);
+  assert.equal(res.headers.get('access-control-allow-origin'), 'https://deadbeef123--inayat-studio.netlify.app');
+});
+
+test('handler: evil origin (https://evil.example) is NOT allowed, no ACAO header', async () => {
+  const res = await handler(
+    new Request('https://site/x', { method: 'OPTIONS', headers: { origin: 'https://evil.example' } }),
+    {},
+  );
+  assert.equal(res.status, 204);
+  assert.equal(res.headers.get('access-control-allow-origin'), null);
+});
+
+test('handler: existing exact origin (https://chapbook.rqai.co.uk) still works', async () => {
+  const res = await handler(
+    new Request('https://site/x', { method: 'OPTIONS', headers: { origin: 'https://chapbook.rqai.co.uk' } }),
+    {},
+  );
+  assert.equal(res.status, 204);
+  assert.equal(res.headers.get('access-control-allow-origin'), 'https://chapbook.rqai.co.uk');
+});
