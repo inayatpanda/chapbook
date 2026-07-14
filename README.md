@@ -10,7 +10,9 @@ webhook, the GitHub device-flow relay, and trial requests.
 
 ## Fork base
 
-**Fork base (recorded verbatim):** `helm` snapshot at `/Users/inayatsmac/Desktop/Transferred to new mac/Inayat-website/helm`, branch `feat/literature-decoded`, commit `259544d` (2026-07-08) **plus uncommitted working-tree edits through 2026-07-12**. Canonical Air 2 offline at fork time; go-live commit `64fb912` reconstructed as: Buy link → `https://buy.stripe.com/5kQeVd0C06t7aSLf3IgUM05?client_reference_id=studio`. Reconcile against Air 2 when it returns.
+**Fork base (recorded verbatim):** `helm` snapshot at `/Users/inayatsmac/Desktop/Transferred to new mac/Inayat-website/helm`, branch `feat/literature-decoded`, commit `259544d` (2026-07-08) **plus uncommitted working-tree edits through 2026-07-12**. Canonical Air 2 offline at fork time; go-live commit `64fb912` reconstructed as: Buy link → `https://buy.stripe.com/5kQeVd0C06t7aSLf3IgUM05?client_reference_id=studio`.
+
+**Reconciled against Air 2 canonical on 2026-07-14** — helm `feat/literature-decoded` HEAD = `64fb912` (the branch tip *is* the go-live commit). The only deployable-set files changed after the fork base were `index.html` (the Stripe link — captured byte-identical above) and `sw.js` (cache version — superseded by this fork's `chapbook-v1`). No un-captured canonical changes remained to port; the fork is current with canonical for the entire product. `trial-request.mjs` has no canonical committed equivalent — this fork is its sole version.
 
 ## Build, test, and deploy
 
