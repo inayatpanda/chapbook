@@ -1,8 +1,8 @@
-// Build the standalone Studio:
-//  1. esbuild-bundle the engine → public/studio/studio.js (browser ESM, no server).
-//  2. emit studio-app/dist/ — a deployable static site (transformed index + rewritten assets)
-//     for a subdomain root like studio.inayatpanda.com. The LOCAL public/studio/index.html
-//     (server-backed) is left untouched.
+// Build Chapbook — the deployable static site.
+//  1. esbuild-bundle the engine → src/studio.js (browser ESM, no server).
+//  2. emit dist/ — a root-relative static site. Source paths are already root-relative
+//     ('/'), so the build only injects runtime config, bundles the engine, and copies
+//     assets verbatim — it does NO path rewriting.
 import { build } from 'esbuild';
 import { readFileSync, writeFileSync, copyFileSync, mkdirSync, rmSync } from 'node:fs';
 import { AI_DEFAULT_MODELS } from './src/core/aiDefaults.js';
@@ -58,7 +58,7 @@ console.log('bundled', `${SRC}/studio.js`);
 // Darkroom uploader controller — its own browser-ESM bundle (loaded directly by index.html,
 // not part of the engine bundle). The pure meta-builder (core/darkroomMeta.js) is bundled IN;
 // resize.js + the vendored exifr stay EXTERNAL so they're shared, separate modules resolved by
-// the browser relative to index.html (works at /studio/ locally and at the flattened dist root).
+// the browser relative to index.html at the dist root.
 await build({
   entryPoints: ['src/darkroom-upload.src.js'], bundle: true, format: 'esm',
   outfile: `${SRC}/darkroom-upload.js`, platform: 'browser', target: 'es2022', legalComments: 'none',
@@ -69,9 +69,10 @@ console.log('bundled', `${SRC}/darkroom-upload.js`);
 rmSync(DIST, { recursive: true, force: true });
 mkdirSync(DIST, { recursive: true });
 
-// --- transform index.html → dist/index.html ---
-// The product is branded "Chapbook" at source (index.html / manifest.json), so the
-// build no longer does any brand string-surgery — it only injects config + rewrites paths.
+// --- index.html → dist/index.html (inject runtime config only) ---
+// The product is branded "Chapbook" and root-relative at source (index.html /
+// manifest.json), so the build does no brand surgery and no path rewriting — it only
+// injects the runtime config globals + the engine <script> tag before writing it out.
 let html = readFileSync(`${SRC}/index.html`, 'utf8');
 
 // (a0) inject the PUBLIC OAuth Client ID + relay base for Device-Flow sign-in.
@@ -96,19 +97,13 @@ html = html.replace('</head>', '  <script type="module" src="./studio.js"></scri
 //     so no rewrite is needed here. Just sanity-check the client-router branch is present.
 if (!html.includes('if(window.__studioApi){')) throw new Error('build: api() no longer delegates to window.__studioApi — index.html changed?');
 
-// (c) assets live at the subdomain root, not /studio/
-html = html.split('/studio/').join('/');
+// (c) assets are already root-relative in source — write index.html straight through.
 writeFileSync(`${DIST}/index.html`, html);
 
-// --- text assets: rewrite /studio/ → / ---
-// manifest.json: hosted paths /studio/ → / AND bare "/studio" (start_url/scope, no trailing
-// slash) → "/" so the installed PWA opens the served root (not a 404). Brand is already
-// "Chapbook" in the source manifest — no rename here.
-writeFileSync(`${DIST}/manifest.json`,
-  readFileSync(`${SRC}/manifest.json`, 'utf8').split('/studio/').join('/').split('"/studio"').join('"/"'));
-writeFileSync(`${DIST}/sw.js`, readFileSync(`${SRC}/sw.js`, 'utf8').split('/studio/').join('/'));
-// --- copy the rest verbatim ---
-for (const f of ['studio.js', 'darkroom-upload.js', 'preview.css', 'resize.js', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icons-manifest.json', 'icons-sprite.svg']) {
+// --- copy every other emitted file verbatim ---
+// Source paths are already root-relative, so manifest.json + sw.js are plain copies
+// (no more /studio/ → / rewriting). index.html is written above with config injected.
+for (const f of ['manifest.json', 'sw.js', 'studio.js', 'darkroom-upload.js', 'preview.css', 'resize.js', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icons-manifest.json', 'icons-sprite.svg']) {
   copyFileSync(`${SRC}/${f}`, `${DIST}/${f}`);
 }
 // vendored libs (exifr browser build) live in a subdir — preserve the path so the Darkroom

@@ -4,8 +4,8 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#04060c" />
-<link rel="manifest" href="/studio/manifest.json" />
-<link rel="apple-touch-icon" href="/studio/apple-touch-icon.png" />
+<link rel="manifest" href="/manifest.json" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <!-- iOS standalone PWA (Add to Home Screen) -->
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
@@ -3355,7 +3355,7 @@
 
     <!-- Owner Helm dashboard: status + quick access for the apps this Helm backs.
          Hidden entirely in pure BYOK (videoHelmReachable()===false). Populated by
-         loadHomeApps() via GET /studio/api/apps. -->
+         loadHomeApps() via GET /api/apps. -->
     <div id="homeApps" style="display:none;margin-top:1.7rem">
       <div class="bar" style="border:0;padding-bottom:.3rem"><h1 style="font-size:.95rem">Your apps</h1></div>
       <p class="sub" style="margin:0 0 .6rem">Your connected apps — status and quick access.</p>
@@ -3522,22 +3522,22 @@
        clearly-labelled standalone control; Publish stays prominent on the right.
        Every original control keeps its id, so the existing handlers still bind. -->
   <div class="editor-bar">
-    <button class="back" id="editorBackBtn"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-arrow-left"/></svg> Posts</button>
-    <button class="iconBtn" id="focusExitBtn" title="Exit focus mode (Esc)"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-x"/></svg> Focus</button>
+    <button class="back" id="editorBackBtn"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-arrow-left"/></svg> Posts</button>
+    <button class="iconBtn" id="focusExitBtn" title="Exit focus mode (Esc)"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-x"/></svg> Focus</button>
     <span class="status-slot" id="editorStatus" data-save="saved"><i class="save-dot" aria-hidden="true"></i><span id="editorStatusText">Draft · saved</span></span>
     <span class="status-slot" id="editorWords" hidden></span>
 
-    <button class="iconBtn tb-labelled" id="focusToggleBtn" title="Focus mode (⌘⇧F)" aria-label="Toggle focus mode"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-focus-2"/></svg> Focus</button>
+    <button class="iconBtn tb-labelled" id="focusToggleBtn" title="Focus mode (⌘⇧F)" aria-label="Toggle focus mode"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-focus-2"/></svg> Focus</button>
 
     <!-- Live preview — was a "View ▾" menu; Outline dropped per owner. The Outline rail
          still auto-joins on wide screens, so nothing is lost on desktop. -->
-    <button class="iconBtn tb-labelled" id="previewBtn" type="button" title="Live preview"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-eye"/></svg> Live preview</button>
+    <button class="iconBtn tb-labelled" id="previewBtn" type="button" title="Live preview"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-eye"/></svg> Live preview</button>
 
     <!-- AI ▾ — whole-draft editor pass -->
     <details class="tb-menu">
       <summary class="iconBtn tb-labelled" title="AI">AI <span class="tb-tri" aria-hidden="true">▾</span></summary>
       <div class="tb-pop" role="menu">
-        <button class="tb-item" id="editorPassBtn" type="button" title="Editor pass — AI critique of the whole draft in your voice"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-sparkles"/></svg> Editor pass</button>
+        <button class="tb-item" id="editorPassBtn" type="button" title="Editor pass — AI critique of the whole draft in your voice"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-sparkles"/></svg> Editor pass</button>
       </div>
     </details>
 
@@ -3545,17 +3545,17 @@
     <details class="tb-menu">
       <summary class="iconBtn tb-labelled" title="Checks &amp; references">Checks <span class="tb-tri" aria-hidden="true">▾</span></summary>
       <div class="tb-pop" role="menu">
-        <button class="tb-item" id="refsBtn" type="button"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-book"/></svg> References &amp; footnotes</button>
-        <button class="tb-item" id="shareBtn" type="button"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-speakerphone"/></svg> Share &amp; SEO preview</button>
-        <button class="tb-item" id="checkBtn" type="button"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-checklist"/></svg> Pre-publish check</button>
-        <button class="tb-item" id="historyBtn" type="button"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-clock"/></svg> Version history</button>
+        <button class="tb-item" id="refsBtn" type="button"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-book"/></svg> References &amp; footnotes</button>
+        <button class="tb-item" id="shareBtn" type="button"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-speakerphone"/></svg> Share &amp; SEO preview</button>
+        <button class="tb-item" id="checkBtn" type="button"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-checklist"/></svg> Pre-publish check</button>
+        <button class="tb-item" id="historyBtn" type="button"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-clock"/></svg> Version history</button>
       </div>
     </details>
 
     <button class="iconBtn" id="cmdkBtn" title="Command palette (⌘K)" aria-label="Command palette">⌘K</button>
     <button class="themeBtn" id="themeToggleEditor" title="Toggle theme" onclick="toggleTheme()">☀️</button>
-    <button class="iconBtn tb-labelled" id="settingsToggleBtn" style="display:none" title="Post settings"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-settings"/></svg> Post settings</button>
-    <button class="iconBtn tb-labelled" id="editorScheduleBtn" title="Schedule for later"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-calendar-time"/></svg> Schedule</button>
+    <button class="iconBtn tb-labelled" id="settingsToggleBtn" style="display:none" title="Post settings"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-settings"/></svg> Post settings</button>
+    <button class="iconBtn tb-labelled" id="editorScheduleBtn" title="Schedule for later"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-calendar-time"/></svg> Schedule</button>
     <button class="pub-btn" id="editorPublishBtn">Publish</button>
   </div>
   <!-- Schedule for later (overlay) — commits a hidden draft + publishAt; the site's
@@ -3585,10 +3585,10 @@
       <button id="chatStripX" type="button" aria-label="Stop editing this block">✕</button>
     </div>
     <div class="chat-row">
-      <button class="cbtn" id="chatPlus" type="button" title="Add — image, interactive, figure…" aria-label="Add a block"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-plus"/></svg></button>
+      <button class="cbtn" id="chatPlus" type="button" title="Add — image, interactive, figure…" aria-label="Add a block"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-plus"/></svg></button>
       <textarea id="chatInput" rows="1" placeholder="Write a message…" autocomplete="off"></textarea>
-      <button class="cbtn" id="chatMic" type="button" title="Dictate" aria-label="Dictate" hidden><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-microphone"/></svg></button>
-      <button class="cbtn" id="chatSendBtn" type="button" title="Send" aria-label="Send"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-send-2"/></svg></button>
+      <button class="cbtn" id="chatMic" type="button" title="Dictate" aria-label="Dictate" hidden><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-microphone"/></svg></button>
+      <button class="cbtn" id="chatSendBtn" type="button" title="Send" aria-label="Send"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-send-2"/></svg></button>
     </div>
   </div>
   <div id="chatSheet" hidden>
@@ -4071,17 +4071,17 @@
   <div class="picker-grab"></div>
   <h3>Add a block</h3>
   <div class="picker-grid" id="pickerGrid">
-    <button class="ptile" data-type="text"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-align-left"/></svg><span class="nm">Text</span></button>
-    <button class="ptile" data-type="heading"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-heading"/></svg><span class="nm">Heading</span></button>
-    <button class="ptile" data-type="image"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-photo"/></svg><span class="nm">Image</span></button>
-    <button class="ptile" data-type="quote"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-quote"/></svg><span class="nm">Quote</span></button>
-    <button class="ptile" data-type="gallery"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-library-photo"/></svg><span class="nm">Gallery</span></button>
-    <button class="ptile" data-type="embed"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-video"/></svg><span class="nm">Video</span></button>
-    <button class="ptile" data-type="table"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-table"/></svg><span class="nm">Table</span></button>
-    <button class="ptile" data-type="playground"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-terminal-2"/></svg><span class="nm">Playground</span></button>
-    <button class="ptile" id="tplLibTile" data-type="__tpllib"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-wand"/></svg><span class="nm">Interactive (template)</span></button>
-    <button class="ptile" id="figTile" data-type="__figure"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-chart-dots"/></svg><span class="nm">Figure</span></button>
-    <button class="ptile" data-type="divider"><svg class="tico" aria-hidden="true"><use href="/studio/icons-sprite.svg#ti-separator"/></svg><span class="nm">Divider</span></button>
+    <button class="ptile" data-type="text"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-align-left"/></svg><span class="nm">Text</span></button>
+    <button class="ptile" data-type="heading"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-heading"/></svg><span class="nm">Heading</span></button>
+    <button class="ptile" data-type="image"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-photo"/></svg><span class="nm">Image</span></button>
+    <button class="ptile" data-type="quote"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-quote"/></svg><span class="nm">Quote</span></button>
+    <button class="ptile" data-type="gallery"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-library-photo"/></svg><span class="nm">Gallery</span></button>
+    <button class="ptile" data-type="embed"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-video"/></svg><span class="nm">Video</span></button>
+    <button class="ptile" data-type="table"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-table"/></svg><span class="nm">Table</span></button>
+    <button class="ptile" data-type="playground"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-terminal-2"/></svg><span class="nm">Playground</span></button>
+    <button class="ptile" id="tplLibTile" data-type="__tpllib"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-wand"/></svg><span class="nm">Interactive (template)</span></button>
+    <button class="ptile" id="figTile" data-type="__figure"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-chart-dots"/></svg><span class="nm">Figure</span></button>
+    <button class="ptile" data-type="divider"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-separator"/></svg><span class="nm">Divider</span></button>
   </div>
 </div>
 
@@ -4636,14 +4636,14 @@
 </nav>
 
 <script type="module">
-import { resizeToBase64, decodeImage, encodeSource, MAX_EDGE } from '/studio/resize.js';
-import { initDarkroom } from '/studio/darkroom-upload.js';
+import { resizeToBase64, decodeImage, encodeSource, MAX_EDGE } from '/resize.js';
+import { initDarkroom } from '/darkroom-upload.js';
 
 const $=id=>document.getElementById(id);
 /* ── one icon language: Tabler sprite refs (icons-sprite.svg, ids ti-<name>) ──
    tico('heading') → '<svg><use …>' inheriting currentColor. Anything that isn't a
    bare icon name (a legacy glyph like '¶') degrades to a plain text span. */
-const TICO_SPRITE='/studio/icons-sprite.svg';
+const TICO_SPRITE='/icons-sprite.svg';
 function tico(name, cls){
   const n = String(name || '');
   if(!/^[a-z0-9-]+$/.test(n)) return '<span class="ic">' + n + '</span>';
@@ -4983,7 +4983,7 @@ window.openDarkroom=openDarkroom;
 /* ── Home: "Your apps" dashboard (owner Helm only) ──────────────────────────
    Shown only when the Studio is backed by a Helm (videoHelmReachable()); pure
    BYOK Studios never see it. Status + quick access only — NO data browser.
-   GET /studio/api/apps → [{ id, name, clinical, url, exists, records, users, sizeBytes }]. */
+   GET /api/apps → [{ id, name, clinical, url, exists, records, users, sizeBytes }]. */
 /* NOTE: fmtBytes(n) is already declared once in this module (near the crop editor)
    and is hoisted, so the app cards below reuse it directly. Do NOT redeclare it —
    a second top-level `function fmtBytes` in this type="module" script is a fatal
@@ -5030,7 +5030,7 @@ async function loadHomeApps(){
   }
 }
 window.loadHomeApps=loadHomeApps;
-// Delegated Backup — reuses the existing SQLite backup (POST /studio/api/apps/backup).
+// Delegated Backup — reuses the existing SQLite backup (POST /api/apps/backup).
 $('homeAppsGrid').addEventListener('click', async (e)=>{
   const b = e.target.closest('.app-backup'); if(!b) return;
   const id = b.dataset.app; if(!id) return;
@@ -16959,7 +16959,7 @@ function mdToHtml(md){
 let _previewCss = null;
 async function getPreviewCss(){
   if(_previewCss != null) return _previewCss;
-  try{ _previewCss = await (await fetch('/studio/preview.css')).text(); }
+  try{ _previewCss = await (await fetch('/preview.css')).text(); }
   catch{ _previewCss = ''; }
   return _previewCss;
 }
@@ -17179,7 +17179,7 @@ document.addEventListener('focusout', () => {
 });
 
 /* ── glyph icon picker ─────────────────────────────────────────────────────── */
-const GLYPH_SPRITE = '/studio/icons-sprite.svg';
+const GLYPH_SPRITE = '/icons-sprite.svg';
 let _glyphManifest = null, _glyphFiltered = [], _glyphShown = 0, _glyphMode = '2d';
 const GLYPH_PAGE = 120;
 
@@ -17211,7 +17211,7 @@ function closeGlyphPicker(){ $('glyphScrim').classList.remove('open'); $('glyphS
 async function loadGlyphManifest(){
   if(_glyphManifest) { applyGlyphSearch(); return; }
   $('glyphCount').textContent = 'Loading…';
-  try{ _glyphManifest = await (await fetch('/studio/icons-manifest.json')).json(); }
+  try{ _glyphManifest = await (await fetch('/icons-manifest.json')).json(); }
   catch(e){ $('glyphCount').textContent = 'Could not load icons.'; return; }
   applyGlyphSearch();
 }
@@ -17526,7 +17526,7 @@ function ptToggleStarters(){ const el=$('ptStarters'); if(!el) return; const emp
 function ptAddMsg(role, text){ const t=$('ptThread'); const d=document.createElement('div'); d.className='pt-msg '+(role==='user'?'user':'ai'); d.textContent=text; t.appendChild(d); t.scrollTop=t.scrollHeight; ptToggleStarters(); }
 // Render the post as it'll look live. The CSS MUST be inlined, not linked: the
 // about:srcdoc base makes a root-relative
-// <link href="/studio/preview.css"> resolve off-document and 404, leaving default
+// <link href="/preview.css"> resolve off-document and 404, leaving default
 // black text on the dark iframe background. Mirror the editor preview exactly —
 // inline preview.css + the data-post-theme="dark" article wrapper.
 async function ptRender(html){
@@ -18204,7 +18204,7 @@ $('libMediaSearch')?.addEventListener('input', () => {
 async function loadLibIcons(){
   const cnt=$('libIconCount'); cnt.textContent='Loading icons…';
   if(!_libIcons){
-    try{ _libIcons=_glyphManifest || await (await fetch('/studio/icons-manifest.json')).json(); _glyphManifest=_libIcons; }
+    try{ _libIcons=_glyphManifest || await (await fetch('/icons-manifest.json')).json(); _glyphManifest=_libIcons; }
     catch(e){ cnt.textContent='Could not load icons.'; _libIconsInit=false; return; }
   }
   buildLibIconCats();
@@ -18560,7 +18560,7 @@ function pollVideo(jobId){
 async function showVideoResult(jobId){
   // fetch the MP4 as a blob so the <video> and Download both work off a blob: URL.
   // (Server-side render is a local-Helm-only feature; unreachable in the BYOK product.)
-  const url='/studio/api/video/file/'+jobId;
+  const url='/api/video/file/'+jobId;
   try{
     const resp=await fetch(url);
     if(!resp.ok) throw new Error('Could not fetch the rendered video');
@@ -18590,7 +18590,7 @@ window.shareVideo=shareVideo;
 let deferredPrompt=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;$('installBtn').style.display='inline-block';});
 $('installBtn').addEventListener('click',async()=>{ if(deferredPrompt){deferredPrompt.prompt();deferredPrompt=null;$('installBtn').style.display='none';} });
-if('serviceWorker' in navigator){ navigator.serviceWorker.register('/studio/sw.js').catch(()=>{}); }
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('/sw.js').catch(()=>{}); }
 
 // Brand the title + mastheads now that the mode (window.__studioConfig) is known:
 // the engine bundle (studio.js) is a module loaded before this one, so it has
@@ -18702,7 +18702,7 @@ applyBrandName();
    user can edit the bundle in their own browser. It stops casual use, nothing more.
 
    Modes:
-     • LOCAL Helm (server-backed build): try GET /studio/api/licence first, so the
+     • LOCAL Helm (server-backed build): try GET /api/licence first, so the
        owner never re-enters the key the server already holds. Falls back to the
        stored/pasted key.
      • HOSTED BYOK: the browser verifies the pasted key; stored in localStorage. */
@@ -18745,7 +18745,7 @@ async function _resolveStoredLicence(){
   if(key) return key;
   // LOCAL Helm: the server may already hold the key in config.licence.key.
   try{
-    const r=await fetch('/studio/api/licence');
+    const r=await fetch('/api/licence');
     if(r.ok){ const j=await r.json(); if(j&&j.key){ try{ localStorage.setItem(LIC_STORE,j.key); }catch{} return j.key; } }
   }catch{}
   return '';
