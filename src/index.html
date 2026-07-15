@@ -4699,9 +4699,14 @@ window.setBusy = setBusy;
    GitHub unreachable) it re-opens onboarding so the user can fix their keys. */
 async function boot(){
   applyBrandName();   // keep the title + app-header name correct for the live mode
-  try{ await api('/drafts'); // validates the GitHub connection
+  try{ await api('/drafts'); // local draft store — reveals the app; NOT a GitHub check (see below)
     $('app').style.display='block'; $('nav').style.display='flex';
     if($('camFab')) $('camFab').style.display='flex';   // reveal the always-reachable camera
+    // H5 — the boot gate (isReady) only checks the repo/token FIELDS are present, and
+    // /drafts is a LOCAL store, so a revoked/expired token would otherwise sail straight
+    // into the composer and only fail at Publish. Validate it for real against GitHub in
+    // the BACKGROUND — never blocking first paint — and reconnect only if it's truly dead.
+    validateGithubConnection();
     loadPosts();
     // Home is the launchpad for EVERYONE and never auto-opens onboarding. By the time we
     // reach boot() the user is already set up (signed in + a blog) — brand-new users are
@@ -4719,6 +4724,23 @@ async function boot(){
     // a reload mid-tour won't re-trigger; "done" is set on Finish/Skip.
     setTimeout(()=>{ try{ const T=window.__studioTour; if(T&&T.shouldAutoOpen()){ T.clearPending(); openFirstPostTour(); } }catch{} }, 1100);
   }catch(e){ $('app').style.display='none'; $('nav').style.display='none'; if($('camFab')) $('camFab').style.display='none'; if(window.__studioOnboard) window.__studioOnboard(); }
+}
+
+/* H5 — background GitHub-token validation. Calls whoami (GET /user) with the stored token;
+   ONLY a definitive dead-token failure (expired / revoked / bad credentials) interrupts to
+   reconnect, so an offline-but-valid session is never punished. Reuses the pure classifier
+   in core/connection.js (window.__studioConnection.isDeadToken). No-op on the local build
+   (no __studioGh) or before the client router is ready. */
+async function validateGithubConnection(){
+  const gh=window.__studioGh, C=window.__studioConnection;
+  if(!gh || !gh.byok || typeof gh.whoami!=='function' || !C || typeof C.isDeadToken!=='function') return;
+  try{ await gh.whoami(); }
+  catch(err){
+    if(!C.isDeadToken(err)) return;   // transient / offline — leave the valid session alone
+    $('app').style.display='none'; $('nav').style.display='none'; if($('camFab')) $('camFab').style.display='none';
+    toast('Your GitHub connection expired — reconnect to keep publishing.');
+    if(window.__studioOnboard) window.__studioOnboard();
+  }
 }
 
 function dismissGettingStarted(){

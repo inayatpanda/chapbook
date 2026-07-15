@@ -11,12 +11,31 @@ const GRANT = 'urn:ietf:params:oauth:grant-type:device_code';
 
 export function makeDeviceAuth({ clientId, relayBase, scope = 'public_repo' }, fetchImpl = fetch) {
   const post = async (step, params) => {
-    const res = await fetchImpl(relayBase, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ step, params }),
-    });
-    return res.json();
+    // M6 — surface relay/GitHub errors as a human message instead of a raw JSON dump or a
+    // silent stall. A network failure to the relay throws a friendly "couldn't reach" error;
+    // an unparseable body (a 5xx HTML page, a gateway error) throws with the status. But any
+    // usable JSON object is returned AS-IS — including the OAuth device-flow codes
+    // (authorization_pending / slow_down / expired_token / access_denied), which GitHub
+    // returns HTTP 200 for. We deliberately do NOT throw purely on !res.ok, so a status quirk
+    // on a polling response can never break the poll loop; requestCode/pollOnce interpret it.
+    let res;
+    try {
+      res = await fetchImpl(relayBase, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ step, params }),
+      });
+    } catch {
+      const e = new Error('Could not reach the sign-in service — check your connection, then try again.');
+      e.kind = 'network'; throw e;
+    }
+    let data = null;
+    try { data = await res.json(); } catch { /* non-JSON body handled below */ }
+    if (data && typeof data === 'object' && (res.ok || data.error || data.access_token || data.device_code || data.user_code)) {
+      return data;
+    }
+    const e = new Error(`The sign-in service is unavailable right now (HTTP ${res.status || '?'}). Please try again in a moment.`);
+    e.kind = 'relay'; e.status = res.status; throw e;
   };
   return {
     // Step 1 — ask GitHub for a device + user code.

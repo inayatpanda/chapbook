@@ -23,6 +23,13 @@ import * as quotes from './core/quotes.js';
 import * as postCalendar from './core/postCalendar.js';
 import * as shareIntents from './core/shareIntents.js';
 import * as postList from './core/postList.js';
+import * as connection from './core/connection.js';
+
+// Minimal HTML escaper for the few spots where user text (a chosen blog name) is written
+// into the onboarding overlay's innerHTML — that overlay's origin holds the buyer's
+// GitHub/AI/R2 secrets, so untrusted text must never become markup there.
+const escHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // Public OAuth Client ID + relay base, injected into dist/index.html at build (Task 5).
 // Absent in the local server-backed Studio → device sign-in hides, PAT path only.
@@ -50,6 +57,10 @@ export function refresh() {
     byok: config.isConfigured(),
     getFile: gh.getFile,
     commitMany: gh.commitMany,
+    // whoami: the boot gate calls this to VALIDATE the token against GitHub in the background
+    // (isConfigured() only checks the fields are present). whoami reads /user via the token
+    // closure — no `this` — so it's safe to surface unbound.
+    whoami: gh.whoami,
     // listTree: read the post's existing _images/<slug>/ files so the uploader can dedupe new
     // filenames against what's already committed (never overwrite a prior photo) + show a true count.
     listTree: gh.listTree,
@@ -211,8 +222,9 @@ export function renderOnboarding() {
   const v = (id) => ($(id).value || '').trim();
 
   // BYOK save
-  $('byok-save').addEventListener('click', () => {
+  $('byok-save').addEventListener('click', async () => {
     const msg = $('byok-msg');
+    const btn = $('byok-save');
     // "Save & start" completes the manual (owner + repo + token) path. Without those
     // three it cannot proceed — so tell the user why instead of returning silently.
     // In device-flow mode the primary path is "Sign in with GitHub" above and the
@@ -222,6 +234,21 @@ export function renderOnboarding() {
       msg.textContent = GH_CLIENT_ID
         ? 'Connect GitHub first — sign in above, or add owner, repo and a token under Advanced.'
         : 'Fill in owner, repo and GitHub token.';
+      return;
+    }
+    // M6 — validate the pasted token BEFORE saving. A wrong/expired PAT (or one lacking the
+    // contents scope) would otherwise save cleanly and only fail later at Publish, after the
+    // user has written a post. A `whoami` (GET /user) is the cheapest live check.
+    btn.disabled = true;
+    msg.style.color = '#aebbd2'; msg.textContent = 'Checking your token…';
+    try {
+      await makeGithub({ token: v('byok-token') }).whoami();
+    } catch (e) {
+      msg.style.color = '#f472b6';
+      msg.textContent = connection.isNetworkError(e)
+        ? 'Couldn’t reach GitHub to check your token — check your connection, then try again.'
+        : 'That GitHub token didn’t work — check it’s correct and has contents read & write, then try again.';
+      btn.disabled = false;
       return;
     }
     config.save({ mode: 'byok', ghOwner: v('byok-owner'), ghRepo: v('byok-repo'), ghBranch: v('byok-branch') || 'main', ghToken: v('byok-token'), aiProvider: v('byok-prov'), aiKey: v('byok-key') });
@@ -331,12 +358,13 @@ export function renderOnboarding() {
         if (!repo) { set('Could not find a free name — try another.', false); go.disabled = false; return; }
         const branch = repo.branch || 'main';
 
-        // Write the chosen look into site.json. Poll getFile first — the template content
-        // can lag a second or two after generate (getFile returns null until it lands).
+        // M5 — write the chosen name/theme/hero into site.json. The template content lags a
+        // moment after generate (getFile returns null until it lands), so poll with a generous
+        // window (~18s) before giving up — otherwise a slow clone silently drops the picks.
         set('Setting it up…');
         const ghRepo = makeGithub({ token, owner, repo: slug, branch });
-        let site = null, sha = null;
-        for (let i = 0; i < 6; i++) {
+        let site = null, sha = null, lookApplied = false;
+        for (let i = 0; i < 12; i++) {
           try { const f = await ghRepo.getFile('src/data/site.json'); if (f && f.content) { site = JSON.parse(f.content); sha = f.sha; break; } } catch {}
           await sleep(1500);
         }
@@ -345,21 +373,50 @@ export function renderOnboarding() {
           Object.assign(site, {
             name, masthead: name,
             defaultTheme: $('cb-theme').value, core: $('cb-core').value,
-            url: `https://${owner}.github.io/${slug}/`,
+            url: connection.blogUrl({ owner, repo: slug }),
           });
           await ghRepo.putFile('src/data/site.json', JSON.stringify(site, null, 2), 'Set up blog', sha);
-        } // else: leave the template defaults; the new repo still works, just unbranded.
+          lookApplied = true;
+        } // else: GitHub was still setting up — the repo works, but the picks weren't applied
+          // yet. We do NOT report this as a plain success; the panel below says so honestly.
 
-        // Best-effort Pages — the template's Actions workflow self-enables on first run,
-        // so a failure here must never abort the create.
-        try { await gh.enablePages({ owner, repo: slug }); } catch (e) { console.warn('enablePages (non-fatal):', e && e.message); }
+        // B3 — enabling Pages via the API needs the full `repo` scope; device sign-in only
+        // grants `public_repo`, so this commonly fails. Do NOT swallow it: capture the result
+        // so the panel below can show the exact one-time manual step when it didn't turn on.
+        const liveUrl = connection.blogUrl({ owner, repo: slug });
+        let pagesEnabled = false;
+        try { await gh.enablePages({ owner, repo: slug }); pagesEnabled = true; }
+        catch (e) { console.warn('enablePages (non-fatal):', e && e.message); }
 
         config.saveRepo({ owner, repo: slug, branch });
         refresh();
         // Flag the first-run "write your first post" tour to auto-open once after the reload.
         try { tour.markPending(); } catch {}
-        set('Your blog is live-building. Loading…', true);
-        setTimeout(() => location.reload(), 800);
+
+        // B3 — SHOW the buyer where their blog lives and whether it's building. Replace the
+        // create form with a result panel (no silent auto-reload) so the URL is unmissable.
+        const gc = $('gh-create');
+        const picker = $('gh-picker'); if (picker) picker.style.display = 'none';
+        const repoPagesSettings = `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(slug)}/settings/pages`;
+        const pagesBlock = pagesEnabled
+          ? `<div class="hint">Your first build is running — it'll be live in about 1–2 minutes. Bookmark the link above.</div>`
+          : `<div class="hint" style="color:#f4c06f;line-height:1.6">One quick step to switch your blog on:<br>
+               1. Open <a href="${repoPagesSettings}" target="_blank" rel="noopener" style="color:#22d3ee;text-decoration:underline">your repo → Settings → Pages</a><br>
+               2. Under <b>Source</b>, choose <b>GitHub Actions</b>.<br>
+               It'll be live at the link above about 1–2 minutes later.</div>`;
+        const notApplied = lookApplied ? ''
+          : `<div class="hint" style="color:#f4c06f">GitHub was still setting up, so your name/theme weren't applied yet — set them any time in Settings → Site settings once you're in.</div>`;
+        gc.innerHTML =
+          `<div class="cb-head">✓ Your blog “${escHtml(name)}” is ready</div>
+           <div class="hint" style="margin-top:.5rem">Your blog's address:</div>
+           <div style="margin-top:.2rem"><a href="${escHtml(liveUrl)}" target="_blank" rel="noopener" style="color:#22d3ee;text-decoration:underline;word-break:break-all;font-weight:700">${escHtml(liveUrl)}</a></div>
+           ${pagesBlock}
+           ${notApplied}
+           <button type="button" id="cb-continue">Continue to Chapbook →</button>
+           <button type="button" id="cb-copy" class="ghost">Copy my blog link</button>`;
+        $('cb-continue').addEventListener('click', () => location.reload());
+        $('cb-copy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(liveUrl); $('cb-copy').textContent = 'Copied ✓'; } catch {} });
+        return;
       } catch (e) {
         set((e && e.message) ? `Could not create the blog: ${e.message}` : 'Could not create the blog — try again.', false);
         go.disabled = false;
@@ -383,5 +440,6 @@ if (typeof window !== 'undefined') {
   // through this so an imported/AI/repo-sidecar payload can't run in the composer origin (which
   // holds the buyer's GitHub/AI/R2 secrets in localStorage). stripUnsafeHtml === sanitiseHtml.
   window.__studioSanitise = blocks.stripUnsafeHtml;
+  window.__studioConnection = connection; // pure blogUrl + dead-token/network classifiers for the boot gate (H5)
   refresh();
 }
