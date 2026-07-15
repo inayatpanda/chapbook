@@ -9674,7 +9674,7 @@ function edPlayground(b, isSel){
     ta.setAttribute('autocomplete', 'off');
     ta.placeholder = key === 'html' ? '<svg …>…</svg>' : 'const el = document.getElementById(…); …';
     ta.addEventListener('click', e => e.stopPropagation());
-    ta.addEventListener('input', () => { b[key] = ta.value; markDirty(); });
+    ta.addEventListener('input', () => { b[key] = ta.value; markDirty(); scheduleLivePreview(); });
     into.appendChild(ta);
     return ta;
   }
@@ -9832,6 +9832,19 @@ function edPlayground(b, isSel){
   holder.className = 'be-pg-preview';
 
   let on = false;
+  // Debounced in-place live preview: reflect HTML/JS edits without pressing
+  // Run / refresh. Only refreshes when the preview is open, and the iframe lives
+  // in `holder` (outside the textareas) so re-rendering never steals the author's
+  // caret. Local-only re-render (no network) → a snappy 150 ms is safe.
+  // (scheduleLivePreview closes over `on`/renderPreview, both live by the time the
+  // input handler ever fires — the field() textareas are wired to call it. Named
+  // apart from the picker's module-level schedulePreview() to avoid shadowing.)
+  let livePreviewTimer = null;
+  function scheduleLivePreview(){
+    if(!on) return;
+    clearTimeout(livePreviewTimer);
+    livePreviewTimer = setTimeout(() => { if(on) renderPreview(); }, 150);
+  }
 
   function buildSrcdoc(){
     // Minimal site playground CSS so the preview approximates the real thing.
@@ -11635,7 +11648,17 @@ function chooseTemplate(id){
   // so you write over it and never have to delete a box. Empty guide boxes carry no
   // content, so they don't publish either.
   seed.blocks = (seed.blocks || []).map(b => guideify({ ...b, id: mkId() }));
-  startNewPost(seed);
+  // Discoverability: the "Interactive" post-template used to seed a RAW code
+  // playground. Instead, drop that placeholder block and, once the scaffold is in
+  // place, open the interactive-template PICKER at its slot so authors start from a
+  // real template (form + live preview), not raw HTML/JS. The raw "Playground"
+  // block-picker tile stays as the escape hatch. Detected by the block itself (a
+  // playground with no template.familyId) rather than hard-coding a template id.
+  let pickerAt = null;
+  const rawIdx = seed.blocks.findIndex(b => b && b.type === 'playground' && !(b.template && b.template.familyId));
+  if(rawIdx !== -1){ pickerAt = rawIdx; seed.blocks.splice(rawIdx, 1); }
+  startNewPost(seed);   // sets doc + renders synchronously before its first await
+  if(pickerAt != null && typeof openTplLib === 'function'){ openTplLib(pickerAt); }
 }
 // Turn a template block's starter text into non-destructive placeholder guidance.
 // Text/quote carry their guide in html; heading carries it in text. In every case the
