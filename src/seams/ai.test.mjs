@@ -128,3 +128,25 @@ test('Layer 1: resolveLatestModel resolves the live latest for the active provid
   // Keyless provider → adapter degrades to its offline default (never throws).
   assert.equal(await ai.resolveLatestModel('openai'), 'gpt-4o');
 });
+
+// ── AI_TIMEOUT — a stalled provider request must abort, not hang forever ─────
+test('a hung provider request rejects with AI_TIMEOUT after timeoutMs', async () => {
+  // fetch that never settles on its own but respects the abort signal (like real fetch)
+  const hangingFetch = (url, opts = {}) => new Promise((_, reject) => {
+    if (opts.signal) opts.signal.addEventListener('abort', () => reject(Object.assign(new Error('The operation was aborted.'), { name: 'AbortError' })));
+  });
+  const cfg = { getAi: () => ({ provider: 'groq', key: 'k', model: 'llama-3.3-70b-versatile' }), save: () => {} };
+  const ai = makeAi(cfg, hangingFetch, { timeoutMs: 40 });
+  await assert.rejects(
+    () => ai.generateText({ prompt: 'hi', maxTokens: 5 }),
+    (err) => err.code === 'AI_TIMEOUT' && /took too long/.test(err.message),
+  );
+});
+
+test('a fast provider response is unaffected by the timeout wrapper', async () => {
+  const okFetch = async () => new Response(JSON.stringify({ choices: [{ message: { content: 'hello' } }] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  const cfg = { getAi: () => ({ provider: 'groq', key: 'k', model: 'llama-3.3-70b-versatile' }), save: () => {} };
+  const ai = makeAi(cfg, okFetch, { timeoutMs: 5000 });
+  const r = await ai.generateText({ prompt: 'hi', maxTokens: 5 });
+  assert.equal(r.text, 'hello');
+});

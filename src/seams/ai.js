@@ -9,12 +9,24 @@ import { pickLatestFromList } from '../lib/ai/pickLatest.js';
 
 const ADAPTERS = { anthropic, openai, google, groq };
 
-export function makeAi(cfg, fetchImpl = fetch) {
+export function makeAi(cfg, fetchImpl = fetch, { timeoutMs = 120_000 } = {}) {
   // Anthropic requires an explicit opt-in header for direct browser use; add it transparently.
+  // Every provider call is also bounded by timeoutMs: without it a stalled request (live e2e:
+  // a free-tier Gemini generateContent hung >2.5min) left the UI on "…thinking" FOREVER with
+  // no error and no way to retry. On abort we throw a classified AI_TIMEOUT the UI can show;
+  // isDeadModelError() is false for it, so the heal path never mistakes a stall for a
+  // retired model.
   const browserFetch = (url, opts = {}) => {
     const headers = { ...(opts.headers || {}) };
     if (String(url).includes('api.anthropic.com')) headers['anthropic-dangerous-direct-browser-access'] = 'true';
-    return fetchImpl(url, { ...opts, headers });
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), timeoutMs);
+    return fetchImpl(url, { ...opts, headers, signal: ctl.signal })
+      .catch((err) => {
+        if (ctl.signal.aborted) throw Object.assign(new Error('The AI provider took too long to respond — try again.'), { code: 'AI_TIMEOUT' });
+        throw err;
+      })
+      .finally(() => clearTimeout(timer));
   };
   const pick = () => { const a = cfg.getAi(); return { adapter: ADAPTERS[a.provider] || anthropic, a }; };
 
