@@ -1,0 +1,24 @@
+# Netlify config for the hosted Studio — static site (dist/) + the secret-less
+# device-flow relay (netlify/functions/). Both paths are relative to this file,
+# so deploy with this directory (studio-app/) as the Netlify project root.
+[build]
+  publish = "dist"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# Security headers for the static app. The relay (gh-device) sets its own CORS
+# headers in code; these apply to the served HTML/JS/CSS.
+# The Studio holds BYOK secrets (studio_token + AI/GitHub keys) in localStorage, so the CSP
+# connect-src allowlist is the key mitigation: even an injected script can only POST to the
+# providers we list. 'unsafe-inline' is kept so the existing inline boot scripts still run
+# (a nonce/hash refinement can drop it later). HSTS forces HTTPS for a year. (H9)
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com https://api.groq.com https://api.crossref.org https://github.com https://api.github.com https://*.workers.dev https://*.r2.dev; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://www.youtube-nocookie.com https://player.vimeo.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"

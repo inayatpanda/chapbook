@@ -1,0 +1,18 @@
+{
+  "id": "how-to",
+  "name": "How-to / Tutorial",
+  "description": "Step-by-step guide: what you'll need, the steps, and a few tips.",
+  "doc": {
+    "version": 1,
+    "blocks": [
+      { "id": "t1", "type": "text", "html": "Say what the reader will be able to do by the end, and roughly how long it takes. One short paragraph." },
+      { "id": "t2", "type": "heading", "level": 3, "text": "What you'll need" },
+      { "id": "t3", "type": "text", "html": "List the kit, accounts, or starting point. If there are prerequisites, name them here so nobody gets stuck halfway." },
+      { "id": "t4", "type": "heading", "level": 3, "text": "Steps" },
+      { "id": "t5", "type": "text", "html": "Step 1. Replace with the first step. Write it as an instruction — one action per step." },
+      { "id": "t7", "type": "text", "html": "Step 2. Replace with the next step. Keep the order honest — write it the way you'd actually do it." },
+      { "id": "t8", "type": "heading", "level": 3, "text": "Tips" },
+      { "id": "t9", "type": "text", "html": "The small things that save time or trouble — the bit you only learn by doing it once and getting it wrong." }
+    ]
+  }
+}

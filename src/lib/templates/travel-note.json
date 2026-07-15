@@ -1,0 +1,13 @@
+{
+  "id": "travel-note",
+  "name": "Travel note",
+  "description": "A short note from a place — a lead, a gallery, a reflection.",
+  "doc": {
+    "version": 1,
+    "blocks": [
+      { "id": "t2", "type": "text", "html": "Set the scene in a sentence or two — where, when, and why you went." },
+      { "id": "t3", "type": "gallery", "images": [] },
+      { "id": "t4", "type": "text", "html": "What stood out. One specific detail — a smell, a wrong turn, a meal — beats a list of everything you saw." }
+    ]
+  }
+}

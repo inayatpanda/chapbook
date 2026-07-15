@@ -1,0 +1,11 @@
+{
+  "id": "blank",
+  "name": "Blank",
+  "description": "An empty canvas.",
+  "doc": {
+    "version": 1,
+    "blocks": [
+      { "id": "t1", "type": "text", "html": "" }
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "id": "announcement",
+  "name": "Announcement",
+  "description": "A short, clear announcement — the headline, the news, and an optional image.",
+  "doc": {
+    "version": 1,
+    "blocks": [
+      { "id": "t1", "type": "heading", "level": 2, "text": "What's the news?" },
+      { "id": "t2", "type": "text", "html": "State it plainly in the first line — what's happening, and when. Then add the one or two things a reader needs to know or do next." }
+    ]
+  }
+}

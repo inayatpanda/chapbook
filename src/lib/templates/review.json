@@ -1,0 +1,17 @@
+{
+  "id": "review",
+  "name": "Review",
+  "description": "A considered review: the verdict up front, the good, the not-so-good, a closing line.",
+  "doc": {
+    "version": 1,
+    "blocks": [
+      { "id": "t2", "type": "text", "html": "The verdict, up front — what it is, who it's for, and whether it's worth the money. Don't make the reader scroll for the answer." },
+      { "id": "t3", "type": "heading", "level": 3, "text": "The good" },
+      { "id": "t4", "type": "text", "html": "What it gets right. Be specific — name the thing that actually made a difference, not the spec sheet." },
+      { "id": "t5", "type": "heading", "level": 3, "text": "The not-so-good" },
+      { "id": "t6", "type": "text", "html": "Where it falls short. Be fair, but don't soften it into nothing — the honest niggles are the useful part." },
+      { "id": "t7", "type": "quote", "html": "A memorable line, or your one-line rating — the bit someone would screenshot.", "cite": "" },
+      { "id": "t8", "type": "text", "html": "Close it out: would you buy it again, and what you'd suggest instead if the answer is no." }
+    ]
+  }
+}

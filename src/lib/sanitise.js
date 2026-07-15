@@ -1,0 +1,80 @@
+// Publish-path HTML sanitiser — parser-based (DOMPurify), replacing the bypassable
+// regex strip. The old regex let `<img/src=x/onerror=alert(1)>` and `<svg/onload=…>`
+// through (the `on*` strip required a whitespace boundary that `/onerror` sidesteps,
+// and `<svg>` was never in the removed-element set), so both reached the user's public
+// GitHub Pages blog verbatim → stored XSS against blog visitors. A real HTML parser
+// normalises `<img/src=x/onerror=…>` to `<img src="x" onerror="…">` and then applies an
+// allow-list, so the attribute-boundary bypass no longer exists.
+//
+// ── DUAL CONTEXT ────────────────────────────────────────────────────────────────
+// blocks.js (which calls sanitiseHtml) is bundled into the browser Studio AND imported
+// directly under `node --test`. DOMPurify needs a DOM `window`:
+//   • Browser (the REAL publish path): DOMPurify.sanitize runs for real and is
+//     authoritative — every commit to the blog goes through it.
+//   • Node / tests (no window): DOMPurify's default export is a lazy factory whose
+//     `.sanitize` is undefined until it is bound to a window, so calling it throws.
+//     We detect that and fall back to `regexStripFallback` (the original regex strip)
+//     so server/test contexts DEGRADE SAFELY instead of crashing. This fallback is a
+//     defence-in-depth backstop, not the primary barrier — the primary barrier is
+//     DOMPurify in the browser. Because the fallback is the old regex, the two audit
+//     vectors above are NOT fully neutralised by the fallback alone; that is why the
+//     unit tests assert the POLICY (PURIFY_CONFIG) and a live-browser runtime assertion
+//     is deferred to the release gate (Task 14).
+//
+// Importing this module is safe under node: `import DOMPurify from 'dompurify'` yields
+// the factory function without throwing; only calling `.sanitize` without a window fails.
+import DOMPurify from 'dompurify';
+
+// DOMPurify policy (the authoritative allow-list the browser enforces at publish time).
+//   • USE_PROFILES.html — keeps legitimate formatting (p, a[href], strong/em, ul/ol/li,
+//     h1-h6, img[src], figure/figcaption, blockquote, code/pre, table…) and, crucially,
+//     STRIPS every `on*` event-handler attribute (they are not in the html allow-list).
+//   • FORBID_TAGS — removes the dangerous element classes on top of the profile:
+//     script/iframe/object/embed drop executable/embedding vectors; svg/math close the
+//     foreign-content parsing hole (`<svg/onload=…>`, `<math>` mutation-XSS); style/form
+//     drop CSS-exfil and formaction abuse.
+//   • FORBID_ATTR: formaction — belt-and-braces against `<button formaction="javascript:…">`.
+//   • ALLOW_UNKNOWN_PROTOCOLS:false — keeps DOMPurify's default IS_ALLOWED_URI regexp,
+//     which rejects `javascript:` / `vbscript:` (and other script-y schemes) in href/src.
+export const PURIFY_CONFIG = {
+  USE_PROFILES: { html: true },
+  FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'svg', 'math', 'style', 'form'],
+  FORBID_ATTR: ['formaction'],           // on* handlers are stripped by the default profile
+  ALLOW_UNKNOWN_PROTOCOLS: false,
+};
+
+// The ORIGINAL regex strip, preserved verbatim so nothing is lost. Used ONLY as the
+// node/test fallback when DOMPurify has no window (see DUAL CONTEXT above). It removes
+// <script>/<iframe>/<object>/<embed>, whitespace-delimited on*= handlers, and neutralises
+// javascript: in href/src. It is intentionally NOT the primary barrier.
+export function regexStripFallback(html) {
+  let s = String(html || '');
+  // whole elements (with or without a close tag) for the dangerous trio + script
+  s = s.replace(/<(script|iframe|object|embed)\b[\s\S]*?<\/\1\s*>/gi, '');
+  // stray / self-closing / unclosed openers of the same tags
+  s = s.replace(/<\/?(?:script|iframe|object|embed)\b[^>]*>/gi, '');
+  // inline event-handler attributes:  onerror="…"  onclick='…'  onload=foo
+  s = s.replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  // neutralise javascript: in href / src (drop the whole attribute)
+  s = s.replace(/\s(?:href|src)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]*)/gi, '');
+  return s;
+}
+
+// True only when DOMPurify is bound to a live DOM (browser / jsdom-backed context).
+function purifyIsLive() {
+  return typeof window !== 'undefined' && DOMPurify && typeof DOMPurify.sanitize === 'function';
+}
+
+// Sanitise arbitrary HTML for the publish pipeline. In the browser this is DOMPurify
+// (authoritative). Under node/tests (no window) it degrades to the regex fallback so the
+// module never crashes a server/test context. Always returns a string.
+export function sanitiseHtml(html) {
+  const input = String(html ?? '');
+  if (!purifyIsLive()) return regexStripFallback(input);
+  try {
+    return String(DOMPurify.sanitize(input, PURIFY_CONFIG));
+  } catch {
+    // Defensive: any unexpected DOMPurify failure must not surface unsanitised HTML.
+    return regexStripFallback(input);
+  }
+}

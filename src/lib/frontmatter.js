@@ -1,0 +1,96 @@
+// Dependency-free frontmatter for the known blog fields + a managed gallery block.
+const GALLERY_START = '<!-- gallery:start -->';
+const GALLERY_END = '<!-- gallery:end -->';
+
+export function parse(md) {
+  const m = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/.exec(md);
+  if (!m) return { data: {}, body: md };
+  const data = {};
+  for (const line of m[1].split('\n')) {
+    const mm = /^(\w+):\s*(.*)$/.exec(line);
+    if (!mm) continue;
+    const key = mm[1];
+    const val = mm[2].trim();
+    if (key === 'tags') {
+      const inner = val.replace(/^\[/, '').replace(/\]$/, '');
+      data.tags = inner.trim()
+        ? inner.split(',').map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean)
+        : [];
+    } else if (key === 'citations') {
+      // Structured references stored as a single-line JSON array: [{id,text},…].
+      try { const arr = JSON.parse(val); data.citations = Array.isArray(arr) ? arr : []; }
+      catch { data.citations = []; }
+    } else if (key === 'seriesPart') {
+      // Explicit part number for ordering within a series. Coerce to a number;
+      // ignore a non-numeric value (date falls back to it).
+      const n = Number(val);
+      if (Number.isFinite(n)) data.seriesPart = n;
+    } else if (val === 'true' || val === 'false') {
+      data[key] = val === 'true';
+    } else {
+      data[key] = val.replace(/^["']|["']$/g, '').replace(/\\"/g, '"');
+    }
+  }
+  return { data, body: m[2] };
+}
+
+const q = (s) => '"' + String(s).replace(/"/g, '\\"') + '"';
+
+export function serialise({ data, body }) {
+  const lines = [];
+  if (data.title != null) lines.push(`title: ${q(data.title)}`);
+  if (data.description != null) lines.push(`description: ${q(data.description)}`);
+  // Optional featured / OG share image (root-relative or absolute URL). Only
+  // written when set — absent means the build's generated /og/<slug>.png is used.
+  if (data.image) lines.push(`image: ${q(data.image)}`);
+  if (data.date != null) lines.push(`date: ${data.date}`);
+  if (data.tags != null) lines.push(`tags: [${data.tags.map(q).join(', ')}]`);
+  // Structured references (manual citations). Single-line JSON so the line-based
+  // parser round-trips it losslessly; only the {id,text} shape is kept.
+  if (Array.isArray(data.citations) && data.citations.length) {
+    const clean = data.citations
+      .filter((c) => c && c.id)
+      .map((c) => ({ id: String(c.id), text: String(c.text == null ? '' : c.text) }));
+    if (clean.length) lines.push(`citations: ${JSON.stringify(clean)}`);
+  }
+  // Series grouping: an optional series name + optional explicit part number.
+  // The name is the source of truth for membership; the number only orders within
+  // the series (else order falls back to date). Only written when set.
+  if (data.series != null && String(data.series).trim()) lines.push(`series: ${q(String(data.series).trim())}`);
+  if (data.seriesPart != null && Number.isFinite(Number(data.seriesPart))) lines.push(`seriesPart: ${Number(data.seriesPart)}`);
+  if (data.accent != null) lines.push(`accent: ${q(data.accent)}`);
+  if (data.glyph != null) lines.push(`glyph: ${q(data.glyph)}`);
+  // Reading TEMPLATE (the post page's reading surface). One of the six keys
+  // observatory·parchment·manuscript·newsprint·slate·focus. 'observatory' is the
+  // dark house default, so omit it (absent → reader's global pref applies).
+  if (data.template != null && data.template !== 'observatory') lines.push(`template: ${q(data.template)}`);
+  // Legacy reading THEME — kept as a quiet fallback for older posts that never set
+  // a template. Only written when explicitly non-dark.
+  if (data.theme != null && data.theme !== 'dark') lines.push(`theme: ${q(data.theme)}`);
+  if (data.draft === true) lines.push('draft: true');
+  // Scheduled publishing: an ISO date/time at which the GitHub Action flips draft→false.
+  // Always paired with draft:true so the post stays hidden until the Action runs.
+  if (data.publishAt) lines.push(`publishAt: ${data.publishAt}`);
+  return `---\n${lines.join('\n')}\n---\n\n${String(body).replace(/^\n+/, '')}`;
+}
+
+export function readGallery(body) {
+  const s = body.indexOf(GALLERY_START);
+  const e = body.indexOf(GALLERY_END);
+  if (s === -1 || e === -1 || e < s) return [];
+  const block = body.slice(s + GALLERY_START.length, e);
+  return [...block.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map((m) => m[1]);
+}
+
+export function writeGallery(body, imagePaths) {
+  const s = body.indexOf(GALLERY_START);
+  const e = body.indexOf(GALLERY_END);
+  const hasBlock = s !== -1 && e !== -1 && e >= s;
+  if (imagePaths.length === 0) {
+    if (!hasBlock) return body;
+    return (body.slice(0, s) + body.slice(e + GALLERY_END.length)).replace(/\n{3,}/g, '\n\n').trimEnd() + '\n';
+  }
+  const block = `${GALLERY_START}\n${imagePaths.map((p) => `![](${p})`).join('\n')}\n${GALLERY_END}`;
+  if (hasBlock) return body.slice(0, s) + block + body.slice(e + GALLERY_END.length);
+  return body.replace(/\s*$/, '') + '\n\n' + block + '\n';
+}

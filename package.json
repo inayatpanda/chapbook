@@ -1,0 +1,15 @@
+{
+  "name": "chapbook",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.5" },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test",
+    "gate": "node scripts/release-gate.mjs",
+    "deploy:draft": "npm run build && netlify deploy --dir dist --functions netlify/functions --site d825cd70-8cca-4b78-a92b-2245e6876d48",
+    "deploy:prod": "npm run build && netlify deploy --prod --dir dist --functions netlify/functions --site d825cd70-8cca-4b78-a92b-2245e6876d48"
+  },
+  "dependencies": { "@netlify/blobs": "^8", "aws4fetch": "^1.0.20", "dompurify": "^3" },
+  "devDependencies": { "esbuild": "^0.23" }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "photo-story",
+  "name": "Photo story",
+  "description": "Photo-led post: a short intro, a gallery, then a closing thought.",
+  "doc": {
+    "version": 1,
+    "blocks": [
+      { "id": "t2", "type": "text", "html": "One or two sentences on what these photos are about, and why you took them." },
+      { "id": "t3", "type": "gallery", "images": [] },
+      { "id": "t4", "type": "text", "html": "A caption for the set — what the images show, or the moment they were taken in." },
+      { "id": "t5", "type": "text", "html": "Close with the one thing that stayed with you. A specific detail beats a tidy summary." }
+    ]
+  }
+}
