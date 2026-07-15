@@ -7,11 +7,24 @@ const KEY = 'helm.studio.config.v1';
 
 const trimSlash = (u) => (u || '').trim().replace(/\/+$/, '');
 
+// A full localStorage quota (or a Safari private-mode write) makes setItem throw. Left
+// unhandled that means the user's keys/settings silently fail to persist. Detect the quota
+// error and signal the UI (a 'studio:storage-full' window event the app turns into a toast)
+// so the failure is visible; then re-throw so callers can react exactly as before.
+const isQuotaError = (e) => !!e && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22 || e.code === 1014);
+function signalStorageFull(e) {
+  try { if (typeof window !== 'undefined' && window.dispatchEvent) window.dispatchEvent(new CustomEvent('studio:storage-full')); } catch {}
+}
+function setItemSafe(ls, key, value) {
+  try { ls.setItem(key, value); }
+  catch (e) { if (isQuotaError(e)) signalStorageFull(e); throw e; }
+}
+
 export function makeConfig(ls) {
   const read = () => { try { return JSON.parse(ls.getItem(KEY)) || {}; } catch { return {}; } };
   return {
     all: read,
-    save(patch) { const c = { ...read(), ...patch }; ls.setItem(KEY, JSON.stringify(c)); return c; },
+    save(patch) { const c = { ...read(), ...patch }; setItemSafe(ls, KEY, JSON.stringify(c)); return c; },
     clear() { ls.removeItem(KEY); },
     getGithub() { const c = read(); return { owner: c.ghOwner || '', repo: c.ghRepo || '', branch: c.ghBranch || 'main', token: c.ghToken || '' }; },
     getAi() { const c = read(); return { provider: c.aiProvider || 'anthropic', key: c.aiKey || '', model: c.aiModel || '' }; },

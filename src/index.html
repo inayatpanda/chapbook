@@ -898,25 +898,6 @@
     transition:border-color .15s,box-shadow .15s,background .15s}
   .bar .iconBtn:hover{border-color:var(--acc);box-shadow:var(--glow);background:var(--surface)}
 
-  /* ── COMPOSE INPUTS ──────────────────────────────────────────────────────── */
-  #fTitle{margin-bottom:.6rem}
-
-  /* ── PHOTOS GRID ─────────────────────────────────────────────────────────── */
-  .photoGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));
-    gap:.5rem;margin-top:.8rem}
-  .thumb{position:relative;border-radius:10px;overflow:hidden;aspect-ratio:1;
-    background:var(--bg)}
-  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
-  .thumb .del{position:absolute;top:.3rem;right:.3rem;background:rgba(0,0,0,.7);
-    border:0;color:#fff;border-radius:50%;width:22px;height:22px;
-    font-size:.8rem;cursor:pointer;line-height:1;display:flex;
-    align-items:center;justify-content:center}
-
-  /* ── FILE BUTTON ─────────────────────────────────────────────────────────── */
-  .fileBtn{display:inline-block;background:transparent;border:1px solid var(--line);
-    color:var(--ink);border-radius:14px;padding:.75em 1.2em;cursor:pointer;
-    font:600 .9rem system-ui;margin-top:.5rem}
-
   /* ── DARKROOM UPLOADER ───────────────────────────────────────────────────── */
   #v-darkroom .dk-warn{background:rgba(244,114,182,.08);border:1px solid rgba(244,114,182,.3);
     color:#f9a8d4;border-radius:12px;padding:.7rem .9rem;margin:.4rem 0 1rem;font-size:.84rem}
@@ -2719,7 +2700,7 @@
 <div id="licence" class="wrap" style="display:none">
   <h1>Activate Chapbook</h1>
   <p class="sub">Enter your Chapbook-access key to use Chapbook. Need one? Email <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a> or buy below.</p>
-  <input id="licKey" type="text" placeholder="IPL1.…" autocomplete="off" spellcheck="false" />
+  <input id="licKey" type="text" placeholder="IPL1.…" autocomplete="off" spellcheck="false" aria-label="Chapbook activation key" />
   <button class="btn" onclick="submitLicence()">Activate</button>
   <div id="licMsg" class="msg" role="alert"></div>
   <p class="sub" style="margin-top:14px">No key yet? <a href="https://buy.stripe.com/5kQeVd0C06t7aSLf3IgUM05?client_reference_id=studio" target="_blank" rel="noopener noreferrer">Buy a key &rarr;</a></p>
@@ -3037,40 +3018,6 @@
       </div>
     </div>
   </div>
-
-  <!-- ===== COMPOSE-EDIT (blog post editor) ===== -->
-  <section class="view" id="v-postedit">
-    <div class="bar">
-      <button class="back" id="backToPosts">← Posts</button>
-      <span id="peTitle" style="flex:1;font-size:.95rem;font-weight:600;color:var(--mut)">New post</span>
-    </div>
-    <input id="fTitle" type="text" placeholder="Title" />
-    <div class="chips" id="fTags"></div>
-    <textarea id="fBody" rows="12" placeholder="Write in markdown…"></textarea>
-    <div class="btn-row" style="margin-top:.8rem">
-      <button class="btn ghost" id="aiAssistBtn">AI draft</button>
-      <button class="btn" id="publishBtn">Publish</button>
-    </div>
-    <div id="editOnlyRow" style="display:none" class="btn-row" style="margin-top:.5rem">
-      <button class="btn ghost" id="photosBtn">Photos</button>
-      <button class="btn ghost" id="takedownBtn">Take down</button>
-      <button class="btn danger" id="deleteBtn">Delete</button>
-    </div>
-    <div id="peMsg" class="msg"></div>
-  </section>
-
-  <!-- ===== PHOTOS ===== -->
-  <section class="view" id="v-photos">
-    <div class="bar">
-      <button class="back" id="backToEdit">← Post</button>
-      <span style="font-size:.95rem;font-weight:600">Photos</span>
-    </div>
-    <label class="fileBtn">
-      <input id="photoInput" type="file" accept="image/*" multiple style="display:none" />
-      Add photos from library
-    </label>
-    <div id="photoGrid" class="photoGrid"></div>
-  </section>
 
   <!-- ===== DARKROOM (photo uploader) ===== -->
   <section class="view" id="v-darkroom">
@@ -3792,7 +3739,7 @@
         <div class="refs-lookup">
           <div class="refs-lookup-row">
             <input id="refsLookupInput" class="refs-lookup-in" type="text" inputmode="text" autocomplete="off"
-                   placeholder="Paste a DOI or PubMed ID — e.g. 10.1001/jama.2020.1234 or 32511637">
+                   placeholder="Paste a DOI or PubMed ID — e.g. 10.1038/nature12373">
             <button class="btn" id="refsLookupBtn">Look up</button>
           </div>
           <p class="refs-lookup-hint">DOI works anywhere (Crossref). For a PubMed ID, paste the full reference and use ✦ Tidy instead.</p>
@@ -4259,7 +4206,7 @@
         <!-- AI generate-a-sticker row -->
         <div class="fig-sticker-ai">
           <input class="ai-input" id="figStickerAiText" type="text"
-            placeholder="✦ Describe a sticker for AI to draw — e.g. a grumpy cartoon femur" autocomplete="off" />
+            placeholder="✦ Describe a sticker for AI to draw — e.g. a grumpy cartoon cactus" autocomplete="off" />
           <button class="btn" id="figStickerAiGo" type="button">✦ Generate a sticker</button>
         </div>
         <p class="fig-compose-note" id="figStickerNote"></p>
@@ -4421,7 +4368,7 @@
       <div class="fig-refine">
         <p class="tpllib-lbl" style="margin:.4rem auto .35rem">Refine in words</p>
         <div class="fig-refine-row">
-          <input class="ai-input" id="figTweakText" placeholder="e.g. make the arrows bolder, rename the top label to 'Supraspinatus'" />
+          <input class="ai-input" id="figTweakText" placeholder="e.g. make the arrows bolder, rename the top label to 'Handlebars'" />
           <button class="btn ghost fig-mic" id="figTweakMic" type="button" hidden aria-pressed="false" title="Dictate">🎙 Dictate</button>
           <button class="btn" id="figTweakGo" type="button">Apply</button>
         </div>
@@ -4787,7 +4734,18 @@ function classifyError({ status, payload, raw } = {}){
   }
   // GitHub API specifics
   if(/rate limit/.test(low) || e.status===429){
-    e.kind='github'; e.message='GitHub rate limit hit — wait a minute, then retry.'; e.retry=true; return e;
+    // Attribute the 429 to the service that actually threw it, not always GitHub.
+    // AI adapters tag their errors with an AI_* code (and name the provider in the
+    // message); R2 is classified separately (r2.classifyError), so it rarely lands here.
+    const code=String((payload&&payload.code)||(raw&&raw.code)||'');
+    if(/^AI_/.test(code) || /anthropic|openai|\bgroq\b|gemini|claude/.test(low)){
+      e.kind='ai'; e.message='Your AI provider is rate-limiting requests — wait a moment, then try again.';
+    } else if(/rate limit|github|api\.github/.test(low)){
+      e.kind='github'; e.message='GitHub rate limit hit — wait a minute, then retry.';
+    } else {
+      e.kind='server'; e.message='Hit a rate limit — wait a moment, then try again.';
+    }
+    e.retry=true; return e;
   }
   // Video single-flight: a render is already running. Not a GitHub conflict —
   // show the real "wait for it to finish" message (the route tags it VIDEO_BUSY).
@@ -4836,6 +4794,9 @@ function toast(t){
   const el=$('toast'); el.textContent=t; el.classList.add('show');
   clearTimeout(_toastTimer); _toastTimer=setTimeout(()=>el.classList.remove('show'),3000);
 }
+// The config seam (bundle) can't call toast() directly, so it signals a full localStorage
+// quota via this window event — surface it so keys/settings never fail to save silently.
+window.addEventListener('studio:storage-full', ()=>toast('Browser storage is full — free some space; your keys and settings weren’t saved.'));
 
 /* ── friendly error dialog ─────────────────────────────────────────────────
    Single place to SHOW a classified error. Never dumps a raw stack. Offers a
@@ -5023,8 +4984,8 @@ const SECTIONS = {
                                         {v:'inbox',           label:'Inbox',          run:'loadInbox'} ] },
   posts:    { label:'Posts',    views:[ {v:'posts',           label:'Posts',          run:'loadPosts'} ] },
   // Media = Darkroom (photo uploader) · Library (browse droppables) · Video
-  // (browse uploaded videos). #v-photos is an EDITOR sub-view (the Gallery-block
-  // picker, reached from the editor with its own "← Post" back), NOT a Media tab.
+  // (browse uploaded videos). Images inside a post are handled by the block editor,
+  // not a Media tab.
   media:    { label:'Media',    views:[ {v:'darkroom',        label:'Darkroom',       run:'__darkroom'},
                                         {v:'library',         label:'Library',        run:'initLibrary'},
                                         {v:'video',           label:'Video',          run:'initVideoLibrary'} ] },
@@ -5038,11 +4999,9 @@ const SECTIONS = {
                                         {v:'settings',         label:'Keys',           run:'loadSettings'} ] },
 };
 // reverse map: view id → section id (every reachable view resolves to a primary tab).
-// drafts/postedit/editor have no own tab — they highlight a sensible parent.
+// drafts/editor have no own tab — they highlight a sensible parent.
 const VIEW_SECTION = (()=>{ const m={}; for(const [s,def] of Object.entries(SECTIONS)) for(const v of def.views) m[v.v]=s; return m; })();
 VIEW_SECTION['drafts']   = 'posts';   // standalone saved-drafts list → grouped under Posts
-VIEW_SECTION['postedit'] = 'posts';   // legacy quick post editor → Posts
-VIEW_SECTION['photos']   = 'posts';   // Gallery-block picker (editor sub-view) → Posts (no Media tab)
 VIEW_SECTION['setup']    = 'home';    // "Getting started" onboarding → highlights Home (no own tab)
 // The block editor has no tab of its own; which primary tab it highlights depends
 // on HOW it was opened: a brand-new post belongs to Write, editing an existing
@@ -6141,10 +6100,8 @@ function makeQueueItem(d, today){
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   POSTS / COMPOSE-EDIT / PHOTOS / CONNECT
+   POSTS / CONNECT
    ═══════════════════════════════════════════════════════════════════════════ */
-
-let editingSlug=null, selectedTags=[];
 
 /* ── posts list ─────────────────────────────────────────────────────────── */
 let _posts=[]; const _postFilter={q:'',status:'all',group:'topic'};
@@ -6522,8 +6479,6 @@ $('postGroup')?.addEventListener('click',e=>{ const b=e.target.closest('[data-gr
 window.loadPosts=loadPosts;  // referenced by an inline onclick on the Posts nav button (global scope)
 
 $('newPostBtn').addEventListener('click',()=>openNewPost());
-$('backToPosts').addEventListener('click',()=>{ go('posts'); loadPosts(); });
-$('backToEdit').addEventListener('click',()=>go('postedit'));
 
 /* ── POSTS: list ↔ calendar view ─────────────────────────────────────────────
    The calendar shows the SAME _posts the list loads (no second fetch). Published/
@@ -6726,151 +6681,6 @@ document.addEventListener('click',e=>{ if(_cal.pickerOpen && !e.target.closest('
 document.addEventListener('keydown',e=>{ if(_cal.pickerOpen && e.key==='Escape'){ closeMonthPicker(); $('calMonth').focus(); } });
 // apply the remembered view on load (default List)
 setPostsView(_cal.view);
-
-/* ── topic tag chips ────────────────────────────────────────────────────── */
-async function renderTagChips(){
-  const wrap=$('fTags'); wrap.innerHTML='';
-  let topics=[];
-  try{ topics=await api('/topics'); }catch{}
-  const flat=[];
-  for(const t of topics){
-    flat.push({name:t.name,tag:t.tag});
-    for(const s of (t.sub||[])) flat.push({name:s.name,tag:s.tag});
-  }
-  if(!flat.length){ wrap.innerHTML='<span class="sub">No topics defined.</span>'; return; }
-  for(const t of flat){
-    const c=document.createElement('button');
-    c.type='button';
-    c.className='chip'+(selectedTags.includes(t.tag)?' on':'');
-    c.textContent=t.name;
-    c.addEventListener('click',()=>{
-      selectedTags=selectedTags.includes(t.tag)?selectedTags.filter(x=>x!==t.tag):[...selectedTags,t.tag];
-      c.classList.toggle('on',selectedTags.includes(t.tag));
-    });
-    wrap.appendChild(c);
-  }
-}
-
-/* ── open post editor ───────────────────────────────────────────────────── */
-async function openPostEdit(slug){
-  editingSlug=slug;
-  $('peTitle').textContent=slug?'Edit post':'New post';
-  $('editOnlyRow').style.display=slug?'flex':'none';
-  $('publishBtn').textContent=slug?'Save changes':'Publish';
-  selectedTags=[];
-  $('fTitle').value=''; $('fBody').value='';
-  $('peMsg').className='msg';
-  await renderTagChips();
-  if(slug){
-    try{
-      msg('peMsg','Loading…','busy');
-      const p=await api('/posts/'+slug);
-      $('fTitle').value=p.data&&p.data.title?p.data.title:'';
-      $('fBody').value=p.body||'';
-      selectedTags=(p.data&&p.data.tags?p.data.tags:[]).slice();
-      await renderTagChips();
-      const td=$('takedownBtn');
-      const isDraft=!!(p.data&&p.data.draft);
-      td.textContent=isDraft?'Republish':'Take down';
-      td.dataset.draft=isDraft?'1':'0';
-      $('peMsg').className='msg';
-    }catch(e){ msg('peMsg',e.message,'err'); }
-  }
-  go('postedit');
-}
-
-/* ── publish / save changes ─────────────────────────────────────────────── */
-$('publishBtn').addEventListener('click',async()=>{
-  const title=$('fTitle').value.trim();
-  const body=$('fBody').value;
-  if(!title)return toast('Title required');
-  try{
-    if(editingSlug){
-      await api('/posts/'+editingSlug,{method:'PUT',body:JSON.stringify({title,body,tags:selectedTags})});
-      toast('Saved');
-    } else {
-      const r=await api('/posts',{method:'POST',body:JSON.stringify({title,body,tags:selectedTags})});
-      // same editor-publish flow as the composer → same success bar (falls back to a toast when no url)
-      await offerAnnounce(r.url, (title+'\n\n'+body).slice(0,1500));
-      await openPostEdit(r.slug);
-    }
-  }catch(e){ toast(e.message); }
-});
-
-/* ── takedown / republish ───────────────────────────────────────────────── */
-$('takedownBtn').addEventListener('click',async()=>{
-  const isDraft=$('takedownBtn').dataset.draft==='1';
-  if(!confirm(isDraft?'Republish to the live site?':'Take this post down from the live site?'))return;
-  try{
-    await api(`/posts/${editingSlug}/${isDraft?'republish':'takedown'}`,{method:'POST'});
-    toast(isDraft?'Republished':'Taken down');
-    await openPostEdit(editingSlug);
-  }catch(e){ toast(e.message); }
-});
-
-/* ── delete post ────────────────────────────────────────────────────────── */
-$('deleteBtn').addEventListener('click',async()=>{
-  if(!confirm('Permanently delete this post and its photos from the live site?'))return;
-  try{
-    await api('/posts/'+editingSlug,{method:'DELETE'});
-    toast('Deleted');
-    editingSlug=null;
-    go('posts'); loadPosts();
-  }catch(e){ toast(e.message); }
-});
-
-/* ── photos ─────────────────────────────────────────────────────────────── */
-$('photosBtn').addEventListener('click',()=>{ go('photos'); loadPhotos(editingSlug); });
-
-async function loadPhotos(slug){
-  const grid=$('photoGrid');
-  grid.innerHTML='<p class="sub">Loading…</p>';
-  try{
-    const photos=await api('/posts/'+slug+'/photos');
-    if(!photos.length){ grid.innerHTML='<p class="sub">No photos.</p>'; return; }
-    grid.innerHTML='';
-    for(const ph of photos){
-      const cell=document.createElement('div');
-      cell.className='thumb';
-      cell.innerHTML=`<img src="${esc(ph.download_url)}" alt="${esc(ph.name)}"><button class="del" title="Delete">✕</button>`;
-      cell.querySelector('.del').addEventListener('click',async()=>{
-        if(!confirm('Delete this photo from the live site?'))return;
-        try{
-          await api(`/posts/${slug}/photos/${encodeURIComponent(ph.name)}`,{method:'DELETE'});
-          loadPhotos(slug);
-        }catch(e){ toast(e.message); }
-      });
-      grid.appendChild(cell);
-    }
-  }catch(e){ grid.innerHTML=`<p class="sub" style="color:#f472b6">${esc(e.message)}</p>`; }
-}
-
-$('photoInput').addEventListener('change',async(e)=>{
-  const files=[...e.target.files]; if(!files.length)return;
-  toast('Resizing…');
-  const photos=[];
-  try{
-    for(const f of files) photos.push(await resizeToBase64(f));
-    toast('Uploading…');
-    await api(`/posts/${editingSlug}/photos`,{method:'POST',body:JSON.stringify({photos})});
-    toast('Added');
-    loadPhotos(editingSlug);
-  }catch(err){ toast(err.message); }
-  e.target.value='';
-});
-
-/* ── AI assist (blog post draft) ────────────────────────────────────────── */
-$('aiAssistBtn').addEventListener('click',async()=>{
-  const idea=($('fBody').value.trim()||$('fTitle').value.trim());
-  if(!idea)return toast('Write an idea or title first');
-  toast('Drafting…');
-  $('aiAssistBtn').disabled=true;
-  try{
-    const r=await api('/draft',{method:'POST',body:JSON.stringify({idea})});
-    $('fBody').value=r.post||r.draft||$('fBody').value;
-  }catch(e){ toast(e.message); }
-  finally{ $('aiAssistBtn').disabled=false; }
-});
 
 /* ── connect status ─────────────────────────────────────────────────────── */
 async function loadConnect(){
@@ -15780,7 +15590,13 @@ function figAutosave(){
           strokes: fr.strokes, texts: fr.texts || [], included: fr.included !== false, dur: fr.dur || 1,
         })),
       }));
-    }catch(_){ /* storage full / private mode — drawing continues unsaved */ }
+      figAutosave._warned = false; // saved OK — allow a fresh warning if storage fills later
+    }catch(err){
+      // Don't fail silently on a full quota — warn once (autosave retries every keystroke,
+      // so gate the toast to avoid spamming it). Other errors (private mode) stay quiet.
+      const quota = err && (err.name==='QuotaExceededError' || err.code===22 || err.code===1014);
+      if(quota && !figAutosave._warned){ figAutosave._warned = true; toast('Browser storage is full — free some space; your drawing wasn’t saved.'); }
+    }
   }, 700);
 }
 /* Restore an autosaved drawing into the (already reset) draw state. True = restored. */
@@ -19020,11 +18836,8 @@ applyBrandName();
    NOTE: client-side verification is a DETERRENT, not tamper-proof — a determined
    user can edit the bundle in their own browser. It stops casual use, nothing more.
 
-   Modes:
-     • LOCAL Helm (server-backed build): try GET /api/licence first, so the
-       owner never re-enters the key the server already holds. Falls back to the
-       stored/pasted key.
-     • HOSTED BYOK: the browser verifies the pasted key; stored in localStorage. */
+   BYOK (hosted, no server): the browser verifies the pasted key and stores it in
+   localStorage. There is no server endpoint to hold the key. */
 const LIC_STORE='helm.studio.licence';
 const LIC_PUBKEY=(typeof window!=='undefined' && window.__LICENCE_PUBLIC_KEY)||'';
 
@@ -19132,16 +18945,10 @@ async function verifyLicence(str){
   return {valid:true,payload,reason:null};
 }
 
-/* Resolve a licence key to check: stored value, else (local mode) ask Helm. */
+/* Resolve the stored licence key. Chapbook is a static BYOK app (no server), so the
+   key only ever lives in this browser's localStorage — there is no /api/licence to ask. */
 async function _resolveStoredLicence(){
-  let key=''; try{ key=localStorage.getItem(LIC_STORE)||''; }catch{}
-  if(key) return key;
-  // LOCAL Helm: the server may already hold the key in config.licence.key.
-  try{
-    const r=await fetch('/api/licence');
-    if(r.ok){ const j=await r.json(); if(j&&j.key){ try{ localStorage.setItem(LIC_STORE,j.key); }catch{} return j.key; } }
-  }catch{}
-  return '';
+  try{ return localStorage.getItem(LIC_STORE)||''; }catch{ return ''; }
 }
 
 async function submitLicence(){

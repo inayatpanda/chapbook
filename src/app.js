@@ -176,8 +176,12 @@ export function renderOnboarding() {
   <style>
     #byok-overlay{position:fixed;inset:0;z-index:9999;background:#04060c;display:grid;place-items:center;padding:1rem;
       font:15px/1.5 'Inter',system-ui,sans-serif;color:#f4f7fd;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
-    #byok-overlay .bc{width:min(440px,94vw);max-height:94vh;overflow:auto;background:linear-gradient(180deg,#0f1730,#0b1120);border:1px solid rgba(140,160,200,.18);
+    #byok-overlay .bc{position:relative;width:min(440px,94vw);max-height:94vh;overflow:auto;background:linear-gradient(180deg,#0f1730,#0b1120);border:1px solid rgba(140,160,200,.18);
       border-radius:18px;padding:1.4rem 1.5rem;box-shadow:0 24px 70px rgba(0,0,0,.6)}
+    #byok-overlay .byok-x{position:absolute;top:.7rem;right:.7rem;width:32px;height:32px;margin:0;padding:0;
+      border-radius:9px;border:1px solid rgba(140,160,200,.25);background:rgba(8,12,22,.6);color:#aebbd2;
+      font:400 1.3rem/1 system-ui;cursor:pointer;display:flex;align-items:center;justify-content:center}
+    #byok-overlay .byok-x:hover{color:#f4f7fd;border-color:rgba(140,160,200,.5)}
     #byok-overlay h2{font:700 1.25rem 'Space Grotesk',system-ui;margin:0 0 .2rem}
     #byok-overlay h2 b{background:linear-gradient(120deg,#2dd4bf,#22d3ee 55%,#818cf8);-webkit-background-clip:text;background-clip:text;color:transparent}
     #byok-overlay p{color:#aebbd2;font-size:.86rem;margin:.1rem 0 1rem}
@@ -201,6 +205,7 @@ export function renderOnboarding() {
     #byok-overlay .no-gh a.no-gh-back{display:inline-block;margin:.45rem 0 0;color:#2dd4bf;text-decoration:none;font-weight:700;white-space:normal}
   </style>
   <div class="bc">
+    <button type="button" id="byok-close" class="byok-x" aria-label="Close setup" title="Close">×</button>
     <h2>Set up <b>Chapbook</b></h2>
     <p>Connect your GitHub account and (optionally) an AI provider. Everything stays in this browser.</p>
 
@@ -222,6 +227,20 @@ export function renderOnboarding() {
   document.body.appendChild(ov);
   const $ = (id) => document.getElementById(id);
   const v = (id) => ($(id).value || '').trim();
+
+  // L4 — the overlay used to be a trap (no way out). Escape or the × dismisses it: when the
+  // app is already connected behind the overlay (e.g. opened from Settings → Change), close
+  // returns to it; when nothing is connected yet there's nothing behind, so keep the overlay
+  // and say why rather than stranding the user on a blank screen.
+  let onKey;
+  const closeOnboarding = () => {
+    if (config.isConfigured()) { if (onKey) document.removeEventListener('keydown', onKey); ov.remove(); }
+    else { const m = $('byok-msg'); if (m) { m.style.color = '#aebbd2'; m.textContent = 'Connect GitHub to continue — that’s where your blog is saved.'; } }
+  };
+  onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); closeOnboarding(); } };
+  document.addEventListener('keydown', onKey);
+  const _closeX = $('byok-close');
+  if (_closeX) _closeX.addEventListener('click', closeOnboarding);
 
   // BYOK save
   $('byok-save').addEventListener('click', async () => {

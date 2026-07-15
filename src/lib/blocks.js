@@ -327,10 +327,14 @@ export function renderPreviewHtml(blocks, ctx = {}) {
   // No owner default: without a configured site origin, root-relative image refs stay
   // root-relative in the preview iframe (data/base64 uploads render regardless).
   const origin = ctx.siteOrigin || '';
+  // A fresh in-browser upload stores RAW base64 (no data: prefix — see resize.js), so wrap
+  // it as a data URL or the <img src> won't render in the preview. An already-prefixed data:
+  // URL (e.g. an AI-generated image) passes through untouched.
+  const asDataUri = (s) => /^data:/i.test(s) ? s : `data:image/jpeg;base64,${s}`;
   // A fresh data URL (owned upload in progress) wins; then a reference `url` to an
   // already-committed image; then the editor src; finally the conventional per-slug
   // path. url/file are root-relative, so prefix the preview origin for them.
-  const imgSrc = (b) => b.base64 ? b.base64 : b.url ? `${origin}${b.url}` : (b.src || `${origin}/images/posts/${slug}/${b.file}`);
+  const imgSrc = (b) => b.base64 ? asDataUri(b.base64) : b.url ? `${origin}${b.url}` : (b.src || `${origin}/images/posts/${slug}/${b.file}`);
   const placeCls = (p) => p === 'wide' ? ' breakout' : p === 'left' ? ' img-left' : p === 'right' ? ' img-right' : '';
   const figure = (b) => {
     const cap = b.caption ? `<figcaption>${escHtml(b.caption)}</figcaption>` : '';
@@ -361,7 +365,7 @@ export function renderPreviewHtml(blocks, ctx = {}) {
       case 'gallery': {
         const ims = (b.images || []).filter((im) => im && (im.file || im.base64));
         if (!ims.length) return '';
-        return `<div class="gallery"${resizeAttrs(b)}>${ims.map((im) => `<figure><img src="${escAttr(im.base64 || `${origin}/images/${slug}/${im.file}`)}" alt="${escAttr(im.alt)}">${im.alt ? `<figcaption>${escHtml(im.alt)}</figcaption>` : ''}</figure>`).join('')}</div>`;
+        return `<div class="gallery"${resizeAttrs(b)}>${ims.map((im) => `<figure><img src="${escAttr(im.base64 ? asDataUri(im.base64) : `${origin}/images/${slug}/${im.file}`)}" alt="${escAttr(im.alt)}">${im.alt ? `<figcaption>${escHtml(im.alt)}</figcaption>` : ''}</figure>`).join('')}</div>`;
       }
       case 'embed': {
         const ra = resizeAttrs(b);
