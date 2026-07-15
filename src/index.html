@@ -1768,6 +1768,12 @@
   .tpl-card:active{transform:scale(.99)}
   .tpl-card .tpl-nm{display:block;font-size:.92rem;font-weight:650;color:var(--ink);margin-bottom:.18em}
   .tpl-card .tpl-ds{display:block;font-size:.8rem;color:var(--mut)}
+  /* Settings → Site theme picker: remap the shared .cbtp swatch-card styles (injected at
+     runtime by studio.js / core/themeCatalogue.js) onto the app's own palette so the picker
+     follows light & dark. The onboarding overlay leaves these unset → the dark fallbacks. */
+  #ss-theme-picker{--cbtp-surface:var(--surface);--cbtp-line:var(--line);--cbtp-line2:var(--line-2);
+    --cbtp-acc:var(--acc);--cbtp-ink:var(--ink);--cbtp-mut:var(--mut);--cbtp-faint:var(--faint);
+    --cbtp-font:var(--font-display)}
 
   /* ── interactive template library picker ───────────────────────────────── */
   #tplLibSheet{max-height:86vh;overflow:auto}
@@ -3296,29 +3302,9 @@
     </div>
 
     <label style="margin-top:1rem">Default theme</label>
-    <select id="ss-theme">
-      <optgroup label="Worlds">
-        <option value="observatory">Observatory</option>
-        <option value="vista">Vista</option>
-        <option value="blueprint">Blueprint</option>
-        <option value="atlas">Atlas</option>
-        <option value="daybreak">Daybreak</option>
-        <option value="dune">Dune</option>
-        <option value="rivendell">Rivendell</option>
-      </optgroup>
-      <optgroup label="Simple blog">
-        <option value="paper">Paper</option>
-        <option value="linen">Linen</option>
-        <option value="mist">Mist</option>
-        <option value="ink">Ink</option>
-      </optgroup>
-      <optgroup label="Creative">
-        <option value="arcade">Arcade</option>
-        <option value="botanic">Botanic</option>
-        <option value="broadsheet">Broadsheet</option>
-        <option value="aurora">Aurora</option>
-      </optgroup>
-    </select>
+    <p class="sub" style="margin-top:0">The look your blog is published with. Change it any time — your posts are untouched.</p>
+    <div id="ss-theme-picker" style="margin-top:.5rem"></div>
+    <input type="hidden" id="ss-theme" value="observatory">
 
     <label style="margin-top:1rem">Galaxy figure</label>
     <select id="ss-core">
@@ -4606,42 +4592,58 @@
 </div>
 
 <div id="legal-terms" hidden>
-  <div class="legal-draft"><strong>Draft — review before launch.</strong> These are sensible plain-language defaults provided for review. The owner should confirm the specifics (for example governing law and exact figures) before relying on them, then remove this note.</div>
   <p class="meta">Terms of use. Last reviewed: 15 July 2026.</p>
 
+  <h4>Who we are</h4>
+  <p>Chapbook is sold by <b>RQAI Ltd</b>, United Kingdom. Contact: <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a>.</p>
+
   <h4>Your licence</h4>
-  <p>A Chapbook licence is granted to you, the buyer, for your own use. It is non-transferable unless we agree otherwise in writing.</p>
+  <p>A Chapbook licence is a <b>yearly subscription</b> for one person. After purchase we email you a licence key; entering it unlocks Chapbook in your browser, on any of your own devices. The key is valid for your paid year and is non-transferable — please don't share or resell it. Your subscription renews automatically through Stripe each year, and each renewal issues you a fresh key by email. If you cancel, or a renewal payment fails, Chapbook keeps working until the end of the period you've paid for.</p>
+
+  <h4>Free trials</h4>
+  <p>Trial keys unlock Chapbook for 7 days, free, with no payment details taken. One trial per person.</p>
 
   <h4>Your content and accounts</h4>
-  <p>You are responsible for your own GitHub, AI-provider and Cloudflare accounts and for everything you publish with them. You keep all rights to your content; Chapbook claims no ownership of it.</p>
+  <p>You are responsible for your own GitHub, AI-provider and Cloudflare accounts and for everything you publish with them. You keep all rights to your content; Chapbook claims no ownership of it — and by design, never even receives it.</p>
 
   <h4>Third-party services</h4>
-  <p>Chapbook works with GitHub, your chosen AI provider and (optionally) Cloudflare. Their terms apply to your use of them, and their availability is outside our control.</p>
+  <p>Chapbook works with GitHub, your chosen AI provider and (optionally) Cloudflare. Their terms govern your use of them, and their availability, pricing and behaviour are outside our control.</p>
+
+  <h4>Cancelling</h4>
+  <p>Cancel your renewal any time from your Stripe receipt email, or by emailing <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a>. Cancelling stops future charges; your key keeps working until your paid year ends.</p>
 
   <h4>Acceptable use</h4>
-  <p>Don't use Chapbook for unlawful purposes, and don't attempt to resell, redistribute or circumvent the licence.</p>
+  <p>Don't use Chapbook for unlawful purposes, and don't attempt to share, resell, redistribute or circumvent the licence.</p>
 
   <h4>Provided “as is”</h4>
-  <p>Chapbook is provided “as is”, without warranties of any kind. To the fullest extent permitted by law, we are not liable for any loss arising from its use — including loss of drafts or content. Please keep your own backups (see <b>Settings → Export drafts</b>).</p>
+  <p>Chapbook is provided “as is”, without warranties of any kind. To the fullest extent permitted by law, we are not liable for loss arising from its use — including loss of drafts or content — and our total liability to you is limited to the amount you paid us in the 12 months before the claim arose. Please keep your own backups (see <b>Settings → Export drafts</b>).</p>
+
+  <h4>Your statutory rights</h4>
+  <p>Nothing in these terms affects your statutory rights as a consumer.</p>
 
   <h4>Changes</h4>
-  <p>We may update these terms; material changes will be reflected here.</p>
+  <p>We may update these terms; material changes will be reflected here with a new “last reviewed” date.</p>
 
   <h4>Governing law</h4>
-  <p><i>To be confirmed by the owner before launch.</i></p>
+  <p>These terms are governed by the law of England and Wales.</p>
 
   <h4>Contact</h4>
   <p>Questions? Email <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a>.</p>
 </div>
 
 <div id="legal-refunds" hidden>
-  <div class="legal-draft"><strong>Draft — review before launch.</strong> This refund window is a reasonable default provided for review. The owner should confirm the exact terms before relying on them, then remove this note.</div>
   <p class="meta">Refund policy. Last reviewed: 15 July 2026.</p>
 
-  <p>We want you to be happy with Chapbook. If it isn't right for you, email <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a> within <b>14 days</b> of your purchase for a full refund.</p>
+  <p>We want you to be happy with Chapbook. If it isn't right for you, email <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a> within <b>14 days</b> of your purchase for a full refund — no questions asked. The same applies to a renewal charge: if you didn't mean to renew, email us within 14 days of the charge.</p>
 
   <h4>What happens on a refund</h4>
-  <p>When a refund is issued, your licence key is revoked and Chapbook stops unlocking on your devices. Anything you've already published to your own GitHub repository or R2 bucket stays yours and is unaffected.</p>
+  <p>Your licence key is revoked and Chapbook stops unlocking on your devices. Anything you've already published to your own GitHub repository or R2 bucket stays yours and is unaffected.</p>
+
+  <h4>How the money comes back</h4>
+  <p>Refunds go to your original payment method through Stripe, and typically appear within 5–10 working days.</p>
+
+  <h4>After 14 days</h4>
+  <p>We don't offer partial refunds mid-year, but you can cancel any time to stop future renewals — and if something's broken, email us first: we'd rather fix it.</p>
 
   <h4>Free trials</h4>
   <p>Free trials are free — there's nothing to refund.</p>
@@ -7172,6 +7174,32 @@ function navMove(i, dir) {
   renderNavEditor();
 }
 
+/* Categorised theme picker for Settings → Site. Mounts the shared renderer (exposed by
+   studio.js as window.__studioThemes) into #ss-theme-picker and writes the chosen theme id
+   into the hidden #ss-theme input that saveSiteSettings reads. Renders from the baked
+   catalogue first, then upgrades to the live template catalogue when it resolves (a 404
+   today keeps the baked list). If the picker module is somehow absent it just leaves the
+   hidden input's value so saving still round-trips the current theme. */
+let _themeCatalogue = null;
+function renderSiteThemePicker(selected) {
+  const host = $('ss-theme-picker');
+  const hidden = $('ss-theme');
+  const T = window.__studioThemes;
+  if (hidden) hidden.value = selected || 'observatory';
+  if (!host || !T || typeof T.mountThemePicker !== 'function') return;
+  const onPick = (id) => { if (hidden) hidden.value = id; };
+  const mount = (cat) => T.mountThemePicker(host, { catalogue: cat, selected: (hidden && hidden.value) || selected, onSelect: onPick });
+  mount(_themeCatalogue || T.BAKED_CATALOGUE);
+  if (!_themeCatalogue) {
+    T.fetchLiveCatalogue().then((live) => {
+      if (live && live.themes) {
+        _themeCatalogue = live;
+        if (live !== T.BAKED_CATALOGUE && $('ss-theme-picker') === host) mount(live);
+      }
+    }).catch(() => {});
+  }
+}
+
 async function loadSiteSettings() {
   try {
     const { data, sha } = await api('/settings/site');
@@ -7184,7 +7212,7 @@ async function loadSiteSettings() {
     $('ss-role').value = d.role || '';
     $('ss-description').value = d.description || '';
     $('ss-url').value = d.url || '';
-    $('ss-theme').value = d.defaultTheme || 'observatory';
+    renderSiteThemePicker(d.defaultTheme || 'observatory');
     $('ss-core').value = d.core || 'tori';
     $('ss-linkedin').value = d.socials?.linkedin || '';
     $('ss-instagram').value = d.socials?.instagram || '';
