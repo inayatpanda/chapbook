@@ -2664,6 +2664,49 @@
   .lib-icon-controls #libIconSearch{flex:1 1 60%;min-width:0;margin:0}
   .lib-icon-controls #libIconCat{flex:1 1 30%;min-width:160px}
   #libIconCatChips{margin:.5rem 0 .2rem}
+
+  /* ── Commercial / trust surface: support + legal footer, legal modal, storage warning ── */
+  .legal-foot{display:flex;flex-wrap:wrap;gap:.15rem .35rem;justify-content:center;align-items:center;
+    margin-top:1.6rem;font-size:.8rem;line-height:1.6;color:var(--faint)}
+  .legal-foot a{color:var(--faint);text-decoration:none;padding:.15rem .35rem;border-radius:6px}
+  .legal-foot a:hover,.legal-foot a:focus-visible{color:var(--ink);text-decoration:underline}
+  .legal-foot a + a::before{content:"·";margin-right:.55rem;color:var(--line);text-decoration:none}
+  /* In-Settings variant sits left-aligned under the data card. */
+  .legal-foot.in-app{justify-content:flex-start;margin-top:1.1rem}
+
+  /* Legal modal — reuses .picker-scrim/.picker-sheet; a scrollable prose sheet like preview. */
+  .legal-sheet{max-height:86vh;display:flex;flex-direction:column}
+  @media (min-width:900px) and (pointer:fine){
+    .legal-sheet{left:50%;right:auto;bottom:auto;top:50%;transform:translate(-50%,-46%);
+      width:min(680px,92vw);border-radius:16px;border:1px solid var(--line);box-shadow:var(--shadow);
+      opacity:0;transition:opacity .16s,transform .16s;pointer-events:none}
+    .legal-sheet.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%)}
+  }
+  .legal-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin:0 0 .3rem}
+  .legal-head h3{margin:0;font:700 1.15rem var(--font-display);color:var(--ink);text-transform:none;letter-spacing:0}
+  .legal-body{overflow-y:auto;padding:.2rem .1rem 1rem;color:var(--ink)}
+  .legal-body h4{font:700 .98rem var(--font-display);margin:1.1rem 0 .35rem}
+  .legal-body p,.legal-body li{font-size:.9rem;line-height:1.62;color:var(--mut)}
+  .legal-body ul{margin:.3rem 0 .3rem;padding-left:1.15rem}
+  .legal-body a{color:var(--cyan,#3bb0c9)}
+  .legal-body .meta{font-size:.78rem;color:var(--faint);margin-top:0}
+  .legal-draft{margin:.2rem 0 1rem;padding:.6rem .8rem;border:1px solid var(--line);border-radius:10px;
+    background:var(--surface-2);font-size:.82rem;color:var(--mut)}
+  .legal-draft strong{color:var(--ink)}
+
+  /* Storage-blocked warning banner (Safari private mode / eviction) — dismissible. */
+  .storage-warn{margin:0 0 1rem;padding:.7rem .85rem;border:1px solid var(--line);border-radius:12px;
+    background:var(--surface-2);display:flex;gap:.6rem;align-items:flex-start}
+  .storage-warn .sw-ico{font-size:1.1rem;line-height:1.4}
+  .storage-warn .sw-txt{font-size:.84rem;line-height:1.55;color:var(--mut)}
+  .storage-warn .sw-txt strong{color:var(--ink)}
+  .storage-warn button{margin-left:auto;flex:none;background:none;border:0;color:var(--faint);
+    cursor:pointer;font-size:1.1rem;line-height:1;padding:.1rem .3rem}
+  .storage-warn button:hover{color:var(--ink)}
+
+  /* Destructive Settings action (Forget this device). */
+  .btn.danger{border-color:#c0433a;color:#e06a60}
+  .btn.danger:hover,.btn.danger:focus-visible{background:rgba(192,67,58,.1);border-color:#e06a60}
 </style>
 <!-- Baked-in licence verify key (hex Ed25519 public key). Patched by `npm run licence:init`
      and carried through to the hosted build. Empty until init runs → gate stays open
@@ -2675,11 +2718,18 @@
 <!-- ===== LICENCE GATE (shown before everything when no valid key is stored) ===== -->
 <div id="licence" class="wrap" style="display:none">
   <h1>Activate Chapbook</h1>
-  <p class="sub">Enter your Chapbook-access key to use Chapbook. Contact the author to obtain one.</p>
+  <p class="sub">Enter your Chapbook-access key to use Chapbook. Need one? Email <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a> or buy below.</p>
   <input id="licKey" type="text" placeholder="IPL1.…" autocomplete="off" spellcheck="false" />
   <button class="btn" onclick="submitLicence()">Activate</button>
   <div id="licMsg" class="msg" role="alert"></div>
   <p class="sub" style="margin-top:14px">No key yet? <a href="https://buy.stripe.com/5kQeVd0C06t7aSLf3IgUM05?client_reference_id=studio" target="_blank" rel="noopener noreferrer">Buy a key &rarr;</a></p>
+  <!-- Commercial/trust footer — reachable BEFORE activation (this gate shows first). -->
+  <nav class="legal-foot" aria-label="Support and legal">
+    <a href="mailto:support@rqai.co.uk">Support</a>
+    <a href="#" onclick="openLegal('privacy');return false">Privacy</a>
+    <a href="#" onclick="openLegal('terms');return false">Terms</a>
+    <a href="#" onclick="openLegal('refunds');return false">Refunds</a>
+  </nav>
 </div>
 
 <!-- ===== MAIN APP ===== -->
@@ -2700,6 +2750,14 @@
       <button class="install" id="installBtn">⤓ Install</button>
     </div>
   </header>
+
+  <!-- H4: shown by the boot storage probe when this browser blocks local storage
+       (Safari private mode / ITP eviction) or can't persist drafts. Dismissible. -->
+  <div id="storageWarn" class="storage-warn" hidden>
+    <span class="sw-ico" aria-hidden="true">⚠️</span>
+    <span class="sw-txt" id="storageWarnTxt"></span>
+    <button type="button" id="storageWarnClose" title="Dismiss" aria-label="Dismiss">×</button>
+  </div>
 
   <!-- ===== NEW POST (Write default: start a blog post) ===== -->
   <!-- Landing for Write. Clicking "Write" LANDS here (enterNewPost is a no-op) — it
@@ -3185,6 +3243,34 @@
       </div>
       <p class="sub" id="r2OptimiseNote" style="margin-top:.8rem;color:var(--faint)">Note: this is a raw upload — no transcode (the clip is stored as-is). On a UK ISP/mobile network, R2 uploads can be blocked by SNI filtering — turn on a VPN/WARP if an upload fails to connect.</p>
     </div>
+
+    <!-- ===== YOUR DATA & DEVICE (H4 export/import + M9 forget-this-device) ===== -->
+    <div class="card" style="margin-top:1.1rem">
+      <strong style="font:700 1rem var(--font-display)">Your data &amp; this device</strong>
+      <p class="sub" style="margin-top:.35rem">Your drafts, writing sessions, snapshots and ideas live only in <b>this browser</b>. Published posts and media are safe in your GitHub repo (and R2 bucket), but anything unpublished can be lost if this browser clears its storage. Export a backup, or move your work to another machine.</p>
+
+      <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem">
+        <button class="btn ghost" type="button" onclick="exportDrafts()">⤓ Export drafts</button>
+        <button class="btn ghost" type="button" onclick="$('draftsImportInput')&&$('draftsImportInput').click()">⤒ Import drafts</button>
+        <input id="draftsImportInput" type="file" accept="application/json,.json" hidden />
+      </div>
+      <div id="draftsMsg" class="msg"></div>
+      <p class="sub" style="margin-top:.5rem;color:var(--faint)">Export downloads a single JSON of every local draft. Import merges a file back in (same-id drafts are overwritten; everything else is added).</p>
+
+      <div style="margin-top:1.3rem;padding-top:1rem;border-top:1px solid var(--line,#1c2433)">
+        <strong style="font:700 .95rem var(--font-display)">Sign out / forget this device</strong>
+        <p class="sub" style="margin-top:.35rem">On a shared or borrowed computer, wipe <b>everything</b> Chapbook has stored here — your GitHub token, AI and R2 keys, your licence, and all local drafts — and return to the activation screen. This can't be undone, so export first if you want to keep your drafts.</p>
+        <button class="btn danger" type="button" onclick="forgetThisDevice()" style="margin-top:.9rem">Sign out &amp; forget this device</button>
+      </div>
+    </div>
+
+    <!-- Support + legal footer (also on the activation screen). -->
+    <nav class="legal-foot in-app" aria-label="Support and legal">
+      <a href="mailto:support@rqai.co.uk">Support</a>
+      <a href="#" onclick="openLegal('privacy');return false">Privacy</a>
+      <a href="#" onclick="openLegal('terms');return false">Terms</a>
+      <a href="#" onclick="openLegal('refunds');return false">Refunds</a>
+    </nav>
 
     <!-- ===== Build / version stamp (unobtrusive) — set from window.__STUDIO_BUILD, which
              the deploy pipeline injects at build time (scripts/deploy-studio.sh). ===== -->
@@ -4514,6 +4600,101 @@
   </div>
 </div>
 
+<!-- ===== LEGAL / SUPPORT MODAL (privacy · terms · refunds) ====================
+     One reusable prose sheet. openLegal(kind) copies the matching #legal-<kind>
+     content into it. Reachable from the footer on the activation screen AND in
+     Settings, so it lives OUTSIDE #app (position:fixed → DOM location doesn't matter).
+     Content is first-party + trusted (no user input) so innerHTML is safe here. -->
+<div class="picker-scrim" id="legalScrim"></div>
+<div class="picker-sheet legal-sheet" id="legalSheet" role="dialog" aria-modal="true" aria-labelledby="legalTitle" aria-hidden="true">
+  <div class="picker-grab"></div>
+  <div class="legal-head">
+    <h3 id="legalTitle">Privacy</h3>
+    <button class="preview-close" id="legalCloseBtn" type="button">Close</button>
+  </div>
+  <div class="legal-body" id="legalBody"></div>
+</div>
+
+<!-- Legal content sources (hidden; cloned into the modal on demand). -->
+<div id="legal-privacy" hidden>
+  <p class="meta">How Chapbook handles your information. Last reviewed: 15 July 2026.</p>
+  <p>Chapbook is <b>local-first</b>. It runs entirely in your browser and talks directly to the services you connect it to. There is no Chapbook server sitting between you and your data.</p>
+
+  <h4>What stays in your browser — and only your browser</h4>
+  <p>Your GitHub token, your AI provider key(s) and your optional Cloudflare R2 keys are stored in this browser's local storage (under <code>helm.studio.config.v1</code>). Your drafts, writing-partner sessions, version snapshots and saved ideas are stored in this browser's IndexedDB database. None of this is ever sent to us — each key is used only to reach the service it belongs to.</p>
+
+  <h4>Publishing to GitHub</h4>
+  <p>When you sign in with GitHub, Chapbook requests the <code>public_repo</code> scope — enough to commit to your public blog repository, and nothing more. Publishing commits straight from your browser to <b>your own</b> GitHub repository using your token. If you use the device-flow sign-in, the login handshake is passed through a small relay so your browser can reach GitHub's login endpoints; that relay holds no secret and stores nothing.</p>
+
+  <h4>AI features (bring your own key)</h4>
+  <p>If you add an AI key (Anthropic, OpenAI or Google), AI requests go <b>directly from your browser to that provider</b> using your key. They do not pass through us. Your chosen provider's own privacy terms apply to those requests.</p>
+
+  <h4>Video and large media (optional Cloudflare R2)</h4>
+  <p>If you connect a Cloudflare R2 bucket, media uploads go straight from your browser to <b>your own</b> bucket (signed in your browser, or via a small upload Worker you deploy). We never receive or store your media.</p>
+
+  <h4>What we receive</h4>
+  <p>The only information that reaches us is what's needed to sell you a licence and let you trial the product:</p>
+  <ul>
+    <li>If you <b>buy a licence</b> through Stripe, we receive your name and email so we can create your licence key and email it to you. The key is signed on the owner's own machine — the signing key never touches a public server.</li>
+    <li>If you <b>request a free trial</b>, your email address is stored in a private queue so a 7-day key can be minted and emailed to you.</li>
+    <li><b>Anonymous usage counts:</b> Chapbook increments a per-day total when a licence is activated or the app is installed. These are counts only — no IP address, no licence key, no identifying information — stored in Netlify Blobs.</li>
+  </ul>
+
+  <h4>What we do NOT collect</h4>
+  <p>We do not collect or receive your drafts, posts, media, GitHub token, AI keys, R2 keys or your author profile. We don't track your writing, we don't use tracking cookies or third-party analytics, and we never sell or share your information.</p>
+
+  <h4>Deleting your data</h4>
+  <p>Everything Chapbook stores locally can be wiped at any time from <b>Settings → “Sign out / forget this device”</b> (or by clearing this browser's site data). Your published posts and uploaded media live in your own GitHub repository and R2 bucket and stay entirely under your control. To have your sales or trial email removed from our records, email <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a>.</p>
+
+  <h4>Contact</h4>
+  <p>Questions about privacy? Email <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a>.</p>
+</div>
+
+<div id="legal-terms" hidden>
+  <div class="legal-draft"><strong>Draft — review before launch.</strong> These are sensible plain-language defaults provided for review. The owner should confirm the specifics (for example governing law and exact figures) before relying on them, then remove this note.</div>
+  <p class="meta">Terms of use. Last reviewed: 15 July 2026.</p>
+
+  <h4>Your licence</h4>
+  <p>A Chapbook licence is granted to you, the buyer, for your own use. It is non-transferable unless we agree otherwise in writing.</p>
+
+  <h4>Your content and accounts</h4>
+  <p>You are responsible for your own GitHub, AI-provider and Cloudflare accounts and for everything you publish with them. You keep all rights to your content; Chapbook claims no ownership of it.</p>
+
+  <h4>Third-party services</h4>
+  <p>Chapbook works with GitHub, your chosen AI provider and (optionally) Cloudflare. Their terms apply to your use of them, and their availability is outside our control.</p>
+
+  <h4>Acceptable use</h4>
+  <p>Don't use Chapbook for unlawful purposes, and don't attempt to resell, redistribute or circumvent the licence.</p>
+
+  <h4>Provided “as is”</h4>
+  <p>Chapbook is provided “as is”, without warranties of any kind. To the fullest extent permitted by law, we are not liable for any loss arising from its use — including loss of drafts or content. Please keep your own backups (see <b>Settings → Export drafts</b>).</p>
+
+  <h4>Changes</h4>
+  <p>We may update these terms; material changes will be reflected here.</p>
+
+  <h4>Governing law</h4>
+  <p><i>To be confirmed by the owner before launch.</i></p>
+
+  <h4>Contact</h4>
+  <p>Questions? Email <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a>.</p>
+</div>
+
+<div id="legal-refunds" hidden>
+  <div class="legal-draft"><strong>Draft — review before launch.</strong> This refund window is a reasonable default provided for review. The owner should confirm the exact terms before relying on them, then remove this note.</div>
+  <p class="meta">Refund policy. Last reviewed: 15 July 2026.</p>
+
+  <p>We want you to be happy with Chapbook. If it isn't right for you, email <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a> within <b>14 days</b> of your purchase for a full refund.</p>
+
+  <h4>What happens on a refund</h4>
+  <p>When a refund is issued, your licence key is revoked and Chapbook stops unlocking on your devices. Anything you've already published to your own GitHub repository or R2 bucket stays yours and is unaffected.</p>
+
+  <h4>Free trials</h4>
+  <p>Free trials are free — there's nothing to refund.</p>
+
+  <h4>How to request one</h4>
+  <p>Email <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a> from, or quoting, the email address you purchased with.</p>
+</div>
+
 <!-- ===== PRIMARY NAV — 5 sections + Home =====================================
      Bottom tab bar on phones, fixed left rail on desktop (see nav.bottom CSS).
      Each button lands on its section's DEFAULT view via goSection(); the secondary
@@ -4723,8 +4904,43 @@ async function boot(){
     // was created (window.__studioTour.shouldAutoOpen). Clear the pending flag on open so
     // a reload mid-tour won't re-trigger; "done" is set on Finish/Skip.
     setTimeout(()=>{ try{ const T=window.__studioTour; if(T&&T.shouldAutoOpen()){ T.clearPending(); openFirstPostTour(); } }catch{} }, 1100);
-  }catch(e){ $('app').style.display='none'; $('nav').style.display='none'; if($('camFab')) $('camFab').style.display='none'; if(window.__studioOnboard) window.__studioOnboard(); }
+    // H4 — warn (once, dismissible) if this browser can't persist local drafts.
+    setTimeout(()=>{ try{ maybeWarnStorage(); }catch{} }, 400);
+  }catch(e){
+    // H4 — a blocked IndexedDB (Safari private mode / ITP eviction) makes api('/drafts')
+    // reject, which used to SILENTLY bounce a fully-configured buyer to onboarding. Detect
+    // it and show the app with a clear warning instead of pretending they're not set up.
+    let storageDead=false;
+    try{ const p = window.__studioStorage && await window.__studioStorage.probe(); storageDead = !!(p && !p.ok); }catch{ storageDead=true; }
+    if(storageDead){
+      $('app').style.display='block'; $('nav').style.display='flex';
+      if($('camFab')) $('camFab').style.display='flex';
+      showStorageWarning('blocked');
+      goSection('home');
+      return;
+    }
+    $('app').style.display='none'; $('nav').style.display='none'; if($('camFab')) $('camFab').style.display='none'; if(window.__studioOnboard) window.__studioOnboard();
+  }
 }
+
+/* ── H4: local-storage health warning ───────────────────────────────────────
+   Safari private mode / ITP eviction make IndexedDB unavailable; the in-memory
+   fallback (very old browsers) can't persist across reloads. Either way the buyer's
+   drafts won't survive, so surface it clearly and point them at Export. Dismissible. */
+function showStorageWarning(kind){
+  const el=$('storageWarn'), txt=$('storageWarnTxt'); if(!el||!txt) return;
+  txt.innerHTML = kind==='blocked'
+    ? "<strong>This browser is blocking local storage.</strong> That's usually Safari private mode or a full/evicted store. Your drafts can't be saved here and may be lost — back up your work with <b>Settings → Export drafts</b>, or switch to a normal window."
+    : "<strong>This browser can't keep drafts between visits.</strong> Your work won't persist here — export anything important from <b>Settings → Export drafts</b>.";
+  el.hidden=false;
+}
+async function maybeWarnStorage(){
+  try{ const p = window.__studioStorage && await window.__studioStorage.probe(); if(!p) return;
+    if(!p.ok) showStorageWarning('blocked');
+    else if(p.persistent===false) showStorageWarning('nonpersistent');
+  }catch{ showStorageWarning('blocked'); }
+}
+$('storageWarnClose') && $('storageWarnClose').addEventListener('click',()=>{ const el=$('storageWarn'); if(el) el.hidden=true; });
 
 /* H5 — background GitHub-token validation. Calls whoami (GET /user) with the stored token;
    ONLY a definitive dead-token failure (expired / revoked / bad credentials) interrupts to
@@ -5690,6 +5906,86 @@ function closeGoblin(){
 }
 window.closeGoblin=closeGoblin;
 $('goblinScrim').addEventListener('click',closeGoblin);
+
+/* ═══ Commercial / trust surface (B6 · H4 · M9) ══════════════════════════════
+   Legal modal, draft export/import, and "forget this device". Chapbook-only —
+   a public-product concern; the Helm owner tool doesn't ship this. */
+
+/* B6 — legal/support modal. openLegal(kind) clones #legal-<kind> into the sheet. */
+function openLegal(kind){
+  const src=$('legal-'+kind); if(!src) return;
+  const titles={privacy:'Privacy',terms:'Terms of use',refunds:'Refund policy'};
+  $('legalTitle').textContent = titles[kind] || 'Chapbook';
+  $('legalBody').innerHTML = src.innerHTML;
+  $('legalBody').scrollTop = 0;
+  $('legalScrim').classList.add('open');
+  $('legalSheet').classList.add('open');
+  $('legalSheet').setAttribute('aria-hidden','false');
+}
+function closeLegal(){
+  $('legalScrim').classList.remove('open');
+  $('legalSheet').classList.remove('open');
+  $('legalSheet').setAttribute('aria-hidden','true');
+}
+window.openLegal=openLegal; window.closeLegal=closeLegal;
+$('legalScrim') && $('legalScrim').addEventListener('click',closeLegal);
+$('legalCloseBtn') && $('legalCloseBtn').addEventListener('click',closeLegal);
+document.addEventListener('keydown',e=>{ if(e.key==='Escape' && $('legalSheet') && $('legalSheet').classList.contains('open')) closeLegal(); });
+
+/* H4 — export EVERY local draft store to one portable JSON. Pure envelope from
+   window.__studioDrafts; IndexedDB read + download are here. */
+async function exportDrafts(){
+  const S=window.__studioStorage, D=window.__studioDrafts;
+  if(!S || !D){ msg('draftsMsg','Draft tools aren’t ready yet — reload and try again.','err'); return; }
+  try{
+    const map={};
+    for(const s of D.DRAFT_STORES) map[s] = await S.all(s);
+    const env = D.serialiseDrafts(map);
+    const blob = new Blob([JSON.stringify(env,null,2)], {type:'application/json'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='chapbook-drafts-'+new Date().toISOString().slice(0,10)+'.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>{ try{ URL.revokeObjectURL(a.href); }catch{} },30000);
+    msg('draftsMsg', env.count ? ('Exported '+env.count+' item'+(env.count===1?'':'s')+' to a JSON file.') : 'Nothing to export yet — no local drafts.','ok');
+  }catch(e){ msg('draftsMsg','Export failed: '+((e&&e.message)||'unknown error'),'err'); }
+}
+window.exportDrafts=exportDrafts;
+
+/* H4 — import a previously-exported JSON, merging into IndexedDB (same-id = overwrite). */
+async function importDraftsFile(file){
+  const S=window.__studioStorage, D=window.__studioDrafts;
+  if(!S || !D){ msg('draftsMsg','Draft tools aren’t ready yet — reload and try again.','err'); return; }
+  if(!file) return;
+  let text=''; try{ text=await file.text(); }catch{ msg('draftsMsg','Could not read that file.','err'); return; }
+  const r=D.parseDraftsFile(text);
+  if(!r.ok){ msg('draftsMsg', r.error||'That file is not a Chapbook drafts export.','err'); return; }
+  if(!r.count){ msg('draftsMsg','That export has no drafts in it.','err'); return; }
+  if(!confirm('Import '+r.count+' item'+(r.count===1?'':'s')+'?\n\nDrafts with the same id are overwritten; everything else is added alongside what’s already here.')) return;
+  try{
+    let n=0;
+    for(const s of D.DRAFT_STORES) for(const rec of (r.stores[s]||[])){ await S.put(s, rec); n++; }
+    msg('draftsMsg','Imported '+n+' item'+(n===1?'':'s')+'. Open Posts or Write to see them.','ok');
+  }catch(e){ msg('draftsMsg','Import failed: '+((e&&e.message)||'unknown error'),'err'); }
+}
+$('draftsImportInput') && $('draftsImportInput').addEventListener('change',function(){ const f=this.files&&this.files[0]; this.value=''; importDraftsFile(f); });
+
+/* M9 — "Sign out / forget this device": wipe ALL Chapbook state (every localStorage
+   namespace via the tested enumerator + the whole IndexedDB DB) then reload to the gate. */
+async function forgetThisDevice(){
+  if(!confirm('Sign out and forget this device?\n\nThis wipes EVERYTHING Chapbook has stored in this browser:\n• your GitHub token, AI keys and R2 keys\n• your licence\n• all local drafts, sessions, snapshots and ideas\n\nAnything already published to your GitHub repo or R2 bucket is safe. This cannot be undone — export your drafts first if you want to keep them.\n\nContinue?')) return;
+  const R=window.__studioReset;
+  // 1. localStorage — every Chapbook namespace (config keys, licence, metric once-flags, …).
+  try{
+    const keys = R ? R.chapbookKeys(Object.keys(localStorage)) : [];
+    for(const k of keys){ try{ localStorage.removeItem(k); }catch{} }
+  }catch{}
+  // 2. IndexedDB — drafts, blockdrafts, partner sessions, shapes, versions, ideas.
+  try{ indexedDB.deleteDatabase((R&&R.CHAPBOOK_IDB_NAME)||'helm-studio'); }catch{}
+  // 3. Back to the activation gate — a clean reload re-runs the licence check.
+  try{ location.reload(); }catch{}
+}
+window.forgetThisDevice=forgetThisDevice;
 
 async function runGoblin(){
   if(_goblinBusy) return;

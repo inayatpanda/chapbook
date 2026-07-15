@@ -6,6 +6,8 @@ import { makeDeviceAuth } from './seams/deviceAuth.js';
 import { makeAi } from './seams/ai.js';
 import { makeR2 } from './seams/r2.js';
 import { storage } from './seams/storage.js';
+import * as draftsIo from './lib/draftsIo.js';
+import * as appReset from './lib/appReset.js';
 import { makePosts } from './core/posts.js';
 import * as partner from './core/partner.js';
 import { makeRouter } from './router.js';
@@ -441,5 +443,8 @@ if (typeof window !== 'undefined') {
   // holds the buyer's GitHub/AI/R2 secrets in localStorage). stripUnsafeHtml === sanitiseHtml.
   window.__studioSanitise = blocks.stripUnsafeHtml;
   window.__studioConnection = connection; // pure blogUrl + dead-token/network classifiers for the boot gate (H5)
+  window.__studioStorage = storage;       // H4: the IndexedDB seam for Settings → Export/Import drafts + the boot storage probe
+  window.__studioDrafts = draftsIo;        // H4: pure draft export/import serialiser (serialiseDrafts / parseDraftsFile / DRAFT_STORES)
+  window.__studioReset = appReset;         // M9: pure "Forget this device" enumerator (chapbookKeys / CHAPBOOK_IDB_NAME)
   refresh();
 }
