@@ -12,8 +12,7 @@ import { buildStyle, buildGoblinSystem, factGuardLine, DEFAULT_PROFILE } from '.
    The house voice is no longer hardcoded: every prompt's identity
    + voice text is COMPOSED from an author/voice PROFILE (passed in
    per call). A fresh install gets a generic, non-medical voice
-   (DEFAULT_PROFILE); the owner's exact voice is preserved by his own
-   profile (server/profile.js INAYAT_PROFILE). See server/profile.js.
+   (DEFAULT_PROFILE); the user's own identity is supplied at call-time.
 
    Each exported function accepts an optional `profile` — server routes
    pass config.studio.profile; the browser router passes the config-seam

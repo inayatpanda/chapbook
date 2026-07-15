@@ -1,11 +1,9 @@
 /* ============================================================
    Author / voice profile — the single source of truth for WHO the
    Studio is writing as. Every AI prompt's identity + voice text is
-   COMPOSED from a profile object instead of being hardcoded, so:
-
-     • a fresh install gets a GENERIC, non-medical author/voice, and
-     • the owner's exact current voice is preserved by seeding HIS
-       profile (INAYAT_PROFILE) with the present identity.
+   COMPOSED from a profile object instead of being hardcoded, so a
+   fresh install gets a GENERIC, non-medical author/voice and the user's
+   own identity is supplied at call-time (never hardcoded here).
 
    Pure + browser-safe (no node built-ins): this module is imported by
    server/studio.js, which is bundled into the BYOK browser Studio, so
@@ -42,18 +40,6 @@ export const DEFAULT_PROFILE = Object.freeze({
   // factGuard: the thing the model must never fabricate. Generic by default;
   // a clinical author re-adds the medical emphasis via this field (or voiceNotes).
   factGuard: 'facts, statistics or studies',
-});
-
-/* ── Inayat's profile: HIS exact current identity ──────────────────────────
-   Seeding this reproduces the previous hardcoded STYLE / GOBLIN voice so his
-   own Studio is unchanged (verified by a draft reading the same). The owner's
-   install pins this via configMigrate; a fresh install never sees it. */
-export const INAYAT_PROFILE = Object.freeze({
-  name: 'Mr Inayat Panda',
-  role: 'an FRCS (Tr & Orth) trauma & orthopaedic surgeon with a subspecialty interest in shoulder surgery, who also builds clinical software',
-  writesAbout: 'orthopaedics, medicine, the arts, history, and technology',
-  voiceNotes: '',
-  factGuard: 'clinical facts, statistics or studies',
 });
 
 // Fill any missing/blank field from DEFAULT_PROFILE. Accepts a partial object
