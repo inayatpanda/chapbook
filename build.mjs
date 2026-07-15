@@ -112,9 +112,9 @@ const RELAY_BASE = process.env.STUDIO_RELAY_BASE || '/.netlify/functions/gh-devi
 // Empty when built manually without the deploy script → the footer reads "local build".
 const BUILD_STAMP = process.env.STUDIO_BUILD_STAMP || '';
 // Blog-template source every new user's blog is seeded from (app.js generateFromTemplate).
-// Interim default points at the owner's personal repo inayatpanda/chapbook-template (which
-// exists) pending an rqai-apps org; override at deploy time via env (CHAPBOOK_TEMPLATE_OWNER/REPO).
-const TEMPLATE_OWNER = process.env.CHAPBOOK_TEMPLATE_OWNER || 'inayatpanda';
+// Canonical default is the org template repo RQAI-projects/chapbook-template (public,
+// is_template); override at deploy time via env (CHAPBOOK_TEMPLATE_OWNER/REPO).
+const TEMPLATE_OWNER = process.env.CHAPBOOK_TEMPLATE_OWNER || 'RQAI-projects';
 const TEMPLATE_REPO = process.env.CHAPBOOK_TEMPLATE_REPO || 'chapbook-template';
 html = html.replace('</head>',
   `  <script>window.__STUDIO_GH_CLIENT_ID=${JSON.stringify(GH_CLIENT_ID)};window.__STUDIO_RELAY_BASE=${JSON.stringify(RELAY_BASE)};window.__STUDIO_BUILD=${JSON.stringify(BUILD_STAMP)};window.__CHAPBOOK_TEMPLATE=${JSON.stringify({ owner: TEMPLATE_OWNER, repo: TEMPLATE_REPO })};</script>\n</head>`);
