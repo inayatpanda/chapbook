@@ -28,13 +28,21 @@ export function parse(md) {
     } else if (val === 'true' || val === 'false') {
       data[key] = val === 'true';
     } else {
-      data[key] = val.replace(/^["']|["']$/g, '').replace(/\\"/g, '"');
+      // Un-escape the double-quoted subset q() emits: strip the surrounding quotes, then
+      // reverse `\\`→`\` and `\"`→`"` in ONE left-to-right pass (a naive two-step replace
+      // would mangle a value like `a\\b\"c`). Legacy values with an unescaped `\` are left
+      // untouched (a `\` not followed by `\`/`"` doesn't match), so this is back-compatible.
+      data[key] = val.replace(/^["']|["']$/g, '').replace(/\\([\\"])/g, '$1');
     }
   }
   return { data, body: m[2] };
 }
 
-const q = (s) => '"' + String(s).replace(/"/g, '\\"') + '"';
+// Quote a value as a YAML double-quoted scalar. Escape the backslash FIRST (it is YAML's
+// escape char), THEN the double-quote — order matters, else the `\` we add for `"` would be
+// doubled. Without the backslash escape, a value like `C:\Users` or a regex emits invalid
+// YAML and fails the buyer's whole Astro build. parse() reverses both escapes.
+const q = (s) => '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
 
 export function serialise({ data, body }) {
   const lines = [];
