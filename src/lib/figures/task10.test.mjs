@@ -23,9 +23,9 @@ test('listFamilies includes bar-compare, part-to-whole, range-scale and small-mu
 
 // (b) Each family's preset build: contains an expected label, no hex, sanitise-stable, draws.
 const EXPECT = {
-  'bar-compare': 'Plate',
-  'part-to-whole': 'Union',
-  'range-scale': 'normal',
+  'bar-compare': 'London',
+  'part-to-whole': 'Sunny',
+  'range-scale': 'road',
   'small-multiples': 'Stage 1',
 };
 
@@ -46,7 +46,7 @@ for (const id of NEW_IDS) {
 
 // (c) part-to-whole: all three styles build to non-empty, sanitise-stable, no-hex svg.
 test('build(part-to-whole) supports donut, stacked and waffle styles', () => {
-  const base = { segments: [{ label: 'Union', value: 7 }, { label: 'Delayed', value: 1 }] };
+  const base = { segments: [{ label: 'Sunny', value: 7 }, { label: 'Grey', value: 1 }] };
   for (const style of ['donut', 'stacked', 'waffle']) {
     const { svg } = build('part-to-whole', { ...base, style });
     assert.equal(typeof svg, 'string');
@@ -60,5 +60,5 @@ test('build(part-to-whole) supports donut, stacked and waffle styles', () => {
 test('build(bar-compare) renders the bar value text', () => {
   const preset = metaOf('bar-compare').presets[0];
   const { svg } = build('bar-compare', preset.params);
-  assert.ok(svg.includes('92'), 'bar value "92" appears');
+  assert.ok(svg.includes('95'), 'bar value "95" appears');
 });

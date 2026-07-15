@@ -5,9 +5,8 @@
 // inline SVG that passes sanitise() UNCHANGED — NO <script>/on*/<foreignObject>/
 // href/url()/external refs/SMIL. mkSticker() asserts this for you.
 //
-// Owner is an orthopaedic surgeon (bones/joints/trauma): the set leans ortho —
-// long bone, vertebra, knee joint, ribcage, plaster cast, crutch, x-ray feel —
-// kept warm, friendly and tasteful (NO gore).
+// A warm, friendly health & anatomy set — long bone, vertebra, knee joint, ribcage,
+// stethoscope, plaster cast, crutch, first-aid feel — kept tasteful (NO gore).
 import { mkSticker, RETRO as C, OUT, LINE, disc } from './_style.js';
 
 export default {

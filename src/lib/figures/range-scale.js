@@ -1,7 +1,7 @@
 // Figure family: range-scale (category 'Quantity').
 // A labelled horizontal scale from min->max with evenly spaced ticks, optional
 // shaded bands (bracketed spans labelled along the axis) and optional markers
-// (pointers placed at a value with a label, e.g. "this patient").
+// (pointers placed at a value with a label, e.g. "this tyre").
 // NYT line-art: minimal strokes, theme-var colours only, no hex.
 // Stroked elements carry class="fig-stroke" so drawCss can animate them.
 
@@ -56,13 +56,13 @@ export const meta = {
   },
   presets: [
     {
-      name: 'Range of motion',
+      name: 'Tyre pressure',
       params: {
         min: 0,
-        max: 180,
-        unit: '°',
-        bands: [{ from: 0, to: 30, label: 'normal' }],
-        markers: [{ value: 45, label: 'this patient' }],
+        max: 120,
+        unit: ' psi',
+        bands: [{ from: 80, to: 100, label: 'road' }],
+        markers: [{ value: 65, label: 'this tyre' }],
       },
     },
   ],

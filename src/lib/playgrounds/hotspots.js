@@ -46,15 +46,15 @@ export default {
       },
     },
     {
-      name: 'Anatomy points',
+      name: 'Parts of a flower',
       params: {
-        title: 'A stylised joint — tap the labelled points',
+        title: 'A flower — tap the labelled parts',
         viewBox: '0 0 400 300',
         spots: [
-          { x: 150, y: 90, label: 'Head', note: 'The rounded articular surface that sits in the socket.' },
-          { x: 250, y: 120, label: 'Socket', note: 'The shallow cup the head rotates within; depth aids stability.' },
-          { x: 130, y: 200, label: 'Shaft', note: 'The long bone that transmits load away from the joint.' },
-          { x: 280, y: 210, label: 'Soft-tissue envelope', note: 'Capsule and surrounding tissue that guide and restrain motion.' },
+          { x: 150, y: 90, label: 'Petal', note: 'The showy petals whose colour and scent draw pollinators in.' },
+          { x: 250, y: 120, label: 'Stamen', note: 'The stamen holds the pollen at the tip of a slender filament.' },
+          { x: 130, y: 200, label: 'Stem', note: 'The stem carries water up from the roots and holds the bloom aloft.' },
+          { x: 280, y: 210, label: 'Leaf', note: 'The leaf turns sunlight, water and air into sugar for the plant.' },
         ],
       },
     },

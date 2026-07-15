@@ -37,25 +37,25 @@ export const meta = {
   },
   presets: [
     {
-      name: 'Reduce → Review',
+      name: 'A proper cuppa',
       params: {
         orientation: 'h',
         steps: [
-          { title: 'Reduce' },
-          { title: 'Immobilise' },
-          { title: 'Image' },
-          { title: 'Review' },
+          { title: 'Boil' },
+          { title: 'Steep' },
+          { title: 'Pour' },
+          { title: 'Sip' },
         ],
       },
     },
     {
-      name: 'Vertical pathway',
+      name: 'Plan a trip',
       params: {
         orientation: 'v',
         steps: [
-          { title: 'Assess', note: 'history + exam' },
-          { title: 'Investigate', note: 'bloods, imaging' },
-          { title: 'Treat' },
+          { title: 'Research', note: 'dates + budget' },
+          { title: 'Book', note: 'travel, rooms' },
+          { title: 'Pack' },
         ],
       },
     },

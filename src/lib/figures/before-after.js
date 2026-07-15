@@ -41,12 +41,12 @@ export const meta = {
   },
   presets: [
     {
-      name: 'Reduction',
+      name: 'Edit pass',
       params: {
         divider: 'arrow',
         panels: [
-          { label: 'Displaced', note: 'pre-reduction' },
-          { label: 'Reduced', note: 'post-reduction' },
+          { label: 'As shot', note: 'before' },
+          { label: 'Edited', note: 'after' },
         ],
       },
     },

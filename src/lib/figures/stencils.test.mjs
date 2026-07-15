@@ -39,5 +39,5 @@ test('listStencils includes the known arrow + both categories', () => {
   assert.ok(ids.includes('arrow'), 'includes the arrow stencil');
   const cats = new Set(list.map((s) => s.category));
   assert.ok(cats.has('Generic'), 'has a Generic category');
-  assert.ok(cats.has('Clinical'), 'has a Clinical category');
+  assert.ok(cats.has('Symbols'), 'has a Symbols category');
 });

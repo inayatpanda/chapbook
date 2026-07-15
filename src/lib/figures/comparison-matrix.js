@@ -43,12 +43,12 @@ export const meta = {
   },
   presets: [
     {
-      name: 'Plate vs cast',
+      name: 'Cafetière vs AeroPress',
       params: {
-        cols: ['Strength', 'Speed', 'Cost'],
+        cols: ['Body', 'Speed', 'Cleanup'],
         rows: [
-          { label: 'Plate', cells: ['yes', 'no', 'no'] },
-          { label: 'Cast', cells: ['no', 'yes', 'yes'] },
+          { label: 'Cafetière', cells: ['yes', 'no', 'no'] },
+          { label: 'AeroPress', cells: ['no', 'yes', 'yes'] },
         ],
       },
     },

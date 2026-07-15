@@ -1,11 +1,11 @@
 /* Family: stopwatch — a button runs an SVG stopwatch (sweeping hand + progress ring
    + numeric readout) that animates to a target time, emitting staged commentary as
    the modelled clock passes each milestone. A second button runs a contrasting
-   target; reset clears. Models the shipped Liston "28-second leg" timer: the clock
-   is animated over a short real interval (mapped from the target) but DISPLAYS the
-   modelled time, so a 90-minute "modern way" run takes a few real seconds to play
-   while reading out as 1:30:00. Honours reduced-motion (jumps to the final state and
-   reveals all stages at once). */
+   target; reset clears. Models a "dinner, two ways" timer: the clock is animated
+   over a short real interval (mapped from the target) but DISPLAYS the modelled
+   time, so a 3-hour slow-cook run takes a few real seconds to play while reading
+   out as 3:00:00. Honours reduced-motion (jumps to the final state and reveals all
+   stages at once). */
 import { esc } from './index.js';
 
 const stageSchema = {
@@ -47,29 +47,29 @@ export default {
   },
   presets: [
     {
-      name: 'The 28-second leg',
+      name: 'Dinner, two ways',
       params: {
-        title: 'How long did the amputation take?',
-        compareLine: 'Robert Liston operated for speed, in the years before anaesthesia made speed beside the point.',
+        title: 'How long does dinner take?',
+        compareLine: 'Same craving; the clock tells two completely different stories.',
         runs: [
           {
-            label: 'Liston, 1846', seconds: 28, accent: '#f472b6',
+            label: 'Instant noodles', seconds: 120, accent: '#f472b6',
             stages: [
-              { at: 0, text: 'Knife to skin. The patient is awake, held down, and counting.' },
-              { at: 8, text: 'Through the muscle in one circular sweep — no pause to look.' },
-              { at: 16, text: 'The saw takes the femur; an assistant clamps the great vessels.' },
-              { at: 24, text: 'Flap drawn over, first ligature thrown.' },
-              { at: 28, text: 'Done. Twenty-eight seconds, and the leg is off.' },
+              { at: 0, text: 'Kettle on, pot ready, packet torn open.' },
+              { at: 30, text: 'Water boiling; the noodle block goes in.' },
+              { at: 60, text: 'Stirring the block loose as it softens.' },
+              { at: 90, text: 'Seasoning stirred through; a quick taste.' },
+              { at: 120, text: 'Done. Two minutes, and dinner is served.' },
             ],
           },
           {
-            label: 'The modern way', seconds: 5400, accent: '#2dd4bf',
+            label: 'A proper ragù', seconds: 5400, accent: '#2dd4bf',
             stages: [
-              { at: 0, text: 'Anaesthetised, prepped, draped. Nobody is in a hurry.' },
-              { at: 600, text: 'Tourniquet up; tissues divided in unhurried layers.' },
-              { at: 2400, text: 'Vessels and nerves handled individually, named and tied.' },
-              { at: 4200, text: 'Bone cut, edges smoothed, a myoplastic flap fashioned.' },
-              { at: 5400, text: 'Closed in layers over a drain. Ninety minutes, and it will heal.' },
+              { at: 0, text: 'Soffritto down low; onion, carrot and celery softening.' },
+              { at: 600, text: 'Mince browned in batches, not crowded, for colour.' },
+              { at: 2400, text: 'Wine in, reduced right down before the tomatoes.' },
+              { at: 4200, text: 'Barely a simmer now — a bubble every few seconds.' },
+              { at: 5400, text: 'Ninety minutes in, and it finally tastes like Sunday.' },
             ],
           },
         ],

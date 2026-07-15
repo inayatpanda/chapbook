@@ -2,8 +2,8 @@
    are ticked, the meter responds (drains or fills) and the colour shifts through
    bands; a live readout shows the band label / verdict. "Run all", "Reset", and an
    optional "skip the important ones" button (leaves weighted items unticked so the
-   meter stays high). Models the shipped surgical-checklist risk meter — ticking the
-   social/team-briefing items is what actually moves the needle. */
+   meter stays high). Models a "what makes a meeting work" meter — ticking the soft,
+   social items (introductions, inviting dissent) is what actually moves the needle. */
 import { esc } from './index.js';
 
 const itemSchema = {
@@ -48,31 +48,31 @@ export default {
   },
   presets: [
     {
-      name: 'Surgical checklist',
+      name: 'What makes a meeting work',
       params: {
-        title: 'Tick the checklist — watch the risk drain',
+        title: 'Tick the checklist — watch the wasted time drain',
         direction: 'drain',
-        meterLabel: 'residual avoidable risk',
+        meterLabel: 'time likely wasted',
         runLabel: 'Tick everything',
         resetLabel: 'Reset',
         skipLabel: 'Skip the "soft" ones',
         skipKeeps: [0, 1, 2],
         items: [
-          { label: 'Whole team introduced themselves by name and role', weight: 4 },
-          { label: 'Surgeon shared the critical/unexpected steps', weight: 4 },
-          { label: 'Concerns invited from anyone in the room', weight: 3 },
-          { label: 'Patient identity confirmed', weight: 1 },
-          { label: 'Site marked and confirmed', weight: 1 },
-          { label: 'Procedure and consent confirmed', weight: 1 },
-          { label: 'Anaesthetic safety check complete', weight: 1 },
-          { label: 'Antibiotic prophylaxis given on time', weight: 1 },
-          { label: 'Imaging displayed and correct', weight: 1 },
+          { label: 'Everyone introduced, and their role is clear', weight: 4 },
+          { label: 'The one decision to make was stated up front', weight: 4 },
+          { label: 'Quieter voices were actually invited in', weight: 3 },
+          { label: 'Agenda shared beforehand', weight: 1 },
+          { label: 'Start time honoured', weight: 1 },
+          { label: 'Someone is taking notes', weight: 1 },
+          { label: 'Phones away', weight: 1 },
+          { label: 'Action items assigned to a name', weight: 1 },
+          { label: 'Finished on time', weight: 1 },
         ],
         bands: [
-          { max: 10, label: 'safe — the team is a team', colour: '#2dd4bf' },
-          { max: 35, label: 'mostly covered', colour: '#22d3ee' },
-          { max: 70, label: 'gaps remain', colour: '#fbbf24' },
-          { max: 100, label: 'high avoidable risk', colour: '#f472b6' },
+          { max: 10, label: 'sharp — this was worth it', colour: '#2dd4bf' },
+          { max: 35, label: 'mostly useful', colour: '#22d3ee' },
+          { max: 70, label: 'patchy', colour: '#fbbf24' },
+          { max: 100, label: 'mostly wasted', colour: '#f472b6' },
         ],
       },
     },

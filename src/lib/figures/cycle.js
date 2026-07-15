@@ -40,13 +40,13 @@ export const meta = {
   },
   presets: [
     {
-      name: 'Bone remodelling',
+      name: 'Water cycle',
       params: {
         steps: [
-          { title: 'Resorption' },
-          { title: 'Reversal' },
-          { title: 'Formation' },
-          { title: 'Mineralisation' },
+          { title: 'Evaporation' },
+          { title: 'Condensation' },
+          { title: 'Precipitation' },
+          { title: 'Collection' },
         ],
       },
     },

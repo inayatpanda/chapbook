@@ -116,7 +116,7 @@ export function renderOnboarding() {
           <div class="cb-head">Create a new blog</div>
           <div class="hint" style="margin-top:.2rem">A fresh public repo from the blog template — pick a look and it builds itself. Recommended.</div>
           <label for="cb-name">Blog name</label>
-          <input id="cb-name" placeholder="e.g. Bone Deep" autocomplete="off">
+          <input id="cb-name" placeholder="e.g. Second Breakfast" autocomplete="off">
           <label id="cb-theme-label">Theme</label>
           <div id="cb-theme-picker" style="max-height:44vh;overflow:auto;margin-top:.1rem;padding:.1rem"></div>
           <input type="hidden" id="cb-theme" value="observatory">

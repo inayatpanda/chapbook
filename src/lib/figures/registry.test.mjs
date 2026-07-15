@@ -20,10 +20,10 @@ test('listFamilies includes labelled-diagram and step-flow with schema + presets
 
 // (b) step-flow build: contains step titles, no hex, sanitise leaves it unchanged.
 test('build(step-flow) contains step titles, no hex, sanitise-stable', () => {
-  const { svg } = build('step-flow', { orientation: 'h', steps: [{ title: 'Reduce' }, { title: 'Image' }] });
+  const { svg } = build('step-flow', { orientation: 'h', steps: [{ title: 'Boil' }, { title: 'Steep' }] });
   assert.equal(typeof svg, 'string');
-  assert.ok(svg.includes('Reduce'), 'svg contains Reduce');
-  assert.ok(svg.includes('Image'), 'svg contains Image');
+  assert.ok(svg.includes('Boil'), 'svg contains Boil');
+  assert.ok(svg.includes('Steep'), 'svg contains Steep');
   assert.ok(!svg.includes('#'), 'svg contains no # hex colour');
   assert.equal(sanitise(svg), svg, 'sanitise leaves the svg unchanged');
 });
