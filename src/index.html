@@ -18553,6 +18553,84 @@ function _b64urlToBytes(s){
 }
 function _hexToBytes(h){ const out=new Uint8Array(h.length/2); for(let i=0;i<out.length;i++) out[i]=parseInt(h.slice(i*2,i*2+2),16); return out; }
 
+/* Shared Ed25519 verify (WebCrypto): does `sigBytes` sign the UTF-8 bytes of `msgStr`
+   under the baked-in LIC_PUBKEY? Used by both the licence-key check and the revocation
+   -list check. Any failure (bad key/sig, unsupported curve) → false. */
+async function _ed25519Verify(msgStr,sigBytes){
+  try{
+    const key=await crypto.subtle.importKey('raw',_hexToBytes(LIC_PUBKEY),{name:'Ed25519'},false,['verify']);
+    return await crypto.subtle.verify({name:'Ed25519'},key,sigBytes,new TextEncoder().encode(msgStr));
+  }catch{ return false; }
+}
+
+/* ── Licence revocation — Helm boundary touchpoint 2 (best-effort, FAILS OPEN) ──
+   Fetches Helm's signed revocation list (an IPLR1.… token: base64url payload
+   {updated, revoked:[jti…]} + Ed25519 signature over the payload segment, same key as
+   licence keys) at most once per 24 h with a 4 s timeout. Only a signature-valid,
+   newer-or-equal list ever updates the cache (a tampered host can't poison it; a stale
+   CDN copy can't transiently un-revoke). Unreachable / 404 / malformed / timeout ⇒
+   fall back to the cached list; never fetched ⇒ [] ⇒ the key is allowed. A revoked
+   `jti` locks the app. _isRevoked / _shouldReplaceRevoked MIRROR the unit-tested
+   src/lib/revocation.js (the inline module can't import it — lib/ isn't shipped to
+   dist, same as the AI_DEFAULT_MODELS mirror). Keep the two copies in lockstep. */
+const REVOKED_URL='https://inayatpanda.com/licences/revoked.json';
+const REVOKED_STORE='helm.studio.revoked';
+const REVOKED_PREFIX='IPLR1';
+const REVOKED_FETCH_INTERVAL_MS=24*60*60*1000;
+const REVOKED_FETCH_TIMEOUT_MS=4000;
+
+/* MIRROR of src/lib/revocation.js isRevoked() — keep identical. */
+function _isRevoked(licenceId,revokedList){
+  return !!licenceId && Array.isArray(revokedList) && revokedList.includes(licenceId);
+}
+/* MIRROR of src/lib/revocation.js shouldReplaceCache() — keep identical. */
+function _shouldReplaceRevoked(cached,fetched,sigOk){
+  if(!fetched||!fetched.ok||!sigOk) return false;
+  if(!Array.isArray(fetched.revoked)) return false;
+  if(!cached||!cached.updated) return true;
+  return Date.parse(fetched.updated)>=Date.parse(cached.updated);
+}
+
+function _readRevokedCache(){
+  let c=null; try{ c=JSON.parse(localStorage.getItem(REVOKED_STORE)||'null'); }catch{ c=null; }
+  return c;
+}
+/* Synchronous, offline: the revoked jtis we already trust (only sig-valid lists are
+   ever cached). Lets a stored-key boot lock instantly on a KNOWN revocation — no
+   network, and no reload loop after a background eject. */
+function _revokedListCached(){
+  const c=_readRevokedCache();
+  return (c&&Array.isArray(c.revoked)&&c.revoked)||[];
+}
+/* Best-effort refresh, then return the current revoked jtis. Never throws. */
+async function _revokedList(){
+  let cached=_readRevokedCache();
+  const now=Date.now();
+  if(!cached || now-cached.fetchedAt>REVOKED_FETCH_INTERVAL_MS){
+    const ctrl=new AbortController();
+    const timer=setTimeout(()=>ctrl.abort(),REVOKED_FETCH_TIMEOUT_MS);
+    try{
+      const res=await fetch(REVOKED_URL,{signal:ctrl.signal});
+      const body=await res.json(); // { token: "IPLR1.…" }
+      const parts=String((body&&body.token)||'').trim().split('.');
+      if(parts.length===3 && parts[0]===REVOKED_PREFIX){
+        let payload=null,sig=null;
+        try{ payload=JSON.parse(new TextDecoder().decode(_b64urlToBytes(parts[1]))); sig=_b64urlToBytes(parts[2]); }catch{ payload=null; sig=null; }
+        if(payload && typeof payload==='object' && sig && sig.length===64){
+          const fetched={ok:true,updated:payload.updated,revoked:payload.revoked};
+          const sigOk=await _ed25519Verify(parts[1],sig);
+          if(_shouldReplaceRevoked(cached,fetched,sigOk)){
+            cached={fetchedAt:now,updated:payload.updated,revoked:payload.revoked};
+            try{ localStorage.setItem(REVOKED_STORE,JSON.stringify(cached)); }catch{}
+          }
+        }
+      }
+    }catch{ /* offline / 404 / bad response / timeout — fall back to cache */ }
+    finally{ clearTimeout(timer); }
+  }
+  return (cached&&Array.isArray(cached.revoked)&&cached.revoked)||[];
+}
+
 /* → {valid, payload, reason}. Mirrors server/licence.js verifyKey(). */
 async function verifyLicence(str){
   if(!LIC_PUBKEY) return {valid:false,reason:'not-configured'};
@@ -18563,11 +18641,7 @@ async function verifyLicence(str){
   try{ payload=JSON.parse(new TextDecoder().decode(_b64urlToBytes(parts[1]))); }catch{ return {valid:false,reason:'malformed'}; }
   try{ sig=_b64urlToBytes(parts[2]); }catch{ return {valid:false,reason:'malformed'}; }
   if(sig.length!==64||!payload||typeof payload.name!=='string') return {valid:false,reason:'malformed'};
-  let ok=false;
-  try{
-    const key=await crypto.subtle.importKey('raw',_hexToBytes(LIC_PUBKEY),{name:'Ed25519'},false,['verify']);
-    ok=await crypto.subtle.verify({name:'Ed25519'},key,sig,new TextEncoder().encode(parts[1]));
-  }catch{ ok=false; }
+  const ok=await _ed25519Verify(parts[1],sig);
   if(!ok) return {valid:false,reason:'bad-signature'};
   if(payload.expires!=null){
     const exp=Date.parse(payload.expires);
@@ -18596,6 +18670,11 @@ async function submitLicence(){
     const human={missing:'Enter your licence key.','not-configured':'Licensing is not configured on this build.',malformed:'That does not look like a valid key.','bad-signature':'This key failed verification.',expired:'This key has expired — contact the author to renew.'};
     msg('licMsg',human[r.reason]||('Invalid key ('+r.reason+').'),'err'); return;
   }
+  // Newly entered key: await the revocation check before accepting (fails open — a
+  // network failure never blocks activation; only a confirmed revoked jti rejects).
+  if(_isRevoked(r.payload&&r.payload.jti, await _revokedList())){
+    msg('licMsg','This licence has been revoked.','err'); return;
+  }
   try{ localStorage.setItem(LIC_STORE,raw); }catch{}
   $('licence').style.display='none';
   proceedAfterLicence();
@@ -18616,7 +18695,26 @@ if(window.__studioConfig && window.__studioConfig.isReady()){ boot(); } else { w
   if(!LIC_PUBKEY){ proceedAfterLicence(); return; } // unlicensed build → behave as before
   const stored=await _resolveStoredLicence();
   const r=await verifyLicence(stored);
-  if(r.valid){ proceedAfterLicence(); }
+  if(r.valid){
+    const jti=r.payload&&r.payload.jti;
+    // A previously-cached revocation locks synchronously — no boot, no network, no
+    // reload loop (a list is only ever cached after its signature verifies).
+    if(_isRevoked(jti,_revokedListCached())){
+      try{ localStorage.removeItem(LIC_STORE); }catch{}
+      msg('licMsg','This licence has been revoked.','err');
+      $('licence').style.display='block';
+      return;
+    }
+    // Otherwise boot immediately (never block boot on the network), then refresh the
+    // revocation list in the background and hard re-gate if this key is now revoked.
+    proceedAfterLicence();
+    _revokedList().then(list=>{
+      if(_isRevoked(jti,list)){
+        try{ localStorage.removeItem(LIC_STORE); }catch{}
+        try{ location.reload(); }catch{} // the now-cached list locks synchronously on reload
+      }
+    }).catch(()=>{});
+  }
   else { try{ localStorage.removeItem(LIC_STORE); }catch{} $('licence').style.display='block'; }
 })();
 </script>
