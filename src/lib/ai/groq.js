@@ -64,8 +64,25 @@ async function call(built, fetchImpl = fetch) {
   return json;
 }
 
+// Groq rejects max_tokens above the model's completion ceiling with a 400 naming the cap
+// ("`max_tokens` must be less than or equal to `8192`, …"). Callers size for generous
+// providers (the Partner asks for 16000 — fine on Gemini/Anthropic), so parse the cap out
+// of the 400 and retry ONCE clamped, instead of failing the whole turn. Live e2e 2026-07-15:
+// every Partner turn on llama-4-scout 400'd until this.
+export function maxTokensCapFromError(message) {
+  const m = /max_tokens[^0-9]*must be less than or equal to[^0-9]*(\d+)/i.exec(String(message == null ? '' : message));
+  return m ? parseInt(m[1], 10) : 0;
+}
+
 export async function generateText(opts, fetchImpl) {
-  const json = await call(buildText(opts), fetchImpl);
+  let json;
+  try { json = await call(buildText(opts), fetchImpl); }
+  catch (err) {
+    const cap = (err && (err.status === 400 || err.providerStatus === 400)) ? maxTokensCapFromError(err.message) : 0;
+    const asked = opts.maxTokens ?? 4000;
+    if (!cap || asked <= cap) throw err;
+    json = await call(buildText({ ...opts, maxTokens: cap }), fetchImpl); // single clamped retry
+  }
   const text = parseText(json);
   if (!opts.json) return { text };
   try { return { text, json: looseJson(text) }; }

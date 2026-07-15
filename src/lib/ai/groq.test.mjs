@@ -76,3 +76,35 @@ test('stripThink is a no-op on plain text', () => {
   assert.equal(stripThink('CHAPBOOK E2E OK'), 'CHAPBOOK E2E OK');
   assert.equal(stripThink(''), '');
 });
+
+// ── max_tokens clamp — Groq 400s requests above the model's completion cap ───
+import { maxTokensCapFromError, generateText } from './groq.js';
+
+const GROQ_CAP_ERR = '`max_tokens` must be less than or equal to `8192`, the maximum value for `max_tokens` is less than the `context_window` for this model';
+
+test('maxTokensCapFromError parses the cap out of the real Groq message', () => {
+  assert.equal(maxTokensCapFromError(GROQ_CAP_ERR), 8192);
+  assert.equal(maxTokensCapFromError('some other 400'), 0);
+  assert.equal(maxTokensCapFromError(null), 0);
+});
+
+test('generateText retries ONCE clamped when Groq rejects max_tokens', async () => {
+  const bodies = [];
+  const fetchImpl = async (url, opts) => {
+    bodies.push(JSON.parse(opts.body));
+    if (bodies.length === 1) return new Response(JSON.stringify({ error: { message: GROQ_CAP_ERR, type: 'invalid_request_error', param: 'max_tokens' } }), { status: 400 });
+    return new Response(JSON.stringify({ choices: [{ message: { content: 'clamped ok' } }] }), { status: 200 });
+  };
+  const r = await generateText({ model: 'meta-llama/llama-4-scout-17b-16e-instruct', key: 'k', prompt: 'hi', maxTokens: 16000 }, fetchImpl);
+  assert.equal(r.text, 'clamped ok');
+  assert.equal(bodies.length, 2);
+  assert.equal(bodies[0].max_tokens, 16000);
+  assert.equal(bodies[1].max_tokens, 8192); // retried at the provider's stated cap
+});
+
+test('a non-cap 400 is NOT retried — surfaces as-is', async () => {
+  let calls = 0;
+  const fetchImpl = async () => { calls++; return new Response(JSON.stringify({ error: { message: 'invalid role', type: 'invalid_request_error' } }), { status: 400 }); };
+  await assert.rejects(() => generateText({ model: 'm', key: 'k', prompt: 'hi', maxTokens: 16000 }, fetchImpl));
+  assert.equal(calls, 1);
+});
