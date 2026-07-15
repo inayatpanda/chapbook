@@ -34,7 +34,13 @@ export function makeRouter(deps) {
     const method = (opts.method || 'GET').toUpperCase();
     const body = opts.body && typeof opts.body === 'string' ? JSON.parse(opts.body) : (opts.body || {});
     const query = qp(rawPath);
-    const seg = clean(rawPath).replace(/^\/+|\/+$/g, '').split('/'); // e.g. ['posts','my-slug','blocks']
+    // Decode each path segment the way the original Fastify server did — callers
+    // encodeURIComponent() route params (e.g. a preset name "Coffee brewing methods"
+    // → "Coffee%20brewing%20methods"), and without decoding, name lookups (getPreset,
+    // getFigurePreset, slugs with reserved chars) silently miss and return null.
+    // Defensive: a malformed %-escape throws, so fall back to the raw segment.
+    const seg = clean(rawPath).replace(/^\/+|\/+$/g, '').split('/') // e.g. ['posts','my-slug','blocks']
+      .map((s) => { try { return decodeURIComponent(s); } catch { return s; } });
     const [a, b, c, d] = seg;
 
     // ---- playgrounds (pure core) ----
@@ -261,12 +267,20 @@ export function makeRouter(deps) {
     // composer reads providers[default].capabilities to gate capability-dependent buttons
     // (e.g. ✦ Generate image). Omitting it left that button permanently disabled for BYOK
     // users on an image-capable provider (OpenAI/Gemini). Mirrors the old server's shape.
-    if (a === 'settings' && b === 'ai' && method === 'GET') { const ai_ = config.getAi(); const caps = (ai && ai.capabilities) ? ai.capabilities() : {}; return { default: ai_.provider, providers: { [ai_.provider]: { configured: !!ai_.key, model: ai_.model, capabilities: caps } } }; }
+    // Fresh AI status, the shape the composer's renderSettings() expects. Used by BOTH
+    // GET and PUT — PUT must return this (not {ok:true}), else saveSettings()'s
+    // renderSettings(putResult) reads undefined providers/default and falsely renders
+    // "No active model — paste a provider's key" right after a SUCCESSFUL key save.
+    const aiStatus = () => {
+      const ai_ = config.getAi(); const caps = (ai && ai.capabilities) ? ai.capabilities() : {};
+      return { default: ai_.provider, providers: { [ai_.provider]: { configured: !!ai_.key, model: ai_.model, capabilities: caps } } };
+    };
+    if (a === 'settings' && b === 'ai' && method === 'GET') return aiStatus();
     if (a === 'settings' && b === 'ai' && method === 'PUT') {
       const patch = {}; if (body.default) patch.aiProvider = body.default;
       const p = body.providers && body.default && body.providers[body.default];
       if (p?.apiKey) patch.aiKey = p.apiKey; if (p?.model) patch.aiModel = p.model;
-      config.save(patch); return { ok: true };
+      config.save(patch); return aiStatus(); // fresh status so the panel reflects the save
     }
 
     // ---- settings/profile (config seam; the author/voice profile, browser-only) ----

@@ -2678,6 +2678,14 @@
   /* Storage-blocked warning banner (Safari private mode / eviction) — dismissible. */
   .storage-warn{margin:0 0 1rem;padding:.7rem .85rem;border:1px solid var(--line);border-radius:12px;
     background:var(--surface-2);display:flex;gap:.6rem;align-items:flex-start}
+  /* [hidden] must win over the display:flex above, else the banner shows empty on every load. */
+  .storage-warn[hidden]{display:none}
+  /* Same [hidden]-override fix for other display:flex controls toggled via the hidden attribute
+     (glyphMoreBtn, libIconMore, errRetry, fig flip/clear buttons → .btn; the post select bar;
+     the figure on-image controls). Without these, `el.hidden=true` fails to hide them. */
+  .btn[hidden]{display:none}
+  .pm-selectbar[hidden]{display:none}
+  .fig-img-ctrls[hidden]{display:none}
   .storage-warn .sw-ico{font-size:1.1rem;line-height:1.4}
   .storage-warn .sw-txt{font-size:.84rem;line-height:1.55;color:var(--mut)}
   .storage-warn .sw-txt strong{color:var(--ink)}
