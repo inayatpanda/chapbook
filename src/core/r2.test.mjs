@@ -6,6 +6,7 @@ import {
   validateWorkerConfig, uploadViaWorker,
   titleFromKey, parseVideoList, videoEntryFromKey, mapVideoLibrary, isVideoKey,
   isImageWorkerConfigured, buildImageRequest, parseImageResponse, generateImageViaWorker,
+  checkPublicReadable,
 } from './r2.js';
 
 const FULL = {
@@ -351,4 +352,48 @@ test('generateImageViaWorker: network throw → kind:blocked', async () => {
     () => generateImageViaWorker({ fetchImpl: fakeFetch, worker: { url: 'https://w.workers.dev', secret: 's' }, prompt: 'x' }),
     (e) => e.kind === 'blocked',
   );
+});
+
+// ── H2: public-readability check ─────────────────────────────────────────────
+// After an authenticated PUT, an UNAUTHENTICATED GET of the public URL tells us whether a
+// visitor's <video> can actually load it. Only 401/403/404 assert "not public"; a blocked
+// fetch (usually CORS) is UNKNOWN, never a false alarm.
+const okRes = (status) => ({ ok: status >= 200 && status < 300, status, body: null });
+
+test('checkPublicReadable: 206 (ranged GET) → readable true', async () => {
+  const r = await checkPublicReadable({ url: 'https://pub.r2.dev/v/clip.mp4', fetchImpl: async () => okRes(206) });
+  assert.equal(r.readable, true);
+});
+
+test('checkPublicReadable: 200 → readable true', async () => {
+  const r = await checkPublicReadable({ url: 'https://pub.r2.dev/v/clip.mp4', fetchImpl: async () => okRes(200) });
+  assert.equal(r.readable, true);
+});
+
+test('checkPublicReadable: 403 → readable false, actionable message', async () => {
+  const r = await checkPublicReadable({ url: 'https://pub.r2.dev/v/clip.mp4', fetchImpl: async () => okRes(403) });
+  assert.equal(r.readable, false);
+  assert.equal(r.status, 403);
+  assert.match(r.message, /public access|custom domain/i);
+});
+
+test('checkPublicReadable: 404 → readable false', async () => {
+  const r = await checkPublicReadable({ url: 'https://pub.r2.dev/v/clip.mp4', fetchImpl: async () => okRes(404) });
+  assert.equal(r.readable, false);
+});
+
+test('checkPublicReadable: 500 → unknown (readable null, no false alarm)', async () => {
+  const r = await checkPublicReadable({ url: 'https://pub.r2.dev/v/clip.mp4', fetchImpl: async () => okRes(500) });
+  assert.equal(r.readable, null);
+});
+
+test('checkPublicReadable: fetch throws (CORS/network) → unknown, no message', async () => {
+  const r = await checkPublicReadable({ url: 'https://pub.r2.dev/v/clip.mp4', fetchImpl: async () => { throw new TypeError('Failed to fetch'); } });
+  assert.equal(r.readable, null);
+  assert.equal(r.message, '');
+});
+
+test('checkPublicReadable: empty url → unknown', async () => {
+  const r = await checkPublicReadable({ url: '', fetchImpl: async () => okRes(200) });
+  assert.equal(r.readable, null);
 });

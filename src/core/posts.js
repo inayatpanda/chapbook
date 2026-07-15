@@ -3,6 +3,7 @@
 // seam (handled by the router), so the DB draft functions are gone.
 import { parse, serialise, readGallery, writeGallery } from '../lib/frontmatter.js';
 import * as blocks from '../lib/blocks.js';
+import { SAFE_IMAGE_DATA_URL } from '../lib/figures/svg.js';
 import { slugify as slugPure } from './slug.js';
 
 const BLOG_DIR = 'src/content/blog';
@@ -114,7 +115,12 @@ export function makePosts(gh) {
       const side = await gh.getFile(blocksPath(slug));
       if (side) {
         const doc = JSON.parse(side.content);
-        for (const b of doc.blocks) if (b.type === 'image' && b.file) b.src = `/images/posts/${slug}/${b.file}`;
+        for (const b of doc.blocks) {
+          if (b.type === 'image' && b.file) b.src = `/images/posts/${slug}/${b.file}`;
+          // A published figure backdrop (M2 extracted it to base.file) resolves to the same
+          // /images/posts/<slug>/ path — set base.src so the composer preview renders it.
+          if (b.type === 'figure' && b.base && b.base.file && !b.base.base64) b.base.src = `/images/posts/${slug}/${b.base.file}`;
+        }
         return { source: 'sidecar', doc, data: post.data };
       }
       return { source: 'legacy', doc: blocks.rawDocFromMarkdown(post.body), data: post.data };
@@ -158,7 +164,7 @@ export function makePosts(gh) {
     async publishBlocks(slug, doc, meta) {
       blocks.validateDoc(doc);
       const imageChanges = [];
-      const storedBlocks = doc.blocks.map((b) => {
+      const storedBlocks = doc.blocks.map((b, bi) => {
         // Reference mode: an image reused from elsewhere in the repo carries a `url` and no
         // base64 — never re-extract or re-commit its bytes; keep the url reference as-is.
         if (b.type === 'image' && b.url && !b.base64) { const { base64, src, file, ...ref } = b; return ref; }
@@ -167,6 +173,29 @@ export function makePosts(gh) {
         if (b.type === 'gallery' && Array.isArray(b.images)) {
           const images = b.images.map((im, i) => { const file = galleryFilename(im || {}, i); if (im && im.base64) imageChanges.push({ path: `${imgDir(slug)}/${file}`, base64: im.base64 }); return { file, alt: (im && im.alt) || '' }; });
           return { ...b, images };
+        }
+        // Figure base image (M2): an author-time `base.base64` data URL is otherwise committed
+        // INLINE by the serialiser (figureInner). Extract it to a committed file — mirroring the
+        // image/gallery pipeline — and reference it by `base.file`, so the markdown stays lean.
+        if (b.type === 'figure' && b.base) {
+          // Already a committed backdrop (re-published figure): keep the file ref, drop any
+          // resolved src/base64 so the sidecar JSON stays clean (mirrors the image src strip).
+          if (b.base.file) return { ...b, base: { file: b.base.file, alt: b.base.alt || '' } };
+          if (b.base.base64) {
+            // Only a SAFE raster is extracted (matches figureInner's guard); base.base64 is a
+            // full data URL, so strip the `data:...;base64,` prefix to the raw bytes commitMany
+            // wants. An unsafe/non-raster backdrop is dropped (overlay svg still renders).
+            const du = String(b.base.base64);
+            const m = SAFE_IMAGE_DATA_URL.test(du) && /^data:image\/([a-z+]+);base64,([\s\S]+)$/i.exec(du);
+            if (m) {
+              const ext = m[1].toLowerCase() === 'jpeg' ? 'jpg' : m[1].toLowerCase();
+              const file = `figure-base-${bi + 1}.${ext}`;
+              imageChanges.push({ path: `${publicImgDir(slug)}/${file}`, base64: m[2] });
+              return { ...b, base: { file, alt: b.base.alt || '' } };
+            }
+            const { base, ...rest } = b;
+            return rest;
+          }
         }
         return b;
       });

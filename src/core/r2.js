@@ -142,6 +142,37 @@ export async function uploadToR2({ signer, file, config, key, onProgress }) {
   return { url: `${cfg.publicBase}/${objKey}`, key: objKey };
 }
 
+// ── public-readability check (H2) ────────────────────────────────────────────
+// A successful AUTHENTICATED PUT does NOT mean visitors can GET the object: a private bucket
+// or a disabled/throttled *.r2.dev returns 403/404, so the <video> is dead on the published
+// blog. After upload we do an UNAUTHENTICATED ranged GET of the public URL and classify it.
+// `fetchImpl` is injected for tests (defaults to global fetch).
+//
+// A cross-origin fetch to r2.dev is frequently CORS-blocked EVEN WHEN the object is perfectly
+// readable by a <video> tag (media playback isn't CORS-gated), so a network/opaque failure is
+// reported as readable:null (UNKNOWN) — never a false "broken" warning. The caller can then
+// fall back to a media-element probe. We only assert readable:false on the unambiguous
+// not-public statuses (401/403/404). Returns { readable: true|false|null, status, message }.
+export async function checkPublicReadable({ url, fetchImpl } = {}) {
+  const doFetch = fetchImpl || (typeof fetch !== 'undefined' ? fetch : null);
+  const u = String(url == null ? '' : url).trim();
+  if (!u || !doFetch) return { readable: null, status: 0, message: '' };
+  const warn = (status) => `Video uploaded, but its public URL is not readable${status ? ` (HTTP ${status})` : ''} — visitors will see a broken video. Enable public access (R2 → your bucket → Settings → Public access / r2.dev) or connect a custom domain, then re-check.`;
+  let res;
+  try {
+    // Range: bytes=0-0 → a 206 with a single byte, so we never download the whole clip. When
+    // the bucket has no CORS policy for this origin the request is blocked → caught below.
+    res = await doFetch(u, { method: 'GET', headers: { Range: 'bytes=0-0' }, cache: 'no-store' });
+  } catch {
+    return { readable: null, status: 0, message: '' };   // blocked (often CORS) — unknown; let the caller probe
+  }
+  try { if (res && res.body && res.body.cancel) res.body.cancel(); } catch { /* ignore */ }
+  const status = (res && typeof res.status === 'number') ? res.status : 0;
+  if (res && (res.ok || status === 206)) return { readable: true, status, message: '' };
+  if (status === 401 || status === 403 || status === 404) return { readable: false, status, message: warn(status) };
+  return { readable: null, status, message: '' };         // other/opaque → unknown
+}
+
 // ── Worker upload route (bypasses the S3 endpoint) ──────────────────────────
 // Recommended when <acct>.r2.cloudflarestorage.com is broken/blocked: PUT the file to
 // the Cloudflare Worker (cloudflare/r2-upload-worker), which writes it to the bucket via

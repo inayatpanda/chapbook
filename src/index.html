@@ -9350,11 +9350,19 @@ function edEmbed(b, isSel){
     }
   }
 
+  let httpWarned = false;
   url.addEventListener('input', () => {
     const parsed = parseEmbedUrl(url.value);
     b.provider = parsed.provider;
     b.videoId = parsed.videoId;
     b.src = parsed.src;
+    // M3: a direct http:// video is a blocked mixed-content player on the https blog.
+    // Upgrade it to https:// (the serialiser coerces too) and warn once so the user can
+    // fix the source URL. Root-relative and https URLs pass through untouched.
+    if(b.provider === 'video' && /^http:\/\//i.test(b.src)){
+      b.src = b.src.replace(/^http:\/\//i, 'https://');
+      if(!httpWarned){ httpWarned = true; toast('Upgraded to https:// — an http:// video is blocked on your published blog'); }
+    }
     markDirty();
     renderPreview();
   });
@@ -9497,6 +9505,35 @@ function captureVideoPoster(video, stem){
   });
 }
 
+// True if `bytes` contains any of the short ASCII tokens (codec fourccs like 'hvc1').
+// latin1 decodes each byte 1:1 to a char, so the ASCII tokens match directly.
+function bytesContainAscii(bytes, tokens){
+  if(!bytes || !bytes.length) return false;
+  const s = new TextDecoder('latin1').decode(bytes);
+  return tokens.some((t) => s.indexOf(t) !== -1);
+}
+
+// M4: warn (non-blocking) when a picked clip is a likely-unplayable codec for most visitors —
+// a QuickTime .mov container or an HEVC (H.265) track. HEVC is detected by sniffing the file's
+// head AND tail for the 'hvc1'/'hev1'/'hvcC' fourccs (iPhone recordings put the moov atom at
+// the END). Returns true iff a warning was shown, so the decode-probe path can skip a dupe toast.
+async function warnIfUnplayableCodec(file){
+  const name = String((file && file.name) || '').toLowerCase();
+  const type = String((file && file.type) || '').toLowerCase();
+  const isQuickTime = type === 'video/quicktime' || /\.mov$/.test(name);
+  let isHevc = false;
+  try{
+    const HEAD = 256 * 1024, TAIL = 512 * 1024, size = file.size || 0;
+    const head = new Uint8Array(await file.slice(0, HEAD).arrayBuffer());
+    const tail = size > HEAD ? new Uint8Array(await file.slice(Math.max(0, size - TAIL)).arrayBuffer()) : new Uint8Array(0);
+    const tokens = ['hvc1', 'hev1', 'hvcC'];
+    isHevc = bytesContainAscii(head, tokens) || bytesContainAscii(tail, tokens);
+  }catch{}
+  if(isHevc){ toast('This video is HEVC (H.265) — most browsers can’t play it. Export it as MP4 (H.264) so all visitors can watch.'); return true; }
+  if(isQuickTime){ toast('This is a QuickTime .mov — many browsers won’t play it. Export as MP4 (H.264) so all visitors can watch.'); return true; }
+  return false;
+}
+
 // Core: probe playability (warn, non-blocking) → capture a poster client-side → upload BOTH
 // the clip and the poster JPEG to the user's R2 via the existing seam. Returns { url, poster }
 // (two public https URLs). `pill` gives status feedback. Throws (classified) on upload failure.
@@ -9505,20 +9542,56 @@ async function uploadVideoWithPoster(file, pill){
   const stem = String(file.name || 'video').replace(/\.[^.]+$/, '').replace(/[^\w.-]+/g, '-') || 'video';
   let posterFile;
   pill.set('Reading video…');
+  // M4: warn on a likely-unplayable codec (HEVC / QuickTime .mov). Such a file often DECODES
+  // fine here (this composer frequently runs on Safari, which plays HEVC) so the probe below
+  // succeeds and would otherwise ship a video ~70% of visitors can't watch. Non-blocking.
+  const codecWarned = await warnIfUnplayableCodec(file);
   try{
     const { video, url } = await loadVideoMeta(file);          // probe BEFORE upload
     posterFile = await captureVideoPoster(video, stem);
     try{ URL.revokeObjectURL(url); video.src = ''; }catch{}
   }catch{
     // Undecodable in this browser → warn (non-blocking) and still upload, with a placeholder poster.
-    toast('This file may not play in all browsers — export as MP4 (H.264) for safety');
+    if(!codecWarned) toast('This file may not play in all browsers — export as MP4 (H.264) for safety');
     posterFile = await placeholderPosterFile(stem);
   }
   pill.set('Uploading video…');
   const vres = await r2.upload({ file, onProgress:(p, m) => pill.set(m || 'Uploading video…') });
   pill.set('Uploading poster…');
   const pres = await r2.upload({ file: posterFile, onProgress:(p, m) => pill.set(m || 'Uploading poster…') });
+  // H2: a successful authenticated PUT ≠ publicly readable. Confirm the clip actually loads
+  // from its PUBLIC url the way a visitor's <video> will, and warn (non-blocking) if not — a
+  // private bucket / disabled r2.dev returns 403 and the video is dead on the published blog.
+  pill.set('Verifying…');
+  try{
+    let bad = false;
+    if(r2.verifyPublicReadable){
+      const chk = await r2.verifyPublicReadable(vres.url);
+      bad = !!(chk && chk.readable === false);
+      if(!chk || chk.readable == null) bad = !(await probePublicVideoUrl(vres.url)); // fetch inconclusive (CORS) → media probe
+    } else {
+      bad = !(await probePublicVideoUrl(vres.url));
+    }
+    if(bad) toast('Video uploaded, but visitors may not be able to load it — enable public access in R2 (bucket → Settings) or add a custom domain, then re-check');
+  }catch{}
   return { url: vres.url, poster: pres.url };
+}
+
+// H2: confirm a URL is readable the way a visitor's <video> loads it — an UNAUTHENTICATED GET
+// under the hood, and NOT CORS-gated (media playback ignores CORS), so it succeeds on a public
+// r2.dev even when a fetch() to the same URL is CORS-blocked. Resolves true on loadedmetadata,
+// false on error/timeout. Never rejects.
+function probePublicVideoUrl(url){
+  return new Promise((resolve) => {
+    const v = document.createElement('video');
+    v.preload = 'metadata'; v.muted = true; v.playsInline = true;
+    let settled = false;
+    const done = (ok) => { if(settled) return; settled = true; clearTimeout(to); try{ v.removeAttribute('src'); v.load(); }catch{} resolve(ok); };
+    const to = setTimeout(() => done(false), 8000);
+    v.addEventListener('loadedmetadata', () => done(true), { once:true });
+    v.addEventListener('error', () => done(false), { once:true });
+    v.src = url;
+  });
 }
 
 // Insert a video block at `at` (or the end): gate on R2, pick a clip, upload clip+poster, insert.
@@ -10048,10 +10121,11 @@ function edFigure(b, isSel){
     frame.setAttribute('sandbox', '');   // no scripts: pure SVG render
     frame.title = 'Figure preview';
     // Keep-backdrop figures: composite the still base behind the overlay svg. The
-    // author-time data URL (base.base64) renders directly; a published base.file would
-    // resolve on the site, so fall back to it when no data URL is present.
-    const baseSrc = b.base && (b.base.base64 || b.base.file
-      ? (b.base.base64 || `/images/posts/post/${b.base.file}`) : null);
+    // author-time data URL (base.base64) renders directly; a re-opened published figure
+    // carries base.src (the resolved /images/posts/<slug>/ path set by getPostBlocks);
+    // fall back to the conventional path when only a bare base.file is present.
+    const baseSrc = b.base && (b.base.base64 || b.base.src || b.base.file
+      ? (b.base.base64 || b.base.src || `/images/posts/post/${b.base.file}`) : null);
     frame.srcdoc = figureSrcdoc(b.svg, baseSrc);
     holder.appendChild(frame);
     holder.appendChild(note);

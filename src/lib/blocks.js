@@ -210,9 +210,14 @@ export function serialiseBlock(block, ctx = {}) {
       // A self-hosted <video> may carry a poster (still backdrop) + caption. It has no
       // sized container, so wrap it in a resizable figure only when sized or captioned;
       // otherwise emit the bare <video> exactly as before (byte-identical for old posts).
+      // M3: require an https (or same-site) src so the published https blog never gets a
+      // blocked mixed-content player; an uncoercible src drops the whole block.
       if (block.src) {
-        const poster = block.poster ? ` poster="${escAttr(block.poster)}"` : '';
-        const tag = `<video src="${escAttr(block.src)}"${poster}${heightCapStyle(block)} controls preload="metadata" playsinline></video>`;
+        const src = safeEmbedSrc(block.src);
+        if (!src) return '';
+        const psrc = block.poster ? safeEmbedSrc(block.poster) : '';
+        const poster = psrc ? ` poster="${escAttr(psrc)}"` : '';
+        const tag = `<video src="${escAttr(src)}"${poster}${heightCapStyle(block)} controls preload="metadata" playsinline></video>`;
         const cap = block.caption ? `<figcaption>${escHtml(block.caption)}</figcaption>` : '';
         return ra || cap ? `<figure class="blk-video"${ra}>${tag}${cap}</figure>` : tag;
       }
@@ -411,6 +416,22 @@ const isSafeHttpsRef = (url) => {
   const s = String(url || '');
   return SAFE_HTTPS_URL.test(s) && !s.split('/').includes('..');
 };
+
+// An embed block's self-hosted <video src>/poster (M3): the published blog is https, so an
+// http:// src becomes a BLOCKED mixed-content player. Coerce a safe URL/path or drop it:
+//   • a root-relative same-site path (/videos/clip.mp4) is fine as-is (never mixed content);
+//   • http:// is upgraded to https:// (an http video was going to be blocked anyway);
+//   • the result must be a safe https ref (no whitespace/quote/angle/backslash breakout);
+//   • anything else (javascript:/data:/protocol-relative //host/…) → '' so the caller drops it.
+// Attribute chars that could break out of the src="" inside a raw-HTML markdown block.
+const ATTR_UNSAFE = /[\s"'<>\\]/;
+function safeEmbedSrc(src) {
+  const s = String(src == null ? '' : src).trim();
+  if (!s) return '';
+  if (/^\/[^/]/.test(s)) return ATTR_UNSAFE.test(s) ? '' : s;   // root-relative same-site path
+  const up = s.replace(/^http:\/\//i, 'https://');               // upgrade to dodge mixed content
+  return isSafeHttpsRef(up) ? up : '';
+}
 
 // An image `file` is a BARE filename that gets joined onto /images/posts/<slug>/ (see
 // serialiseBlock). A value containing a path separator or `..` could climb out of that

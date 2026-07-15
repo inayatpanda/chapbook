@@ -153,3 +153,31 @@ test('B5: stripUnsafeHtml preserves links + lists (prose formatting survives)', 
   assert.match(out, /href="https:\/\/example\.com"/);
   assert.match(out, /<li>one<\/li>/);
 });
+
+// ── M3: an embed block's self-hosted <video src> must be https (or a same-site path) so the
+// published https blog never renders a BLOCKED mixed-content player. http:// is upgraded;
+// an uncoercible scheme drops the whole block.
+test('M3: embed http:// src is upgraded to https:// in the serialised video', () => {
+  const out = serialiseBlock({ id: 'e1', type: 'embed', provider: 'video', src: 'http://cdn.example.com/clip.mp4' });
+  assert.match(out, /<video src="https:\/\/cdn\.example\.com\/clip\.mp4"/);
+  assert.doesNotMatch(out, /http:\/\//);
+});
+
+test('M3: embed https:// src passes through unchanged (byte-identical for old posts)', () => {
+  const out = serialiseBlock({ id: 'e1', type: 'embed', provider: 'video', src: 'https://cdn.example.com/clip.mp4' });
+  assert.equal(out, '<video src="https://cdn.example.com/clip.mp4" controls preload="metadata" playsinline></video>');
+});
+
+test('M3: embed root-relative same-site src is kept as-is (never mixed content)', () => {
+  const out = serialiseBlock({ id: 'e1', type: 'embed', provider: 'video', src: '/videos/clip.mp4' });
+  assert.match(out, /<video src="\/videos\/clip\.mp4"/);
+});
+
+test('M3: embed with a javascript: src is dropped entirely', () => {
+  assert.equal(serialiseBlock({ id: 'e1', type: 'embed', provider: 'video', src: 'javascript:alert(1)' }), '');
+});
+
+test('M3: embed http:// poster is upgraded alongside the src', () => {
+  const out = serialiseBlock({ id: 'e1', type: 'embed', provider: 'video', src: 'https://cdn.example.com/c.mp4', poster: 'http://cdn.example.com/p.jpg' });
+  assert.match(out, /poster="https:\/\/cdn\.example\.com\/p\.jpg"/);
+});

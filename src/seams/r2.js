@@ -7,7 +7,7 @@
 // v1 = single PUT (fine for typical phone clips). FUTURE: multipart for large files, and
 // a Worker / custom-domain upload route to dodge the SNI filter (see core/r2.js note).
 import { AwsClient } from 'aws4fetch';
-import { uploadToR2, uploadViaWorker, validateR2Config, validateWorkerConfig, isR2Configured, buildCorsPolicy, classifyR2Error, r2Key, safeName, mapVideoLibrary, generateImageViaWorker, isImageWorkerConfigured } from '../core/r2.js';
+import { uploadToR2, uploadViaWorker, validateR2Config, validateWorkerConfig, isR2Configured, buildCorsPolicy, classifyR2Error, r2Key, safeName, mapVideoLibrary, generateImageViaWorker, isImageWorkerConfigured, checkPublicReadable } from '../core/r2.js';
 
 export function makeR2(config) {
   // Two upload paths share this seam:
@@ -43,6 +43,11 @@ export function makeR2(config) {
       const aws = new AwsClient({ accessKeyId: cfg.accessKeyId, secretAccessKey: cfg.secretAccessKey, service: 's3', region: 'auto' });
       return uploadToR2({ signer: aws, file, config: cfg, onProgress });
     },
+
+    // H2: verify an uploaded object is PUBLICLY readable (unauthenticated GET of its public
+    // URL). Returns { readable: true|false|null, status, message }; readable:null = couldn't
+    // tell (often a CORS-blocked fetch) so the caller should fall back to a media-element probe.
+    verifyPublicReadable(url) { return checkPublicReadable({ url }); },
 
     // Free text-to-image via the SAME Worker's POST /image route (Workers AI / FLUX-schnell).
     // Configured = Worker url+secret (publicBase NOT needed — the image returns as base64, not
