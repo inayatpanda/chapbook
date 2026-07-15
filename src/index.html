@@ -11645,6 +11645,12 @@ async function doPublish(){
 }
 $('editorPublishBtn').addEventListener('click', async ()=>{
   if(!meta.title.trim()){ toast('Title required'); return; }
+  // Flush any text still sitting UN-SENT in the bottom composer into the post before we
+  // check/publish. Without this, a writer who typed their body into the "Write a message…"
+  // strip and hit Publish (never Send) would ship an EMPTY post while the pre-publish check
+  // reported "0 words · Score 100" — the text lost in the strip. chatSend() is a no-op when
+  // the box is empty or already bound-and-synced, and commits it as a block otherwise.
+  if($('chatInput') && $('chatInput').value.trim()){ await chatSend(); }
   const btn=$('editorPublishBtn');
   setBusy(btn, true);
   // Run the pre-publish check; the panel gates the actual publish.
