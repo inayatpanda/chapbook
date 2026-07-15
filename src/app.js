@@ -26,6 +26,7 @@ import * as postCalendar from './core/postCalendar.js';
 import * as shareIntents from './core/shareIntents.js';
 import * as postList from './core/postList.js';
 import * as connection from './core/connection.js';
+import * as themeCatalogue from './core/themeCatalogue.js';
 
 // Minimal HTML escaper for the few spots where user text (a chosen blog name) is written
 // into the onboarding overlay's innerHTML — that overlay's origin holds the buyer's
@@ -116,43 +117,16 @@ export function renderOnboarding() {
           <div class="hint" style="margin-top:.2rem">A fresh public repo from the blog template — pick a look and it builds itself. Recommended.</div>
           <label for="cb-name">Blog name</label>
           <input id="cb-name" placeholder="e.g. Bone Deep" autocomplete="off">
-          <div class="row" style="margin-top:.2rem">
-            <div>
-              <label for="cb-theme">Theme</label>
-              <select id="cb-theme">
-                <optgroup label="Worlds">
-                  <option value="observatory" selected>Observatory</option>
-                  <option value="vista">Vista</option>
-                  <option value="blueprint">Blueprint</option>
-                  <option value="atlas">Atlas</option>
-                  <option value="daybreak">Daybreak</option>
-                  <option value="dune">Dune</option>
-                  <option value="rivendell">Rivendell</option>
-                </optgroup>
-                <optgroup label="Simple blog">
-                  <option value="paper">Paper</option>
-                  <option value="linen">Linen</option>
-                  <option value="mist">Mist</option>
-                  <option value="ink">Ink</option>
-                </optgroup>
-                <optgroup label="Creative">
-                  <option value="arcade">Arcade</option>
-                  <option value="botanic">Botanic</option>
-                  <option value="broadsheet">Broadsheet</option>
-                  <option value="aurora">Aurora</option>
-                </optgroup>
-              </select>
-            </div>
-            <div>
-              <label for="cb-core">Hero figure</label>
-              <select id="cb-core">
-                <option value="monogram">Monogram</option>
-                <option value="tori" selected>Interlocked rings</option>
-                <option value="armillary">Armillary sphere</option>
-                <option value="star">Star</option>
-              </select>
-            </div>
-          </div>
+          <label id="cb-theme-label">Theme</label>
+          <div id="cb-theme-picker" style="max-height:44vh;overflow:auto;margin-top:.1rem;padding:.1rem"></div>
+          <input type="hidden" id="cb-theme" value="observatory">
+          <label for="cb-core" style="margin-top:.9rem">Hero figure</label>
+          <select id="cb-core">
+            <option value="monogram">Monogram</option>
+            <option value="tori" selected>Interlocked rings</option>
+            <option value="armillary">Armillary sphere</option>
+            <option value="star">Star</option>
+          </select>
           <button type="button" id="cb-go" style="margin-top:.9rem">Create my blog</button>
           <div class="msg" id="cb-status"></div>
           <div class="cb-or">or use an existing repo</div>
@@ -227,6 +201,27 @@ export function renderOnboarding() {
   document.body.appendChild(ov);
   const $ = (id) => document.getElementById(id);
   const v = (id) => ($(id).value || '').trim();
+
+  // Categorised theme picker — replaces the old single-option <select>. Renders from the
+  // baked 20-theme catalogue immediately, then upgrades to the live template catalogue when
+  // it resolves (a 404 today keeps the baked list). The pick is written into the hidden
+  // #cb-theme input, which the create flow reads verbatim into site.json's defaultTheme.
+  try {
+    const themeHost = $('cb-theme-picker');
+    if (themeHost) {
+      const onTheme = (id) => { const h = $('cb-theme'); if (h) h.value = id; };
+      themeCatalogue.mountThemePicker(themeHost, {
+        catalogue: themeCatalogue.BAKED_CATALOGUE,
+        selected: v('cb-theme') || themeCatalogue.DEFAULT_THEME,
+        onSelect: onTheme,
+      });
+      themeCatalogue.fetchLiveCatalogue().then((live) => {
+        if (live && live !== themeCatalogue.BAKED_CATALOGUE && $('cb-theme-picker') === themeHost) {
+          themeCatalogue.mountThemePicker(themeHost, { catalogue: live, selected: v('cb-theme'), onSelect: onTheme });
+        }
+      }).catch(() => {});
+    }
+  } catch {}
 
   // L4 — the overlay used to be a trap (no way out). Escape or the × dismisses it: when the
   // app is already connected behind the overlay (e.g. opened from Settings → Change), close
@@ -465,5 +460,6 @@ if (typeof window !== 'undefined') {
   window.__studioStorage = storage;       // H4: the IndexedDB seam for Settings → Export/Import drafts + the boot storage probe
   window.__studioDrafts = draftsIo;        // H4: pure draft export/import serialiser (serialiseDrafts / parseDraftsFile / DRAFT_STORES)
   window.__studioReset = appReset;         // M9: pure "Forget this device" enumerator (chapbookKeys / CHAPBOOK_IDB_NAME)
+  window.__studioThemes = themeCatalogue;   // baked blog-theme registry + live-catalogue fetch + the shared picker renderer (Settings → Site mounts it)
   refresh();
 }

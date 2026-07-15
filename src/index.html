@@ -1769,6 +1769,12 @@
   .tpl-card:active{transform:scale(.99)}
   .tpl-card .tpl-nm{display:block;font-size:.92rem;font-weight:650;color:var(--ink);margin-bottom:.18em}
   .tpl-card .tpl-ds{display:block;font-size:.8rem;color:var(--mut)}
+  /* Settings → Site theme picker: remap the shared .cbtp swatch-card styles (injected at
+     runtime by studio.js / core/themeCatalogue.js) onto the app's own palette so the picker
+     follows light & dark. The onboarding overlay leaves these unset → the dark fallbacks. */
+  #ss-theme-picker{--cbtp-surface:var(--surface);--cbtp-line:var(--line);--cbtp-line2:var(--line-2);
+    --cbtp-acc:var(--acc);--cbtp-ink:var(--ink);--cbtp-mut:var(--mut);--cbtp-faint:var(--faint);
+    --cbtp-font:var(--font-display)}
 
   /* ── interactive template library picker ───────────────────────────────── */
   #tplLibSheet{max-height:86vh;overflow:auto}
@@ -3297,29 +3303,9 @@
     </div>
 
     <label style="margin-top:1rem">Default theme</label>
-    <select id="ss-theme">
-      <optgroup label="Worlds">
-        <option value="observatory">Observatory</option>
-        <option value="vista">Vista</option>
-        <option value="blueprint">Blueprint</option>
-        <option value="atlas">Atlas</option>
-        <option value="daybreak">Daybreak</option>
-        <option value="dune">Dune</option>
-        <option value="rivendell">Rivendell</option>
-      </optgroup>
-      <optgroup label="Simple blog">
-        <option value="paper">Paper</option>
-        <option value="linen">Linen</option>
-        <option value="mist">Mist</option>
-        <option value="ink">Ink</option>
-      </optgroup>
-      <optgroup label="Creative">
-        <option value="arcade">Arcade</option>
-        <option value="botanic">Botanic</option>
-        <option value="broadsheet">Broadsheet</option>
-        <option value="aurora">Aurora</option>
-      </optgroup>
-    </select>
+    <p class="sub" style="margin-top:0">The look your blog is published with. Change it any time — your posts are untouched.</p>
+    <div id="ss-theme-picker" style="margin-top:.5rem"></div>
+    <input type="hidden" id="ss-theme" value="observatory">
 
     <label style="margin-top:1rem">Galaxy figure</label>
     <select id="ss-core">
@@ -7174,6 +7160,32 @@ function navMove(i, dir) {
   renderNavEditor();
 }
 
+/* Categorised theme picker for Settings → Site. Mounts the shared renderer (exposed by
+   studio.js as window.__studioThemes) into #ss-theme-picker and writes the chosen theme id
+   into the hidden #ss-theme input that saveSiteSettings reads. Renders from the baked
+   catalogue first, then upgrades to the live template catalogue when it resolves (a 404
+   today keeps the baked list). If the picker module is somehow absent it just leaves the
+   hidden input's value so saving still round-trips the current theme. */
+let _themeCatalogue = null;
+function renderSiteThemePicker(selected) {
+  const host = $('ss-theme-picker');
+  const hidden = $('ss-theme');
+  const T = window.__studioThemes;
+  if (hidden) hidden.value = selected || 'observatory';
+  if (!host || !T || typeof T.mountThemePicker !== 'function') return;
+  const onPick = (id) => { if (hidden) hidden.value = id; };
+  const mount = (cat) => T.mountThemePicker(host, { catalogue: cat, selected: (hidden && hidden.value) || selected, onSelect: onPick });
+  mount(_themeCatalogue || T.BAKED_CATALOGUE);
+  if (!_themeCatalogue) {
+    T.fetchLiveCatalogue().then((live) => {
+      if (live && live.themes) {
+        _themeCatalogue = live;
+        if (live !== T.BAKED_CATALOGUE && $('ss-theme-picker') === host) mount(live);
+      }
+    }).catch(() => {});
+  }
+}
+
 async function loadSiteSettings() {
   try {
     const { data, sha } = await api('/settings/site');
@@ -7186,7 +7198,7 @@ async function loadSiteSettings() {
     $('ss-role').value = d.role || '';
     $('ss-description').value = d.description || '';
     $('ss-url').value = d.url || '';
-    $('ss-theme').value = d.defaultTheme || 'observatory';
+    renderSiteThemePicker(d.defaultTheme || 'observatory');
     $('ss-core').value = d.core || 'tori';
     $('ss-linkedin').value = d.socials?.linkedin || '';
     $('ss-instagram').value = d.socials?.instagram || '';
