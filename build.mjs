@@ -39,6 +39,33 @@ const DIST = 'dist';
   console.log('AI_DEFAULT_MODELS: inline map matches core/aiDefaults.js ✓');
 }
 
+// Drift guard: the revocation predicates are mirrored, not imported — src/lib/revocation.js
+// (isRevoked / shouldReplaceCache) is unit-tested, but index.html's inline gate can't import
+// it (lib/ isn't shipped to dist), so it carries verbatim copies (_isRevoked /
+// _shouldReplaceRevoked). This asserts the inline bodies still match the module ones.
+// Method: extract each function's body (between its signature `{` and the closing `}` on its
+// own line — these bodies have no nested braces), strip ALL whitespace, compare the results.
+// This tolerates formatting differences (the module spaces operators, the inline copy doesn't)
+// while catching any real logic drift. Re-sync the mirror if this throws.
+{
+  const bodyOf = (src, name) => {
+    const m = src.match(new RegExp(`function\\s+${name}\\s*\\([^)]*\\)\\s*\\{([\\s\\S]*?)\\n\\}`));
+    if (!m) throw new Error(`build: could not extract body of ${name}() for revocation drift guard`);
+    return m[1].replace(/\s+/g, '');
+  };
+  const mod = readFileSync(`${SRC}/lib/revocation.js`, 'utf8');
+  const idx = readFileSync(`${SRC}/index.html`, 'utf8');
+  const pairs = [
+    ['isRevoked', '_isRevoked'],
+    ['shouldReplaceCache', '_shouldReplaceRevoked'],
+  ];
+  for (const [modName, inlineName] of pairs) {
+    if (bodyOf(mod, modName) !== bodyOf(idx, inlineName))
+      throw new Error(`build: inline ${inlineName} in index.html drifted from ${modName} in src/lib/revocation.js — re-sync the mirror.`);
+  }
+  console.log('revocation predicates: inline gate matches src/lib/revocation.js ✓');
+}
+
 // Parse-check the inline `<script type="module">` with Node's real ES-module parser.
 // A SyntaxError here (e.g. a duplicate top-level declaration) fails to parse in the
 // browser and blanks the whole app — but is invisible to esbuild (which only bundles
@@ -84,10 +111,15 @@ const RELAY_BASE = process.env.STUDIO_RELAY_BASE || '/.netlify/functions/gh-devi
 // STUDIO_BUILD_STAMP; surfaced in the Studio's Settings footer (#buildStamp).
 // Empty when built manually without the deploy script → the footer reads "local build".
 const BUILD_STAMP = process.env.STUDIO_BUILD_STAMP || '';
+// Blog-template source every new user's blog is seeded from (app.js generateFromTemplate).
+// Canonical default is the public org template repo; override at deploy time via env.
+const TEMPLATE_OWNER = process.env.CHAPBOOK_TEMPLATE_OWNER || 'rqai-apps';
+const TEMPLATE_REPO = process.env.CHAPBOOK_TEMPLATE_REPO || 'chapbook-template';
 html = html.replace('</head>',
-  `  <script>window.__STUDIO_GH_CLIENT_ID=${JSON.stringify(GH_CLIENT_ID)};window.__STUDIO_RELAY_BASE=${JSON.stringify(RELAY_BASE)};window.__STUDIO_BUILD=${JSON.stringify(BUILD_STAMP)};</script>\n</head>`);
+  `  <script>window.__STUDIO_GH_CLIENT_ID=${JSON.stringify(GH_CLIENT_ID)};window.__STUDIO_RELAY_BASE=${JSON.stringify(RELAY_BASE)};window.__STUDIO_BUILD=${JSON.stringify(BUILD_STAMP)};window.__CHAPBOOK_TEMPLATE=${JSON.stringify({ owner: TEMPLATE_OWNER, repo: TEMPLATE_REPO })};</script>\n</head>`);
 console.log('device-flow client id:', GH_CLIENT_ID || '(none)');
 console.log('build stamp:', BUILD_STAMP || '(none — local build)');
+console.log('blog template:', `${TEMPLATE_OWNER}/${TEMPLATE_REPO}`);
 
 // (a) load the engine bundle before the inline module
 html = html.replace('</head>', '  <script type="module" src="./studio.js"></script>\n</head>');

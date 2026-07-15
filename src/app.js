@@ -300,12 +300,18 @@ export function renderOnboarding() {
         if (!owner) { set('Could not read your GitHub account — try signing in again.', false); go.disabled = false; return; }
 
         // Generate from the blog template, retrying the slug on a name collision (-2, -3, …).
+        // The template source is build-configurable (window.__CHAPBOOK_TEMPLATE, injected by
+        // build.mjs from CHAPBOOK_TEMPLATE_OWNER/REPO); fall back to the canonical org
+        // template repo if the global is somehow absent.
+        const _tpl = (typeof window !== 'undefined' && window.__CHAPBOOK_TEMPLATE) || {};
+        const templateOwner = _tpl.owner || 'rqai-apps';
+        const templateRepo = _tpl.repo || 'chapbook-template';
         set('Creating your blog…');
         let repo = null;
         for (let i = 0; i < 5; i++) {
           const tryName = i ? `${slug}-${i + 1}` : slug;
           try {
-            repo = await gh.generateFromTemplate({ templateOwner: 'inayatpanda', templateRepo: 'blog-template', owner, name: tryName, description: name });
+            repo = await gh.generateFromTemplate({ templateOwner, templateRepo, owner, name: tryName, description: name });
             slug = tryName; break;
           } catch (e) {
             if (!/name already exists|already exists|422/i.test(e.message || '')) throw e;

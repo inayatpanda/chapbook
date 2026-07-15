@@ -14,9 +14,12 @@ const DIST = 'dist';
 const ALLOWED = 'https://inayatpanda.com/licences/revoked.json';
 
 // Forbidden patterns (case-sensitive, exactly as specified by the release contract).
+// `inayatpanda` is matched BARE (not just `.com`) so ANY owner-personal-account coupling —
+// org, repo, email, or URL — trips the gate. The one legitimate occurrence, the licence
+// revoke-list URL, is stripped from each line by the ALLOWED allowlist BELOW before these
+// patterns run, so it stays SKIPPED-ALLOWED and never matches here.
 const PATTERNS = [
-  /inayatpanda\.com/,
-  /inayatpanda-site/,
+  /inayatpanda/,
   /studio@/,
   /admin token/,
   /X-Admin-Token/,

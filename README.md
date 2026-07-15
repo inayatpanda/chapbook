@@ -29,6 +29,14 @@ The GitHub device-flow client id is supplied at deploy time via the
 `STUDIO_GH_CLIENT_ID` environment variable, e.g.
 `STUDIO_GH_CLIENT_ID=… npm run deploy:draft`.
 
+**Blog template source.** New users' blogs are seeded (onboarding "create blog" →
+`generateFromTemplate`) from **`rqai-apps/chapbook-template`** by default. This repo
+**must exist and be public** (contents copied from the owner's existing `blog-template`)
+**before** the manual publish test and **before** prod cutover — the "create blog" step
+depends on it. Override at deploy time with `CHAPBOOK_TEMPLATE_OWNER` /
+`CHAPBOOK_TEMPLATE_REPO` (mirrors the `STUDIO_GH_CLIENT_ID` pattern), e.g.
+`CHAPBOOK_TEMPLATE_OWNER=myorg CHAPBOOK_TEMPLATE_REPO=my-template npm run deploy:draft`.
+
 ## Helm boundary
 
 Chapbook is a standalone product. It couples to the owner's private Helm (the Air 2
