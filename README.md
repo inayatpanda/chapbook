@@ -30,12 +30,14 @@ The GitHub device-flow client id is supplied at deploy time via the
 `STUDIO_GH_CLIENT_ID=… npm run deploy:draft`.
 
 **Blog template source.** New users' blogs are seeded (onboarding "create blog" →
-`generateFromTemplate`) from **`rqai-apps/chapbook-template`** by default. This repo
-**must exist and be public** (contents copied from the owner's existing `blog-template`)
-**before** the manual publish test and **before** prod cutover — the "create blog" step
-depends on it. Override at deploy time with `CHAPBOOK_TEMPLATE_OWNER` /
-`CHAPBOOK_TEMPLATE_REPO` (mirrors the `STUDIO_GH_CLIENT_ID` pattern), e.g.
+`generateFromTemplate`) from **`inayatpanda/chapbook-template`** by default. This is an
+**interim** pointer at the owner's personal repo (which already exists and is public) while
+there is no `rqai-apps` org yet, so the "create blog" step works today. Override at deploy
+time with `CHAPBOOK_TEMPLATE_OWNER` / `CHAPBOOK_TEMPLATE_REPO` (mirrors the
+`STUDIO_GH_CLIENT_ID` pattern), e.g.
 `CHAPBOOK_TEMPLATE_OWNER=myorg CHAPBOOK_TEMPLATE_REPO=my-template npm run deploy:draft`.
+The clean end-state is to transfer the template repo into an `rqai-apps` org and flip this
+default back to `rqai-apps/chapbook-template`.
 
 ## Helm boundary
 

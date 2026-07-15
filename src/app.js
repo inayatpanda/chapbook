@@ -304,7 +304,7 @@ export function renderOnboarding() {
         // build.mjs from CHAPBOOK_TEMPLATE_OWNER/REPO); fall back to the canonical org
         // template repo if the global is somehow absent.
         const _tpl = (typeof window !== 'undefined' && window.__CHAPBOOK_TEMPLATE) || {};
-        const templateOwner = _tpl.owner || 'rqai-apps';
+        const templateOwner = _tpl.owner || 'inayatpanda';
         const templateRepo = _tpl.repo || 'chapbook-template';
         set('Creating your blog…');
         let repo = null;

@@ -4,20 +4,35 @@
 //
 // NOT wired into package.json (npm run gate comes later) — invoke it directly.
 //
-// One allowlisted exception: the licence revoke-list URL below. If it appears it is
-// Helm-published static data and is permitted; it's stripped before matching and each
-// occurrence is reported as SKIPPED-ALLOWED.
+// Narrow allowlist of EXACT substrings (see ALLOWED below) that legitimately contain an
+// otherwise-forbidden pattern — the licence revoke-list URL and the deliberate blog-template
+// owner pointer. Each is stripped from every line before matching and reported as
+// SKIPPED-ALLOWED. Anything not matching one of these exact fragments still trips the gate.
 import { readdirSync, statSync, readFileSync } from 'node:fs';
 import { join, extname } from 'node:path';
 
 const DIST = 'dist';
-const ALLOWED = 'https://inayatpanda.com/licences/revoked.json';
+
+// Allowlisted exact substrings. Each is stripped from a line BEFORE the PATTERNS run, and
+// every occurrence is reported as SKIPPED-ALLOWED. The list is deliberately narrow — only
+// these EXACT fragments are permitted, so any OTHER `inayatpanda` (a stray email, an
+// inayatpanda.com URL, a github.com/inayatpanda/… link) still fails the gate.
+//   1. the licence revoke-list URL (Helm-published static data);
+//   2. the injected blog-template pointer in dist/index.html
+//      (window.__CHAPBOOK_TEMPLATE={"owner":"inayatpanda",…}); and
+//   3. that pointer's bundled app.js fallback owner in dist/studio.js.
+const ALLOWED = [
+  { text: 'https://inayatpanda.com/licences/revoked.json', reason: 'licence revoke-list URL' },
+  { text: '"owner":"inayatpanda"', reason: 'injected blog-template owner (window.__CHAPBOOK_TEMPLATE)' },
+  { text: '_tpl.owner || "inayatpanda"', reason: 'bundled blog-template fallback owner (app.js)' },
+];
 
 // Forbidden patterns (case-sensitive, exactly as specified by the release contract).
 // `inayatpanda` is matched BARE (not just `.com`) so ANY owner-personal-account coupling —
-// org, repo, email, or URL — trips the gate. The one legitimate occurrence, the licence
-// revoke-list URL, is stripped from each line by the ALLOWED allowlist BELOW before these
-// patterns run, so it stays SKIPPED-ALLOWED and never matches here.
+// org, repo, email, or URL — trips the gate. The few legitimate occurrences (the licence
+// revoke-list URL and the deliberate blog-template owner pointer) are stripped from each line
+// by the ALLOWED allowlist ABOVE before these patterns run, so they stay SKIPPED-ALLOWED and
+// never match here.
 const PATTERNS = [
   /inayatpanda/,
   /studio@/,
@@ -70,11 +85,13 @@ for (const file of walk(DIST)) {
   const lines = text.split('\n');
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i];
-    // Strip the allowlisted revoke-list URL before matching; note each occurrence.
-    if (line.includes(ALLOWED)) {
-      console.log(`SKIPPED-ALLOWED ${file}:${i + 1} — licence revoke-list URL`);
-      allowedHits++;
-      line = line.split(ALLOWED).join('');
+    // Strip EACH allowlisted substring before matching; report every occurrence.
+    for (const { text, reason } of ALLOWED) {
+      while (line.includes(text)) {
+        console.log(`SKIPPED-ALLOWED ${file}:${i + 1} — ${reason}`);
+        allowedHits++;
+        line = line.replace(text, '');
+      }
     }
     for (const re of PATTERNS) {
       if (re.test(line)) {
@@ -89,4 +106,4 @@ if (failures) {
   console.error(`\ngrep-gate: FAILED — ${failures} forbidden match(es) across ${scanned} scanned file(s) in ${DIST}/`);
   process.exit(1);
 }
-console.log(`grep-gate: clean ✓ — ${scanned} file(s) scanned, ${allowedHits} allowlisted revoke-URL reference(s) skipped`);
+console.log(`grep-gate: clean ✓ — ${scanned} file(s) scanned, ${allowedHits} allowlisted reference(s) skipped`);
