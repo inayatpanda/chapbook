@@ -24,7 +24,15 @@ export function inlineHtmlToMd(html) {
     const id = idm ? safeCiteId(decodeEntities(idm[1])) : '';
     return id ? `[^${id}]` : '';
   });
-  s = s.replace(/<a\s+[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, (_, href, txt) => `[${txt.replace(/<[^>]+>/g, '')}](${href})`);
+  s = s.replace(/<a\s+[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, (_, href, txt) => {
+    const text = txt.replace(/<[^>]+>/g, '');
+    // L3: drop javascript:/vbscript: hrefs (keep the visible text). Otherwise the emitted
+    // markdown `[text](javascript:…)` re-renders as a live executable <a> on the blog, which
+    // has no downstream sanitiser. Leading whitespace is tolerated (browsers ignore it
+    // before resolving the scheme). Mirrors inlineMdToHtml's javascript: neutralise below.
+    if (/^\s*(?:javascript|vbscript):/i.test(decodeEntities(href))) return text;
+    return `[${text}](${href})`;
+  });
   // inline code → `text` (decode entities + strip any nested tags inside the span first,
   // so the backticked body is plain text that the site markdown re-parses to <code>)
   s = s.replace(/<code>([\s\S]*?)<\/code>/gi, (_, t) => `\`${decodeEntities(t.replace(/<[^>]+>/g, ''))}\``);

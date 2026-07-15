@@ -4,7 +4,7 @@
 // client-side and uploaded alongside the clip.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { serialiseBlock, validateDoc, renderPreviewHtml } from './blocks.js';
+import { serialiseBlock, validateDoc, renderPreviewHtml, inlineHtmlToMd, stripUnsafeHtml } from './blocks.js';
 
 const VID = 'https://pub-abc123.r2.dev/videos/1a2b-clip.mp4';
 const POS = 'https://pub-abc123.r2.dev/videos/1a2b-clip.jpg';
@@ -92,4 +92,64 @@ test('video: renderPreviewHtml renders the post-video figure (escaped)', () => {
 
 test('video: renderPreviewHtml skips a video block with no url', () => {
   assert.equal(renderPreviewHtml([{ id: 'v1', type: 'video', poster: POS }]), '');
+});
+
+// ── L3: inlineHtmlToMd neutralises script-y anchor hrefs (HTML → markdown) ───────
+// A text/quote block's html is converted to markdown by inlineHtmlToMd at publish. A
+// `javascript:`/`vbscript:` href must NOT survive into `[text](javascript:…)`, or remark
+// renders a live executable <a> on the blog (no downstream sanitiser). The visible text
+// is kept; only the dangerous link wrapper is dropped.
+
+test('L3: inlineHtmlToMd drops a javascript: anchor but keeps the visible text', () => {
+  const out = inlineHtmlToMd('<a href="javascript:alert(1)">click me</a>');
+  assert.doesNotMatch(out, /javascript:/i);
+  assert.doesNotMatch(out, /\]\(/);           // no markdown link destination emitted
+  assert.equal(out, 'click me');
+});
+
+test('L3: inlineHtmlToMd drops a vbscript: anchor (keeps text)', () => {
+  const out = inlineHtmlToMd('<a href="vbscript:msgbox(1)">x</a>');
+  assert.doesNotMatch(out, /vbscript:/i);
+  assert.equal(out, 'x');
+});
+
+test('L3: leading whitespace before the scheme does not sneak a javascript: link through', () => {
+  const out = inlineHtmlToMd('<a href="  javascript:alert(1)">y</a>');
+  assert.doesNotMatch(out, /javascript:/i);
+  assert.equal(out, 'y');
+});
+
+test('L3: a legitimate https link is still converted to a markdown link', () => {
+  const out = inlineHtmlToMd('<a href="https://example.com">home</a>');
+  assert.equal(out, '[home](https://example.com)');
+});
+
+test('L3: a javascript: href reaching serialiseBlock (text) publishes no live link', () => {
+  const md = serialiseBlock({ type: 'text', html: 'see <a href="javascript:steal()">this</a> now' });
+  assert.doesNotMatch(md, /javascript:/i);
+  assert.match(md, /see this now/);
+});
+
+// ── B5: the composer edit-load sink (index.html edText/edQuote) routes untrusted block.html
+// through window.__studioSanitise, which IS this stripUnsafeHtml (=== sanitiseHtml). These
+// assert the barrier neutralises the well-formed payloads AND preserves prose formatting.
+// The attribute-boundary bypass `<img/src=x/onerror=…>` and `<svg/onload=…>` are neutralised
+// by DOMPurify in the browser — proven at the policy level in sanitise.test.mjs (PURIFY_CONFIG),
+// since under `node --test` there is no window and this degrades to the regex fallback.
+
+test('B5: stripUnsafeHtml (composer sink barrier) removes <script> and keeps prose', () => {
+  const out = stripUnsafeHtml('<p>Hi <strong>there</strong></p><script>steal(localStorage)</script>');
+  assert.doesNotMatch(out, /<script/i);
+  assert.match(out, /<strong>there<\/strong>/);
+});
+
+test('B5: stripUnsafeHtml strips an on* handler off a well-formed <img> (fallback path)', () => {
+  const out = stripUnsafeHtml('<img src="x" onerror="steal(localStorage)">');
+  assert.doesNotMatch(out, /onerror/i);
+});
+
+test('B5: stripUnsafeHtml preserves links + lists (prose formatting survives)', () => {
+  const out = stripUnsafeHtml('<a href="https://example.com">x</a><ul><li>one</li></ul>');
+  assert.match(out, /href="https:\/\/example\.com"/);
+  assert.match(out, /<li>one<\/li>/);
 });

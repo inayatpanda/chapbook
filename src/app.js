@@ -378,5 +378,10 @@ if (typeof window !== 'undefined') {
   window.__studioCalendar = postCalendar; // pure post-calendar helpers (bucket/classify/month grid) for the Posts calendar view
   window.__studioShare = shareIntents;   // pure Share-flow helpers (intent URLs, post-link, image-list); mirrored inline for the local build
   window.__studioPostList = postList;    // pure Posts-list helpers (optimistic remove-by-slug + already-deleted 404 test)
+  // B5: the real browser HTML sanitiser (DOMPurify via blocks.js/sanitise.js) for the inline
+  // composer. index.html's edit-load innerHTML sinks (edText/edQuote) route untrusted block.html
+  // through this so an imported/AI/repo-sidecar payload can't run in the composer origin (which
+  // holds the buyer's GitHub/AI/R2 secrets in localStorage). stripUnsafeHtml === sanitiseHtml.
+  window.__studioSanitise = blocks.stripUnsafeHtml;
   refresh();
 }

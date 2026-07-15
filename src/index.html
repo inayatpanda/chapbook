@@ -3447,7 +3447,7 @@
             <button class="btn" id="ptSend">Send</button></div>
           <div class="btn-row" style="margin-top:.5rem"><button class="btn ghost" id="ptUndo">Undo turn</button><button class="btn" id="ptPublish">Publish</button></div>
         </div>
-        <div class="pt-preview" id="ptPreview"><iframe id="ptFrame" title="Post preview"></iframe></div>
+        <div class="pt-preview" id="ptPreview"><iframe id="ptFrame" title="Post preview" sandbox="allow-scripts"></iframe></div>
       </div>
     </div>
   </section>
@@ -8077,7 +8077,7 @@ function deleteCitation(id){
   // remove markers from every block's html + live DOM
   for(const b of doc.blocks){
     if(b.type==='text' && b.html && b.html.includes('data-fn="'+id+'"')){
-      const tmp = document.createElement('div'); tmp.innerHTML = b.html;
+      const tmp = document.createElement('div'); tmp.innerHTML = sanitiseHtml(b.html);  // B5: b.html may be untrusted (import/AI/sidecar) — never innerHTML it raw
       tmp.querySelectorAll('sup.fn-ref[data-fn="'+id+'"]').forEach(s => s.remove());
       b.html = tmp.innerHTML;
     }
@@ -8240,6 +8240,22 @@ $('qlClose')?.addEventListener('click', closeQuoteLibrary);
 $('qlDone')?.addEventListener('click', closeQuoteLibrary);
 $('quoteLibPanel')?.addEventListener('click', e => { if(e.target === $('quoteLibPanel')) closeQuoteLibrary(); });
 
+// B5: sanitise HTML before it is assigned to an innerHTML sink in the composer origin.
+// Prose block.html (text/quote) can arrive from untrusted sources — pasted/imported markup,
+// AI document-import (a prompt-injectable .docx/.pdf → text/quote html verbatim), a
+// repo-sidecar doc, or a restored draft — and rendering it raw into a contenteditable would
+// execute e.g. `<img src=x onerror=…>`/`<svg/onload=…>` in the origin that holds the buyer's
+// GitHub/AI/R2 secrets in localStorage. Delegates to the bundle's DOMPurify sanitiser
+// (window.__studioSanitise, set by app.js); if that isn't up yet, a conservative regex strip
+// is the backstop. The html profile keeps p/strong/em/a/lists, so normal formatting survives.
+function sanitiseHtml(html){
+  const s = String(html == null ? '' : html);
+  if(window.__studioSanitise){ try{ return String(window.__studioSanitise(s)); }catch{} }
+  return s.replace(/<(script|iframe|object|embed)\b[\s\S]*?<\/\1\s*>/gi,'')
+          .replace(/<\/?(?:script|iframe|object|embed|svg|math)\b[^>]*>/gi,'')
+          .replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi,'')
+          .replace(/\s(?:href|src)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]*)/gi,'');
+}
 function edText(b, isSel){
   const wrap = document.createElement('div');
 
@@ -8247,7 +8263,7 @@ function edText(b, isSel){
   ce.className = 'be-ce';
   ce.contentEditable = 'true';
   ce.dataset.ph = b.ph || 'Write something…  ( / for blocks )';   // per-block ghost guidance (template guide)
-  ce.innerHTML = b.html || '';
+  ce.innerHTML = sanitiseHtml(b.html || '');
   ce.addEventListener('click', e => e.stopPropagation());
   ce.addEventListener('input', () => {
     b.html = ce.innerHTML;
@@ -9053,7 +9069,7 @@ function edQuote(b, isSel){
   ce.className = 'be-quote-ce';
   ce.contentEditable = 'true';
   ce.dataset.ph = b.ph || 'Quote text…';   // template guide shows as ghost, not deletable content
-  ce.innerHTML = b.html || '';
+  ce.innerHTML = sanitiseHtml(b.html || '');   // B5: never render untrusted quote html raw in the composer origin
   ce.addEventListener('click', e => e.stopPropagation());
   ce.addEventListener('input', () => { b.html = ce.innerHTML; markDirty(); });
   wrap.appendChild(ce);
@@ -11136,7 +11152,7 @@ function firstTextSnippet(){
   for(const b of doc.blocks){
     if(b.type==='text' && b.html){
       const tmp = document.createElement('div');
-      tmp.innerHTML = b.html;
+      tmp.innerHTML = sanitiseHtml(b.html);   // B5: parse untrusted block html safely (no detached-img onerror)
       const t = tmp.textContent.trim();
       if(t) return t.slice(0,155);
     }
@@ -17734,6 +17750,10 @@ document.addEventListener('keydown', (e) => {
 
 /* ── Partner screen ─────────────────────────────────────────────────────── */
 let ptSession = null;
+// Plain-text of the last rendered preview. The ptFrame is now sandboxed WITHOUT
+// allow-same-origin (B4), so the parent can no longer read its contentDocument to seed the
+// post-publish announce text — capture it here from the html we render instead.
+let _ptLastText = '';
 // Tappable quick-starts that seed the chat for a first-time user. Each is a ready-to-send
 // opener; "fill" ones leave a placeholder to complete so they don't fire a vague turn.
 const PT_STARTERS = [
@@ -17767,6 +17787,8 @@ function ptAddMsg(role, text){ const t=$('ptThread'); const d=document.createEle
 // inline preview.css + the data-post-theme="dark" article wrapper.
 async function ptRender(html){
   const css = await getPreviewCss();
+  // Capture a plain-text version for the announce seed (the sandboxed frame is unreadable).
+  _ptLastText = String(html||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
   $('ptFrame').srcdoc = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+css+'</style></head>'
     + '<body><article data-post-theme="dark"><div class="pv-frame"><div class="article-body">'+(html||'')+'</div></div></article></body></html>';
 }
@@ -17819,7 +17841,7 @@ function initPartner(){
     let _pubHost=''; { const _o=_siteOrigin(); if(_o){ try{ _pubHost=new URL(_o).host; }catch{} } }
     if(!confirm('Publish this post to '+(_pubHost||'your blog')+' now?\n\nIt will be live in ~2 minutes. You can take it down again from Posts.')) return;
     const r=await api('/partner/'+ptSession+'/publish',{method:'POST'});
-    if(r.ok){ let src=''; try{ src=($('ptFrame').contentDocument.body.innerText||'').trim().slice(0,1500); }catch{} await offerAnnounce(r.url, src); }
+    if(r.ok){ const src=(_ptLastText||'').slice(0,1500); await offerAnnounce(r.url, src); }
     else toast((r.errors||[]).map(e=>e.message).join('; ')); });
   ptResume(); // restore last session on first open
 }
