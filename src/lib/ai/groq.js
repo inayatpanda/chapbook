@@ -1,4 +1,5 @@
 import { looseJson } from './_json.js';
+import { pickLatestFromList, latestModelOffline } from './pickLatest.js';
 /* Groq adapter — OpenAI-compatible Chat Completions over raw HTTP, no SDK.
    Groq serves open models (Llama, etc.) very fast and cheap, with a generous free tier;
    its API mirrors OpenAI's /chat/completions, so this mirrors the OpenAI adapter's
@@ -46,7 +47,9 @@ async function call(built, fetchImpl = fetch) {
   const raw = await res.text();
   let json = null;
   try { json = raw ? JSON.parse(raw) : {}; } catch { /* non-JSON body */ }
-  if (!res.ok) throw Object.assign(new Error(json?.error?.message || `Groq API ${res.status}`), { code: 'AI_HTTP', status: res.status });
+  // Enrich the error with the provider's own error code/type so the dead-model classifier
+  // (dispatch.isDeadModelError) can tell a retired model apart from auth/quota/overload.
+  if (!res.ok) throw Object.assign(new Error(json?.error?.message || `Groq API ${res.status}`), { code: 'AI_HTTP', status: res.status, provider: 'groq', providerCode: json?.error?.code, providerType: json?.error?.type });
   if (json === null) throw Object.assign(new Error(`Groq returned a non-JSON response (HTTP ${res.status}).`), { code: 'AI_HTTP', status: res.status });
   return json;
 }
@@ -63,15 +66,42 @@ export function parseModels(json) {
   return [...new Set((json.data || []).map((m) => m.id).filter(Boolean))].sort();
 }
 
-export async function listModels({ key } = {}, fetchImpl = fetch) {
+// Raw entries (keeping the `created` Unix timestamp) for the pick-latest heuristic. Groq's
+// /models list mixes chat with audio (whisper), guard, TTS (orpheus) and agentic (compound)
+// heads and carries no stable "-latest" alias — the EXCLUDE heuristics + recency ordering in
+// pickLatestFromList pick the newest real chat model.
+function parseModelsRaw(json) {
+  return (json.data || [])
+    .filter((m) => m && m.id)
+    .map((m) => ({ id: m.id, created: m.created }));
+}
+
+async function fetchModelsJson({ key } = {}, fetchImpl = fetch) {
   const res = await fetchImpl(`${BASE}/models`, { method: 'GET', headers: { 'Authorization': 'Bearer ' + key } });
   const raw = await res.text();
   let json = null;
   try { json = raw ? JSON.parse(raw) : {}; } catch { /* non-JSON body */ }
-  if (!res.ok) throw Object.assign(new Error(json?.error?.message || `Groq API ${res.status}`), { code: 'AI_HTTP', status: res.status });
-  return parseModels(json || {});
+  if (!res.ok) throw Object.assign(new Error(json?.error?.message || `Groq API ${res.status}`), { code: 'AI_HTTP', status: res.status, provider: 'groq', providerCode: json?.error?.code, providerType: json?.error?.type });
+  return json || {};
 }
 
-// No resolveLatestModel: Groq's /models list mixes chat, audio (whisper) and guard models
-// with no stable "-latest" alias, so activation uses the offline DEFAULT_MODEL (a known
-// current chat model), overridable under "Advanced — override model" in Settings.
+export async function listModels(opts = {}, fetchImpl = fetch) {
+  return parseModels(await fetchModelsJson(opts, fetchImpl));
+}
+
+export async function listModelsRaw(opts = {}, fetchImpl = fetch) {
+  return parseModelsRaw(await fetchModelsJson(opts, fetchImpl));
+}
+
+// Resolve the latest sensible TEXT model with no explicit override: query the live list and
+// pick the newest chat model (llama/qwen/gpt-oss …) by `created`, skipping whisper/guard/
+// orpheus/compound. No stable alias, so a failed/offline query degrades to SAFE_DEFAULT
+// (llama-3.3-70b-versatile). This supersedes the old "no resolveLatestModel" stance now that
+// the EXCLUDE heuristics reliably screen Groq's non-chat modalities.
+export async function resolveLatestModel(opts = {}, fetchImpl = fetch) {
+  try {
+    const picked = pickLatestFromList('groq', await listModelsRaw(opts, fetchImpl));
+    if (picked) return picked;
+  } catch { /* offline / no key → fall through */ }
+  return latestModelOffline('groq');
+}

@@ -4,6 +4,8 @@ import * as anthropic from '../lib/ai/anthropic.js';
 import * as openai from '../lib/ai/openai.js';
 import * as google from '../lib/ai/google.js';
 import * as groq from '../lib/ai/groq.js';
+import { isDeadModelError } from '../lib/ai/dispatch.js';
+import { pickLatestFromList } from '../lib/ai/pickLatest.js';
 
 const ADAPTERS = { anthropic, openai, google, groq };
 
@@ -15,15 +17,52 @@ export function makeAi(cfg, fetchImpl = fetch) {
     return fetchImpl(url, { ...opts, headers });
   };
   const pick = () => { const a = cfg.getAi(); return { adapter: ADAPTERS[a.provider] || anthropic, a }; };
+
+  // Mid-use auto-heal (Layer 3): a request just failed. If it failed because the provider
+  // RETIRED the configured model (isDeadModelError), fetch the provider's live list, pick the
+  // newest sensible chat model, PERSIST it (so every later call self-heals too), announce the
+  // switch via a 'studio:model-switched' window event (the UI toasts it), and return the new
+  // id so the caller can retry ONCE. Returns '' for anything else — the original error stands.
+  // Never loops: a resolution that fails, is unavailable, or repeats the same dead id → ''.
+  async function recoverDeadModel(err, { provider, adapter, key, model }) {
+    if (err && typeof err === 'object') { err.provider = err.provider || provider; err.model = err.model || model; }
+    if (!isDeadModelError(err)) return '';
+    if (typeof adapter.listModelsRaw !== 'function') return '';
+    let next = '';
+    try { next = pickLatestFromList(provider, await adapter.listModelsRaw({ key }, browserFetch)); }
+    catch { return ''; }
+    if (!next || next === model) return '';
+    try { cfg.save({ aiProvider: provider, aiModel: next }); } catch { /* storage full → still retry in-memory */ }
+    try {
+      if (typeof window !== 'undefined' && window.dispatchEvent)
+        window.dispatchEvent(new CustomEvent('studio:model-switched', { detail: { provider, from: model, to: next } }));
+    } catch { /* non-browser (tests) → no event */ }
+    return next;
+  }
+
+  // Run an adapter call that takes a model; on a dead-model failure, heal + retry exactly once.
+  async function runHealing(makeCall, { provider, adapter, key, model }) {
+    try { return await makeCall(model); }
+    catch (err) {
+      const next = await recoverDeadModel(err, { provider, adapter, key, model });
+      if (!next) throw err;
+      return makeCall(next); // single retry with the healed model — no further recovery
+    }
+  }
+
   return {
     async generateText({ system, prompt, maxTokens, json, effort }) {
       const { adapter, a } = pick();
-      return adapter.generateText({ system, prompt, maxTokens, json, effort, model: a.model || adapter.DEFAULT_MODEL, key: a.key }, browserFetch);
+      const model = a.model || adapter.DEFAULT_MODEL;
+      return runHealing((m) => adapter.generateText({ system, prompt, maxTokens, json, effort, model: m, key: a.key }, browserFetch),
+        { provider: a.provider, adapter, key: a.key, model });
     },
     async describeImage({ prompt, imageBase64, mimeType, maxTokens }) {
       const { adapter, a } = pick();
       if (!adapter.capabilities?.vision) throw Object.assign(new Error(`${a.provider} cannot read images`), { code: 'AI_CAP' });
-      return adapter.describeImage({ prompt, imageBase64, mimeType, maxTokens, model: a.model || adapter.DEFAULT_MODEL, key: a.key }, browserFetch);
+      const model = a.model || adapter.DEFAULT_MODEL;
+      return runHealing((m) => adapter.describeImage({ prompt, imageBase64, mimeType, maxTokens, model: m, key: a.key }, browserFetch),
+        { provider: a.provider, adapter, key: a.key, model });
     },
     async generateImage({ prompt, size }) {
       const { adapter, a } = pick();
@@ -38,11 +77,39 @@ export function makeAi(cfg, fetchImpl = fetch) {
     async readDocument({ system, instruction, fileBase64, mimeType, json }) {
       const { adapter, a } = pick();
       if (typeof adapter.readDocument !== 'function') throw Object.assign(new Error(`${a.provider} cannot read documents — use a provider that supports document import (e.g. Anthropic or Gemini).`), { code: 'AI_CAP' });
-      return adapter.readDocument({ system, instruction, fileBase64, mimeType, json, model: a.model || adapter.DEFAULT_MODEL, key: a.key }, browserFetch);
+      const model = a.model || adapter.DEFAULT_MODEL;
+      return runHealing((m) => adapter.readDocument({ system, instruction, fileBase64, mimeType, json, model: m, key: a.key }, browserFetch),
+        { provider: a.provider, adapter, key: a.key, model });
     },
     // The current provider's declared capabilities ({ text, vision, document, image }).
     // The router surfaces this in GET /settings/ai so the composer can gate capability-
     // dependent buttons (e.g. ✦ Generate image) exactly as it did against the old server.
     capabilities() { const { adapter } = pick(); return adapter.capabilities || {}; },
+
+    // Layer 1 — live model list for the Settings "↻ refresh models" datalist. Uses the
+    // stored key, which BYOK holds only for the ACTIVE provider, so listing a different
+    // provider (no key) returns [] gracefully rather than firing a doomed 401. Never throws:
+    // the router wraps this as { models } and loadModels() reads r.models||[].
+    async listModels(provider) {
+      const a = cfg.getAi();
+      const id = provider || a.provider;
+      const adapter = ADAPTERS[id];
+      if (!adapter || typeof adapter.listModels !== 'function') return [];
+      const key = (id === a.provider) ? a.key : '';
+      if (!key) return [];
+      return adapter.listModels({ key }, browserFetch);
+    },
+    // Layer 1 — resolve the provider's LATEST sensible chat model (stable alias / live query /
+    // offline default) so activation pins a current id instead of a stale hardcoded one. The
+    // adapter's resolveLatestModel never throws (a missing key / offline degrades to the
+    // offline default), so this always yields a usable id or '' for an unknown provider.
+    async resolveLatestModel(provider) {
+      const a = cfg.getAi();
+      const id = provider || a.provider;
+      const adapter = ADAPTERS[id];
+      if (!adapter || typeof adapter.resolveLatestModel !== 'function') return '';
+      const key = (id === a.provider) ? a.key : '';
+      return adapter.resolveLatestModel({ key }, browserFetch);
+    },
   };
 }

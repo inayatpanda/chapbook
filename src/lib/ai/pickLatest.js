@@ -30,6 +30,9 @@ export const SAFE_DEFAULT = {
   anthropic: 'claude-opus-4-8',
   openai: 'gpt-4o',
   google: 'gemini-flash-latest',
+  // Groq has no "-latest" alias, so activation resolves the newest chat model from the live
+  // list (pickLatestFromList) and only falls back to this known-current id offline.
+  groq: 'llama-3.3-70b-versatile',
   ollama: '',
 };
 
@@ -40,6 +43,10 @@ const EXCLUDE = [
   'image', 'imagen', 'vision', 'tts', 'audio', 'speech', 'whisper', 'realtime',
   'embedding', 'embed', 'moderation', 'rerank', 'guard', 'transcribe',
   'dall-e', 'dalle', 'sora', 'veo', 'aqa', 'gemma',
+  // Groq-specific non-chat heads: 'orpheus' is a TTS family (canopylabs/orpheus-*) and
+  // 'compound' is an agentic wrapper (groq/compound[-mini]) — neither is a plain chat model,
+  // so an auto-pick must never land on them.
+  'orpheus', 'compound',
   // previews / experiments / dated snapshots we don't want as the default
   'preview', 'experimental', '-exp', 'nightly', 'thinking', 'search',
 ];
@@ -51,6 +58,10 @@ const PREFERRED_HINTS = {
   anthropic: ['sonnet', 'opus', 'haiku', 'claude'],
   openai: ['gpt', 'chatgpt', 'o4', 'o3'],
   google: ['flash', 'pro', 'gemini'],
+  // Groq serves open chat models from several families — whitelist the mainstream ones so a
+  // pick can't wander onto a specialised id (e.g. the Arabic-only allam-*, or anything the
+  // EXCLUDE list above already screens out: whisper/guard/orpheus/compound).
+  groq: ['llama', 'qwen', 'gpt-oss', 'mixtral'],
   ollama: [],
 };
 

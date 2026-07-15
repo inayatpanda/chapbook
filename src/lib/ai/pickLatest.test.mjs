@@ -131,6 +131,64 @@ test('alias map: only google maintains a stable -latest text alias', () => {
   assert.deepEqual(Object.keys(LATEST_ALIAS), ['google']);
 });
 
-test('SAFE_DEFAULT covers exactly the four providers', () => {
-  assert.deepEqual(Object.keys(SAFE_DEFAULT).sort(), ['anthropic', 'google', 'ollama', 'openai']);
+test('SAFE_DEFAULT covers exactly the five providers (incl. groq)', () => {
+  assert.deepEqual(Object.keys(SAFE_DEFAULT).sort(), ['anthropic', 'google', 'groq', 'ollama', 'openai']);
+});
+
+test('latestModelOffline returns the Groq SAFE_DEFAULT (no alias)', () => {
+  assert.equal(latestModelOffline('groq'), 'llama-3.3-70b-versatile');
+});
+
+/* ── Groq: EXCLUDE heuristics over the real catalogue ─────────────────────── */
+
+// Groq's live /models list mixes chat with whisper (audio), *-guard (safety), orpheus (TTS)
+// and compound (agentic) heads — none of which is a plain chat model. This is the real 17-id
+// catalogue (2026-07), with `created` timestamps arranged so the newest entry OVERALL is a
+// whisper model and the newest UNwanted-but-newer entry (allam, Arabic-only) is not a
+// whitelisted family — the pick must skip both and land on the newest whitelisted chat model.
+const GROQ_CATALOGUE = [
+  { id: 'allam-2-7b', created: 1759000000 },                                 // not a whitelisted family → excluded (though newer)
+  { id: 'canopylabs/orpheus-arabic-saudi', created: 1750000000 },            // TTS → excluded
+  { id: 'canopylabs/orpheus-v1-english', created: 1759500000 },              // TTS → excluded
+  { id: 'groq/compound', created: 1759600000 },                             // agentic wrapper → excluded
+  { id: 'groq/compound-mini', created: 1749000000 },                        // agentic wrapper → excluded
+  { id: 'llama-3.1-8b-instant', created: 1751000000 },                      // chat
+  { id: 'llama-3.3-70b-versatile', created: 1757000000 },                   // chat
+  { id: 'meta-llama/llama-4-scout-17b-16e-instruct', created: 1758000000 }, // chat → NEWEST chat
+  { id: 'meta-llama/llama-prompt-guard-2-22m', created: 1748000000 },       // guard → excluded
+  { id: 'meta-llama/llama-prompt-guard-2-86m', created: 1758500000 },       // guard → excluded
+  { id: 'openai/gpt-oss-120b', created: 1755000000 },                       // chat
+  { id: 'openai/gpt-oss-20b', created: 1753000000 },                        // chat
+  { id: 'openai/gpt-oss-safeguard-20b', created: 1758200000 },              // guard → excluded
+  { id: 'qwen/qwen3-32b', created: 1752000000 },                            // chat
+  { id: 'qwen/qwen3.6-27b', created: 1754000000 },                          // chat
+  { id: 'whisper-large-v3', created: 1747000000 },                          // audio → excluded
+  { id: 'whisper-large-v3-turbo', created: 1760000000 },                    // audio → NEWEST overall, excluded
+];
+
+const GROQ_FORBIDDEN = /whisper|guard|orpheus|compound/;
+
+test('Groq: isTextModel screens whisper/guard/orpheus/compound + the Arabic-only allam', () => {
+  assert.equal(isTextModel('groq', 'whisper-large-v3-turbo'), false);
+  assert.equal(isTextModel('groq', 'meta-llama/llama-prompt-guard-2-86m'), false);
+  assert.equal(isTextModel('groq', 'openai/gpt-oss-safeguard-20b'), false);
+  assert.equal(isTextModel('groq', 'canopylabs/orpheus-v1-english'), false);
+  assert.equal(isTextModel('groq', 'groq/compound'), false);
+  assert.equal(isTextModel('groq', 'allam-2-7b'), false); // not a whitelisted family
+  // …but the mainstream chat families pass.
+  assert.equal(isTextModel('groq', 'llama-3.3-70b-versatile'), true);
+  assert.equal(isTextModel('groq', 'meta-llama/llama-4-scout-17b-16e-instruct'), true);
+  assert.equal(isTextModel('groq', 'openai/gpt-oss-120b'), true);
+  assert.equal(isTextModel('groq', 'qwen/qwen3.6-27b'), true);
+});
+
+test('Groq: pickLatest over the real catalogue selects the newest chat model, never a non-chat head', () => {
+  const picked = pickLatestFromList('groq', GROQ_CATALOGUE);
+  assert.equal(picked, 'meta-llama/llama-4-scout-17b-16e-instruct'); // newest whitelisted chat
+  assert.ok(!GROQ_FORBIDDEN.test(picked), 'must never pick whisper/guard/orpheus/compound');
+});
+
+test('Groq: with only non-chat heads present, pickLatest returns "" (caller falls back to SAFE_DEFAULT)', () => {
+  const junk = GROQ_CATALOGUE.filter((m) => GROQ_FORBIDDEN.test(m.id) || m.id === 'allam-2-7b');
+  assert.equal(pickLatestFromList('groq', junk), '');
 });

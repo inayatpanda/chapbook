@@ -52,7 +52,7 @@ async function call(built, fetchImpl = fetch) {
   const raw = await res.text();
   let json = null;
   try { json = raw ? JSON.parse(raw) : {}; } catch { /* non-JSON body */ }
-  if (!res.ok) throw Object.assign(new Error(json?.error?.message || `OpenAI API ${res.status}`), { code: 'AI_HTTP', status: res.status });
+  if (!res.ok) throw Object.assign(new Error(json?.error?.message || `OpenAI API ${res.status}`), { code: 'AI_HTTP', status: res.status, provider: 'openai', providerCode: json?.error?.code, providerType: json?.error?.type });
   if (json === null) throw Object.assign(new Error(`OpenAI returned a non-JSON response (HTTP ${res.status}).`), { code: 'AI_HTTP', status: res.status });
   return json;
 }
@@ -133,7 +133,7 @@ async function fetchModelsJson({ key }, fetchImpl) {
   const raw = await res.text();
   let json = null;
   try { json = raw ? JSON.parse(raw) : {}; } catch { /* non-JSON body */ }
-  if (!res.ok) throw Object.assign(new Error(json?.error?.message || `OpenAI API ${res.status}`), { code: 'AI_HTTP', status: res.status });
+  if (!res.ok) throw Object.assign(new Error(json?.error?.message || `OpenAI API ${res.status}`), { code: 'AI_HTTP', status: res.status, provider: 'openai', providerCode: json?.error?.code, providerType: json?.error?.type });
   if (json === null) throw Object.assign(new Error(`OpenAI returned a non-JSON response (HTTP ${res.status}).`), { code: 'AI_HTTP', status: res.status });
   return json;
 }

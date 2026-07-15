@@ -262,7 +262,22 @@ export function makeRouter(deps) {
     if (a === 'figures' && b === 'shapes' && c && method === 'DELETE') { await storage.del('shapes', c); return { deleted: c }; }
 
     // ---- settings/ai (config; never returns a key) ----
-    if (a === 'settings' && b === 'ai' && c === 'models') return []; // model list is provider-dependent (deferred; users type the model)
+    // These two model sub-routes are guarded with c==='…' and MUST stay BEFORE the generic
+    // status route below (which matches a==='settings'&&b==='ai'&&GET with NO `!c` guard) —
+    // otherwise /settings/ai/models and /settings/ai/latest-model would fall through to it and
+    // return the status object instead of their own shapes.
+    // GET /settings/ai/models?provider= → { models } for the Settings datalist. Graceful:
+    // unconfigured / offline / no listModels → { models: [] } (loadModels reads r.models||[]).
+    if (a === 'settings' && b === 'ai' && c === 'models' && method === 'GET') {
+      try { return { models: (ai && ai.listModels) ? await ai.listModels(query.provider) : [] }; }
+      catch { return { models: [] }; }
+    }
+    // GET /settings/ai/latest-model?provider= → { model } — the provider's resolved latest
+    // chat model, for pinning on activation. Graceful '' fallback (latestModelFor reads r.model).
+    if (a === 'settings' && b === 'ai' && c === 'latest-model' && method === 'GET') {
+      try { return { model: (ai && ai.resolveLatestModel) ? await ai.resolveLatestModel(query.provider) : '' }; }
+      catch { return { model: '' }; }
+    }
     // GET must carry the provider's capabilities ({ image, vision, document, … }) — the
     // composer reads providers[default].capabilities to gate capability-dependent buttons
     // (e.g. ✦ Generate image). Omitting it left that button permanently disabled for BYOK
@@ -275,6 +290,8 @@ export function makeRouter(deps) {
       const ai_ = config.getAi(); const caps = (ai && ai.capabilities) ? ai.capabilities() : {};
       return { default: ai_.provider, providers: { [ai_.provider]: { configured: !!ai_.key, model: ai_.model, capabilities: caps } } };
     };
+    // Generic AI status. NOTE: no `!c` guard — the c==='models'/'latest-model' sub-routes
+    // above intentionally intercept those paths first; anything else under settings/ai lands here.
     if (a === 'settings' && b === 'ai' && method === 'GET') return aiStatus();
     if (a === 'settings' && b === 'ai' && method === 'PUT') {
       const patch = {}; if (body.default) patch.aiProvider = body.default;

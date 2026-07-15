@@ -4805,6 +4805,13 @@ function toast(t){
 // The config seam (bundle) can't call toast() directly, so it signals a full localStorage
 // quota via this window event — surface it so keys/settings never fail to save silently.
 window.addEventListener('studio:storage-full', ()=>toast('Browser storage is full — free some space; your keys and settings weren’t saved.'));
+// Layer 3 auto-heal: when a provider retires the configured model mid-use, the AI seam
+// switches to a live one, persists it, and signals it here so the change is never silent.
+window.addEventListener('studio:model-switched', (e)=>{
+  const d=(e&&e.detail)||{};
+  const label={groq:'Groq',anthropic:'Anthropic',openai:'OpenAI',google:'Gemini',ollama:'Ollama'}[d.provider]||d.provider||'The provider';
+  toast(`${label} retired ${d.from||'the old model'} — switched to ${d.to||'a current one'}.`);
+});
 
 /* ── friendly error dialog ─────────────────────────────────────────────────
    Single place to SHOW a classified error. Never dumps a raw stack. Offers a
@@ -6931,11 +6938,17 @@ window.activateProvider = activateProvider;
 
 async function saveSettings(){
   const patch={ default:_aiDefault, providers:{} };
+  // Track whether the ACTIVE provider's model override was left blank. If so, once the key is
+  // persisted (below) we resolve its LATEST live model and pin that, rather than leaving the
+  // synchronous offline default — activation must never end up on a stale hardcoded version.
+  let activeOverrideBlank=false;
   for(const p of AI_PROVIDERS){
     const pp={};
     const modelEl=$('ai-model-'+p.id);
+    const typed=modelEl?modelEl.value.trim():'';
+    if(p.id===_aiDefault && !typed) activeOverrideBlank=true;
     // Model is automatic: a blank override → the provider's default (Ollama has none).
-    if(modelEl) pp.model=modelEl.value.trim() || defaultModelFor(p.id);
+    if(modelEl) pp.model=typed || defaultModelFor(p.id);
     if(p.id==='ollama'){
       const baseEl=$('ai-base-'+p.id);
       if(baseEl) pp.baseUrl=baseEl.value.trim();
@@ -6948,7 +6961,19 @@ async function saveSettings(){
   }
   $('aiSaveBtn').disabled=true; msg('settingsMsg','Saving…','busy');
   try{
-    const s=await api('/settings/ai',{method:'PUT',body:JSON.stringify(patch)});
+    let s=await api('/settings/ai',{method:'PUT',body:JSON.stringify(patch)});
+    // Layer 2: the key is now stored, so a live /models query works. When the active provider
+    // had no explicit override, upgrade the offline default we just saved to the resolved
+    // latest and persist it. Best-effort — offline / older backend keeps the offline default.
+    if(activeOverrideBlank && _aiDefault && _aiDefault!=='ollama'){
+      try{
+        const latest=await latestModelFor(_aiDefault);
+        const persisted=(s.providers&&s.providers[_aiDefault]&&s.providers[_aiDefault].model)||'';
+        if(latest && latest!==persisted){
+          s=await api('/settings/ai',{method:'PUT',body:JSON.stringify({ default:_aiDefault, providers:{ [_aiDefault]:{ model:latest } } })});
+        }
+      }catch(_){ /* keep the offline default already saved */ }
+    }
     _aiCapsCache=null;                                   // image-gen capability may have changed
     renderSettings(s);                                   // re-render from fresh status; key inputs reset to empty
     $('settingsMsg').className='msg'; $('settingsMsg').textContent='';
