@@ -101,13 +101,24 @@ export async function runTurn({ session, message }, deps = {}) {
   ].join('\n\n');
 
   const ask = async () => { const { text } = await ai.generateText({ system: context, prompt, maxTokens: 16000, effort: 'medium' }); return looseJson(text); };
+  // The session already has content when the user is EDITING; a model that answers without
+  // echoing the whole document ("Done." with no doc — live e2e: llama-4-scout did exactly
+  // this) must NOT wipe the draft. Treat a missing/empty doc on a non-empty session as a
+  // malformed turn: throw → retry once → the fallback reply keeps the existing doc.
+  const hadContent = !!(session.doc && Array.isArray(session.doc.blocks) && session.doc.blocks.length > 0);
   const attempt = async () => {
     const out = await ask();
+    if (hadContent && (!out.doc || !Array.isArray(out.doc.blocks) || out.doc.blocks.length === 0)) {
+      throw Object.assign(new Error('turn omitted the document — refusing to wipe the draft'), { code: 'PT_DOC_DROPPED' });
+    }
     const rawDoc = out.doc || { blocks: [] };
     const meta = { ...session.meta, ...(out.meta || {}) };
     const filled = await fill(rawDoc, meta);
     const doc = filled.doc || rawDoc;
     validateDoc(doc);
+    if (hadContent && (!Array.isArray(doc.blocks) || doc.blocks.length === 0)) {
+      throw Object.assign(new Error('turn produced an empty document — refusing to wipe the draft'), { code: 'PT_DOC_DROPPED' });
+    }
     return { reply: out.reply || '', doc, meta: filled.meta || meta };
   };
 
