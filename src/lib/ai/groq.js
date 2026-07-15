@@ -37,7 +37,17 @@ export function buildText({ system, prompt, maxTokens, model, key, json }) {
 
 export function parseText(json) {
   if (json?.choices?.[0]?.finish_reason === 'content_filter') throw Object.assign(new Error('Groq declined this request (content_filter).'), { code: 'AI_REFUSAL' });
-  return (json?.choices?.[0]?.message?.content || '').trim();
+  return stripThink((json?.choices?.[0]?.message?.content || '')).trim();
+}
+
+// Groq serves reasoning-first families (qwen3*, gpt-oss) that interleave <think>…</think>
+// scaffolding with the answer. Auto-pick avoids those families (pickLatest whitelist), but a
+// user can still type one manually — strip closed think-blocks; a truncated UNCLOSED <think>
+// (the model burned maxTokens mid-reasoning) leaves no salvageable answer, so drop it too:
+// an empty result reads as "no answer" rather than leaking chain-of-thought into a post.
+export function stripThink(text) {
+  const s = String(text == null ? '' : text);
+  return s.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<think>[\s\S]*$/, '');
 }
 
 async function call(built, fetchImpl = fetch) {

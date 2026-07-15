@@ -58,3 +58,21 @@ test('a decommissioned-model chat error carries the provider code for the classi
     (e) => e.provider === 'groq' && e.status === 400 && e.providerCode === 'model_decommissioned',
   );
 });
+
+// ── stripThink — reasoning-model scaffolding must never reach a post ─────────
+import { stripThink } from './groq.js';
+
+test('stripThink removes closed <think> blocks and keeps the answer', () => {
+  assert.equal(stripThink('<think>step 1… step 2…</think>The answer is 4.').trim(), 'The answer is 4.');
+  assert.equal(stripThink('A<think>x</think>B<think>y</think>C'), 'ABC');
+});
+
+test('stripThink drops a truncated UNCLOSED <think> tail (no salvageable answer)', () => {
+  assert.equal(stripThink("<think>\nHere's a thinking process:\n1.").trim(), '');
+  assert.equal(stripThink('Real text first. <think>then truncated reasoning').trim(), 'Real text first.');
+});
+
+test('stripThink is a no-op on plain text', () => {
+  assert.equal(stripThink('CHAPBOOK E2E OK'), 'CHAPBOOK E2E OK');
+  assert.equal(stripThink(''), '');
+});

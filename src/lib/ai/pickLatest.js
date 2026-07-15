@@ -58,10 +58,13 @@ const PREFERRED_HINTS = {
   anthropic: ['sonnet', 'opus', 'haiku', 'claude'],
   openai: ['gpt', 'chatgpt', 'o4', 'o3'],
   google: ['flash', 'pro', 'gemini'],
-  // Groq serves open chat models from several families — whitelist the mainstream ones so a
-  // pick can't wander onto a specialised id (e.g. the Arabic-only allam-*, or anything the
-  // EXCLUDE list above already screens out: whisper/guard/orpheus/compound).
-  groq: ['llama', 'qwen', 'gpt-oss', 'mixtral'],
+  // Groq serves open chat models from several families — whitelist ONLY plain-instruct ones
+  // so a pick can't wander onto a specialised id (the Arabic-only allam-*, or anything the
+  // EXCLUDE list above screens out: whisper/guard/orpheus/compound). Qwen and gpt-oss are
+  // deliberately ABSENT: they are reasoning-first families that leak <think>/analysis
+  // scaffolding into the text (live e2e 2026-07-15: an auto-healed qwen3.6 burned the whole
+  // token budget inside <think> and returned no answer). Users can still type them manually.
+  groq: ['llama', 'mixtral'],
   ollama: [],
 };
 

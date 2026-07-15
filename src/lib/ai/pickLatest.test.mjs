@@ -157,16 +157,16 @@ const GROQ_CATALOGUE = [
   { id: 'meta-llama/llama-4-scout-17b-16e-instruct', created: 1758000000 }, // chat → NEWEST chat
   { id: 'meta-llama/llama-prompt-guard-2-22m', created: 1748000000 },       // guard → excluded
   { id: 'meta-llama/llama-prompt-guard-2-86m', created: 1758500000 },       // guard → excluded
-  { id: 'openai/gpt-oss-120b', created: 1755000000 },                       // chat
-  { id: 'openai/gpt-oss-20b', created: 1753000000 },                        // chat
+  { id: 'openai/gpt-oss-120b', created: 1755000000 },                       // reasoning-first → excluded
+  { id: 'openai/gpt-oss-20b', created: 1753000000 },                        // reasoning-first → excluded
   { id: 'openai/gpt-oss-safeguard-20b', created: 1758200000 },              // guard → excluded
-  { id: 'qwen/qwen3-32b', created: 1752000000 },                            // chat
-  { id: 'qwen/qwen3.6-27b', created: 1754000000 },                          // chat
+  { id: 'qwen/qwen3-32b', created: 1752000000 },                            // reasoning-first → excluded
+  { id: 'qwen/qwen3.6-27b', created: 1759800000 },                          // reasoning-first → excluded (NEWEST chat-ish — the live regression: it must STILL lose)
   { id: 'whisper-large-v3', created: 1747000000 },                          // audio → excluded
   { id: 'whisper-large-v3-turbo', created: 1760000000 },                    // audio → NEWEST overall, excluded
 ];
 
-const GROQ_FORBIDDEN = /whisper|guard|orpheus|compound/;
+const GROQ_FORBIDDEN = /whisper|guard|orpheus|compound|qwen|gpt-oss/;
 
 test('Groq: isTextModel screens whisper/guard/orpheus/compound + the Arabic-only allam', () => {
   assert.equal(isTextModel('groq', 'whisper-large-v3-turbo'), false);
@@ -175,17 +175,19 @@ test('Groq: isTextModel screens whisper/guard/orpheus/compound + the Arabic-only
   assert.equal(isTextModel('groq', 'canopylabs/orpheus-v1-english'), false);
   assert.equal(isTextModel('groq', 'groq/compound'), false);
   assert.equal(isTextModel('groq', 'allam-2-7b'), false); // not a whitelisted family
-  // …but the mainstream chat families pass.
+  // Reasoning-first families are excluded from AUTO-pick: they leak <think>/analysis
+  // scaffolding into the text (live e2e 2026-07-15: healed qwen3.6 returned only <think>).
+  assert.equal(isTextModel('groq', 'openai/gpt-oss-120b'), false);
+  assert.equal(isTextModel('groq', 'qwen/qwen3.6-27b'), false);
+  // …but the plain-instruct families pass.
   assert.equal(isTextModel('groq', 'llama-3.3-70b-versatile'), true);
   assert.equal(isTextModel('groq', 'meta-llama/llama-4-scout-17b-16e-instruct'), true);
-  assert.equal(isTextModel('groq', 'openai/gpt-oss-120b'), true);
-  assert.equal(isTextModel('groq', 'qwen/qwen3.6-27b'), true);
 });
 
 test('Groq: pickLatest over the real catalogue selects the newest chat model, never a non-chat head', () => {
   const picked = pickLatestFromList('groq', GROQ_CATALOGUE);
   assert.equal(picked, 'meta-llama/llama-4-scout-17b-16e-instruct'); // newest whitelisted chat
-  assert.ok(!GROQ_FORBIDDEN.test(picked), 'must never pick whisper/guard/orpheus/compound');
+  assert.ok(!GROQ_FORBIDDEN.test(picked), 'must never pick a non-chat head or a reasoning-first family');
 });
 
 test('Groq: with only non-chat heads present, pickLatest returns "" (caller falls back to SAFE_DEFAULT)', () => {
