@@ -232,13 +232,14 @@ export function renderOnboarding() {
 
   // --- Device-Flow sign-in (only present when a Client ID was injected) ---
   if (GH_CLIENT_ID && $('gh-start')) {
-    // "I've got one — continue": bring the user back to the Sign-in button after they
-    // created their account in the new tab. Just focuses/scrolls it into view.
+    // "I've got one — continue": the user already has an account, so take them
+    // straight into sign-in — scroll the button into view and start the flow.
+    // (Just focusing it was a no-op when the button was already on screen.)
     const haveAcct = $('gh-have-account');
     if (haveAcct) haveAcct.addEventListener('click', (e) => {
       e.preventDefault();
       const b = $('gh-start');
-      if (b) { try { b.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch {} b.focus(); }
+      if (b && !b.disabled) { try { b.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch {} b.click(); }
     });
     // The signed-in user's token, captured on success and shared by the create + picker
     // paths below. Falls back to config.getGithub().token (saveDeviceAuth persisted it).
