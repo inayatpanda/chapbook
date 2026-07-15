@@ -1,5 +1,5 @@
 /* Family: layer peel — concentric layers you toggle on/off to "peel" down to the
-   core (tissue planes skin→fat→muscle→bone, what a scan layers up, abstractions in
+   core (a forest canopy→understory→floor, what a diagram layers up, abstractions in
    a stack). Click a layer in the legend to hide it and reveal what's beneath. */
 import { esc } from './index.js';
 
@@ -7,7 +7,7 @@ export default {
   id: 'layer-peel',
   name: 'Layer peel',
   category: 'diagram',
-  description: 'Concentric layers you toggle to peel down to the core (tissue planes, scan layers, a stack of abstractions).',
+  description: 'Concentric layers you toggle to peel down to the core (a forest canopy, map layers, a stack of abstractions).',
   paramsSchema: {
     type: 'object', additionalProperties: false,
     required: ['layers'],
@@ -25,14 +25,14 @@ export default {
   },
   presets: [
     {
-      name: 'Tissue planes',
+      name: 'Forest layers',
       params: {
-        title: 'What the scalpel goes through', caption: 'Peel a layer off to see what is underneath.',
+        title: 'Peel down through the canopy', caption: 'Peel a layer off to see what is underneath.',
         layers: [
-          { name: 'Skin', colour: '#f472b6', note: 'Skin — the bit everyone sees, and the bit that scars.' },
-          { name: 'Fat', colour: '#fbbf24', note: 'Subcutaneous fat — variable, and it bleeds.' },
-          { name: 'Muscle', colour: '#fb7185', note: 'Muscle — split along its fibres where you can.' },
-          { name: 'Bone', colour: '#e9eef8', note: 'Bone — the thing we actually came for.' },
+          { name: 'Canopy', colour: '#2dd4bf', note: 'Canopy — the sunlit roof, where most of the leaves are.' },
+          { name: 'Understory', colour: '#22d3ee', note: 'Understory — young trees waiting for a gap to open.' },
+          { name: 'Shrubs', colour: '#818cf8', note: 'Shrub layer — ferns, brambles and berries.' },
+          { name: 'Forest floor', colour: '#e9eef8', note: 'Forest floor — where everything is quietly recycled.' },
         ],
       },
     },

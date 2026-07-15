@@ -1,6 +1,6 @@
 // Figure family: morph (category 'Motion').
-// A subject (e.g. a bone fragment / segment) transitioning between two poses —
-// the "show the change" device (displaced <-> reduced). The subject's transform
+// A subject (e.g. a hung picture / a shelf) transitioning between two poses —
+// the "show the change" device (crooked <-> level). The subject's transform
 // loops between the `from` pose and the `to` pose, holding briefly at each end.
 // Both state labels (A near the from region, B near the to region) are shown.
 // Theme-var colours only (no hex). Motion CSS inlined via svgWrap; the
@@ -13,7 +13,7 @@ import {
 const W = 320;
 const H = 220;
 
-// Default poses: A = displaced/rotated/offset, B = aligned (reduced).
+// Default poses: A = tilted/rotated/offset, B = square (level).
 const DEF_FROM = { dx: -36, dy: -28, rotate: -22 };
 const DEF_TO = { dx: 0, dy: 0, rotate: 0 };
 
@@ -31,7 +31,7 @@ export const meta = {
   id: 'morph',
   name: 'Morph',
   category: 'Motion',
-  description: 'A subject transitioning between two states (displaced <-> reduced), looping.',
+  description: 'A subject transitioning between two states (crooked <-> level), looping.',
   paramsSchema: {
     type: 'object',
     properties: {
@@ -55,7 +55,7 @@ export const meta = {
     },
   },
   presets: [
-    { name: 'Displaced to reduced', params: { labelA: 'Displaced', labelB: 'Reduced', period: 3 } },
+    { name: 'Crooked to level', params: { labelA: 'Crooked', labelB: 'Level', period: 3 } },
   ],
 };
 

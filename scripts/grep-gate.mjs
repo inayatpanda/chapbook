@@ -43,6 +43,23 @@ const PATTERNS = [
   /\/admin\/api\/login/,
   /buy\.stripe\.com\/test_/,
   /videoHelmReachable/,
+  // ── Medical/clinical denylist ────────────────────────────────────────────────
+  // Chapbook was forked from an orthopaedics app; its figure/playground presets,
+  // sample labels and stencils once shipped clinical/surgical EXAMPLE content. These
+  // terms are unambiguously clinical, so the shipped bundle must never re-leak them
+  // (a fork-back, a copied preset, or a stray comment). Case-insensitive. Kept
+  // deliberately NARROW so ordinary blog words stay legal: "cast" (theatre), "reduce",
+  // "operation", "patient" (the virtue), "orthogonal"/"orthography" (don't match
+  // /orthop/) are all fine, and the surgical stopwatch line is matched by its
+  // distinctive full phrase — not a bare "knife to skin", which a cooking post could
+  // legitimately use.
+  /fracture/i,
+  /periosteum/i,
+  /callus/i,
+  /orthop/i,
+  /osteo/i,
+  /\bclinical\b/i,
+  /knife to skin\. the patient/i,
 ];
 
 // Binary/asset extensions the text gate should not read.

@@ -23,10 +23,10 @@ test('listFamilies includes before-after, comparison-matrix, venn-overlap and hi
 
 // (b) Each family's preset build: contains an expected label, no hex, sanitise-stable, draws.
 const EXPECT = {
-  'before-after': 'Displaced',
-  'comparison-matrix': 'Plate',
-  'venn-overlap': 'Swelling',
-  hierarchy: 'Open',
+  'before-after': 'Edited',
+  'comparison-matrix': 'Cafetière',
+  'venn-overlap': 'Sea',
+  hierarchy: 'Percussion',
 };
 
 for (const id of NEW_IDS) {
@@ -49,7 +49,7 @@ test('build(comparison-matrix) renders a tick for a yes cell and a header col la
   const preset = metaOf('comparison-matrix').presets[0];
   const { svg } = build('comparison-matrix', preset.params);
   assert.ok(svg.includes('var(--teal)'), 'tick uses var(--teal)');
-  assert.ok(svg.includes('Strength'), 'header col label "Strength" appears');
+  assert.ok(svg.includes('Cleanup'), 'header col label "Cleanup" appears');
 });
 
 // (d) venn-overlap: at least two circles rendered.

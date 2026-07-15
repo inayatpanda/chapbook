@@ -176,7 +176,6 @@
   .app-badges{display:flex;flex-wrap:wrap;gap:.3rem;justify-content:flex-end}
   .app-badge{font:700 .6rem var(--font-display);letter-spacing:.05em;text-transform:uppercase;
     padding:.2em .55em;border-radius:999px;white-space:nowrap}
-  .app-badge.clinical{background:rgba(129,140,248,.16);color:var(--violet);border:1px solid rgba(129,140,248,.35)}
   .app-badge.ok{background:rgba(45,212,191,.14);color:var(--acc);border:1px solid rgba(45,212,191,.3)}
   .app-badge.muted{background:var(--bg-1);color:var(--faint);border:1px solid var(--line)}
   .app-stats{margin:.55rem 0 0;font-size:.78rem;color:var(--faint);font-family:var(--font-display)}
@@ -5107,7 +5106,6 @@ window.openDarkroom=openDarkroom;
    SyntaxError ("Identifier 'fmtBytes' has already been declared") that blanks the
    whole app. (That regression shipped once; this comment is the guard-rail.) */
 function renderAppCard(a){
-  const clinical = a.clinical ? '<span class="app-badge clinical">Clinical</span>' : '';
   const hasData = !!a.exists && Number(a.records) > 0;
   const health = hasData
     ? '<span class="app-badge ok">Has data</span>'
@@ -5120,7 +5118,7 @@ function renderAppCard(a){
   return `<div class="app-card">
     <div class="app-head">
       <strong>${esc(a.name || a.id)}</strong>
-      <div class="app-badges">${clinical}${health}</div>
+      <div class="app-badges">${health}</div>
     </div>
     <div class="app-stats">${recs} record${recs===1?'':'s'} · ${usrs} user${usrs===1?'':'s'} · ${fmtBytes(a.sizeBytes)}</div>
     <div class="app-actions">
@@ -15342,7 +15340,7 @@ function figStencilThumbSvg(s){
 
 /* Render the palette grouped by category. Generic shapes (arrows/braces/primitives)
    come first from the catalogue and are the default/prominent group; any further
-   categories (e.g. a Clinical set) follow as optional groups in catalogue order. */
+   categories (e.g. a Symbols set) follow as optional groups in catalogue order. */
 function renderFigStencils(){
   const body = $('figStencilBody'); if(!body) return;
   const list = _figStencils || [];

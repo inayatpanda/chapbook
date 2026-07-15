@@ -53,23 +53,23 @@ export const meta = {
   },
   presets: [
     {
-      name: 'Union rate',
+      name: 'Rainy days',
       params: {
         bars: [
-          { label: 'Plate', value: 92 },
-          { label: 'Cast', value: 68 },
+          { label: 'London', value: 95 },
+          { label: 'Rome', value: 63 },
         ],
-        note: 'union rate (%)',
+        note: 'rainy days per year',
       },
     },
     {
-      name: 'Vertical counts',
+      name: 'Books by season',
       params: {
         orientation: 'v',
         bars: [
-          { label: 'Stable', value: 14 },
-          { label: 'Unstable', value: 6 },
-          { label: 'Revised', value: 2 },
+          { label: 'Spring', value: 5 },
+          { label: 'Summer', value: 9 },
+          { label: 'Autumn', value: 4 },
         ],
       },
     },

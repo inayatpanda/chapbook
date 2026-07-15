@@ -45,21 +45,21 @@ export const meta = {
   },
   presets: [
     {
-      name: 'Outcomes (waffle)',
+      name: 'A week’s weather (waffle)',
       params: {
         segments: [
-          { label: 'Union', value: 7 },
-          { label: 'Delayed', value: 1 },
+          { label: 'Sunny', value: 7 },
+          { label: 'Grey', value: 1 },
         ],
         style: 'waffle',
       },
     },
     {
-      name: 'Outcomes (donut)',
+      name: 'A week’s weather (donut)',
       params: {
         segments: [
-          { label: 'Union', value: 7 },
-          { label: 'Delayed', value: 1 },
+          { label: 'Sunny', value: 7 },
+          { label: 'Grey', value: 1 },
         ],
         style: 'donut',
       },

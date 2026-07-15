@@ -27,7 +27,7 @@ test('build(timeline) preset contains event label, no hex, sanitise-stable, draw
   const preset = metaOf('timeline').presets[0];
   const { svg, supportsDraw, motion } = build('timeline', preset.params);
   assert.equal(typeof svg, 'string');
-  assert.ok(svg.includes('Injury'), 'svg contains event label "Injury"');
+  assert.ok(svg.includes('Harvest'), 'svg contains event label "Harvest"');
   assert.ok(!svg.includes('#'), 'svg contains no # hex colour');
   assert.equal(sanitise(svg), svg, 'sanitise leaves the svg unchanged');
   assert.equal(supportsDraw, true);
@@ -41,7 +41,7 @@ test('build(cycle) preset contains step title, no hex, sanitise-stable, draws', 
   const preset = metaOf('cycle').presets[0];
   const { svg, supportsDraw, motion } = build('cycle', preset.params);
   assert.equal(typeof svg, 'string');
-  assert.ok(svg.includes('Resorption'), 'svg contains step title "Resorption"');
+  assert.ok(svg.includes('Evaporation'), 'svg contains step title "Evaporation"');
   assert.ok(!svg.includes('#'), 'svg contains no # hex colour');
   assert.equal(sanitise(svg), svg, 'sanitise leaves the svg unchanged');
   assert.equal(supportsDraw, true);
@@ -55,7 +55,7 @@ test('build(flow-decision) preset contains decision text, both branch labels, no
   const preset = metaOf('flow-decision').presets[0];
   const { svg, supportsDraw, motion } = build('flow-decision', preset.params);
   assert.equal(typeof svg, 'string');
-  assert.ok(svg.includes('Displaced?'), 'svg contains decision text "Displaced?"');
+  assert.ok(svg.includes('Sprouted?'), 'svg contains decision text "Sprouted?"');
   assert.ok(svg.includes('yes'), 'svg contains branch label "yes"');
   assert.ok(svg.includes('no'), 'svg contains branch label "no"');
   assert.ok(!svg.includes('#'), 'svg contains no # hex colour');

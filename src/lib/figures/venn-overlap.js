@@ -49,12 +49,12 @@ export const meta = {
   },
   presets: [
     {
-      name: 'Symptoms',
+      name: 'A day at the beach',
       params: {
-        sets: [{ label: 'Pain' }, { label: 'Swelling' }, { label: 'Deformity' }],
+        sets: [{ label: 'Sun' }, { label: 'Sea' }, { label: 'Sand' }],
         overlaps: [
-          { between: [0, 1], label: 'sprain' },
-          { between: [0, 1, 2], label: 'fracture' },
+          { between: [0, 1], label: 'a swim' },
+          { between: [0, 1, 2], label: 'the beach' },
         ],
       },
     },

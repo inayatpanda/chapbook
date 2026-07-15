@@ -39,13 +39,13 @@ export const meta = {
   },
   presets: [
     {
-      name: 'Fracture healing',
+      name: 'Sourdough starter',
       params: {
         stages: [
-          { label: 'Haematoma' },
-          { label: 'Soft callus' },
-          { label: 'Hard callus' },
-          { label: 'Remodelling' },
+          { label: 'Fed' },
+          { label: 'Bubbling' },
+          { label: 'Risen' },
+          { label: 'Ripe' },
         ],
       },
     },

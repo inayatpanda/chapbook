@@ -41,13 +41,13 @@ export const meta = {
   },
   presets: [
     {
-      name: 'Fracture healing',
+      name: 'From bean to cup',
       params: {
         events: [
-          { label: 'Injury' },
-          { label: 'Reduction' },
-          { label: 'Union' },
-          { label: 'Remodelling' },
+          { label: 'Harvest' },
+          { label: 'Roast' },
+          { label: 'Grind' },
+          { label: 'Brew' },
         ],
       },
     },

@@ -6,9 +6,9 @@
 // them as ordinary strokes ({ width, points: [{ x, y, pressure }] }) onto the
 // current frame — so render/export/undo/mirror all work with NO new data model.
 //
-// Design: schematic, minimal — a handful of polylines each, not anatomically exact.
-// Two categories: 'Generic' (arrows / braces / primitives) and 'Clinical'
-// (long bone / joint / vertebra / screw / plate).
+// Design: schematic, minimal — a handful of polylines each, not fussy.
+// Two categories: 'Generic' (arrows / braces / primitives) and 'Symbols'
+// (star / heart / sun / speech bubble / lightning bolt).
 
 const round = (n) => Math.round(n * 100) / 100;
 
@@ -30,6 +30,19 @@ function arc(cx, cy, rx, ry, a0, a1, n = 18) {
 }
 
 const TAU = Math.PI * 2;
+
+// Sample an N-point star into a closed polyline: outer/inner radii alternate around
+// the centre, starting at the top (-90deg).
+function star(cx, cy, rOuter, rInner, points = 5, rot = -Math.PI / 2) {
+  const pts = [];
+  for (let i = 0; i < points * 2; i++) {
+    const r = i % 2 === 0 ? rOuter : rInner;
+    const a = rot + (i * Math.PI) / points;
+    pts.push([round(cx + r * Math.cos(a)), round(cy + r * Math.sin(a))]);
+  }
+  if (pts.length) pts.push([pts[0][0], pts[0][1]]);
+  return pts;
+}
 
 // ── Generic stencils ───────────────────────────────────────────────────────
 function genericStencils() {
@@ -114,91 +127,78 @@ function genericStencils() {
   ];
 }
 
-// ── Clinical stencils (schematic, simple) ───────────────────────────────────
-function clinicalStencils() {
+// ── Symbol stencils (schematic, simple) ─────────────────────────────────────
+function symbolStencils() {
+  // Sun rays: eight short spokes around the disc.
+  const rays = [];
+  for (let k = 0; k < 8; k++) {
+    const a = (k * Math.PI) / 4;
+    rays.push([
+      [round(50 + 28 * Math.cos(a)), round(50 + 28 * Math.sin(a))],
+      [round(50 + 44 * Math.cos(a)), round(50 + 44 * Math.sin(a))],
+    ]);
+  }
   return [
     {
-      // Long bone: two parallel shafts joined by rounded ends (top + bottom).
-      id: 'long-bone',
-      name: 'Long bone',
-      category: 'Clinical',
-      viewBox: [80, 200],
+      // Star: a classic 5-point star drawn as one closed polyline.
+      id: 'star',
+      name: 'Star',
+      category: 'Symbols',
+      viewBox: [100, 100],
       strokes: [
-        // left shaft + rounded top end curving across to the right shaft
+        star(50, 50, 46, 18, 5),
+      ],
+    },
+    {
+      // Heart: bottom point, up the sides, two bumps over the top.
+      id: 'heart',
+      name: 'Heart',
+      category: 'Symbols',
+      viewBox: [100, 92],
+      strokes: [
         [
-          [26, 28], [26, 172],
-          ...arc(40, 176, 14, 16, Math.PI, TAU, 10).slice(1), // bottom rounded end (left→right)
-          [54, 28],
-          ...arc(40, 24, 14, 16, 0, -Math.PI, 10).slice(1),   // top rounded end (right→left)
+          [50, 84], [12, 44],
+          ...arc(31, 44, 19, 19, Math.PI, TAU, 12).slice(1), // left bump (up and over)
+          ...arc(69, 44, 19, 19, Math.PI, TAU, 12).slice(1), // right bump (up and over)
+          [50, 84],
         ],
       ],
     },
     {
-      // Joint: two opposing condyle curves facing each other across a gap.
-      id: 'joint',
-      name: 'Joint',
-      category: 'Clinical',
-      viewBox: [120, 120],
+      // Sun: a small disc with eight radiating spokes.
+      id: 'sun',
+      name: 'Sun',
+      category: 'Symbols',
+      viewBox: [100, 100],
       strokes: [
-        // upper bone end: shaft sides + a convex (downward) condyle
-        [[40, 8], [40, 40], ...arc(60, 40, 30, 18, Math.PI, TAU, 14).slice(1), [80, 8]],
-        // lower bone end: shaft sides + a concave (upward) socket
-        [[40, 112], [40, 78], ...arc(60, 78, 30, 16, Math.PI, 0, 14).slice(1), [80, 112]],
+        arc(50, 50, 20, 20, 0, TAU, 24), // disc
+        ...rays,
       ],
     },
     {
-      // Vertebra: rounded body + a posterior arch with spinous + transverse spikes.
-      id: 'vertebra',
-      name: 'Vertebra',
-      category: 'Clinical',
-      viewBox: [120, 100],
+      // Speech bubble: a rounded rectangle with a small tail off the bottom-left.
+      id: 'speech-bubble',
+      name: 'Speech bubble',
+      category: 'Symbols',
+      viewBox: [120, 90],
       strokes: [
-        ring([[24, 18], [96, 18], [100, 50], [96, 70], [24, 70], [20, 50]]), // body (rounded box)
-        arc(60, 78, 26, 16, Math.PI, TAU, 16),                               // posterior arch (down)
-        [[60, 90], [60, 96]],                                                // spinous process
-        [[34, 78], [16, 84]],                                                // left transverse
-        [[86, 78], [104, 84]],                                               // right transverse
+        ring([[10, 8], [110, 8], [110, 58], [46, 58], [30, 80], [38, 58], [10, 58]]),
       ],
     },
     {
-      // Screw: round head, straight shaft, a few angled thread ticks.
-      id: 'screw',
-      name: 'Screw',
-      category: 'Clinical',
-      viewBox: [60, 160],
+      // Lightning bolt: a single jagged closed zig-zag.
+      id: 'bolt',
+      name: 'Lightning bolt',
+      category: 'Symbols',
+      viewBox: [60, 120],
       strokes: [
-        ring([[14, 8], [46, 8], [40, 24], [20, 24]]),  // head (trapezoid)
-        [[26, 24], [26, 132], [30, 144], [34, 132], [34, 24]], // shaft → pointed tip
-        [[26, 44], [34, 38]],    // thread ticks
-        [[26, 62], [34, 56]],
-        [[26, 80], [34, 74]],
-        [[26, 98], [34, 92]],
-        [[26, 116], [34, 110]],
-      ],
-    },
-    {
-      // Plate: rounded bar with 4 screw holes (small rings) along it.
-      id: 'plate',
-      name: 'Plate',
-      category: 'Clinical',
-      viewBox: [200, 50],
-      strokes: [
-        ring([
-          ...arc(20, 25, 16, 18, Math.PI / 2, (3 * Math.PI) / 2, 8), // rounded left end
-          [180, 7],
-          ...arc(180, 25, 16, 18, -Math.PI / 2, Math.PI / 2, 8),     // rounded right end
-          [20, 43],
-        ]),
-        arc(40, 25, 7, 7, 0, TAU, 12),   // hole 1
-        arc(80, 25, 7, 7, 0, TAU, 12),   // hole 2
-        arc(120, 25, 7, 7, 0, TAU, 12),  // hole 3
-        arc(160, 25, 7, 7, 0, TAU, 12),  // hole 4
+        ring([[34, 6], [12, 64], [28, 64], [20, 114], [50, 50], [34, 50]]),
       ],
     },
   ];
 }
 
-// The full ordered catalogue (Generic first, then Clinical).
+// The full ordered catalogue (Generic first, then Symbols).
 export function listStencils() {
-  return [...genericStencils(), ...clinicalStencils()];
+  return [...genericStencils(), ...symbolStencils()];
 }

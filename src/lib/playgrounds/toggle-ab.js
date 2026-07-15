@@ -1,6 +1,6 @@
 /* Family: A / B toggle — switch between two states with readouts + caption.
    Reusable for any "this vs that" comparison (cloud vs local, before vs after,
-   open vs closed, conservative vs operative…). Derived from the shipped
+   film vs digital, rent vs buy…). Derived from the shipped
    "cloud is someone else's computer" playground. */
 import { esc } from './index.js';
 
@@ -47,12 +47,12 @@ export default {
       },
     },
     {
-      name: 'Conservative vs operative',
+      name: 'Film vs digital',
       params: {
-        stateA: { label: 'Conservative', accent: '#2dd4bf', caption: 'Time and physiotherapy; the body does the repair.',
-          readouts: [{ label: 'Risk', value: 'low, but slow' }, { label: 'Recovery', value: 'weeks–months' }, { label: 'Reversible', value: 'yes' }] },
-        stateB: { label: 'Operative', accent: '#818cf8', caption: 'Faster structural fix, at the cost of an operation.',
-          readouts: [{ label: 'Risk', value: 'surgical' }, { label: 'Recovery', value: 'rehab protocol' }, { label: 'Reversible', value: 'no' }] },
+        stateA: { label: 'Film', accent: '#2dd4bf', caption: 'Slower, and you feel every frame. You wait to see what you got.',
+          readouts: [{ label: 'Shots', value: '36 to a roll' }, { label: 'Feedback', value: 'days later' }, { label: 'Cost per frame', value: 'real' }] },
+        stateB: { label: 'Digital', accent: '#818cf8', caption: 'Instant, endless, and easy to never stop shooting.',
+          readouts: [{ label: 'Shots', value: 'thousands' }, { label: 'Feedback', value: 'instant' }, { label: 'Cost per frame', value: '~nothing' }] },
       },
     },
   ],

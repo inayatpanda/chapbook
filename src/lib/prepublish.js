@@ -113,7 +113,7 @@ const AME_TO_BRE = {
   catalog: 'catalogue', dialog: 'dialogue', gray: 'grey', mold: 'mould',
   traveled: 'travelled', traveling: 'travelling', canceled: 'cancelled', modeling: 'modelling',
   jewelry: 'jewellery', aluminum: 'aluminium', anesthesia: 'anaesthesia',
-  pediatric: 'paediatric', orthopedic: 'orthopaedic', orthopedics: 'orthopaedics',
+  pediatric: 'paediatric',
   esophagus: 'oesophagus', edema: 'oedema', fetal: 'foetal', hemoglobin: 'haemoglobin',
 };
 const AME_RE = new RegExp('\\b(' + Object.keys(AME_TO_BRE).join('|') + ')\\b', 'gi');

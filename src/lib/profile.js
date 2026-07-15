@@ -29,8 +29,8 @@ const UNIVERSAL_VOICE = [
 ].join('\n');
 
 /* ── Default (fresh install): generic, non-medical ─────────────────────────
-   A new user is NOT a surgeon. Neutral name/role, "writes across their own
-   interests", and the universal voice rules only — nothing clinical. The
+   A new user is NOT a specialist. Neutral name/role, "writes across their own
+   interests", and the universal voice rules only — nothing domain-specific. The
    onboarding Q&A overwrites these the moment the user answers. */
 export const DEFAULT_PROFILE = Object.freeze({
   name: 'the author',
@@ -38,7 +38,7 @@ export const DEFAULT_PROFILE = Object.freeze({
   writesAbout: 'across their own interests',
   voiceNotes: '',
   // factGuard: the thing the model must never fabricate. Generic by default;
-  // a clinical author re-adds the medical emphasis via this field (or voiceNotes).
+  // a specialist author re-adds a domain emphasis via this field (or voiceNotes).
   factGuard: 'facts, statistics or studies',
 });
 
@@ -91,9 +91,9 @@ FORMAT for a social post:
 }
 
 /**
- * The "do not fabricate" guard line, driven by profile.factGuard. Used wherever
- * the old code said "Do not invent clinical facts, statistics or studies".
- * Generic by default; a clinical profile re-adds the medical emphasis.
+ * The "do not fabricate" guard line, driven by profile.factGuard. Replaces the
+ * old hardcoded "Do not invent facts, statistics or studies" guard.
+ * Generic by default; a specialist profile re-adds a domain emphasis.
  */
 export function factGuardLine(profile) {
   const p = normaliseProfile(profile);
@@ -126,7 +126,7 @@ THE ONE LINE YOU DO NOT CROSS:
 
 /**
  * The Partner system-prompt voice line, profile-driven. Replaces the hardcoded
- * "Write in the house voice. … never invent clinical facts or statistics."
+ * "Write in the house voice. … never invent facts or statistics."
  */
 export function partnerVoiceLine(profile) {
   const p = normaliseProfile(profile);
@@ -152,7 +152,7 @@ export function profileFromAnswers(answers = {}) {
     role: answers.role,
     writesAbout: answers.writesAbout,
     voiceNotes: answers.voiceNotes,
-    // factGuard is not asked in onboarding — keep the generic default. A clinical
-    // user can add medical emphasis through voiceNotes / role, or edit it in Settings.
+    // factGuard is not asked in onboarding — keep the generic default. A specialist
+    // user can add a domain emphasis through voiceNotes / role, or edit it in Settings.
   });
 }

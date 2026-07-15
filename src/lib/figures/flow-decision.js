@@ -54,14 +54,14 @@ export const meta = {
   },
   presets: [
     {
-      name: 'Fracture algorithm',
+      name: 'Seed to seedling',
       params: {
         nodes: [
-          { id: 'a', text: 'Fracture', kind: 'start' },
-          { id: 'b', text: 'Displaced?', kind: 'decision' },
-          { id: 'c', text: 'Reduce', kind: 'action' },
-          { id: 'd', text: 'Immobilise', kind: 'action' },
-          { id: 'e', text: 'Review', kind: 'end' },
+          { id: 'a', text: 'Seed sown', kind: 'start' },
+          { id: 'b', text: 'Sprouted?', kind: 'decision' },
+          { id: 'c', text: 'Move to light', kind: 'action' },
+          { id: 'd', text: 'Keep warm', kind: 'action' },
+          { id: 'e', text: 'Seedling', kind: 'end' },
         ],
         edges: [
           { from: 'a', to: 'b' },

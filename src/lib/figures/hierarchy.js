@@ -37,17 +37,17 @@ export const meta = {
   },
   presets: [
     {
-      name: 'Fracture taxonomy',
+      name: 'Instrument families',
       params: {
         root: {
-          label: 'Fracture',
+          label: 'Instruments',
           children: [
-            { label: 'Open' },
+            { label: 'Percussion' },
             {
-              label: 'Closed',
+              label: 'Strings',
               children: [
-                { label: 'Displaced' },
-                { label: 'Undisplaced' },
+                { label: 'Plucked' },
+                { label: 'Bowed' },
               ],
             },
           ],

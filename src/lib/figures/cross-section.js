@@ -39,15 +39,15 @@ export const meta = {
   },
   presets: [
     {
-      name: 'Soft-tissue to bone',
+      name: 'Earth’s layers',
       params: {
         orientation: 'v',
         layers: [
-          { label: 'skin' },
-          { label: 'fat', hatch: true },
-          { label: 'muscle' },
-          { label: 'periosteum' },
-          { label: 'bone' },
+          { label: 'crust' },
+          { label: 'upper mantle', hatch: true },
+          { label: 'lower mantle' },
+          { label: 'outer core' },
+          { label: 'inner core' },
         ],
       },
     },
