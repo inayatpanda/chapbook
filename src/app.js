@@ -202,7 +202,7 @@ export function renderOnboarding() {
       </select>
       <label>AI key <span style="opacity:.6">(optional)</span></label><input id="byok-key" type="password" placeholder="sk-… (only needed for AI drafting)" value="${c.aiKey || ''}">
       <button id="byok-save">Save &amp; start</button>
-      <div class="msg" id="byok-msg"></div>
+      <div class="msg" id="byok-msg" role="alert" aria-live="polite"></div>
     </div>
     <div class="hint">You can change these any time in Settings.</div>
   </div>`;
@@ -213,7 +213,17 @@ export function renderOnboarding() {
   // BYOK save
   $('byok-save').addEventListener('click', () => {
     const msg = $('byok-msg');
-    if (!v('byok-owner') || !v('byok-repo') || !v('byok-token')) { msg.textContent = 'Fill in owner, repo and GitHub token.'; msg.style.color = '#f472b6'; return; }
+    // "Save & start" completes the manual (owner + repo + token) path. Without those
+    // three it cannot proceed — so tell the user why instead of returning silently.
+    // In device-flow mode the primary path is "Sign in with GitHub" above and the
+    // manual fields live under Advanced, so point the user there.
+    if (!v('byok-owner') || !v('byok-repo') || !v('byok-token')) {
+      msg.style.color = '#f472b6';
+      msg.textContent = GH_CLIENT_ID
+        ? 'Connect GitHub first — sign in above, or add owner, repo and a token under Advanced.'
+        : 'Fill in owner, repo and GitHub token.';
+      return;
+    }
     config.save({ mode: 'byok', ghOwner: v('byok-owner'), ghRepo: v('byok-repo'), ghBranch: v('byok-branch') || 'main', ghToken: v('byok-token'), aiProvider: v('byok-prov'), aiKey: v('byok-key') });
     refresh();
     msg.textContent = 'Saved. Loading…'; msg.style.color = '#2dd4bf';

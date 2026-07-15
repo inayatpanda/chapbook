@@ -108,17 +108,26 @@ export default async function handler(req, context) {
     return json({ error: 'forbidden_origin' }, 403, origin);
   }
 
-  // Netlify v2 passes context (with .ip) as the 2nd handler arg; fall back to the
-  // client-ip header for local/dev where context may be absent.
-  const ip = context?.ip ?? req.headers.get('x-nf-client-connection-ip');
-  if (!rateLimitCheck(ip).allowed) {
-    return new Response(JSON.stringify({ error: 'rate_limited' }), {
-      status: 429,
-      headers: { ...corsHeaders(origin), 'Content-Type': 'application/json', 'retry-after': '600' },
-    });
-  }
-
   let body;
   try { body = await req.json(); } catch { return json({ error: 'invalid_json' }, 400, origin); }
+
+  // Rate-limit ONLY the initial device-code request (step 'code'). The device flow
+  // POSTs to this relay for BOTH the one-off code request AND repeated POLLING
+  // (step 'token', every few seconds for up to ~15 min while the user authorises).
+  // Counting those legitimate, frequent polls against the 30/10-min budget would
+  // 429 a normal, slightly-slow sign-in and break it. The 'code' request is the
+  // expensive/abusable one, so that is the one — and only one — we throttle.
+  if (body && body.step === 'code') {
+    // Netlify v2 passes context (with .ip) as the 2nd handler arg; fall back to the
+    // client-ip header for local/dev where context may be absent.
+    const ip = context?.ip ?? req.headers.get('x-nf-client-connection-ip');
+    if (!rateLimitCheck(ip).allowed) {
+      return new Response(JSON.stringify({ error: 'rate_limited' }), {
+        status: 429,
+        headers: { ...corsHeaders(origin), 'Content-Type': 'application/json', 'retry-after': '600' },
+      });
+    }
+  }
+
   return relay(body, fetch, origin);
 }
