@@ -988,6 +988,7 @@
     white-space:nowrap;border:1px solid var(--line);color:var(--faint);background:transparent}
   .pill.ok{border-color:transparent;background:rgba(45,212,191,.14);color:var(--acc)}
   /* active provider highlight + "Use this" toggle */
+  .ai-savekey{margin-top:.5rem}
   .ai-card.active{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc),0 6px 22px -12px var(--acc)}
   .pill.active{border-color:transparent;background:var(--grad-pub);color:#04211c}
   .use-btn{font-size:.72rem;font-weight:700;border:1px solid var(--acc);color:var(--acc);
@@ -3108,7 +3109,7 @@
 
     <button class="btn" id="aiSaveBtn" onclick="saveSettings()">Save keys</button>
     <div id="settingsMsg" class="msg"></div>
-    <p class="sub" style="margin-top:.6rem">Paste a key and tap <b>Use this</b> — Chapbook picks that provider's current model automatically. Keys are write-only (never shown again); save a new key before testing it.</p>
+    <p class="sub" style="margin-top:.6rem">Paste a key and tap <b>Save &amp; use</b> — Chapbook picks that provider's current model automatically. Keys are write-only (never shown again); save a new key before testing it.</p>
 
     <!-- ===== About you / Your voice (the author profile that steers every AI feature) ===== -->
     <div id="profileCard" class="card" style="margin-top:1.1rem">
@@ -6881,12 +6882,17 @@ function renderSettings(s){
       : (configured
           ? `<button class="use-btn" onclick="activateProvider('${p.id}')">Use this</button>`
           : '<span class="pill">not set</span>');
-    // credential field: key for cloud providers, baseUrl for ollama
-    const cred = p.id==='ollama'
+    // credential field: key for cloud providers, baseUrl for ollama. Each card carries its
+    // OWN "Save & use" button: the browser config stores ONE active provider+key, so saving a
+    // key MUST also make its provider active — a global save silently dropped a key typed
+    // into a non-active card (the key "disappeared"), and the old activate path ("Use this")
+    // only rendered once configured, so a fresh provider could never be activated at all.
+    const cred = (p.id==='ollama'
       ? `<label>Base URL</label>
          <input type="text" id="ai-base-${p.id}" placeholder="http://127.0.0.1:11434" value="${esc(c.baseUrl)}" />`
       : `<label>API key</label>
-         <input type="password" id="ai-key-${p.id}" autocomplete="off" placeholder="${configured?'•••• set':'paste key'}" value="" />`;
+         <input type="password" id="ai-key-${p.id}" autocomplete="off" placeholder="${configured?'•••• set':'paste key'}" value="" />`)
+      + `<button class="btn ai-savekey" onclick="activateProvider('${p.id}')">Save &amp; use</button>`;
     // Model is now automatic: paste key → "Use this" applies the provider default.
     // The field lives in a collapsed expander so a stale default stays correctable.
     // Ollama has no cloud default, so its expander starts open (the user must name a local model).
@@ -6917,21 +6923,19 @@ function renderSettings(s){
   if (act && (provs[act.id]||{}).configured) {
     actLine.innerHTML = `Using <b>${act.name}</b>${actModel?` · <code>${esc(actModel)}</code>`:''} for all AI.`;
   } else {
-    actLine.innerHTML = `<span class="warn">No active model — paste a provider's key below and tap “Use this”.</span>`;
+    actLine.innerHTML = `<span class="warn">No active model — paste a provider's key below and tap “Save &amp; use”.</span>`;
   }
 }
 
-// flip the active provider — persists immediately so it's truly in effect.
-// If the user hasn't set an explicit override, resolve the provider's LATEST model from
-// the server and pin it, so activation never leaves a stale hardcoded version in place.
-// (The override field, when filled, always wins — we only fill it when it's blank.)
+// flip the active provider (each card's "Save & use") — persists that card's key + makes it
+// active in ONE save, so the single-provider browser config can never drop the key.
+// Deliberately does NOT pre-resolve the latest model here: before the save the key isn't
+// stored yet, so a live /models query fails and the pre-fill pinned the STALE offline default
+// into the override field — which then blocked saveSettings' post-save live upgrade (it only
+// runs when the override is blank). Leave the field alone; Layer 2 in saveSettings resolves
+// the live latest AFTER the key is persisted.
 async function activateProvider(id){
   _aiDefault = id;
-  const modelEl = $('ai-model-'+id);
-  if (id!=='ollama' && modelEl && !modelEl.value.trim()){
-    const latest = await latestModelFor(id);
-    if (latest) modelEl.value = latest;   // saveSettings persists this as the provider model
-  }
   await saveSettings();
 }
 window.activateProvider = activateProvider;
