@@ -10905,23 +10905,45 @@ $('editorTitle').addEventListener('input', ()=>{
   // debounce slug reservation for new posts
   if(!currentSlug){
     clearTimeout(_slugDebounce);
-    _slugDebounce = setTimeout(reserveSlug, 900);
+    _slugDebounce = setTimeout(()=>reserveSlug(), 900);
+  }
+});
+// Reserve immediately on blur ("clicking away") too — don't wait out the debounce.
+// This is why the header used to only "sometimes" flip off "Unsaved title": the slug
+// reserves the moment the field loses focus, so the next autosave lands on the real slug.
+$('editorTitle').addEventListener('blur', ()=>{
+  if(!currentSlug && $('editorTitle').value.trim().length >= 2){
+    clearTimeout(_slugDebounce);
+    reserveSlug();
   }
 });
 
-async function reserveSlug(){
-  if(currentSlug) return; // already reserved
+async function reserveSlug({ surface = false } = {}){
+  if(currentSlug) return currentSlug; // already reserved
   const title = $('editorTitle').value.trim();
-  if(title.length < 2) return;
+  if(title.length < 2) return null;
   try{
     const r = await api('/slug?title='+encodeURIComponent(title));
-    if(!currentSlug){
-      currentSlug = r.slug; // only set if still null
+    // The client-side router's /slug route returns a BARE slug string (posts.suggestSlug);
+    // tolerate a { slug } envelope too so a future server shape can't silently break this.
+    // (Reading r.slug off the bare string yielded undefined → the title never reserved a
+    // slug → the header stuck on "Unsaved title" and publish silently no-opped.)
+    // Inline MIRROR of parseSlugResponse() in src/core/slug.js (unit-tested) — the inline
+    // module can't import core/ at runtime, so keep the two in step.
+    const slug = (typeof r === 'string') ? (r.trim()||null) : (r && typeof r.slug === 'string' ? (r.slug.trim()||null) : null);
+    if(slug && !currentSlug){
+      currentSlug = slug; // only set if still null
       // P3c: fold any titleless work saved under the provisional slug into this real
       // slug, so there is exactly one draft (not an orphaned '__untitled__').
       await migrateProvisionalDraft(currentSlug);
     }
-  }catch{}
+    return currentSlug;
+  }catch(e){
+    // Silent for the debounce + autosave callers (they retry on the next edit); the
+    // publish / schedule paths pass { surface:true } so they can SHOW the real reason.
+    if(surface) throw e;
+    return null;
+  }
 }
 
 /* ── P3c: titleless-draft helpers ─────────────────────────────────────────────
@@ -11328,8 +11350,23 @@ function publishMeta(){
   };
 }
 async function doPublish(){
-  if(!currentSlug){ await reserveSlug(); }
-  if(!currentSlug){ toast('Could not reserve a slug — add a title first'); return; }
+  // Self-heal the slug. A title-bearing post that never reserved a slug (the debounce
+  // hadn't fired, or an earlier /slug call failed) reserves one HERE before committing —
+  // publish must NEVER silently no-op. Every failure path below shows a visible reason.
+  if(!currentSlug){
+    const titleText = (meta.title || $('editorTitle')?.value || '').trim();
+    if(!titleText){ toast('Add a title before publishing.'); setSaveState('idle','New post'); return; }
+    try{
+      // surface:true → a real /slug failure (GitHub down, network) throws its true reason
+      // instead of being swallowed and mis-reported as "add a title".
+      await reserveSlug({ surface:true });
+    }catch(e){
+      setSaveState('error','Publish failed');
+      showError(e, { title:'Couldn’t publish', onRetry: doPublish });
+      return;
+    }
+    if(!currentSlug){ toast('Publish failed: couldn’t create a web address from that title — try a longer title.'); return; }
+  }
   const btn = $('editorPublishBtn');
   setBusy(btn, true);
   setSaveState('saving','Publishing…');
@@ -11386,8 +11423,15 @@ async function doSchedule(){
   const when = new Date(raw);
   if(isNaN(when)){ $('schHint').textContent='That date didn’t parse.'; return; }
   if(when.getTime() <= Date.now()){ $('schHint').textContent='Pick a time in the future (a past time would publish on the next Action run).'; return; }
-  if(!currentSlug){ await reserveSlug(); }
-  if(!currentSlug){ toast('Could not reserve a slug — add a title first'); return; }
+  // Self-heal the slug (same contract as doPublish): reserve from the title before
+  // committing the scheduled draft, and surface the real reason rather than no-op silently.
+  if(!currentSlug){
+    const titleText = (meta.title || $('editorTitle')?.value || '').trim();
+    if(!titleText){ $('schHint').textContent='Add a title before scheduling.'; return; }
+    try{ await reserveSlug({ surface:true }); }
+    catch(e){ setSaveState('error','Schedule failed'); showError(e, { title:'Couldn’t schedule', onRetry: doSchedule }); return; }
+    if(!currentSlug){ $('schHint').textContent='Couldn’t create a web address from that title — try a longer title.'; return; }
+  }
   const iso = when.toISOString();
   const btn = $('schConfirm');
   setBusy(btn, true);

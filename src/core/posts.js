@@ -3,6 +3,7 @@
 // seam (handled by the router), so the DB draft functions are gone.
 import { parse, serialise, readGallery, writeGallery } from '../lib/frontmatter.js';
 import * as blocks from '../lib/blocks.js';
+import { slugify as slugPure } from './slug.js';
 
 const BLOG_DIR = 'src/content/blog';
 const postPath = (slug) => `${BLOG_DIR}/${slug}.md`;
@@ -11,11 +12,9 @@ const blocksPath = (slug) => `${BLOG_DIR}/_blocks/${slug}.json`;
 const publicImgDir = (slug) => `public/images/posts/${slug}`;
 const relImg = (slug, file) => `./_images/${slug}/${file}`;
 const todayISO = () => new Date().toISOString().slice(0, 10);
-function slugify(title) {
-  return String(title || '').toLowerCase().trim()
-    .replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
-    .slice(0, 60) || 'post';
-}
+// Single source of truth for slug generation lives in ./slug.js (unit-tested). Keep the
+// legacy `|| 'post'` fallback here so an all-symbol title still yields a usable slug.
+function slugify(title) { return slugPure(title) || 'post'; }
 function galleryFilename(im, i) {
   if (im.file) return im.file;
   const m = /^data:image\/(\w+);base64,/.exec(im.base64 || '');
