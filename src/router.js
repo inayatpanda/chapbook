@@ -106,6 +106,13 @@ export function makeRouter(deps) {
       if (b === 'read-document') return studio.importDocument(body, ai); // .docx: needs the browser zlib adapter (deferred)
     }
 
+    // ---- short social draft (studio engine + ai seam) → { post, hooks } ----
+    // The fork renamed this engine's route to /ai/draft, but the LIVE Share → Compose
+    // "✦ Draft it" button (and the legacy AI-assist button) still POST bare /draft. Without
+    // this alias that call 404s and the social composer silently fails. Map it to the SAME
+    // studio.draftPost engine as /ai/draft so both paths behave identically.
+    if (a === 'draft') return studio.draftPost({ ...body, profile: profile(), voicePosts: await voicePosts() }, ai);
+
     // ---- prepublish + preview (pure core) ----
     if (a === 'posts' && c === 'preview') return { html: blocks.renderPreviewHtml((body.doc?.blocks) || [], { slug: b }) };
     if (a === 'posts' && c === 'check') {
@@ -250,7 +257,11 @@ export function makeRouter(deps) {
 
     // ---- settings/ai (config; never returns a key) ----
     if (a === 'settings' && b === 'ai' && c === 'models') return []; // model list is provider-dependent (deferred; users type the model)
-    if (a === 'settings' && b === 'ai' && method === 'GET') { const ai_ = config.getAi(); return { default: ai_.provider, providers: { [ai_.provider]: { configured: !!ai_.key, model: ai_.model } } }; }
+    // GET must carry the provider's capabilities ({ image, vision, document, … }) — the
+    // composer reads providers[default].capabilities to gate capability-dependent buttons
+    // (e.g. ✦ Generate image). Omitting it left that button permanently disabled for BYOK
+    // users on an image-capable provider (OpenAI/Gemini). Mirrors the old server's shape.
+    if (a === 'settings' && b === 'ai' && method === 'GET') { const ai_ = config.getAi(); const caps = (ai && ai.capabilities) ? ai.capabilities() : {}; return { default: ai_.provider, providers: { [ai_.provider]: { configured: !!ai_.key, model: ai_.model, capabilities: caps } } }; }
     if (a === 'settings' && b === 'ai' && method === 'PUT') {
       const patch = {}; if (body.default) patch.aiProvider = body.default;
       const p = body.providers && body.default && body.providers[body.default];

@@ -30,5 +30,19 @@ export function makeAi(cfg, fetchImpl = fetch) {
       if (!adapter.capabilities?.image) throw Object.assign(new Error(`${a.provider} cannot generate images`), { code: 'AI_CAP' });
       return adapter.generateImage({ prompt, size, model: a.model || adapter.DEFAULT_MODEL, key: a.key }, browserFetch);
     },
+    // Document import (PDF / image → structured blocks). studio.importDocument calls this;
+    // it was missing here, so /ai/read-document threw "ai.readDocument is not a function"
+    // and the live "Import document" feature broke for every provider. Delegate to the
+    // adapter (all three offered providers implement readDocument); a provider without it
+    // (e.g. Groq) gets a clean AI_CAP message the UI routes to Settings, not a raw TypeError.
+    async readDocument({ system, instruction, fileBase64, mimeType, json }) {
+      const { adapter, a } = pick();
+      if (typeof adapter.readDocument !== 'function') throw Object.assign(new Error(`${a.provider} cannot read documents — use a provider that supports document import (e.g. Anthropic or Gemini).`), { code: 'AI_CAP' });
+      return adapter.readDocument({ system, instruction, fileBase64, mimeType, json, model: a.model || adapter.DEFAULT_MODEL, key: a.key }, browserFetch);
+    },
+    // The current provider's declared capabilities ({ text, vision, document, image }).
+    // The router surfaces this in GET /settings/ai so the composer can gate capability-
+    // dependent buttons (e.g. ✦ Generate image) exactly as it did against the old server.
+    capabilities() { const { adapter } = pick(); return adapter.capabilities || {}; },
   };
 }
