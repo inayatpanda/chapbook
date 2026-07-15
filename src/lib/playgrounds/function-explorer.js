@@ -1,8 +1,9 @@
 /* Family: function explorer — 1–3 sliders drive a live curve + a headline readout +
-   a colour-coded verdict. The workhorse: covers hollow-bone, glenoid version,
-   hip survival, dose–response, clinic throughput, and similar. The curve/marker/
-   output are small JS expressions (in slider keys `V.*` + `Math` + sweep `t`) that
-   ship with each preset; a non-coder edits labels / ranges / verdict text only. */
+   a colour-coded verdict. The workhorse: covers a hollow-beam stiffness curve, an
+   adoption S-curve, savings with compound interest, a projectile arc, and similar.
+   The curve/marker/output are small JS expressions (in slider keys `V.*` + `Math` +
+   sweep `t`) that ship with each preset; a non-coder edits labels / ranges / verdict
+   text only. */
 import { esc } from './index.js';
 
 const sliderSchema = {
@@ -58,12 +59,12 @@ export default {
       },
     },
     {
-      name: 'Logistic (dose–response)',
+      name: 'Logistic (adoption curve)',
       params: {
-        sliders: [{ key: 'dose', label: 'Dose', min: 0, max: 100, value: 50, step: 1, unit: '' }],
-        curve: { xLabel: 'dose →', yLabel: 'response →', yExpr: '1/(1+Math.exp(-(t-0.5)*10))', markerExpr: 'V.dose/100' },
-        output: { label: 'response', expr: '100/(1+Math.exp(-((V.dose/100)-0.5)*10))', unit: '%', decimals: 0 },
-        verdict: { bands: [{ max: 20, label: 'sub-threshold', colour: '#717d99' }, { max: 80, label: 'climbing fast', colour: '#22d3ee' }, { max: 100, label: 'plateau', colour: '#2dd4bf' }] },
+        sliders: [{ key: 'time', label: 'Time', min: 0, max: 100, value: 50, step: 1, unit: '' }],
+        curve: { xLabel: 'time →', yLabel: 'adopters →', yExpr: '1/(1+Math.exp(-(t-0.5)*10))', markerExpr: 'V.time/100' },
+        output: { label: 'share adopted', expr: '100/(1+Math.exp(-((V.time/100)-0.5)*10))', unit: '%', decimals: 0 },
+        verdict: { bands: [{ max: 20, label: 'early days', colour: '#717d99' }, { max: 80, label: 'taking off', colour: '#22d3ee' }, { max: 100, label: 'everyone has one', colour: '#2dd4bf' }] },
       },
     },
   ],

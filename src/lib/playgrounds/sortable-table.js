@@ -23,14 +23,14 @@ export default {
   },
   presets: [
     {
-      name: 'Landmark shoulder trials',
+      name: 'Coffee brewing methods',
       params: {
-        columns: ['Trial', 'Year', 'N', 'Verdict'],
+        columns: ['Method', 'Minutes', 'Faff', 'Verdict'],
         rows: [
-          ['ProFHER', '2015', '250', 'Surgery no better for displaced proximal humerus'],
-          ['UKUFF', '2017', '460', 'Open ≈ arthroscopic cuff repair'],
-          ['CSAW', '2018', '313', 'Decompression ≈ placebo surgery'],
-          ['FISH', '2019', '210', 'Operative ≈ functional bracing for humeral shaft'],
+          ['French press', '4', 'Low', 'Full-bodied and forgiving of a rough grind'],
+          ['AeroPress', '2', 'Low', 'Quick, clean and easy to travel with'],
+          ['Pour-over', '3', 'Medium', 'Bright and clear; rewards a steady pour'],
+          ['Moka pot', '5', 'Medium', 'Strong and stovetop; watch the heat'],
         ],
         filterable: true,
       },

@@ -39,12 +39,12 @@ export default {
   },
   presets: [
     {
-      name: 'Fracture first principles',
+      name: 'Everyday science quiz',
       params: {
         questions: [
-          { q: 'The commonest direction of shoulder dislocation?', options: ['Anterior', 'Posterior', 'Inferior'], answer: 0, explain: 'Roughly 95% — posterior is rare and classically missed.' },
-          { q: 'First imaging for a suspected scaphoid fracture?', options: ['MRI', 'Plain radiographs', 'CT'], answer: 1, explain: 'X-ray first; MRI when clinical suspicion persists with normal films.' },
-          { q: 'An open fracture needs antibiotics…', options: ['Within an hour', 'Within a day', 'Only if contaminated'], answer: 0, explain: 'As soon as possible — ideally within the hour.' },
+          { q: 'Which reaches you first in a storm?', options: ['The lightning', 'The thunder', 'They arrive together'], answer: 0, explain: 'Light travels far faster than sound, so you see the flash before you hear the thunder.' },
+          { q: 'What makes bread dough rise?', options: ['Baking the flour', 'Yeast giving off gas', 'Adding cold water'], answer: 1, explain: 'Yeast ferments the sugars and releases carbon dioxide, which the gluten traps as bubbles.' },
+          { q: 'Why does the sky look blue?', options: ['The sea reflects up', 'Air scatters blue light most', 'The sun is blue'], answer: 1, explain: 'Shorter blue wavelengths scatter more in the atmosphere than the longer red ones.' },
         ],
         verdicts: [
           { min: 0, text: 'Worth a re-read — the basics bite hardest.' },

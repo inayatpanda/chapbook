@@ -1,7 +1,7 @@
 /* Family: stepper timeline — step / scrub through N stages. Each stage updates a
    caption + a moving marker on an SVG track + a "stage k of N" readout + optional
-   detail line. The narrative workhorse: models the shipped trepanation-through-the-
-   ages timeline and the papyrus case-flipper. A range slider is primary; prev/next
+   detail line. The narrative workhorse: models a history-through-the-ages timeline
+   and a step-by-step troubleshooting walkthrough. A range slider is primary; prev/next
    buttons mirror it. Each stage may carry a value (0..1) that positions the marker
    along the track (e.g. an era / a probability / a position); when absent the marker
    falls back to even spacing across the stages. */
@@ -36,26 +36,26 @@ export default {
     {
       name: 'Eras of an idea',
       params: {
-        title: 'Drilling the skull, through the ages',
+        title: 'Mapping the night sky, through the ages',
         xLabel: 'earlier ←  time  → later',
         stages: [
-          { label: 'Neolithic', value: 0, caption: 'Holes scraped into living skulls — and the bone healed, so they survived.', detail: 'Trepanation predates writing; ritual and pressure-relief both proposed.' },
-          { label: 'Antiquity', value: 0.34, caption: 'Hippocratic writers codify when to drill and when to leave well alone.', detail: 'The first attempt at indications rather than instinct.' },
-          { label: 'Renaissance', value: 0.67, caption: 'Trephine instruments are engineered; anatomy is drawn from dissection.', detail: 'Tooling improves faster than understanding of infection.' },
-          { label: 'Modern', value: 1, caption: 'Burr holes under imaging, asepsis, and a clear pressure rationale.', detail: 'Same hole, finally for the right reason.' },
+          { label: 'Neolithic', value: 0, caption: 'Stone circles line up with the solstice sunrise — sky-keeping built to last.', detail: 'Careful sky-watching predates writing; calendar and ritual both proposed.' },
+          { label: 'Antiquity', value: 0.34, caption: 'Greek astronomers name the constellations and write the first star catalogues.', detail: 'The first attempt at order rather than folklore.' },
+          { label: 'Renaissance', value: 0.67, caption: 'The telescope arrives; charts are drawn from patient, repeated observation.', detail: 'Tooling improves faster than the theory behind it.' },
+          { label: 'Modern', value: 1, caption: 'Digital surveys map billions of stars, each measured and catalogued.', detail: 'Same sky, finally in fine detail.' },
         ],
       },
     },
     {
       name: 'Case walkthrough',
       params: {
-        title: 'A shoulder, from injury to verdict',
-        xLabel: 'presentation  →  decision',
+        title: 'A sour espresso, from taste to fix',
+        xLabel: 'symptom  →  decision',
         stages: [
-          { label: 'Presentation', value: 0, caption: 'Fall onto an outstretched hand; the arm is held still, the contour is off.', detail: 'History points before the X-ray confirms.' },
-          { label: 'Imaging', value: 0.4, caption: 'Plain films show a displaced proximal humerus in three parts.', detail: 'Fracture pattern drives the next fork.' },
-          { label: 'Options', value: 0.7, caption: 'Weigh fixation against replacement against accepting the position.', detail: 'Age, bone quality, and demand all pull differently.' },
-          { label: 'Verdict', value: 1, caption: 'Fix it: restore the tuberosities, protect the blood supply, rehab early.', detail: 'Chosen for a younger patient with reconstructable bone.' },
+          { label: 'Symptom', value: 0, caption: 'The shot tastes sharp and sour, and it ran through the basket fast.', detail: 'Taste points before the scales confirm.' },
+          { label: 'Check', value: 0.4, caption: 'Weigh the cup: far more liquid out than the recipe asks for.', detail: 'The flow rate drives the next fork.' },
+          { label: 'Options', value: 0.7, caption: 'Weigh a finer grind against a bigger dose against living with it.', detail: 'Bean age, grinder, and taste all pull differently.' },
+          { label: 'Fix', value: 1, caption: 'Grind finer: slow the flow, pull less liquid, then taste again.', detail: 'Chosen for fresh beans and a shot that simply ran too quickly.' },
         ],
       },
     },

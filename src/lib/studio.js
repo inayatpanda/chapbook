@@ -27,18 +27,18 @@ const styleFor = (profile) => buildStyle(profile);
 const guardFor = (profile) => factGuardLine(profile);
 
 // A short blog-domain descriptor for the visual-asset prompts (interactive/figure/
-// sticker generation), driven by the profile's subjects. Replaces the old hardcoded
-// "orthopaedic / medicine / history / technology blog". Falls back to a neutral phrase.
+// sticker generation), driven by the profile's subjects. Replaces an old hardcoded
+// subject list (e.g. "history / cooking / technology blog"). Falls back to a neutral phrase.
 const blogDomainFor = (profile) => {
   const about = (profile && profile.writesAbout && String(profile.writesAbout).trim());
   return about ? `a dark-themed blog about ${about}` : 'a dark-themed personal blog';
 };
 // The short "do not invent" clause for visual-asset prompts, profile-driven. The old
-// code said "Do not invent clinical facts or specific statistics — keep numbers
-// clearly illustrative"; a generic profile says "facts or specific statistics".
+// code hardcoded a domain-specific facts clause; now a generic profile says
+// "facts or specific statistics" and a specialist profile can narrow it.
 const visualGuardFor = (profile) => {
   const p = (profile && profile.factGuard) ? String(profile.factGuard) : DEFAULT_PROFILE.factGuard;
-  // factGuard is e.g. "facts, statistics or studies" / "clinical facts, statistics or studies".
+  // factGuard is e.g. "facts, statistics or studies" (a specialist profile may narrow it).
   return `Do not invent ${p} or specific statistics — keep any numbers clearly illustrative.`;
 };
 

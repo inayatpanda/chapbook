@@ -39,9 +39,9 @@ export default {
     {
       name: 'Reveal the answer',
       params: {
-        title: 'Which nerve is most at risk in a surgical neck fracture?',
+        title: 'What is the tallest mountain on Earth, base to summit?',
         coverLabel: 'Scratch to reveal',
-        revealText: 'The axillary nerve — test the badge area and deltoid.',
+        revealText: 'Mauna Kea — measured from the seabed it beats Everest, which wins only above sea level.',
         color: '#2dd4bf',
       },
     },
@@ -49,7 +49,7 @@ export default {
       name: 'Spoiler',
       params: {
         coverLabel: 'Spoiler — scratch if you dare',
-        revealHtml: 'It was the <strong>scaphoid</strong> all along.',
+        revealHtml: 'It was <strong>Colonel Mustard</strong>, in the library, all along.',
         color: '#818cf8',
       },
     },

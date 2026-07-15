@@ -38,25 +38,25 @@ test('every WS4 family: first preset builds self-contained', () => {
 test('image-annotator: pins render as buttons at their coordinates', () => {
   const b = firstPresetBlock('image-annotator');
   assert.ok(b.html.includes('pg-anno-pin') && b.html.includes('left:30%'), 'pin positioned');
-  assert.ok(b.js.includes('Acromion'), 'pin data in CONFIG');
+  assert.ok(b.js.includes('Headstock'), 'pin data in CONFIG');
   assert.ok(b.html.includes('is-blank'), 'no image → placeholder stage');
 });
 
 test('step-explainer: steps + dots + counter', () => {
   const b = firstPresetBlock('step-explainer');
-  assert.ok(b.js.includes('Haematoma') && b.js.includes('Remodelling'), 'steps in CONFIG');
+  assert.ok(b.js.includes('Mixing') && b.js.includes('Bake'), 'steps in CONFIG');
   assert.ok((b.html.match(/pg-sx-dot/g) || []).length >= 4, 'a dot per step');
 });
 
 test('scored-quiz: questions + verdict bands wired', () => {
   const b = firstPresetBlock('scored-quiz');
-  assert.ok(b.js.includes('scaphoid') && b.js.includes('Full marks'), 'questions + verdicts in CONFIG');
+  assert.ok(b.js.includes('dough') && b.js.includes('Full marks'), 'questions + verdicts in CONFIG');
 });
 
 test('sortable-table: headers are sort buttons with aria-sort; rows escape', () => {
   const b = firstPresetBlock('sortable-table');
   assert.ok(b.html.includes('aria-sort="none"') && b.html.includes('pg-st-sort'), 'sortable headers');
-  assert.ok(b.html.includes('ProFHER'), 'rows rendered');
+  assert.ok(b.html.includes('French press'), 'rows rendered');
   const evil = buildInstance('sortable-table', { columns: ['a<b', 'c'], rows: [['<script>x</script>', '1']] }, 'pg-st-x');
   assert.ok(!evil.html.includes('<script>x'), 'cells are escaped');
 });

@@ -1,10 +1,9 @@
-/* Family: lever geometry — an SVG with a pivot, a bone/arm at an adjustable angle,
+/* Family: lever geometry — an SVG with a pivot, an arm/lever at an adjustable angle,
    and a line-of-pull at an adjustable angle. Computes the perpendicular moment arm
    (the cross-product term, length·sin(pull−arm)) live and reads out the turning
-   effect as a 0..100% of the maximum, plus a banded verdict. Models the shipped
-   rotator-cuff lever toy: a pull near the hinge spins the joint but cannot lift it;
-   a pull square to the bone lifts cleanly. Two sliders (arm angle, pull angle); all
-   angles in degrees in the UI. */
+   effect as a 0..100% of the maximum, plus a banded verdict. Models a spanner on a
+   bolt: a pull along the shaft cannot turn it; a pull square to the spanner turns it
+   cleanly. Two sliders (arm angle, pull angle); all angles in degrees in the UI. */
 import { esc } from './index.js';
 
 const rangeSchema = {
@@ -48,18 +47,18 @@ export default {
   },
   presets: [
     {
-      name: 'Rotator cuff lever',
+      name: 'Spanner on a bolt',
       params: {
-        title: 'Why the cuff lifts the arm — and the geometry that lets it',
-        armLabel: 'Arm elevation', pullLabel: 'Line of pull',
+        title: 'Why a spanner turns a bolt — and the geometry that lets it',
+        armLabel: 'Spanner angle', pullLabel: 'Line of pull',
         armRange: [0, 150], pullRange: [0, 180],
         armValue: 20, pullValue: 110,
-        outLabel: 'lifting effect',
+        outLabel: 'turning effect',
         bands: [
-          { max: 20, label: 'cannot lift — the pull runs almost along the bone, into the joint', colour: '#f472b6' },
-          { max: 60, label: 'some lift, but mostly compressing the joint', colour: '#fbbf24' },
-          { max: 85, label: 'good leverage — most of the pull turns the arm', colour: '#22d3ee' },
-          { max: 100, label: 'lifts cleanly — the pull is square to the bone', colour: '#2dd4bf' },
+          { max: 20, label: 'will not turn — the pull runs almost along the shaft, into the bolt', colour: '#f472b6' },
+          { max: 60, label: 'some turn, but mostly straining the bolt sideways', colour: '#fbbf24' },
+          { max: 85, label: 'good leverage — most of the pull turns the bolt', colour: '#22d3ee' },
+          { max: 100, label: 'turns cleanly — the pull is square to the spanner', colour: '#2dd4bf' },
         ],
       },
     },

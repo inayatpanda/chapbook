@@ -32,15 +32,15 @@ export default {
   },
   presets: [
     {
-      name: 'Shoulder landmarks',
+      name: 'Parts of a guitar',
       params: {
         alt: 'Diagram stage',
         pins: [
-          { x: 30, y: 25, label: 'Acromion', note: 'The bony roof — palpable at the point of the shoulder.' },
-          { x: 55, y: 45, label: 'Glenoid', note: 'The shallow socket; depth comes from the labrum.' },
-          { x: 70, y: 70, label: 'Deltoid tuberosity', note: 'Where the deltoid inserts on the humerus.' },
+          { x: 30, y: 25, label: 'Headstock', note: 'Holds the tuning pegs that set the pitch of each string.' },
+          { x: 55, y: 45, label: 'Soundhole', note: 'The opening that lets the body project the sound.' },
+          { x: 70, y: 70, label: 'Bridge', note: 'Anchors the strings and passes their vibration into the top.' },
         ],
-        prompt: 'Tap a pin to explore the landmarks.',
+        prompt: 'Tap a pin to explore the parts.',
       },
     },
     {

@@ -32,22 +32,22 @@ export default {
     {
       name: 'Myth-buster',
       params: {
-        title: 'Three things people get wrong about fractures', columns: 3, accent: '#22d3ee',
+        title: 'Three things people get wrong about bread', columns: 3, accent: '#22d3ee',
         cards: [
-          { front: '“If you can move it, it isn’t broken.”', back: 'You can often move a broken bone — the muscles still work. Movement rules nothing out.', tag: 'Myth' },
-          { front: '“A hairline crack will heal on its own.”', back: 'Usually, yes — but position and load matter. Some need fixing to heal straight.', tag: 'Mostly' },
-          { front: '“Once the cast is off, you’re better.”', back: 'The bone is united, not finished. Stiffness and weakness take longer than the cast.', tag: 'Myth' },
+          { front: '“Kneading longer always makes a better loaf.”', back: 'Past a point it does little — time and folding build the same structure with less effort.', tag: 'Myth' },
+          { front: '“A loaf is done when the top looks golden.”', back: 'Usually a good sign — but colour and doneness differ. A tap or a probe tells you more.', tag: 'Mostly' },
+          { front: '“Fresh from the oven is the best time to slice.”', back: 'The crumb is still setting. Cutting too soon leaves it gummy; let it cool first.', tag: 'Myth' },
         ],
       },
     },
     {
       name: 'Term → meaning',
       params: {
-        title: 'Three words surgeons use', columns: 3, accent: '#818cf8',
+        title: 'Three words typographers use', columns: 3, accent: '#818cf8',
         cards: [
-          { front: 'Reduction', back: 'Putting the broken ends back where they belong — closed (by hand) or open (surgery).', tag: 'Term' },
-          { front: 'Non-union', back: 'A fracture that has stopped trying to heal. Different from one that is simply slow.', tag: 'Term' },
-          { front: 'Arthroplasty', back: 'Replacing a joint surface with an implant — “plasty” = reshaping.', tag: 'Term' },
+          { front: 'Kerning', back: 'Adjusting the space between two particular letters so the word looks even.', tag: 'Term' },
+          { front: 'Leading', back: 'The vertical space between lines of type. Named after the strips of lead once used.', tag: 'Term' },
+          { front: 'Ligature', back: 'Two letters drawn as one shape — like “fi” — to avoid an awkward collision.', tag: 'Term' },
         ],
       },
     },

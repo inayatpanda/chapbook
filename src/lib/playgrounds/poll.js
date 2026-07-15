@@ -40,20 +40,20 @@ export default {
     {
       name: 'Reader opinion (pick only)',
       params: {
-        question: 'When a shoulder dislocates for the first time, what matters most?',
-        options: ['Speed of relocation', 'Ruling out a fracture first', 'Pain relief', 'Getting an MRI'],
+        question: 'When a houseplant starts drooping, what matters most?',
+        options: ['Watering it straight away', 'Checking the soil first', 'Moving it to more light', 'Repotting it'],
         showResults: 'none',
       },
     },
     {
       name: 'Survey result (bars)',
       params: {
-        question: 'Which knee injury is the commonest in contact sport?',
+        question: 'What is the commonest way people kill a houseplant?',
         options: [
-          { label: 'ACL tear', weight: 46 },
-          { label: 'MCL sprain', weight: 31 },
-          { label: 'Meniscal tear', weight: 18 },
-          { label: 'PCL tear', weight: 5 },
+          { label: 'Overwatering', weight: 46 },
+          { label: 'Too little light', weight: 31 },
+          { label: 'Letting it dry out', weight: 18 },
+          { label: 'Pests', weight: 5 },
         ],
         showResults: 'bars',
         note: 'Illustrative shares — an author-authored distribution, not a live tally.',

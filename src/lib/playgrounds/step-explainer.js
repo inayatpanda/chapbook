@@ -28,13 +28,13 @@ export default {
   },
   presets: [
     {
-      name: 'How a fracture heals',
+      name: 'How bread rises',
       params: {
         steps: [
-          { heading: 'Haematoma', body: 'Bleeding at the fracture forms a clot — the scaffold everything else builds on.' },
-          { heading: 'Soft callus', body: 'Fibroblasts and chondroblasts bridge the gap with cartilage over 2–3 weeks.' },
-          { heading: 'Hard callus', body: 'Osteoblasts mineralise the bridge into woven bone — visibly “healing” on an x-ray.' },
-          { heading: 'Remodelling', body: 'Months to years: woven bone becomes lamellar bone along the lines of stress.' },
+          { heading: 'Mixing', body: 'Flour and water form gluten — the stretchy network everything else builds on.' },
+          { heading: 'First prove', body: 'Yeast feeds on the sugars and gives off gas, so the dough slowly swells over a few hours.' },
+          { heading: 'Shaping', body: 'Knocking back and folding builds tension in the surface so the loaf holds its form.' },
+          { heading: 'Bake', body: 'A last burst of oven spring sets the crumb and browns the crust.' },
         ],
       },
     },

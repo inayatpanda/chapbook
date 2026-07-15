@@ -1,6 +1,6 @@
 /* Family: gauge dial — a semicircular gauge with coloured zones and a needle,
    driven by a slider. For any single value read against a scale (a score, a
-   pressure, a probability, a “how bad is it” reading). */
+   pressure, a charge level, a temperature reading). */
 import { esc } from './index.js';
 
 export default {
@@ -29,16 +29,16 @@ export default {
   },
   presets: [
     {
-      name: 'Risk score',
-      params: { title: 'A made-up risk score', min: 0, max: 10, value: 3, unit: '',
-        zones: [{ from: 0, to: 3, colour: '#2dd4bf', label: 'low' }, { from: 3, to: 7, colour: '#fbbf24', label: 'watch' }, { from: 7, to: 10, colour: '#f472b6', label: 'high' }],
-        caption: 'Drag the needle — note how the same number lands in a different zone.' },
+      name: 'Trail grade',
+      params: { title: 'A walking-trail difficulty grade', min: 0, max: 10, value: 3, unit: '',
+        zones: [{ from: 0, to: 3, colour: '#2dd4bf', label: 'easy' }, { from: 3, to: 7, colour: '#fbbf24', label: 'moderate' }, { from: 7, to: 10, colour: '#f472b6', label: 'tough' }],
+        caption: 'Drag the needle — note how the same number lands in a different band.' },
     },
     {
-      name: 'Saturation',
-      params: { title: 'Oxygen saturation', min: 80, max: 100, value: 97, unit: '%',
-        zones: [{ from: 80, to: 92, colour: '#f472b6', label: 'low' }, { from: 92, to: 95, colour: '#fbbf24', label: 'borderline' }, { from: 95, to: 100, colour: '#2dd4bf', label: 'fine' }],
-        caption: 'Illustrative zones, not clinical advice.' },
+      name: 'Battery charge',
+      params: { title: 'Laptop battery charge', min: 80, max: 100, value: 97, unit: '%',
+        zones: [{ from: 80, to: 92, colour: '#f472b6', label: 'topping up' }, { from: 92, to: 95, colour: '#fbbf24', label: 'nearly full' }, { from: 95, to: 100, colour: '#2dd4bf', label: 'full' }],
+        caption: 'Illustrative zones, not a real reading.' },
     },
   ],
   build(params, domId) {
