@@ -1062,6 +1062,31 @@
   /* desktop: centre within the content area to the right of the 88px nav rail */
   @media(min-width:900px){ #pubBar{left:calc(50% + 44px)} }
 
+  /* ── iOS "ADD TO HOME SCREEN" HINT ─────────────────────────────────────────
+     iOS/iPadOS Safari fires no beforeinstallprompt, so the ⤓ Install button
+     never appears there — users must be told to use Share → Add to Home Screen.
+     Shown ONLY on iOS Safari that isn't already installed and hasn't dismissed
+     it (gated in the PWA-install script). Fixed + bottom-anchored → never shifts
+     layout or blocks taps outside itself. Mirrors the #pubBar surface language;
+     respects env(safe-area-inset-bottom) above the home indicator. */
+  #iosInstallHint{display:none;position:fixed;left:50%;transform:translateX(-50%);
+    bottom:calc(env(safe-area-inset-bottom) + 1rem);z-index:998;
+    align-items:flex-start;gap:.6rem;max-width:min(94vw,430px);
+    background:var(--surface);border:1px solid var(--line-2);border-radius:14px;
+    box-shadow:var(--shadow),var(--glow);
+    padding:.7rem .7rem .7rem .9rem;color:var(--ink);font-size:.85rem;line-height:1.45}
+  #iosInstallHint.show{display:flex;animation:iih-in .22s ease-out}
+  @keyframes iih-in{from{opacity:0;transform:translateX(-50%) translateY(12px)}
+    to{opacity:1;transform:translateX(-50%) translateY(0)}}
+  @media (prefers-reduced-motion: reduce){#iosInstallHint.show{animation:none}}
+  #iosInstallHint .iih-icon{flex:0 0 auto;display:inline-flex;color:var(--acc);margin-top:1px}
+  #iosInstallHint .iih-text{flex:1 1 auto}
+  #iosInstallHint .iih-text b{font-weight:600;color:var(--ink)}
+  #iosInstallHint .iih-x{flex:0 0 auto;width:34px;height:34px;border:0;background:transparent;
+    color:var(--mut);border-radius:9px;cursor:pointer;font-size:15px;line-height:1;
+    display:flex;align-items:center;justify-content:center;padding:0;transition:color .15s}
+  #iosInstallHint .iih-x:hover{color:var(--ink)}
+
   #login{margin-top:18vh}
 
   /* ── THEME TOGGLE BUTTON ─────────────────────────────────────────────────── */
@@ -3992,6 +4017,18 @@
 <div id="focusMeter" aria-live="polite" hidden><span id="focusWords">0 words</span><span class="fm-x">·</span><span id="focusRead">1 min</span></div>
 
 <div id="toast"></div>
+
+<!-- iOS "Add to Home Screen" hint — revealed ONLY on iOS/iPadOS Safari that isn't
+     already installed and hasn't dismissed it (gated in the PWA-install script). iOS
+     Safari has no install button, so this is the only cue to Share → Add to Home Screen.
+     Hidden by default (display:none); position:fixed so it never shifts layout. -->
+<div id="iosInstallHint" role="dialog" aria-live="polite" aria-label="Install Chapbook on your Home Screen">
+  <span class="iih-icon" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M8 7l4-4 4 4"/><path d="M6 12v6.5A1.5 1.5 0 0 0 7.5 20h9a1.5 1.5 0 0 0 1.5-1.5V12"/></svg>
+  </span>
+  <span class="iih-text">Install Chapbook — tap <b>Share</b>, then <b>Add to Home&nbsp;Screen</b>.</span>
+  <button type="button" class="iih-x" id="iosInstallHintClose" aria-label="Dismiss">✕</button>
+</div>
 
 <!-- Friendly error dialog (global) — never shows a raw stack; offers Retry / copy details -->
 <div id="errOverlay" class="pp-overlay" hidden>
@@ -18834,6 +18871,38 @@ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPro
 window.addEventListener('appinstalled',()=>{ _pingMetric('install'); });
 $('installBtn').addEventListener('click',async()=>{ if(deferredPrompt){deferredPrompt.prompt();deferredPrompt=null;$('installBtn').style.display='none';} });
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('/sw.js').catch(()=>{}); }
+
+/* ── iOS "Add to Home Screen" hint ────────────────────────────────────────────
+   iOS/iPadOS Safari has no beforeinstallprompt (so the ⤓ Install button above
+   never shows there) — users must be told to use Share → Add to Home Screen.
+   Reveal the hint only when ALL THREE hold, else leave it hidden:
+     (a) iOS/iPadOS Safari — touchscreen + a Safari-family UA that is NOT another
+         iOS browser's webview + navigator.standalone exists (a WebKit-only flag,
+         absent on desktop Safari and every Chrome/Firefox/Android browser);
+     (b) NOT already installed / running standalone; and
+     (c) not dismissed before (a localStorage flag).
+   Desktop and Android never satisfy (a), so they never see it. Wrapped in
+   try/catch so a storage/matchMedia hiccup can never block boot. */
+(function(){
+  try{
+    var KEY='chapbook.iosInstallHintDismissed';
+    var ua=navigator.userAgent||'';
+    var isTouch=('ontouchend' in document)||navigator.maxTouchPoints>0;
+    var isSafari=/Safari/.test(ua)&&!/CriOS|FxiOS|EdgiOS|OPiOS|Chrome|Chromium|Android/i.test(ua);
+    var iosSafari=isTouch&&isSafari&&('standalone' in navigator);          // (a)
+    var standalone=(navigator.standalone===true)||
+      (window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches); // (b)
+    var dismissed=false; try{ dismissed=localStorage.getItem(KEY)==='1'; }catch(_){} // (c)
+    if(!(iosSafari&&!standalone&&!dismissed)) return;
+    var hint=$('iosInstallHint'); if(!hint) return;
+    requestAnimationFrame(function(){ hint.classList.add('show'); }); // next frame → entrance anim plays
+    var x=$('iosInstallHintClose');
+    if(x) x.addEventListener('click',function(){
+      hint.classList.remove('show');
+      try{ localStorage.setItem(KEY,'1'); }catch(_){}
+    });
+  }catch(_){/* hint is best-effort — never fatal */}
+})();
 
 // Brand the title + mastheads now that config (window.__studioConfig) is known: the
 // engine bundle (studio.js) is a module loaded before this one, so it has already set
