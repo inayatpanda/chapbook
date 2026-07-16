@@ -4,7 +4,7 @@
 //     ('/'), so the build only injects runtime config, bundles the engine, and copies
 //     assets verbatim — it does NO path rewriting.
 import { build } from 'esbuild';
-import { readFileSync, writeFileSync, copyFileSync, mkdirSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, copyFileSync, mkdirSync, rmSync, readdirSync } from 'node:fs';
 import { AI_DEFAULT_MODELS } from './src/core/aiDefaults.js';
 import { PUBLIC_KEY as LICENCE_PUBLIC_KEY } from './src/lib/licence-pubkey.js';
 import { assertInlineModulesParse } from './checkInlineModule.mjs';
@@ -143,6 +143,12 @@ for (const f of ['manifest.json', 'sw.js', 'studio.js', 'darkroom-upload.js', 'p
 // module's external `./vendor/exifr.esm.js` import resolves at the dist root too.
 mkdirSync(`${DIST}/vendor`, { recursive: true });
 copyFileSync(`${SRC}/vendor/exifr.esm.js`, `${DIST}/vendor/exifr.esm.js`);
+
+// Self-hosted fonts → dist/fonts/ (referenced by /fonts/*.woff2 @font-face in index.html).
+// Copy every .woff2; the OFL licence text files travel with them for attribution.
+mkdirSync(`${DIST}/fonts`, { recursive: true });
+for (const f of readdirSync(`${SRC}/fonts`)) copyFileSync(`${SRC}/fonts/${f}`, `${DIST}/fonts/${f}`);
+console.log('fonts:', readdirSync(`${SRC}/fonts`).filter((f) => f.endsWith('.woff2')).length, 'woff2 self-hosted → dist/fonts/');
 
 // The product lives at chapbook.rqai.co.uk ONLY — Netlify serves the *.netlify.app name
 // too but never redirects it by itself, so enforce the canonical host here. (Netlify

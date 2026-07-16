@@ -11,11 +11,19 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Chapbook" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
 <title>Chapbook</title>
 <style>
+  /* Self-hosted fonts (Inter + Space Grotesk, SIL OFL — files in /fonts, licences alongside).
+     Previously loaded from fonts.googleapis.com; self-hosting removes that third-party
+     dependency (it 5xx'd twice during launch testing) and lets the app render its own
+     type offline / behind the SW cache. font-display:swap keeps text visible while they load. */
+  @font-face{font-family:'Inter';font-weight:400;font-style:normal;font-display:swap;src:url('/fonts/inter-400.woff2') format('woff2')}
+  @font-face{font-family:'Inter';font-weight:500;font-style:normal;font-display:swap;src:url('/fonts/inter-500.woff2') format('woff2')}
+  @font-face{font-family:'Inter';font-weight:600;font-style:normal;font-display:swap;src:url('/fonts/inter-600.woff2') format('woff2')}
+  @font-face{font-family:'Inter';font-weight:700;font-style:normal;font-display:swap;src:url('/fonts/inter-700.woff2') format('woff2')}
+  @font-face{font-family:'Space Grotesk';font-weight:500;font-style:normal;font-display:swap;src:url('/fonts/space-grotesk-500.woff2') format('woff2')}
+  @font-face{font-family:'Space Grotesk';font-weight:600;font-style:normal;font-display:swap;src:url('/fonts/space-grotesk-600.woff2') format('woff2')}
+  @font-face{font-family:'Space Grotesk';font-weight:700;font-style:normal;font-display:swap;src:url('/fonts/space-grotesk-700.woff2') format('woff2')}
   /* ── THEME VARIABLES ─────────────────────────────────────────────────────── */
   /* Dark is the default — a first-party companion to the (dark) published site.
      A [data-theme="light"] override keeps the toggle working for anyone who wants it. */
