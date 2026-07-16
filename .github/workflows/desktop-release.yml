@@ -1,0 +1,74 @@
+name: Desktop release (Tauri)
+
+# Builds the Chapbook desktop wrapper (a signed app window onto the live PWA).
+#   • macOS  → universal .dmg (Intel + Apple Silicon), code-signed + notarized
+#   • Windows → NSIS .exe installer (unsigned unless a Windows cert is added)
+# Trigger by pushing a tag like `desktop-v1.0.0`, or run manually.
+#
+# REQUIRED SECRETS on THIS repo (same VALUES as the ortho-outcomes repo — copy
+# them across; GitHub secrets are write-only so they can't be shared automatically):
+#   CSC_LINK                     base64 of the Developer ID .p12 certificate
+#   CSC_KEY_PASSWORD             password for that .p12
+#   APPLE_ID                     your Apple ID email
+#   APPLE_APP_SPECIFIC_PASSWORD  app-specific password for notarization
+#   APPLE_TEAM_ID                your Apple Developer Team ID (G3RVS73AU3)
+
+on:
+  push:
+    tags: ['desktop-v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
+            args: --target universal-apple-darwin --bundles dmg
+          - platform: windows-latest
+            rust-targets: ''
+            args: --bundles nsis
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-targets }}
+
+      - name: Cache cargo
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri -> target
+
+      - name: Install desktop deps
+        working-directory: desktop
+        run: npm ci
+
+      - name: Build + (mac) sign & notarize
+        uses: tauri-apps/tauri-action@v0
+        env:
+          # macOS signing (values mirror the ortho-outcomes repo secrets)
+          APPLE_CERTIFICATE: ${{ secrets.CSC_LINK }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: "Developer ID Application: Inayat Panda (G3RVS73AU3)"
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          projectPath: desktop
+          tauriScript: npx tauri
+          args: ${{ matrix.args }}
+          tagName: ${{ github.ref_name }}
+          releaseName: "Chapbook Desktop ${{ github.ref_name }}"
+          releaseDraft: true
+          prerelease: false
