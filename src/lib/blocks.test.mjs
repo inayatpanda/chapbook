@@ -201,6 +201,21 @@ test('serialise embed videoId is attribute-escaped (no breakout)', () => {
   assert.match(out, /embed\/x&quot; onload=&quot;alert\(1\)/);
 });
 
+test('serialise embed title attribute escapes & < > (not just ")', () => {
+  const out = serialiseBlock({ id: 'e', type: 'embed', provider: 'youtube', videoId: 'abc123', title: 'A & B <tag> "q"' });
+  // & must become &amp; (found live: escAttr only escaped "), and </> too.
+  assert.match(out, /title="A &amp; B &lt;tag&gt; &quot;q&quot;"/);
+  assert.ok(!/title="[^"]*<tag>/.test(out), 'raw <tag> must not survive in the title attribute');
+});
+
+test('serialise gallery alt is NOT html-escaped (markdown context, no double-encode)', () => {
+  const out = serialiseBlock({ id: 'g', type: 'gallery', images: [{ file: 'p.jpg', alt: 'Tom & Jerry "3"' }] }, { slug: 's' });
+  // markdown ![alt](path): the & and quotes stay literal (Astro escapes on render);
+  // escaping here would double-encode to &amp;amp;.
+  assert.match(out, /!\[Tom & Jerry "3"\]\(\.\/_images\/s\/p\.jpg\)/);
+  assert.ok(!/&amp;/.test(out), 'gallery alt must not be pre-escaped');
+});
+
 test('validateDoc rejects a figure whose base.file traverses', () => {
   assert.throws(() => validateDoc({ blocks: [{ id: 'f', type: 'figure', svg: '<svg></svg>', base: { file: '../../secret' } }] }), /figure image filename/i);
 });

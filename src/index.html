@@ -3637,21 +3637,11 @@
     </div>
   </div>
 
-  <!-- Shared dark dialog: replaces native prompt()/confirm() (alien in the PWA,
-       flaky in installed iOS web-apps). helmPrompt()/helmConfirm() drive it. -->
-  <div id="helmDlg" class="pp-overlay" hidden>
-    <div class="pp-card helm-dlg-card">
-      <div class="pp-head"><strong id="hdTitle"></strong><button class="pp-x" id="hdX" aria-label="Close">✕</button></div>
-      <div class="pp-body">
-        <p id="hdText" class="sub" style="display:none;margin:0 0 .6rem"></p>
-        <input id="hdInput" type="text" autocomplete="off" style="display:none" />
-      </div>
-      <div class="pp-foot">
-        <button class="btn ghost" id="hdCancel" type="button">Cancel</button>
-        <button class="btn" id="hdOk" type="button">OK</button>
-      </div>
-    </div>
-  </div>
+  <!-- #helmDlg (the shared confirm/prompt dialog) is defined at BODY LEVEL just
+       after the #v-editor section — NOT here — so it renders on every view. It
+       used to live inside #v-editor, which is display:none off the editor, so
+       helmConfirm()/helmPrompt() called from Posts/Settings/Share opened an
+       invisible 0x0 dialog. Keep it top-level. -->
 
   <div id="prepublishPanel" class="pp-overlay" hidden>
     <div class="pp-card">
@@ -3967,6 +3957,24 @@
   <!-- Existing series names (from listPosts) so the field autocompletes & names stay consistent -->
   <datalist id="seriesNames"></datalist>
 </section><!-- /#v-editor -->
+
+<!-- Shared dark dialog: replaces native prompt()/confirm() (alien in the PWA,
+     flaky in installed iOS web-apps). helmPrompt()/helmConfirm() drive it.
+     MUST live at body level (outside every .view section) so it renders on any
+     view — a .view is display:none unless active, which would hide it. -->
+<div id="helmDlg" class="pp-overlay" hidden>
+  <div class="pp-card helm-dlg-card">
+    <div class="pp-head"><strong id="hdTitle"></strong><button class="pp-x" id="hdX" aria-label="Close">✕</button></div>
+    <div class="pp-body">
+      <p id="hdText" class="sub" style="display:none;margin:0 0 .6rem"></p>
+      <input id="hdInput" type="text" autocomplete="off" style="display:none" />
+    </div>
+    <div class="pp-foot">
+      <button class="btn ghost" id="hdCancel" type="button">Cancel</button>
+      <button class="btn" id="hdOk" type="button">OK</button>
+    </div>
+  </div>
+</div>
 
 <!-- ===== EDITOR UX: slash menu / command palette / focus meter ===== -->
 <!-- Inline slash "/" insert menu (positioned at the caret) -->
@@ -5413,7 +5421,7 @@ async function expandBlog(){
   const body=$('draftText').value.trim();
   if(body.length<20){ msg('reviewMsg','Write or draft something first.','err'); return; }
   // NEVER auto-publish. Confirm, create a DRAFT (not live), then open it for review.
-  if(!confirm('Generate a long-form blog DRAFT from this?\n\nIt will NOT go live — you review, edit, and publish it yourself from Posts.')) return;
+  if(!await helmConfirm({ title:'Generate a long-form blog DRAFT from this?', text:'It will NOT go live — you review, edit, and publish it yourself from Posts.', okText:'Generate' })) return;
   msg('reviewMsg','Writing the long-form article (saving as a draft)…','busy');
   try{
     const r=await api('/expand',{method:'POST',body:JSON.stringify({idea:state.idea||body,post:body})});
@@ -5843,7 +5851,7 @@ async function addIdea(text){
   }catch(e){ showError(e,{ title:'Couldn’t save the idea', onRetry:()=>addIdea(t) }); }
 }
 async function delIdea(id){
-  if(!confirm('Delete this idea?')) return;
+  if(!await helmConfirm({ title:'Delete this idea?', okText:'Delete', danger:true })) return;
   try{ await api('/ideas/'+id,{method:'DELETE'}); _ideas=_ideas.filter(i=>String(i.id)!==String(id)); renderInbox(); }
   catch(e){ toast(e.message||'Could not delete'); }
 }
@@ -5946,7 +5954,7 @@ async function importDraftsFile(file){
   const r=D.parseDraftsFile(text);
   if(!r.ok){ msg('draftsMsg', r.error||'That file is not a Chapbook drafts export.','err'); return; }
   if(!r.count){ msg('draftsMsg','That export has no drafts in it.','err'); return; }
-  if(!confirm('Import '+r.count+' item'+(r.count===1?'':'s')+'?\n\nDrafts with the same id are overwritten; everything else is added alongside what’s already here.')) return;
+  if(!await helmConfirm({ title:'Import '+r.count+' item'+(r.count===1?'':'s')+'?', text:'Drafts with the same id are overwritten; everything else is added alongside what’s already here.', okText:'Import' })) return;
   try{
     let n=0;
     for(const s of D.DRAFT_STORES) for(const rec of (r.stores[s]||[])){ await S.put(s, rec); n++; }
@@ -5958,7 +5966,7 @@ $('draftsImportInput') && $('draftsImportInput').addEventListener('change',funct
 /* M9 — "Sign out / forget this device": wipe ALL Chapbook state (every localStorage
    namespace via the tested enumerator + the whole IndexedDB DB) then reload to the gate. */
 async function forgetThisDevice(){
-  if(!confirm('Sign out and forget this device?\n\nThis wipes EVERYTHING Chapbook has stored in this browser:\n• your GitHub token, AI keys and R2 keys\n• your licence\n• all local drafts, sessions, snapshots and ideas\n\nAnything already published to your GitHub repo or R2 bucket is safe. This cannot be undone — export your drafts first if you want to keep them.\n\nContinue?')) return;
+  if(!await helmConfirm({ title:'Sign out and forget this device?', text:'This wipes EVERYTHING Chapbook has stored in this browser:\n• your GitHub token, AI keys and R2 keys\n• your licence\n• all local drafts, sessions, snapshots and ideas\n\nAnything already published to your GitHub repo or R2 bucket is safe. This cannot be undone — export your drafts first if you want to keep them.\n\nContinue?', okText:'Sign out', danger:true })) return;
   const R=window.__studioReset;
   // 1. localStorage — every Chapbook namespace (config keys, licence, metric once-flags, …).
   try{
@@ -6305,14 +6313,14 @@ function initShareReview(){
 }
 window.initShareReview=initShareReview;
 async function togglePost(p){
-  if(!confirm(`${p.draft?'Publish':'Take down'} “${p.title||p.slug}”?`)) return;
+  if(!await helmConfirm({ title:`${p.draft?'Publish':'Take down'} “${p.title||p.slug}”?`, okText:p.draft?'Publish':'Take down', danger:!p.draft })) return;
   try{ await api(`/posts/${p.slug}/${p.draft?'republish':'takedown'}`,{method:'POST'}); await loadPosts(); }
-  catch(e){ alert(e.message); }
+  catch(e){ showError(e); }
 }
 /* Cancel a schedule: re-commit the post as a plain hidden draft (drops publishAt) so the
    site Action will never flip it. Re-publishes the existing block doc with draft:true. */
 async function unschedulePost(p){
-  if(!confirm(`Cancel the schedule for “${p.title||p.slug}”?\n\nIt stays a hidden draft (it won't go live on its own). You can edit or reschedule it any time.`)) return;
+  if(!await helmConfirm({ title:`Cancel the schedule for “${p.title||p.slug}”?`, text:"It stays a hidden draft (it won't go live on its own). You can edit or reschedule it any time.", okText:'Cancel schedule', danger:true })) return;
   try{
     const r = await api('/posts/'+p.slug+'/blocks');
     const d = (r && r.doc) || { version:1, blocks:[] };
@@ -6325,12 +6333,12 @@ async function unschedulePost(p){
 }
 window.unschedulePost = unschedulePost;
 async function dupPost(p){
-  if(!confirm(`Duplicate “${p.title||p.slug}” as a new draft?`)) return;
+  if(!await helmConfirm({ title:`Duplicate “${p.title||p.slug}” as a new draft?`, okText:'Duplicate' })) return;
   try{ const r=await api(`/posts/${p.slug}/duplicate`,{method:'POST'}); await loadPosts(); if(r&&r.slug) openBlockEditor(r.slug); }
-  catch(e){ alert(e.message); }
+  catch(e){ showError(e); }
 }
 async function delPost(p,row,btn){
-  if(!confirm(`Delete “${p.title||p.slug}” permanently? This removes it from the live site.`)) return;
+  if(!await helmConfirm({ title:`Delete “${p.title||p.slug}” permanently?`, text:'This removes it from the live site.', okText:'Delete', danger:true })) return;
   // Immediately freeze the row (spinner on Delete, siblings disabled) so the ~2s commit
   // can't be double-tapped into a 404. On success drop the row optimistically; a 404 means
   // it was already gone → also drop it (not an error). Any other failure re-enables + reports.
@@ -6439,7 +6447,7 @@ async function bulkSetDraft(makeDraft){
   const verb=makeDraft?'Take down':'Republish';
   const targets=_selPosts().filter(p=>!!p.draft!==makeDraft);
   if(!targets.length){ toast(makeDraft?'Nothing live to take down':'Nothing to republish'); return; }
-  if(!confirm(`${verb} ${targets.length} post${targets.length===1?'':'s'}?${makeDraft?'\n\nThey come off the live site.':'\n\nThey go live in ~2 minutes.'}`)) return;
+  if(!await helmConfirm({ title:`${verb} ${targets.length} post${targets.length===1?'':'s'}?`, text:makeDraft?'They come off the live site.':'They go live in ~2 minutes.', okText:verb, danger:makeDraft })) return;
   // run only over the targets (not the whole selection)
   const saved=new Set(_postSelect.sel); _postSelect.sel=new Set(targets.map(p=>p.slug));
   await runBulk(verb, async (p)=>{ await api(`/posts/${p.slug}/${makeDraft?'takedown':'republish'}`,{method:'POST'}); });
@@ -8281,10 +8289,10 @@ function renderRefsManager(){
     ol.appendChild(li);
   });
 }
-function deleteCitation(id){
+async function deleteCitation(id){
   const list = citationsArr();
   const used = citedIds().includes(id);
-  if(used && !confirm('This reference is cited in the text. Deleting it removes the citation marker(s) too. Continue?')) return;
+  if(used && !await helmConfirm({ title:'This reference is cited in the text.', text:'Deleting it removes the citation marker(s) too. Continue?', okText:'Delete', danger:true })) return;
   // remove markers from every block's html + live DOM
   for(const b of doc.blocks){
     if(b.type==='text' && b.html && b.html.includes('data-fn="'+id+'"')){
@@ -10942,7 +10950,7 @@ window.openBlockEditor = openBlockEditor;
    it (Restore — the default, since it's the newest) or Discard it and reload
    the published version. Never overwrites silently either way. */
 async function offerDraftRecovery(slug, savedAt){
-  const keep = confirm('You have unsaved changes from '+relTime(savedAt)+'.\n\nOK = keep your unsaved edits.\nCancel = discard them and load the last published version.');
+  const keep = await helmConfirm({ title:'You have unsaved changes from '+relTime(savedAt)+'.', text:'OK = keep your unsaved edits.\nCancel = discard them and load the last published version.' });
   if(keep){ markDirty(); return; } // re-flag dirty so the recovered work persists/guards
   // discard: delete the local autosave (DELETE /blocks), then re-fetch — which now
   // falls through to the last published version (sidecar/legacy), not the draft.
@@ -11343,7 +11351,7 @@ async function refreshUntitledRecovery(){
 window.refreshUntitledRecovery = refreshUntitledRecovery;
 
 async function discardUntitledDraft(){
-  if(!confirm('Discard the untitled draft? This can’t be undone.')) return;
+  if(!await helmConfirm({ title:'Discard the untitled draft?', text:'This can’t be undone.', okText:'Discard', danger:true })) return;
   try{ await api('/posts/'+PROVISIONAL_SLUG+'/blocks', { method:'DELETE' }); }catch{}
   _ownsProvisional = false;
   toast('Untitled draft discarded');
@@ -11712,7 +11720,7 @@ $('editorPublishBtn').addEventListener('click', async ()=>{
   setBusy(btn, true);
   // Run the pre-publish check; the panel gates the actual publish.
   try{ renderPrepublish(await runPrepublishCheck(), doPublish); }
-  catch(e){ if(confirm('Pre-publish check unavailable ('+(e.message||'error')+'). Publish anyway?')) doPublish(); }
+  catch(e){ if(await helmConfirm({ title:'Pre-publish check unavailable ('+(e.message||'error')+').', text:'Publish anyway?', okText:'Publish' })) doPublish(); }
   finally{ setBusy(btn, false); }
 });
 
@@ -11840,7 +11848,7 @@ async function renderHistory(){
 /* Restore is itself undoable: snapshot the CURRENT state first ("Before restore"),
    then load the chosen snapshot's doc+meta into the editor + persist it. */
 async function restoreVersion(v){
-  if(!confirm('Restore “'+(v.label||'Snapshot')+'” from '+relTime(v.ts)+'?\n\nYour current state is snapshotted first, so this is undoable.')) return;
+  if(!await helmConfirm({ title:'Restore “'+(v.label||'Snapshot')+'” from '+relTime(v.ts)+'?', text:'Your current state is snapshotted first, so this is undoable.', okText:'Restore' })) return;
   await snapshotCurrent('Before restore', { silent:true });
   doc = (v.doc && v.doc.blocks) ? structuredClone(v.doc) : { version:1, blocks:[] };
   meta = metaFromData(currentSlug, v.meta || {});
@@ -11899,7 +11907,7 @@ document.addEventListener('keydown', (e)=>{
 async function railTakedown(){
   if(!currentSlug){ toast('Save the post first'); return; }
   const isDraft = meta.draft;
-  if(!confirm(isDraft?'Republish to the live site?':'Take this post down?')) return;
+  if(!await helmConfirm({ title:isDraft?'Republish to the live site?':'Take this post down?', okText:isDraft?'Republish':'Take down', danger:!isDraft })) return;
   try{
     await api('/posts/'+currentSlug+'/'+(isDraft?'republish':'takedown'),{method:'POST'});
     meta.draft = !isDraft;
@@ -11918,7 +11926,7 @@ let _railDeleting=false;
 async function railDelete(){
   if(_railDeleting) return;                 // in-flight guard: no double-tap during the commit
   if(!currentSlug){ toast('Nothing to delete'); return; }
-  if(!confirm('Permanently delete this post from the live site?')) return;
+  if(!await helmConfirm({ title:'Permanently delete this post from the live site?', okText:'Delete', danger:true })) return;
   const slug=currentSlug;
   const btns=['railDeleteBtn','mRailDeleteBtn'].map($).filter(Boolean);
   _railDeleting=true; btns.forEach(b=>setBusy(b,true));
@@ -18147,7 +18155,7 @@ function initPartner(){
   $('ptUndo').addEventListener('click',async()=>{ if(!ptSession) return; const s=await api('/partner/'+ptSession); const v=(s.versions.length||1)-1; if(v<1){ toast('Nothing earlier to undo to'); return; } const r=await api('/partner/'+ptSession+'/revert',{method:'POST',body:JSON.stringify({version:v})}); ptAddMsg('ai','↩ reverted to turn '+v); await ptRenderDoc(r&&r.doc); });
   $('ptPublish').addEventListener('click',async()=>{ if(!ptSession) return;
     let _pubHost=''; { const _o=_siteOrigin(); if(_o){ try{ _pubHost=new URL(_o).host; }catch{} } }
-    if(!confirm('Publish this post to '+(_pubHost||'your blog')+' now?\n\nIt will be live in ~2 minutes. You can take it down again from Posts.')) return;
+    if(!await helmConfirm({ title:'Publish this post to '+(_pubHost||'your blog')+' now?', text:'It will be live in ~2 minutes. You can take it down again from Posts.', okText:'Publish' })) return;
     const r=await api('/partner/'+ptSession+'/publish',{method:'POST'});
     if(r.ok){ const src=(_ptLastText||'').slice(0,1500); await offerAnnounce(r.url, src); }
     else toast((r.errors||[]).map(e=>e.message).join('; ')); });

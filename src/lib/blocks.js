@@ -44,7 +44,13 @@ export function inlineHtmlToMd(html) {
   return s.replace(/[ \t]+/g, ' ').trim();
 }
 
-function escAttr(s) { return String(s || '').replace(/"/g, '&quot;'); }
+// HTML-attribute escaper. `&` MUST be first (so we don't double-encode the entities
+// we introduce next). Escaping `<`/`>` too keeps attribute values well-formed even
+// though a double-quoted value doesn't strictly require it. Used for every attribute
+// value we emit into raw HTML (src, alt, poster, iframe title, videoId-in-src …).
+// NOT for markdown `![alt]()` alt text — that is markdown context, not an HTML attr,
+// and the markdown engine escapes on render (see the gallery case below).
+function escAttr(s) { return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 function escHtml(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
 // ─── drag-to-resize (width + alignment) ─────────────────────────────────────
@@ -191,7 +197,11 @@ export function serialiseBlock(block, ctx = {}) {
     case 'gallery': {
       const imgs = (block.images || [])
         .filter((im) => im && im.file)
-        .map((im) => `![${escAttr(im.alt).replace(/[\[\]]/g, '')}](./_images/${ctx.slug || 'post'}/${im.file})`);
+        // Markdown `![alt](path)` — alt is markdown text, NOT an HTML attribute, so it
+        // must NOT be HTML-escaped here (the markdown engine escapes on render; escaping
+        // now would double-encode). Only neutralise what breaks the `![…](…)` syntax:
+        // strip brackets and collapse newlines.
+        .map((im) => `![${String(im.alt || '').replace(/[\[\]]/g, '').replace(/[\r\n]+/g, ' ').trim()}](./_images/${ctx.slug || 'post'}/${im.file})`);
       if (!imgs.length) return '';
       // Gallery images stay as markdown `![]()` so Astro's content-asset pipeline
       // resolves + optimises the co-located ./_images paths (a raw <img src="./_images">
