@@ -36,7 +36,6 @@
       "icons/icon.ico"
     ],
     "macOS": {
-      "signingIdentity": "Developer ID Application: Inayat Panda (G3RVS73AU3)",
       "minimumSystemVersion": "10.13"
     }
   }

@@ -12,6 +12,9 @@ name: Desktop release (Tauri)
 #   APPLE_ID                     your Apple ID email
 #   APPLE_APP_SPECIFIC_PASSWORD  app-specific password for notarization
 #   APPLE_TEAM_ID                your Apple Developer Team ID (G3RVS73AU3)
+#   APPLE_SIGNING_IDENTITY       "Developer ID Application: Inayat Panda (G3RVS73AU3)"
+# Without these, the mac build is produced UNSIGNED (still works). The Windows
+# .exe is always unsigned (no Windows cert). GITHUB_TOKEN is auto-provided.
 
 on:
   push:
@@ -57,10 +60,13 @@ jobs:
       - name: Build + (mac) sign & notarize
         uses: tauri-apps/tauri-action@v0
         env:
-          # macOS signing (values mirror the ortho-outcomes repo secrets)
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # macOS signing — all empty until the Apple secrets are added to THIS repo.
+          # Empty APPLE_SIGNING_IDENTITY => an UNSIGNED mac build (which still succeeds);
+          # set it (+ the cert secrets) to get a signed + notarized DMG.
           APPLE_CERTIFICATE: ${{ secrets.CSC_LINK }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: "Developer ID Application: Inayat Panda (G3RVS73AU3)"
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
