@@ -172,7 +172,10 @@ export function serialiseBlock(block, ctx = {}) {
       // An untouched template-guide heading keeps its guidance in the editor placeholder
       // (b.ph), not in text — skip it rather than emitting a bare "## ".
       const t = (block.text || '').trim();
-      return t ? `${'#'.repeat(Math.min(Math.max(block.level || 2, 2), 4))} ${t}` : '';
+      // escHtml the heading text: the published .md is rendered with rehype-raw (no
+      // sanitiser), so a heading like "<img src=x onerror=…>" would otherwise execute in
+      // every reader's browser. renderPreviewHtml already escapes it — publish must match.
+      return t ? `${'#'.repeat(Math.min(Math.max(block.level || 2, 2), 4))} ${escHtml(t)}` : '';
     }
     case 'text': return inlineHtmlToMd(block.html);
     case 'quote': {
@@ -203,10 +206,12 @@ export function serialiseBlock(block, ctx = {}) {
     }
     case 'embed': {
       const ra = resizeAttrs(block);
+      // videoId flows into a src="…" attribute — escAttr it (as preview does) so a crafted/
+      // imported id like `x" onload="…` can't break out of the attribute on the published page.
       if (block.provider === 'youtube' && block.videoId)
-        return `<div class="embed-16x9"${ra}>\n  <iframe src="https://www.youtube-nocookie.com/embed/${block.videoId}" title="${escAttr(block.title)}" loading="lazy" allowfullscreen></iframe>\n</div>`;
+        return `<div class="embed-16x9"${ra}>\n  <iframe src="https://www.youtube-nocookie.com/embed/${escAttr(block.videoId)}" title="${escAttr(block.title)}" loading="lazy" allowfullscreen></iframe>\n</div>`;
       if (block.provider === 'vimeo' && block.videoId)
-        return `<div class="embed-16x9"${ra}>\n  <iframe src="https://player.vimeo.com/video/${block.videoId}" title="${escAttr(block.title)}" loading="lazy" allowfullscreen></iframe>\n</div>`;
+        return `<div class="embed-16x9"${ra}>\n  <iframe src="https://player.vimeo.com/video/${escAttr(block.videoId)}" title="${escAttr(block.title)}" loading="lazy" allowfullscreen></iframe>\n</div>`;
       // A self-hosted <video> may carry a poster (still backdrop) + caption. It has no
       // sized container, so wrap it in a resizable figure only when sized or captioned;
       // otherwise emit the bare <video> exactly as before (byte-identical for old posts).
@@ -250,7 +255,9 @@ export function serialiseBlock(block, ctx = {}) {
       const rows = Array.isArray(block.rows) ? block.rows : [];
       if (!header.length && !rows.length) return '';
       const cols = header.length || Math.max(0, ...rows.map((r) => r.length));
-      const cell = (v) => String(v == null ? '' : v).replace(/\|/g, '\\|').replace(/\n/g, ' ').trim();
+      // escHtml each cell: table cells land verbatim in the published .md (rehype-raw, no
+      // sanitiser), so a cell "<img onerror=…>" would be stored XSS. Preview escapes them too.
+      const cell = (v) => escHtml(String(v == null ? '' : v).replace(/\|/g, '\\|').replace(/\n/g, ' ').trim());
       const pad = (r) => { const a = (r || []).map(cell); while (a.length < cols) a.push(''); return a.slice(0, cols); };
       const head = header.length ? header : (rows[0] || []);
       const body = header.length ? rows : rows.slice(1);
@@ -451,6 +458,8 @@ export function validateDoc(doc) {
   for (const b of doc.blocks) {
     if (!b || !KNOWN.has(b.type)) throw Object.assign(new Error(`unknown block type: ${b && b.type}`), { status: 400 });
     if (b.type === 'image' && !b.file && !b.base64 && !b.url) throw Object.assign(new Error('image block needs file, base64 or url'), { status: 400 });
+    // A base64 upload MUST carry a filename — else publishBlocks commits to `.../undefined`.
+    if (b.type === 'image' && b.base64 && !b.file) throw Object.assign(new Error('image with image data needs a filename'), { status: 400 });
     // url-mode reference (no fresh base64 upload): require a safe same-site image path.
     if (b.type === 'image' && b.url && !b.base64 && !isSafeImageRef(b.url))
       throw Object.assign(new Error('image reference must be a site image path under /images/posts/'), { status: 400 });
@@ -464,6 +473,10 @@ export function validateDoc(doc) {
       }
     }
     if (b.type === 'figure' && (typeof b.svg !== 'string' || b.svg.trim() === '')) throw Object.assign(new Error('figure block needs a non-empty svg string'), { status: 400 });
+    // A figure drawn over an uploaded image carries base.file — guard it like image.file
+    // (publishBlocks builds /images/posts/<slug>/<base.file>, so a "../.." would traverse).
+    if (b.type === 'figure' && b.base && b.base.file && isUnsafeFilename(b.base.file))
+      throw Object.assign(new Error('unsafe figure image filename'), { status: 400 });
     // A video block is a self-hosted clip on the user's OWN R2 — both the clip `url` and
     // the `poster` still must be safe public https URLs (validated as https refs, NOT the
     // filename-traversal guard which is for bare image filenames). Reject missing/non-https.

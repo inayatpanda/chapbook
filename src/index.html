@@ -3120,7 +3120,9 @@
     <div id="aiActiveLine" class="ai-active-line"></div>
     <div id="aiProviders"><p class="sub">Loading…</p></div>
 
-    <button class="btn" id="aiSaveBtn" onclick="saveSettings()">Save keys</button>
+    <!-- The global "Save keys" button was removed: with a single-key config it silently dropped a
+         key typed into a non-active card. Each provider card's own "Save &amp; use" is the correct,
+         unambiguous save (it activates that exact provider). -->
     <div id="settingsMsg" class="msg"></div>
     <p class="sub" style="margin-top:.6rem">Paste a key and tap <b>Save &amp; use</b> — Chapbook picks that provider's current model automatically. Keys are write-only (never shown again); save a new key before testing it.</p>
 
@@ -6721,12 +6723,15 @@ async function loadConnect(){
 window.loadConnect=loadConnect;
 
 /* ── settings → AI ──────────────────────────────────────────────────────── */
+// NB Ollama is intentionally NOT offered: the browser AI seam (src/seams/ai.js) deliberately
+// dropped it ("Ollama dropped"), so selecting it silently routed prompts to Anthropic. Removed
+// from the picker until the seam threads a local baseUrl. (The dead p.id==='ollama' branches in
+// renderSettings/saveSettings below are now unreachable but harmless.)
 const AI_PROVIDERS=[
   {id:'groq',     name:'Groq'},
   {id:'anthropic',name:'Anthropic (Claude)'},
   {id:'openai',   name:'OpenAI'},
   {id:'google',   name:'Gemini'},
-  {id:'ollama',   name:'Ollama (local)'},
 ];
 // Provider → OFFLINE-default model. Mirrors studio-app/core/aiDefaults.js
 // (AI_DEFAULT_MODELS) — keep the two in sync; the build sanity-checks they agree.
@@ -6971,7 +6976,8 @@ async function saveSettings(){
     }
     patch.providers[p.id]=pp;
   }
-  $('aiSaveBtn').disabled=true; msg('settingsMsg','Saving…','busy');
+  const _sb=$('aiSaveBtn'); if(_sb) _sb.disabled=true;   // global button removed; guard for any caller
+  msg('settingsMsg','Saving…','busy');
   try{
     let s=await api('/settings/ai',{method:'PUT',body:JSON.stringify(patch)});
     // Layer 2: the key is now stored, so a live /models query works. When the active provider
@@ -6991,7 +6997,7 @@ async function saveSettings(){
     $('settingsMsg').className='msg'; $('settingsMsg').textContent='';
     toast('Saved');
   }catch(e){ msg('settingsMsg',e.message,'err'); }
-  finally{ $('aiSaveBtn').disabled=false; }
+  finally{ if(_sb) _sb.disabled=false; }
 }
 window.saveSettings=saveSettings;
 
@@ -7498,6 +7504,12 @@ window.saveTopicsSettings = saveTopicsSettings;
 
 async function testProvider(id){
   const res=$('ai-result-'+id); if(!res) return;
+  // The AI seam only ever calls the ACTIVE provider (config holds one key), so a Test on any
+  // OTHER card would silently run against the active provider and falsely report ✓ under the
+  // wrong name. Only the active provider can be honestly tested.
+  if(id !== _aiDefault){
+    res.textContent='Tap “Save & use” on this provider first, then test.'; res.className='ai-result err'; return;
+  }
   // if a new key was typed but not saved, it won't be persisted yet
   const keyEl=$('ai-key-'+id);
   if(keyEl && keyEl.value.trim()){
@@ -8824,7 +8836,10 @@ async function chatSend(){
   } else {
     const last = doc.blocks[doc.blocks.length - 1];
     const lastEmpty = last && last.type === 'text' && !String(last.html || '').replace(/<[^>]+>/g, '').trim();
-    await importMarkdownText(t, lastEmpty ? last.id : null);
+    const added = await importMarkdownText(t, lastEmpty ? last.id : null);
+    // Import can fail (offline / server error / nothing to import) and add NOTHING. Only clear
+    // the box when it actually landed blocks — else the user's typed message is silently lost.
+    if(!added) return;
     chatRelease(true);   // import auto-binds its first block — a SENT message should leave the box free
   }
   inp.value = ''; chatAutosize();
@@ -8869,6 +8884,7 @@ function chatMoveBound(d){
   const i = doc.blocks.findIndex(x => x.id === _chatBound);
   const j = i + d;
   if(i < 0 || j < 0 || j >= doc.blocks.length) return;
+  pushHistory();   // a reorder is a structural change — put it on the ⌘Z stack (moveBlock/deleteBlock do)
   [doc.blocks[i], doc.blocks[j]] = [doc.blocks[j], doc.blocks[i]];
   markDirty(); chatPaint();
 }
@@ -8876,6 +8892,7 @@ async function chatDeleteBound(){
   const i = doc.blocks.findIndex(x => x.id === _chatBound);
   if(i < 0) return;
   if(!(await helmConfirm({ title: 'Delete this block?', okText: 'Delete', danger: true }))) return;
+  pushHistory();   // deleting a block is a structural change — undoable
   doc.blocks.splice(i, 1);
   chatRelease(true);
   markDirty(); renderBlocks();
@@ -10840,6 +10857,7 @@ window.enterNewPost = enterNewPost;
    start from (e.g. a chosen template, already id-reassigned). Defaults to a
    single empty text block — same as the old blank behaviour. */
 async function startNewPost(seedDoc){
+  chatRelease(true);         // clear any un-sent compose-bar text + binding from the PRIOR post — else the publish/schedule flush would splice it into this new post
   editorSection = 'write';   // a brand-new post belongs to the Write tab (back → New-post landing)
   currentSlug = null;
   _ownsProvisional = false;  // P3c: a fresh post claims the provisional slot only once it has content AND the slot is free
@@ -10887,6 +10905,7 @@ function metaFromData(slug, data){
 
 /* ── open block editor for an existing post ─────────────────────────────── */
 async function openBlockEditor(slug){
+  chatRelease(true);         // clear any un-sent compose-bar text + binding from the PRIOR post before loading this one
   editorSection = 'posts';   // editing an existing post belongs to the Posts tab (back → Posts list)
   currentSlug = slug;
   _ownsProvisional = false;  // P3c: editing a titled post never writes the provisional slot
@@ -11636,6 +11655,10 @@ function publishMeta(){
     series: (meta.series||'').trim() || undefined,
     seriesPart: ((meta.series||'').trim() && meta.seriesPart!=null && Number.isFinite(Number(meta.seriesPart))) ? Number(meta.seriesPart) : undefined,
     draft: meta.draft,
+    // Preserve a scheduled post's publishAt: without it, re-publishing a scheduled post via the
+    // main Publish button committed draft:true with NO publishAt → the cron never flips it and it
+    // stayed hidden forever. Keeping it means the schedule survives a re-publish.
+    publishAt: (meta.publishAt || '').trim() || undefined,
   };
 }
 async function doPublish(){
@@ -11746,7 +11769,7 @@ async function doSchedule(){
     showError(e, { title:'Couldn’t schedule', onRetry: doSchedule });
   }finally{ setBusy(btn, false); }
 }
-$('editorScheduleBtn').addEventListener('click', ()=>{ if(!meta.title.trim()){ toast('Title required'); return; } openSchedule(); });
+$('editorScheduleBtn').addEventListener('click', async ()=>{ if(!meta.title.trim()){ toast('Title required'); return; } if($('chatInput') && $('chatInput').value.trim()){ await chatSend(); } openSchedule(); });
 $('schClose').addEventListener('click', closeSchedule);
 $('schCancel').addEventListener('click', closeSchedule);
 $('schConfirm').addEventListener('click', doSchedule);
@@ -18917,6 +18940,11 @@ applyBrandName();
    localStorage. There is no server endpoint to hold the key. */
 const LIC_STORE='helm.studio.licence';
 const LIC_PUBKEY=(typeof window!=='undefined' && window.__LICENCE_PUBLIC_KEY)||'';
+// The Ed25519 signing key is SHARED across every RQAI product, so a valid signature alone is
+// not proof of a Chapbook licence — without this scope check a cheap key for ANY other product
+// (topp, consultantprep, …) would unlock Chapbook. Chapbook keys carry product 'studio'
+// (paid) or 'trial' (the 7-day trial, minted under the reserved 'trial' product).
+const LIC_PRODUCTS=['studio','trial'];
 
 function _b64urlToBytes(s){
   s=s.replace(/-/g,'+').replace(/_/g,'/'); const bin=atob(s);
@@ -19019,6 +19047,8 @@ async function verifyLicence(str){
     if(Number.isNaN(exp)) return {valid:false,reason:'malformed'};
     if(Date.now()>exp) return {valid:false,payload,reason:'expired'};
   }
+  // Product scope — a validly-signed key for a DIFFERENT RQAI product must not unlock Chapbook.
+  if(!LIC_PRODUCTS.includes(payload.product)) return {valid:false,payload,reason:'wrong-product'};
   return {valid:true,payload,reason:null};
 }
 
@@ -19032,7 +19062,7 @@ async function submitLicence(){
   const raw=($('licKey').value||'').trim();
   const r=await verifyLicence(raw);
   if(!r.valid){
-    const human={missing:'Enter your licence key.','not-configured':'Licensing is not configured on this build.',malformed:'That does not look like a valid key.','bad-signature':'This key failed verification.',expired:'This key has expired — contact the author to renew.'};
+    const human={missing:'Enter your licence key.','not-configured':'Licensing is not configured on this build.',malformed:'That does not look like a valid key.','bad-signature':'This key failed verification.',expired:'This key has expired — contact the author to renew.','wrong-product':'This key is for a different product, not Chapbook.'};
     msg('licMsg',human[r.reason]||('Invalid key ('+r.reason+').'),'err'); return;
   }
   // Newly entered key: await the revocation check before accepting (fails open — a

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import handler from '../../netlify/functions/trial-request.mjs';
+import handler, { canonicalEmail } from '../../netlify/functions/trial-request.mjs';
 
 // GITHUB_QUEUE_TOKEN is unset for these tests → the function is INERT once a
 // request passes validation, so an ACCEPTED product deterministically reaches the
@@ -75,4 +75,22 @@ test('CORS: evil origin (https://evil.example) is NOT allowed, no ACAO header', 
   }));
   assert.equal(res.status, 204);
   assert.equal(res.headers.get('access-control-allow-origin'), null);
+});
+
+
+// SEC-2: email canonicalisation for the dedup hash — aliases must collapse to one inbox.
+test('canonicalEmail strips +tag on any domain', () => {
+  assert.strictEqual(canonicalEmail('you+1@example.com'), 'you@example.com');
+  assert.strictEqual(canonicalEmail('you+anything.here@work.co.uk'), 'you@work.co.uk');
+});
+test('canonicalEmail collapses dots for gmail/googlemail only', () => {
+  assert.strictEqual(canonicalEmail('y.o.u@gmail.com'), 'you@gmail.com');
+  assert.strictEqual(canonicalEmail('y.o.u@googlemail.com'), 'you@googlemail.com');
+  assert.strictEqual(canonicalEmail('y.o.u@fastmail.com'), 'y.o.u@fastmail.com'); // dots kept off-gmail
+});
+test('canonicalEmail: gmail +tag AND dots both collapse (the abuse vector)', () => {
+  assert.strictEqual(canonicalEmail('j.a.n.e+trial7@gmail.com'), 'jane@gmail.com');
+});
+test('canonicalEmail leaves a plain address unchanged', () => {
+  assert.strictEqual(canonicalEmail('plain@example.com'), 'plain@example.com');
 });

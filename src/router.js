@@ -296,7 +296,12 @@ export function makeRouter(deps) {
     if (a === 'settings' && b === 'ai' && method === 'PUT') {
       const patch = {}; if (body.default) patch.aiProvider = body.default;
       const p = body.providers && body.default && body.providers[body.default];
-      if (p?.apiKey) patch.aiKey = p.apiKey; if (p?.model) patch.aiModel = p.model;
+      if (p?.apiKey) patch.aiKey = p.apiKey;
+      // Config holds ONE key for the active provider. Switching to a DIFFERENT provider with no
+      // new key must NOT carry the old provider's key over (it would 401 every call while the
+      // panel falsely showed "configured"). Clear it so the new provider starts keyless.
+      else if (body.default && body.default !== config.getAi().provider) patch.aiKey = '';
+      if (p?.model) patch.aiModel = p.model;
       config.save(patch); return aiStatus(); // fresh status so the panel reflects the save
     }
 
