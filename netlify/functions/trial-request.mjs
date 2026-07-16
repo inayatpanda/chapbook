@@ -27,6 +27,34 @@ const DEFAULT_QUEUE_REPO = 'inayatpanda/rqai-sales';
 // the delivery itself — a bad address just never receives the key.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Canonicalise an email for the DEDUP hash only (delivery still uses the typed address).
+// Without this, one inbox yields unlimited rolling 7-day trials via sub-addressing:
+// you+1@…, you+2@… and (on Gmail) y.o.u@… all reach the same mailbox but hash differently.
+// Collapse +tag on any domain and dots on gmail/googlemail so the per-address 422 dedup holds.
+export function canonicalEmail(e) {
+  const m = /^([^@]+)@(.+)$/.exec(String(e || ''));
+  if (!m) return String(e || '');
+  let local = m[1]; const domain = m[2];
+  const plus = local.indexOf('+'); if (plus >= 0) local = local.slice(0, plus);
+  if (domain === 'gmail.com' || domain === 'googlemail.com') local = local.replace(/\./g, '');
+  return local + '@' + domain;
+}
+
+// Best-effort in-memory throttle (per warm instance). Netlify spins many instances so this is
+// NOT a hard limit — the real abuse control is the canonical-email dedup above and the Helm
+// worker's ledger — but it blunts a single-instance flood. A Blobs-backed counter would be firmer.
+const _hits = new Map();
+function rateLimited(ip, limit = 20, windowMs = 3600_000) {
+  if (!ip) return false;
+  const now = _rlNow();
+  const rec = _hits.get(ip);
+  if (!rec || now - rec.start > windowMs) { _hits.set(ip, { start: now, n: 1 }); return false; }
+  rec.n += 1;
+  return rec.n > limit;
+}
+// Date.now indirection so this stays a pure module for any test harness that stubs time.
+const _rlNow = () => Date.now();
+
 // Only products we actually fulfil may be queued. An omitted product (null) is
 // still allowed — it means "no product", not an unknown one. Anything else is
 // rejected up front, before it is ever written to the queue or logged.
@@ -96,6 +124,12 @@ export default async function handler(req) {
     return json(400, { ok: false, error: 'invalid_email' }, origin);
   }
 
+  // Best-effort per-IP throttle (see rateLimited note).
+  const ip = (req.headers.get('x-nf-client-connection-ip') || req.headers.get('x-forwarded-for') || '').split(',')[0].trim();
+  if (rateLimited(ip)) {
+    return json(429, { ok: false, error: 'rate_limited', message: 'Too many trial requests — try again later.' }, origin);
+  }
+
   const token = process.env.GITHUB_QUEUE_TOKEN;
   if (!token) {
     console.error('[trial-request] INERT: GITHUB_QUEUE_TOKEN is not set — cannot queue.');
@@ -103,8 +137,10 @@ export default async function handler(req) {
   }
   const repo = process.env.QUEUE_REPO || DEFAULT_QUEUE_REPO;
 
-  // Path is a pure function of the (normalised) email → idempotent per address.
-  const id = createHash('sha256').update(email, 'utf8').digest('hex').slice(0, 32);
+  // Dedup path is a pure function of the CANONICAL email → one trial per real inbox
+  // (aliases collapse). Delivery still uses the typed `email`, so a non-sub-addressing
+  // provider still gets its key at the exact address entered.
+  const id = createHash('sha256').update(canonicalEmail(email), 'utf8').digest('hex').slice(0, 32);
   const record = { type: 'trial', email, product, ts: new Date().toISOString() };
 
   try {

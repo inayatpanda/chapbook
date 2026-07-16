@@ -194,3 +194,21 @@ test('Groq: with only non-chat heads present, pickLatest returns "" (caller fall
   const junk = GROQ_CATALOGUE.filter((m) => GROQ_FORBIDDEN.test(m.id) || m.id === 'allam-2-7b');
   assert.equal(pickLatestFromList('groq', junk), '');
 });
+
+// Reasoning-first Groq models must be excluded from auto-pick even though the name contains
+// a whitelisted family ('llama'/'qwen'), because they leak <think> scaffolding (stripThink).
+test('Groq: deepseek-r1-distill-llama-70b is NOT a text-model auto-pick candidate', () => {
+  assert.equal(isTextModel('groq', 'deepseek-r1-distill-llama-70b'), false);
+  assert.equal(isTextModel('groq', 'deepseek-r1-distill-qwen-32b'), false);
+  // a plain instruct llama still passes
+  assert.equal(isTextModel('groq', 'llama-3.3-70b-versatile'), true);
+});
+
+test('Groq: pickLatest skips a newest-but-reasoning deepseek and lands on a plain chat model', () => {
+  const list = [
+    { id: 'deepseek-r1-distill-llama-70b', created: 1760000000 }, // newest but reasoning → excluded
+    { id: 'llama-3.3-70b-versatile', created: 1757000000 },       // newest PLAIN chat → the pick
+    { id: 'whisper-large-v3', created: 1759000000 },
+  ];
+  assert.equal(pickLatestFromList('groq', list), 'llama-3.3-70b-versatile');
+});

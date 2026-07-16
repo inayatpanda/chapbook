@@ -181,3 +181,30 @@ test('M3: embed http:// poster is upgraded alongside the src', () => {
   const out = serialiseBlock({ id: 'e1', type: 'embed', provider: 'video', src: 'https://cdn.example.com/c.mp4', poster: 'http://cdn.example.com/p.jpg' });
   assert.match(out, /poster="https:\/\/cdn\.example\.com\/p\.jpg"/);
 });
+
+// ── bug-sweep remediation: publish-side XSS (table/heading/embed) + validateDoc guards ──
+test('serialise heading escapes HTML (no stored XSS in the published .md)', () => {
+  const out = serialiseBlock({ id: 'h', type: 'heading', level: 2, text: '<img src=x onerror=alert(1)>' });
+  assert.ok(!/<img/.test(out), 'raw <img> must not survive into the heading');
+  assert.match(out, /## &lt;img src=x onerror=alert\(1\)&gt;/);
+});
+
+test('serialise table cells escape HTML (no stored XSS)', () => {
+  const out = serialiseBlock({ id: 't', type: 'table', header: ['A', 'B'], rows: [['<script>alert(1)</script>', 'ok']] });
+  assert.ok(!/<script>/.test(out), 'raw <script> must not survive into a table cell');
+  assert.match(out, /&lt;script&gt;/);
+});
+
+test('serialise embed videoId is attribute-escaped (no breakout)', () => {
+  const out = serialiseBlock({ id: 'e', type: 'embed', provider: 'youtube', videoId: 'x" onload="alert(1)' });
+  assert.ok(!/videoId|onload="alert/.test(out.replace(/&quot;/g, '')) || /&quot;/.test(out), 'the double-quote must be escaped');
+  assert.match(out, /embed\/x&quot; onload=&quot;alert\(1\)/);
+});
+
+test('validateDoc rejects a figure whose base.file traverses', () => {
+  assert.throws(() => validateDoc({ blocks: [{ id: 'f', type: 'figure', svg: '<svg></svg>', base: { file: '../../secret' } }] }), /figure image filename/i);
+});
+
+test('validateDoc rejects an image that has base64 but no filename', () => {
+  assert.throws(() => validateDoc({ blocks: [{ id: 'i', type: 'image', base64: 'AAAA', alt: 'x' }] }), /filename/i);
+});

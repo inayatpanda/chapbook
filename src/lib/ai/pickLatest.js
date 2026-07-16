@@ -47,6 +47,10 @@ const EXCLUDE = [
   // 'compound' is an agentic wrapper (groq/compound[-mini]) — neither is a plain chat model,
   // so an auto-pick must never land on them.
   'orpheus', 'compound',
+  // Reasoning-first models leak <think>/analysis into the text (see stripThink) and burn the
+  // budget mid-reasoning — auto-pick must skip them even when the base name contains a
+  // whitelisted family (e.g. Groq's `deepseek-r1-distill-llama-70b` matches 'llama').
+  'deepseek', 'distill', 'r1-', '-r1',
   // previews / experiments / dated snapshots we don't want as the default
   'preview', 'experimental', '-exp', 'nightly', 'thinking', 'search',
 ];
