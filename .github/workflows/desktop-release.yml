@@ -104,3 +104,23 @@ jobs:
           releaseName: "Chapbook Desktop ${{ github.ref_name }}"
           releaseDraft: true
           prerelease: false
+
+      # Tauri notarizes the .app INSIDE the DMG but neither notarizes nor staples the
+      # DMG container itself (learned on desktop-v1.0.1: spctl rejects the DMG as
+      # "Unnotarized Developer ID" even though the app's ticket was Accepted). Submit
+      # the DMG for its own ticket, staple it, and replace the release asset so the
+      # download passes Gatekeeper offline. Runs only when signing env was configured.
+      - name: Notarize + staple the DMG container (mac, signed builds only)
+        if: matrix.platform == 'macos-latest' && env.APPLE_SIGNING_IDENTITY != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DMG=$(ls desktop/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg | head -1)
+          echo "Notarizing DMG container: $DMG"
+          xcrun notarytool submit "$DMG" --apple-id "$APPLE_ID" --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" --wait --timeout 30m
+          xcrun stapler staple "$DMG"
+          xcrun stapler validate "$DMG"
+          spctl -a -t install "$DMG"
+          gh release upload "${{ github.ref_name }}" "$DMG" --clobber
+          echo "Stapled DMG re-uploaded to ${{ github.ref_name }}"
