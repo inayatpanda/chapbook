@@ -1,0 +1,28 @@
+<section class="section trial" id="trial"><div class="mkt-wrap"><div class="card trial-card">
+  <p class="eyebrow">Free for 7 days</p>
+  <h2>Start your trial</h2>
+  <p>Enter your email and we will send a 7-day key. No card, one trial per person.</p>
+  <form class="trial-form" novalidate>
+    <input type="email" name="email" required autocomplete="email" placeholder="you@example.com" aria-label="Your email">
+    <button class="btn-primary" type="submit">Send my key</button>
+  </form>
+  <p class="trial-msg" role="status" aria-live="polite"></p>
+</div></div></section>
+<script>
+(function(){
+  var form = document.querySelector('.trial-form'); if(!form) return;
+  var msg = document.querySelector('.trial-msg');
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var email = form.email.value.trim();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ msg.textContent = 'Please enter a valid email address.'; return; }
+    msg.textContent = 'Sending…';
+    fetch('/.netlify/functions/trial-request', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: email, product: 'studio' })
+    }).then(function(r){ return r.json().catch(function(){ return {}; }).then(function(b){ return { ok:r.ok, b:b }; }); })
+      .then(function(res){ msg.textContent = res.ok && res.b.message ? res.b.message : (res.b.message || 'Something went wrong. Email support@rqai.co.uk and we will sort it.'); })
+      .catch(function(){ msg.textContent = 'Network error. Please try again, or email support@rqai.co.uk.'; });
+  });
+})();
+</script>

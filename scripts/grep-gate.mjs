@@ -65,6 +65,7 @@ const PATTERNS = [
 // Binary/asset extensions the text gate should not read.
 const SKIP_EXT = new Set([
   '.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.avif',
+  '.webm', '.mp4', '.mov', '.m4v', // marketing video loops (dist/media/loops) — binary, not text
   '.woff', '.woff2', '.ttf', '.otf', '.eot', '.map',
   '.dmg', '.exe', // staged installers in dist/downloads/ — binary, not text to gate
 ]);

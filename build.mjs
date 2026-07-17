@@ -8,6 +8,8 @@ import { readFileSync, writeFileSync, copyFileSync, mkdirSync, rmSync, readdirSy
 import { AI_DEFAULT_MODELS } from './src/core/aiDefaults.js';
 import { PUBLIC_KEY as LICENCE_PUBLIC_KEY } from './src/lib/licence-pubkey.js';
 import { assertInlineModulesParse } from './checkInlineModule.mjs';
+import { extractStripeUrl, extractLegalBlock, LEGAL_TITLES, renderLegalPage, injectMarketing } from './src/marketing/build-marketing.mjs';
+import { buildInstance } from './src/lib/playgrounds/index.js';
 
 const SRC = 'src';
 const DIST = 'dist';
@@ -122,27 +124,137 @@ console.log('device-flow client id:', GH_CLIENT_ID || '(none)');
 console.log('build stamp:', BUILD_STAMP || '(none — local build)');
 console.log('blog template:', `${TEMPLATE_OWNER}/${TEMPLATE_REPO}`);
 
-// (a) load the engine bundle before the inline module
-html = html.replace('</head>', '  <script type="module" src="./studio.js"></script>\n</head>');
+// (a) load the engine bundle before the inline module. Root-relative (/studio.js) so it
+//     resolves from the app doc's new home at /app/index.html (studio.js stays at dist root).
+html = html.replace('</head>', '  <script type="module" src="/studio.js"></script>\n</head>');
 
 // (b) api() delegates to the BYOK client router (window.__studioApi) in source, and
 //     the boot gate (window.__studioConfig.isReady()) is baked into index.html too,
 //     so no rewrite is needed here. Just sanity-check the client-router branch is present.
 if (!html.includes('if(window.__studioApi){')) throw new Error('build: api() no longer delegates to window.__studioApi — index.html changed?');
 
-// (c) assets are already root-relative in source — write index.html straight through.
-writeFileSync(`${DIST}/index.html`, html);
+// (c) The app now lives at /app. Assets stay root-relative at the dist root (studio.js,
+//     manifest.json, icons, fonts) so the app doc at /app/index.html loads them from '/'.
+mkdirSync(`${DIST}/app`, { recursive: true });
+writeFileSync(`${DIST}/app/index.html`, html);
+
+// ---- marketing shell inputs ----
+// Partials + tokens shared by every marketing page. _nav/_footer are stubs in Task 1
+// (fleshed out in Task 2); _trial is empty-safe until Task 7. The legal wrapper and the
+// live Stripe link + legal copy all come from single sources so nothing drifts.
+const MKT = `${SRC}/marketing`;
+const nav = readFileSync(`${MKT}/_nav.html`, 'utf8');
+const footer = readFileSync(`${MKT}/_footer.html`, 'utf8');
+const trial = readFileSync(`${MKT}/_trial.html`, 'utf8');
+const legalTpl = readFileSync(`${MKT}/legal.template.html`, 'utf8');
+const idxSrc = readFileSync(`${SRC}/index.html`, 'utf8');
+const STRIPE = extractStripeUrl(idxSrc);
+const PRICE = process.env.CHAPBOOK_PRICE || '£49';
+const YEAR = new Date().getUTCFullYear();
+const inject = (pageHtml) => injectMarketing(pageHtml, { nav, footer, trial, stripeUrl: STRIPE, price: PRICE, year: YEAR });
+
+// ---- /features live interactive: bake the REAL playground engine at build time ----
+// The neutral Aurora gradient preset is built through the same buildInstance() the Studio
+// uses, then rendered the way published blogs render a playground block (outer .playground
+// wrapper + scoped <style> + the family IIFE). That whole document becomes the srcdoc of a
+// sandbox="allow-scripts" iframe on /features: an opaque-origin, fully isolated frame whose
+// inline IIFE still runs (srcdoc inherits the page CSP's script-src 'unsafe-inline'; srcdoc
+// has no HTTP response so X-Frame-Options never applies). Newlines are collapsed so the whole
+// srcdoc lands on one attribute line; then it is HTML-attribute-escaped (& " < >) so the inner
+// markup and </script> cannot break out of the double-quoted srcdoc attribute.
+const pg = buildInstance('gradient-maker', { stops: ['#2dd4bf', '#22d3ee', '#818cf8'], angle: 100 }, 'pg-features');
+const pgSrcdoc =
+    '<!doctype html><html><head><meta charset="utf-8">'
+  + '<style>:root{color-scheme:dark}'
+  + 'body{margin:0;padding:16px;background:#0b1120;color:#e6edf7;'
+  + "font:15px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif}"
+  + pg.css + '</style></head><body>'
+  + `<div class="playground"><div id="${pg.domId}">${pg.html}</div></div>`
+  + `<script>${pg.js}</script></body></html>`;
+const escAttr = (s) => String(s)
+  .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const pgSrcdocAttr = escAttr(pgSrcdoc.replace(/\n/g, ' '));
+console.log('features: baked live interactive (gradient-maker/Aurora →', `${pgSrcdocAttr.length} chars srcdoc)`);
+
+// ---- marketing pages (each authored in its own task; guard-emit those that exist yet) ----
+for (const page of ['index.html', 'features.html', 'themes.html', 'pricing.html']) {
+  const p = `${MKT}/${page}`;
+  try {
+    let raw = readFileSync(p, 'utf8');
+    // /features carries a dedicated token for the baked interactive; fill it BEFORE the
+    // generic inject() so the srcdoc lands intact and inject()'s %%-pass leaves it alone.
+    // NB: a FUNCTION replacement, not a string — the baked JS contains `$$` (and could
+    // contain `$&`), which String.replaceAll would otherwise interpret as replacement
+    // patterns and mangle (turning `var $$=` into `var $=`, breaking the widget).
+    if (page === 'features.html') raw = raw.replaceAll('%%LIVE_INTERACTIVE_SRCDOC%%', () => pgSrcdocAttr);
+    writeFileSync(`${DIST}/${page}`, inject(raw));
+  } catch (e) { if (page === 'index.html') throw e; /* others land in later tasks */ }
+}
+
+// ---- legal pages, single-sourced from index.html's legal modal (never re-typed) ----
+for (const kind of ['privacy', 'terms', 'refunds']) {
+  const inner = extractLegalBlock(idxSrc, kind);
+  const page = renderLegalPage({ kind, title: LEGAL_TITLES[kind], inner, tpl: legalTpl, nav, footer, year: YEAR });
+  writeFileSync(`${DIST}/${kind}.html`, page);
+}
+console.log('legal pages: privacy/terms/refunds extracted from index.html ✓');
 
 // --- copy every other emitted file verbatim ---
 // Source paths are already root-relative, so manifest.json + sw.js are plain copies
 // (no more /studio/ → / rewriting). index.html is written above with config injected.
-for (const f of ['manifest.json', 'sw.js', 'studio.js', 'darkroom-upload.js', 'preview.css', 'resize.js', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icons-manifest.json', 'icons-sprite.svg', 'download.html']) {
+for (const f of ['manifest.json', 'sw.js', 'studio.js', 'darkroom-upload.js', 'preview.css', 'resize.js', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icons-manifest.json', 'icons-sprite.svg']) {
   copyFileSync(`${SRC}/${f}`, `${DIST}/${f}`);
 }
+
+// download.html is a marketing surface: run it through inject() (not a verbatim copy) so it
+// carries the SAME shared nav as every other page. It is self-styled, so it does NOT link
+// marketing.css — only its <!-- MKT:NAV --> marker is filled (its own footer stays bespoke).
+writeFileSync(`${DIST}/download.html`, inject(readFileSync(`${SRC}/download.html`, 'utf8')));
+
+// Shared marketing shell assets → dist root. marketing.css is the one visual language every
+// marketing page links; og-image.png is the committed Open Graph share card (1200x630).
+copyFileSync(`${MKT}/marketing.css`, `${DIST}/marketing.css`);
+copyFileSync(`${MKT}/og-image.png`, `${DIST}/og-image.png`);
+console.log('marketing shell: marketing.css + og-image.png → dist root');
+
+// SEO plumbing. The sitemap lists every crawlable marketing + legal route (not /app, a
+// private tool with no SEO value). robots allows the crawl, keeps /app out of the index
+// (advisory only — the app stays reachable), and points crawlers at the sitemap.
+const SITE = 'https://chapbook.rqai.co.uk';
+const pages = ['/', '/features', '/themes', '/pricing', '/download', '/privacy', '/terms', '/refunds'];
+const today = new Date().toISOString().slice(0, 10);
+writeFileSync(`${DIST}/sitemap.xml`,
+  '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+  pages.map((p) => `  <url><loc>${SITE}${p}</loc><lastmod>${today}</lastmod></url>`).join('\n') +
+  '\n</urlset>\n');
+writeFileSync(`${DIST}/robots.txt`,
+  `User-agent: *\nAllow: /\nDisallow: /app\nSitemap: ${SITE}/sitemap.xml\n`);
+console.log('SEO: sitemap.xml + robots.txt emitted');
 // vendored libs (exifr browser build) live in a subdir — preserve the path so the Darkroom
 // module's external `./vendor/exifr.esm.js` import resolves at the dist root too.
 mkdirSync(`${DIST}/vendor`, { recursive: true });
 copyFileSync(`${SRC}/vendor/exifr.esm.js`, `${DIST}/vendor/exifr.esm.js`);
+
+// Vendored blog-theme catalogue → dist/themes-css/ (Task 3). The exact CSS the published
+// blogs use (global.css + themes.css + 20 theme files + kids extras + theme fonts) plus the
+// themed sample post the /themes live switcher iframes. Copied as a tree so themes.css's
+// relative `@import './themes/<id>.css'` and fonts.css's /themes-css/fonts/ urls resolve.
+function copyTree(src, dst) {
+  mkdirSync(dst, { recursive: true });
+  for (const entry of readdirSync(src, { withFileTypes: true })) {
+    const s = `${src}/${entry.name}`, d = `${dst}/${entry.name}`;
+    if (entry.isDirectory()) copyTree(s, d); else copyFileSync(s, d);
+  }
+}
+copyTree(`${MKT}/themes-css`, `${DIST}/themes-css`);
+console.log('themes-css: vendored blog-theme catalogue copied to dist/themes-css/');
+
+// Marketing media (Task 5) — the /features video loops + framed app screenshots. Copied as a
+// tree so /media/loops/<name>.{webm,mp4,jpg} and /media/screens/*.png resolve root-relative.
+// Guarded: a missing or partial media dir must never fail the build (the loop pipeline can
+// fill it independently); pages reference the files lazily and degrade to their posters.
+try { copyTree(`${MKT}/media`, `${DIST}/media`); console.log('media: marketing loops/screens copied to dist/media/'); }
+catch (e) { console.log('media: none staged yet (parallel pipeline) — pages reference lazily'); }
 
 // Self-hosted fonts → dist/fonts/ (referenced by /fonts/*.woff2 @font-face in index.html).
 // Copy every .woff2; the OFL licence text files travel with them for attribution.
@@ -153,7 +265,11 @@ console.log('fonts:', readdirSync(`${SRC}/fonts`).filter((f) => f.endsWith('.wof
 // The product lives at chapbook.rqai.co.uk ONLY — Netlify serves the *.netlify.app name
 // too but never redirects it by itself, so enforce the canonical host here. (Netlify
 // _redirects host conditions: the 301! forces even though the file exists.)
+// Canonical-host 301 (Netlify serves the *.netlify.app name too but never redirects it
+// itself), plus an explicit /app rule so the app doc is served without a trailing-slash
+// bounce. No SPA catch-all: marketing/legal .html are served by Netlify pretty-URLs.
 writeFileSync(`${DIST}/_redirects`,
-  'https://inayat-studio.netlify.app/* https://chapbook.rqai.co.uk/:splat 301!\n');
+  'https://inayat-studio.netlify.app/* https://chapbook.rqai.co.uk/:splat 301!\n' +
+  '/app /app/index.html 200\n');
 console.log('canonical-host redirect: inayat-studio.netlify.app → chapbook.rqai.co.uk');
 console.log('emitted', DIST, '(deployable static site)');

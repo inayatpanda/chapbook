@@ -1,18 +1,18 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Chapbook",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "identifier": "uk.co.rqai.chapbook",
   "build": {
     "frontendDist": "../fallback",
-    "devUrl": "https://chapbook.rqai.co.uk"
+    "devUrl": "https://chapbook.rqai.co.uk/app"
   },
   "app": {
     "windows": [
       {
         "label": "main",
         "title": "Chapbook",
-        "url": "https://chapbook.rqai.co.uk",
+        "url": "https://chapbook.rqai.co.uk/app",
         "width": 1200,
         "height": 820,
         "minWidth": 720,

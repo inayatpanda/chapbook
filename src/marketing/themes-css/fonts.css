@@ -1,0 +1,26 @@
+/* Theme display/body serifs + kids body (vendored from chapbook-template).
+   Face list mirrors the template's src/styles/fonts.css verbatim, with urls
+   repointed at the vendored /themes-css/fonts/ copies. All self-hosted
+   (CSP font-src 'self'); font-display swap keeps unused faces free. */
+@font-face{font-family:'Fraunces';font-weight:400;font-display:swap;src:url('/themes-css/fonts/fraunces-latin-400-normal.woff2') format('woff2')}
+@font-face{font-family:'Fraunces';font-weight:600;font-display:swap;src:url('/themes-css/fonts/fraunces-latin-600-normal.woff2') format('woff2')}
+@font-face{font-family:'Fraunces';font-weight:700;font-display:swap;src:url('/themes-css/fonts/fraunces-latin-700-normal.woff2') format('woff2')}
+@font-face{font-family:'Fraunces';font-weight:900;font-display:swap;src:url('/themes-css/fonts/fraunces-latin-900-normal.woff2') format('woff2')}
+@font-face{font-family:'Fraunces';font-weight:400;font-style:italic;font-display:swap;src:url('/themes-css/fonts/fraunces-latin-400-italic.woff2') format('woff2')}
+@font-face{font-family:'Fraunces';font-weight:900;font-style:italic;font-display:swap;src:url('/themes-css/fonts/fraunces-latin-900-italic.woff2') format('woff2')}
+@font-face{font-family:'Newsreader';font-weight:400;font-display:swap;src:url('/themes-css/fonts/newsreader-latin-400-normal.woff2') format('woff2')}
+@font-face{font-family:'Newsreader';font-weight:600;font-display:swap;src:url('/themes-css/fonts/newsreader-latin-600-normal.woff2') format('woff2')}
+@font-face{font-family:'Newsreader';font-weight:400;font-style:italic;font-display:swap;src:url('/themes-css/fonts/newsreader-latin-400-italic.woff2') format('woff2')}
+@font-face{font-family:'Newsreader';font-weight:600;font-style:italic;font-display:swap;src:url('/themes-css/fonts/newsreader-latin-600-italic.woff2') format('woff2')}
+@font-face{font-family:'Fredoka';font-weight:400;font-display:swap;src:url('/themes-css/fonts/fredoka-latin-400-normal.woff2') format('woff2')}
+@font-face{font-family:'Fredoka';font-weight:500;font-display:swap;src:url('/themes-css/fonts/fredoka-latin-500-normal.woff2') format('woff2')}
+@font-face{font-family:'Fredoka';font-weight:600;font-display:swap;src:url('/themes-css/fonts/fredoka-latin-600-normal.woff2') format('woff2')}
+@font-face{font-family:'Fredoka';font-weight:700;font-display:swap;src:url('/themes-css/fonts/fredoka-latin-700-normal.woff2') format('woff2')}
+@font-face{font-family:'Atkinson Hyperlegible';font-weight:400;font-display:swap;src:url('/themes-css/fonts/atkinson-hyperlegible-latin-400-normal.woff2') format('woff2')}
+@font-face{font-family:'Atkinson Hyperlegible';font-weight:700;font-display:swap;src:url('/themes-css/fonts/atkinson-hyperlegible-latin-700-normal.woff2') format('woff2')}
+@font-face{font-family:'Atkinson Hyperlegible';font-weight:400;font-style:italic;font-display:swap;src:url('/themes-css/fonts/atkinson-hyperlegible-latin-400-italic.woff2') format('woff2')}
+/* Alias the variable families global.css names (--font-display/--font-body) to
+   Chapbook's self-hosted static weights, so the vendored global.css resolves
+   fully self-hosted without the template's @fontsource-variable packages. */
+@font-face{font-family:'Space Grotesk Variable';font-weight:500 700;font-display:swap;src:url('/fonts/space-grotesk-600.woff2') format('woff2')}
+@font-face{font-family:'Inter Variable';font-weight:400 600;font-display:swap;src:url('/fonts/inter-500.woff2') format('woff2')}

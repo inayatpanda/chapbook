@@ -1,0 +1,77 @@
+/* Chapbook marketing shell: the one shared visual language for every marketing page.
+   The @font-face block and :root tokens are copied VERBATIM from src/download.html so
+   the palette, type and focus discipline cannot drift; the rest are shared components
+   (nav, footer, headings, buttons, cards, sections) the pages compose. Self-hosted
+   faces only, no external hosts. */
+@font-face{font-family:'Inter';font-weight:400;font-style:normal;font-display:swap;src:url('/fonts/inter-400.woff2') format('woff2')}
+@font-face{font-family:'Inter';font-weight:500;font-style:normal;font-display:swap;src:url('/fonts/inter-500.woff2') format('woff2')}
+@font-face{font-family:'Inter';font-weight:600;font-style:normal;font-display:swap;src:url('/fonts/inter-600.woff2') format('woff2')}
+@font-face{font-family:'Space Grotesk';font-weight:600;font-style:normal;font-display:swap;src:url('/fonts/space-grotesk-600.woff2') format('woff2')}
+@font-face{font-family:'Space Grotesk';font-weight:700;font-style:normal;font-display:swap;src:url('/fonts/space-grotesk-700.woff2') format('woff2')}
+:root{--well:#05070e;--midnight:#0b1120;--paper:#e6edf7;--mist:rgba(230,237,247,.62);--faint:rgba(230,237,247,.38);--hairline:rgba(230,237,247,.09);--teal:#2dd4bf;--cyan:#22d0ee;--violet:#8b5cf6;--ink:#06121a}
+*{box-sizing:border-box;margin:0;padding:0}
+html{color-scheme:dark}
+body.mkt{font:400 16px/1.6 'Inter',system-ui,sans-serif;color:var(--paper);background:linear-gradient(180deg,var(--midnight) 0%,var(--well) 100%) fixed;min-height:100dvh;-webkit-font-smoothing:antialiased}
+.mkt a{color:var(--teal)}
+.mkt :focus-visible{outline:2px solid var(--teal);outline-offset:3px;border-radius:4px}
+.mkt-wrap{width:min(1080px,100% - 2*clamp(18px,5vw,48px));margin-inline:auto}
+/* nav */
+.mkt-nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(8px);background:rgba(11,17,32,.72);border-bottom:1px solid var(--hairline)}
+.mkt-nav .mkt-wrap{display:flex;align-items:center;gap:16px;padding-block:14px}
+.mkt-nav .lockup{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--paper);margin-right:auto}
+.mkt-nav .lockup img{width:26px;height:26px}
+.mkt-nav .lockup b{font:700 17px 'Space Grotesk',sans-serif;letter-spacing:-.01em}
+.mkt-nav a.lnk{font-size:14px;font-weight:500;color:var(--mist);text-decoration:none}
+.mkt-nav a.lnk[aria-current="page"],.mkt-nav a.lnk:hover{color:var(--teal)}
+.mkt-nav .cta{font:600 13.5px 'Inter',sans-serif;color:var(--ink);background:linear-gradient(90deg,var(--teal),var(--cyan));padding:8px 13px;border-radius:8px;text-decoration:none}
+/* Narrow screens: the link row wraps below the lockup+CTA instead of forcing the page
+   wider than the viewport. The lockup's auto right-margin keeps the CTA hard right on the
+   top line; the section links flow onto a centred second line. Every link stays reachable. */
+@media (max-width:600px){
+  .mkt-nav .mkt-wrap{flex-wrap:wrap;gap:9px 16px;padding-block:11px}
+  .mkt-nav a.lnk{order:1}
+}
+/* headings, buttons, cards, sections, eyebrow */
+.mkt h1{font:700 clamp(2.3rem,6vw,3.6rem)/1.06 'Space Grotesk',sans-serif;letter-spacing:-.025em}
+.mkt h2{font:700 clamp(1.5rem,3.4vw,2.2rem)/1.15 'Space Grotesk',sans-serif;letter-spacing:-.02em}
+.mkt .brand{background:linear-gradient(100deg,var(--teal),var(--cyan) 60%,var(--violet) 130%);-webkit-background-clip:text;background-clip:text;color:transparent}
+/* Buttons are anchors, so they must out-specify the generic `.mkt a` link colour
+   (0,1,1); scoping under `.mkt` (0,2,0) keeps the filled button's dark ink from being
+   repainted link-teal (teal-on-teal = invisible). The extra `.mkt a.btn-*` colour rule
+   (0,2,1) also beats every container-scoped anchor rule in this file (.mkt-foot a,
+   .mkt-nav a.lnk are 0,2,0/0,2,1 but element-gated), so a button keeps its label colour
+   wherever a page places it. */
+.mkt .btn-primary{display:inline-block;text-decoration:none;font:600 15px 'Inter',sans-serif;padding:12px 20px;border-radius:10px;color:var(--ink);background:linear-gradient(90deg,var(--teal),var(--cyan))}
+.mkt a.btn-primary{color:var(--ink)}
+.mkt .btn-primary:hover{filter:brightness(1.06)}
+.mkt .btn-ghost{display:inline-block;text-decoration:none;font:600 15px 'Inter',sans-serif;padding:12px 20px;border-radius:10px;color:var(--teal);border:1px solid rgba(45,212,191,.45)}
+.mkt a.btn-ghost{color:var(--teal)}
+.mkt .btn-ghost:hover{background:rgba(45,212,191,.1)}
+.eyebrow{font:600 12px 'Inter',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan)}
+.section{padding-block:clamp(48px,8vh,96px)}
+.card{border:1px solid var(--hairline);border-radius:14px;background:linear-gradient(180deg,rgba(230,237,247,.035),rgba(230,237,247,.012));padding:22px}
+/* trial: the shared 7-day email-capture partial (home + features + pricing).
+   Styles live here (not in the partial) so the one _trial.html injected on three pages
+   carries no duplicated <style>. The button is a real <button> here, so it must reset the
+   UA border/background that the anchor .btn-primary never has to. */
+.trial{padding-block:clamp(40px,7vh,84px)}
+.trial-card{max-width:560px;margin-inline:auto;text-align:center;padding:clamp(26px,4vw,36px);
+  background:linear-gradient(180deg,rgba(45,212,191,.08),rgba(139,92,246,.05));border-color:rgba(45,212,191,.24)}
+.trial-card .eyebrow{display:block;margin-bottom:12px}
+.trial-card h2{margin-bottom:10px}
+.trial-card > p{color:var(--mist);max-width:44ch;margin:0 auto 22px}
+.trial-form{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:440px;margin-inline:auto}
+.trial-form input[type=email]{flex:1 1 220px;min-width:0;font:400 15px 'Inter',sans-serif;color:var(--paper);
+  background:rgba(4,7,14,.5);border:1px solid var(--hairline);border-radius:10px;padding:12px 14px}
+.trial-form input[type=email]::placeholder{color:var(--faint)}
+.trial-form input[type=email]:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-color:transparent}
+.trial-form .btn-primary{flex:0 0 auto;border:0;cursor:pointer}
+.trial-msg{min-height:1.4em;margin-top:14px;font-size:14px;color:var(--mist)}
+.trial-msg:empty{margin-top:0;min-height:0}
+@media (max-width:460px){.trial-form .btn-primary{flex:1 1 100%}}
+/* footer */
+.mkt-foot{border-top:1px solid var(--hairline);margin-top:clamp(40px,8vh,80px)}
+.mkt-foot .mkt-wrap{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center;padding-block:24px;font-size:13px;color:var(--faint)}
+.mkt-foot a{color:var(--mist);text-decoration:none}
+.mkt-foot a:hover{color:var(--teal)}
+@media (prefers-reduced-motion:no-preference){/* entrance animations opt-in per page */}
