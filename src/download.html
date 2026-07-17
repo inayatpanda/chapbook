@@ -12,6 +12,7 @@
 <meta property="og:title" content="Download Chapbook">
 <meta property="og:description" content="Desktop apps for macOS and Windows, or straight in the browser. Your blog, wherever you write.">
 <meta property="og:image" content="https://chapbook.rqai.co.uk/icon-512.png">
+<link rel="stylesheet" href="/marketing.css">
 <style>
   /* Self-hosted faces only (no external hosts; matches the app's font set). */
   @font-face{font-family:'Inter';font-weight:400;font-style:normal;font-display:swap;src:url('/fonts/inter-400.woff2') format('woff2')}
@@ -47,15 +48,6 @@
 
   .wrap{width:min(1020px,100% - 2*clamp(18px,5vw,48px));margin-inline:auto}
 
-  /* ---------- header ---------- */
-  header{padding-block:26px}
-  header .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px}
-  .lockup{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--paper)}
-  .lockup img{width:30px;height:30px}
-  .lockup b{font:600 19px 'Space Grotesk',sans-serif;letter-spacing:-.01em}
-  .openlink{font-size:14px;font-weight:500;text-decoration:none;color:var(--mist)}
-  .openlink:hover{color:var(--teal)}
-
   /* ---------- hero ---------- */
   main{flex:1}
   .hero{padding-block:clamp(30px,7vh,64px) clamp(26px,5vh,44px)}
@@ -74,7 +66,7 @@
     display:grid;grid-template-columns:repeat(3,1fr);gap:16px;
     padding-block:8px 8px;
   }
-  .card{
+  .edition{
     position:relative;
     display:grid;grid-template-columns:32px 1fr;
     border:1px solid var(--hairline);border-radius:14px;
@@ -82,8 +74,8 @@
     overflow:hidden;
     transition:transform .16s ease,border-color .16s ease;
   }
-  .card:hover{transform:translateY(-2px);border-color:rgba(230,237,247,.2)}
-  .card.here{border-color:rgba(45,212,191,.55);box-shadow:0 0 0 1px rgba(45,212,191,.35),0 12px 34px -18px rgba(34,208,238,.35)}
+  .edition:hover{transform:translateY(-2px);border-color:rgba(230,237,247,.2)}
+  .edition.here{border-color:rgba(45,212,191,.55);box-shadow:0 0 0 1px rgba(45,212,191,.35),0 12px 34px -18px rgba(34,208,238,.35)}
   /* spine: real book anatomy, platform name set vertically, native editions
      take the icon's violet spine, the browser edition its teal pages */
   .spine{
@@ -91,7 +83,7 @@
     border-right:1px solid rgba(5,7,14,.5);
     background:linear-gradient(180deg,#7c4ff0,#5b34c9);
   }
-  .card[data-plat="web"] .spine{background:linear-gradient(180deg,var(--teal),#0e9488)}
+  .edition[data-plat="web"] .spine{background:linear-gradient(180deg,var(--teal),#0e9488)}
   .spine span{
     writing-mode:vertical-rl;transform:rotate(180deg);
     font:600 10px 'Inter',sans-serif;letter-spacing:.22em;
@@ -104,7 +96,7 @@
     color:var(--ink);background:linear-gradient(90deg,var(--teal),var(--cyan));
     padding:3px 9px;border-radius:99px;
   }
-  .card.here .chip{display:inline-block}
+  .edition.here .chip{display:inline-block}
   .cover h2{font:600 19px/1.25 'Space Grotesk',sans-serif;letter-spacing:-.01em}
   .cover p{font-size:14px;color:var(--mist);flex:1}
   .meta{font-size:12.5px;color:var(--faint);font-variant-numeric:tabular-nums}
@@ -116,11 +108,11 @@
     transition:background .16s ease,color .16s ease;
   }
   .btn:hover{background:rgba(45,212,191,.1)}
-  .card.here .btn{
+  .edition.here .btn{
     color:var(--ink);border-color:transparent;
     background:linear-gradient(90deg,var(--teal),var(--cyan));
   }
-  .card.here .btn:hover{filter:brightness(1.07)}
+  .edition.here .btn:hover{filter:brightness(1.07)}
 
   /* ---------- fine print ---------- */
   .fine{margin-top:clamp(30px,6vh,52px);border-top:1px solid var(--hairline);padding-block:26px 8px}
@@ -151,11 +143,11 @@
 
   /* one orchestrated entrance; nothing moves for reduced-motion readers */
   @media (prefers-reduced-motion:no-preference){
-    .card{opacity:0;transform:translateY(10px);animation:rise .45s ease forwards}
-    .card:nth-child(2){animation-delay:.07s}
-    .card:nth-child(3){animation-delay:.14s}
+    .edition{opacity:0;transform:translateY(10px);animation:rise .45s ease forwards}
+    .edition:nth-child(2){animation-delay:.07s}
+    .edition:nth-child(3){animation-delay:.14s}
     @keyframes rise{to{opacity:1;transform:none}}
-    .card.here:hover{transform:translateY(-2px)}
+    .edition.here:hover{transform:translateY(-2px)}
   }
 </style>
 </head>
@@ -173,7 +165,7 @@
 
     <section class="editions" aria-label="Ways to get Chapbook">
 
-      <article class="card" data-plat="mac">
+      <article class="edition" data-plat="mac">
         <div class="spine" aria-hidden="true"><span>macOS</span></div>
         <div class="cover">
           <span class="chip">For this Mac</span>
@@ -184,7 +176,7 @@
         </div>
       </article>
 
-      <article class="card" data-plat="win">
+      <article class="edition" data-plat="win">
         <div class="spine" aria-hidden="true"><span>Windows</span></div>
         <div class="cover">
           <span class="chip">For this PC</span>
@@ -195,7 +187,7 @@
         </div>
       </article>
 
-      <article class="card" data-plat="web">
+      <article class="edition" data-plat="web">
         <div class="spine" aria-hidden="true"><span>Browser</span></div>
         <div class="cover">
           <span class="chip">For this device</span>
@@ -248,7 +240,7 @@
   else if (/Win/i.test(plat)) { pick = 'win'; }
   else if (plat) { pick = 'web'; }               // Linux, ChromeOS, the rest
   if (pick) {
-    var card = document.querySelector('.card[data-plat="' + pick + '"]');
+    var card = document.querySelector('.edition[data-plat="' + pick + '"]');
     if (card) {
       card.classList.add('here');
       if (chip) card.querySelector('.chip').textContent = chip;
