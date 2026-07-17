@@ -9,6 +9,7 @@ import { AI_DEFAULT_MODELS } from './src/core/aiDefaults.js';
 import { PUBLIC_KEY as LICENCE_PUBLIC_KEY } from './src/lib/licence-pubkey.js';
 import { assertInlineModulesParse } from './checkInlineModule.mjs';
 import { extractStripeUrl, extractLegalBlock, LEGAL_TITLES, renderLegalPage, injectMarketing } from './src/marketing/build-marketing.mjs';
+import { buildInstance } from './src/lib/playgrounds/index.js';
 
 const SRC = 'src';
 const DIST = 'dist';
@@ -152,11 +153,42 @@ const PRICE = process.env.CHAPBOOK_PRICE || '£49';
 const YEAR = new Date().getUTCFullYear();
 const inject = (pageHtml) => injectMarketing(pageHtml, { nav, footer, trial, stripeUrl: STRIPE, price: PRICE, year: YEAR });
 
+// ---- /features live interactive: bake the REAL playground engine at build time ----
+// The neutral Aurora gradient preset is built through the same buildInstance() the Studio
+// uses, then rendered the way published blogs render a playground block (outer .playground
+// wrapper + scoped <style> + the family IIFE). That whole document becomes the srcdoc of a
+// sandbox="allow-scripts" iframe on /features: an opaque-origin, fully isolated frame whose
+// inline IIFE still runs (srcdoc inherits the page CSP's script-src 'unsafe-inline'; srcdoc
+// has no HTTP response so X-Frame-Options never applies). Newlines are collapsed so the whole
+// srcdoc lands on one attribute line; then it is HTML-attribute-escaped (& " < >) so the inner
+// markup and </script> cannot break out of the double-quoted srcdoc attribute.
+const pg = buildInstance('gradient-maker', { stops: ['#2dd4bf', '#22d3ee', '#818cf8'], angle: 100 }, 'pg-features');
+const pgSrcdoc =
+    '<!doctype html><html><head><meta charset="utf-8">'
+  + '<style>:root{color-scheme:dark}'
+  + 'body{margin:0;padding:16px;background:#0b1120;color:#e6edf7;'
+  + "font:15px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif}"
+  + pg.css + '</style></head><body>'
+  + `<div class="playground"><div id="${pg.domId}">${pg.html}</div></div>`
+  + `<script>${pg.js}</script></body></html>`;
+const escAttr = (s) => String(s)
+  .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const pgSrcdocAttr = escAttr(pgSrcdoc.replace(/\n/g, ' '));
+console.log('features: baked live interactive (gradient-maker/Aurora →', `${pgSrcdocAttr.length} chars srcdoc)`);
+
 // ---- marketing pages (each authored in its own task; guard-emit those that exist yet) ----
 for (const page of ['index.html', 'features.html', 'themes.html', 'pricing.html']) {
   const p = `${MKT}/${page}`;
-  try { writeFileSync(`${DIST}/${page}`, inject(readFileSync(p, 'utf8'))); }
-  catch (e) { if (page === 'index.html') throw e; /* others land in later tasks */ }
+  try {
+    let raw = readFileSync(p, 'utf8');
+    // /features carries a dedicated token for the baked interactive; fill it BEFORE the
+    // generic inject() so the srcdoc lands intact and inject()'s %%-pass leaves it alone.
+    // NB: a FUNCTION replacement, not a string — the baked JS contains `$$` (and could
+    // contain `$&`), which String.replaceAll would otherwise interpret as replacement
+    // patterns and mangle (turning `var $$=` into `var $=`, breaking the widget).
+    if (page === 'features.html') raw = raw.replaceAll('%%LIVE_INTERACTIVE_SRCDOC%%', () => pgSrcdocAttr);
+    writeFileSync(`${DIST}/${page}`, inject(raw));
+  } catch (e) { if (page === 'index.html') throw e; /* others land in later tasks */ }
 }
 
 // ---- legal pages, single-sourced from index.html's legal modal (never re-typed) ----
@@ -216,6 +248,13 @@ function copyTree(src, dst) {
 }
 copyTree(`${MKT}/themes-css`, `${DIST}/themes-css`);
 console.log('themes-css: vendored blog-theme catalogue copied to dist/themes-css/');
+
+// Marketing media (Task 5) — the /features video loops + framed app screenshots. Copied as a
+// tree so /media/loops/<name>.{webm,mp4,jpg} and /media/screens/*.png resolve root-relative.
+// Guarded: a missing or partial media dir must never fail the build (the loop pipeline can
+// fill it independently); pages reference the files lazily and degrade to their posters.
+try { copyTree(`${MKT}/media`, `${DIST}/media`); console.log('media: marketing loops/screens copied to dist/media/'); }
+catch (e) { console.log('media: none staged yet (parallel pipeline) — pages reference lazily'); }
 
 // Self-hosted fonts → dist/fonts/ (referenced by /fonts/*.woff2 @font-face in index.html).
 // Copy every .woff2; the OFL licence text files travel with them for attribution.
