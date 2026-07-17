@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chapbook features - composer, interactives, and one-click publish</title>
+<meta name="description" content="Everything Chapbook does: a chat-style composer, twelve block types, a photo darkroom, live interactive widgets, an AI partner that uses your own keys, a social planner, and one-click publishing to a GitHub repo you own.">
+<link rel="canonical" href="https://chapbook.rqai.co.uk/features">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Chapbook features - composer, interactives, and one-click publish">
+<meta property="og:description" content="A chat-style composer, twelve block types, live interactives, an AI partner on your own keys, and one-click publishing to a blog you own.">
+<meta property="og:url" content="https://chapbook.rqai.co.uk/features">
+<meta property="og:image" content="/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/marketing.css">
+<style>
+/* ---- features: page intro ------------------------------------------------- */
+.feat-hero{padding-bottom:clamp(20px,3vh,34px)}
+.feat-hero h1{max-width:16ch;margin-bottom:16px}
+.feat-hero p{color:var(--mist);max-width:52ch;font-size:clamp(1rem,1.3vw,1.14rem)}
+.feat-jump{display:flex;flex-wrap:wrap;gap:8px 10px;margin-top:22px}
+.feat-jump a{font:600 13px 'Inter',sans-serif;color:var(--mist);text-decoration:none;
+  border:1px solid var(--hairline);border-radius:999px;padding:6px 13px}
+.feat-jump a:hover{color:var(--teal);border-color:rgba(45,212,191,.4)}
+
+/* ---- the alternating feature row ----------------------------------------- */
+.feat{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,4vw,56px);align-items:center}
+.feat + .feat{margin-top:clamp(26px,4vw,44px)}
+.feat-copy .eyebrow{display:block;margin-bottom:12px}
+.feat-copy h2{margin-bottom:14px}
+.feat-copy h3.feat-sub-h{font:650 1.28rem 'Space Grotesk',sans-serif;letter-spacing:-.01em;margin-bottom:12px}
+.feat-copy p{color:var(--mist);max-width:46ch;line-height:1.6}
+.feat-copy p + p{margin-top:12px}
+.feat-media{border:1px solid var(--hairline);border-radius:16px;overflow:hidden;
+  background:#0a0f1c;box-shadow:0 34px 80px -46px rgba(0,0,0,.9)}
+.feat-media > * + *{border-top:1px solid var(--hairline)}
+.feat-media video,.feat-media img{display:block;width:100%;height:auto}
+.feat.rev .feat-copy{order:2}
+@media (max-width:820px){
+  .feat{grid-template-columns:1fr}
+  .feat.rev .feat-copy{order:0}
+  .feat-copy p{max-width:none}
+}
+
+/* ---- the live interactive ------------------------------------------------- */
+.pg-lead{max-width:60ch}
+.pg-lead .eyebrow{display:block;margin-bottom:12px}
+.pg-lead h2{margin-bottom:14px}
+.pg-lead p{color:var(--mist)}
+.live-pg{display:block;width:100%;height:400px;margin:22px 0 10px;border:1px solid var(--hairline);
+  border-radius:14px;background:#0b1120;box-shadow:0 34px 80px -46px rgba(0,0,0,.9)}
+.pg-note{font-size:.9rem;color:var(--faint);max-width:56ch}
+@media (max-width:520px){.live-pg{height:440px}}
+
+/* ---- the publish flow diagram (pure CSS, no external asset) --------------- */
+.flow{list-style:none;display:flex;flex-wrap:wrap;align-items:stretch;justify-content:center;
+  gap:10px;padding:0;margin:26px auto 0;max-width:900px}
+.flow-step{flex:1 1 150px;min-width:140px;max-width:220px;text-align:center;padding:18px 14px;
+  border:1px solid var(--hairline);border-radius:13px;
+  background:linear-gradient(180deg,rgba(230,237,247,.045),rgba(230,237,247,.012))}
+.flow-ico{display:inline-grid;place-items:center;width:36px;height:36px;margin-bottom:10px;
+  border-radius:10px;font-size:17px;color:var(--ink);background:linear-gradient(135deg,var(--teal),var(--cyan))}
+.flow-step b{display:block;font:650 1.02rem 'Space Grotesk',sans-serif;letter-spacing:-.01em}
+.flow-step .flow-cap{display:block;margin-top:5px;font-size:.82rem;color:var(--mist);line-height:1.4}
+.flow-link{flex:0 0 30px;align-self:center;position:relative;height:2px;border-radius:2px;
+  background:var(--hairline)}
+.flow-dot{position:absolute;top:50%;left:0;width:8px;height:8px;margin-top:-4px;border-radius:50%;
+  background:var(--cyan);box-shadow:0 0 10px 1px var(--cyan);opacity:0}
+@media (max-width:640px){
+  .flow{flex-direction:column;align-items:center}
+  .flow-step{width:100%;max-width:300px}
+  .flow-link{width:2px;height:22px;flex-basis:22px}
+}
+@media (prefers-reduced-motion:no-preference){
+  .flow-step{animation:flowGlow 8s ease-in-out infinite;animation-play-state:var(--flow-play,running)}
+  .flow-step:nth-child(3){animation-delay:2s}
+  .flow-step:nth-child(5){animation-delay:4s}
+  .flow-step:nth-child(7){animation-delay:6s}
+  .flow-dot{animation:flowDot 8s ease-in-out infinite;animation-play-state:var(--flow-play,running)}
+  .flow-link:nth-child(2) .flow-dot{animation-delay:1s}
+  .flow-link:nth-child(4) .flow-dot{animation-delay:3s}
+  .flow-link:nth-child(6) .flow-dot{animation-delay:5s}
+  @keyframes flowGlow{
+    0%,7%{border-color:var(--hairline);box-shadow:none}
+    12%,22%{border-color:rgba(45,212,191,.55);box-shadow:0 0 0 1px rgba(45,212,191,.28),0 18px 42px -26px rgba(45,212,191,.75)}
+    30%,100%{border-color:var(--hairline);box-shadow:none}}
+  @keyframes flowDot{
+    0%,7%{opacity:0;left:0}
+    12%{opacity:1;left:0}
+    22%{opacity:1;left:calc(100% - 8px)}
+    27%,100%{opacity:0;left:calc(100% - 8px)}}
+}
+
+/* ---- phone story ---------------------------------------------------------- */
+.phones{display:flex;flex-wrap:wrap;gap:clamp(14px,3vw,26px);justify-content:center;margin-top:28px}
+.phone{width:min(216px,60vw);border:9px solid #0f1728;border-radius:30px;overflow:hidden;
+  background:#000;box-shadow:0 40px 90px -46px rgba(0,0,0,.95)}
+.phone img{display:block;width:100%;height:auto}
+</style>
+</head><body class="mkt">
+<!-- MKT:NAV -->
+<main>
+
+<section class="section feat-hero"><div class="mkt-wrap">
+  <p class="eyebrow">A tour of Chapbook</p>
+  <h1>Every part of the write to publish loop</h1>
+  <p>Chapbook is a local-first blog writing app. It turns a quick note into a real post, then commits it to a GitHub repo and Pages site that are yours. Here is what that looks like, feature by feature.</p>
+  <nav class="feat-jump" aria-label="Jump to a feature">
+    <a href="#composer">Composer</a>
+    <a href="#blocks">Blocks and media</a>
+    <a href="#interactives">Interactives</a>
+    <a href="#ai">AI partner</a>
+    <a href="#share">Share and planner</a>
+    <a href="#publish">Publish</a>
+    <a href="#phone">On your phone</a>
+  </nav>
+</div></section>
+
+<section class="section" id="composer"><div class="mkt-wrap">
+  <div class="feat">
+    <div class="feat-copy">
+      <p class="eyebrow">Chat composer</p>
+      <h2>Write like you are texting a friend</h2>
+      <p>Type a thought and send it. Each message becomes a block you can reorder, restyle or split. Twelve block types are a tap away, and the chat bar keeps the writing feeling light.</p>
+      <p>Every draft stays on your device until you decide to publish. Nothing leaves your machine without you asking.</p>
+    </div>
+    <div class="feat-media">
+      <video class="loop" muted loop playsinline preload="none" poster="/media/loops/write-a-post.jpg" aria-label="A note turning into a published post"><source src="/media/loops/write-a-post.webm" type="video/webm"><source src="/media/loops/write-a-post.mp4" type="video/mp4"></video>
+    </div>
+  </div>
+</div></section>
+
+<section class="section" id="blocks"><div class="mkt-wrap">
+  <div class="feat rev">
+    <div class="feat-copy">
+      <p class="eyebrow">Blocks and media</p>
+      <h2>Twelve block types, plus a darkroom for your photos</h2>
+      <p>Headings, quotes, code, galleries, tables, embeds and more. The built-in Darkroom resizes photos right in your browser and commits them straight to your repo.</p>
+      <p>Longer clips live in your own R2 bucket and stream into the post, so a video never bloats the page or the repo.</p>
+    </div>
+    <div class="feat-media">
+      <video class="loop" muted loop playsinline preload="none" poster="/media/loops/flipbook.jpg" aria-label="A hand-drawn flipbook animation dropped into a post"><source src="/media/loops/flipbook.webm" type="video/webm"><source src="/media/loops/flipbook.mp4" type="video/mp4"></video>
+      <img src="/media/screens/05-darkroom-1280.png" width="1280" height="800" loading="lazy" decoding="async" alt="The Darkroom uploader: pick a post, drop a batch of photos, and commit them to your repo">
+    </div>
+  </div>
+</div></section>
+
+<section class="section" id="interactives"><div class="mkt-wrap">
+  <div class="pg-lead">
+    <p class="eyebrow">Interactives</p>
+    <h2>Drop in something readers can actually play with</h2>
+    <p>Chapbook ships live widgets you configure with a form, no code. Here is one running exactly as it would on your published post. Drag the angle and copy the CSS.</p>
+  </div>
+  <iframe class="live-pg" title="Live interactive demo: a gradient maker" loading="lazy" sandbox="allow-scripts" srcdoc="%%LIVE_INTERACTIVE_SRCDOC%%"></iframe>
+  <p class="pg-note">This is live, not a video. It renders from the same engine that draws the widget on your published page.</p>
+
+  <div class="feat rev" style="margin-top:clamp(30px,5vw,52px)">
+    <div class="feat-copy">
+      <h3 class="feat-sub-h">A glyph for every idea</h3>
+      <p>Search 5093 icons and place one in a heading or a card. Pick clean flat 2D, or an extruded 3D wireframe when a page wants a little depth.</p>
+    </div>
+    <div class="feat-media">
+      <img src="/media/screens/04-glyph-3d-1280.png" width="1280" height="800" loading="lazy" decoding="async" alt="The glyph picker showing 5093 icons with a 2D flat and 3D wireframe toggle">
+    </div>
+  </div>
+</div></section>
+
+<section class="section" id="ai"><div class="mkt-wrap">
+  <div class="feat">
+    <div class="feat-copy">
+      <p class="eyebrow">AI partner</p>
+      <h2>An editor on call, using your own keys</h2>
+      <p>Bring a key from the provider you already pay for. Chapbook adds a writing Partner, a line-by-line Editor, a playful Goblin, and a Social pack that reshapes one post for each platform.</p>
+      <p>Your keys stay in your browser and never touch a server. If a model name changes upstream, the request heals itself, so a draft never fails on a renamed model.</p>
+    </div>
+    <div class="feat-media">
+      <video class="loop" muted loop playsinline preload="none" poster="/media/loops/share-social.jpg" aria-label="One draft fanning out into platform-tuned social posts"><source src="/media/loops/share-social.webm" type="video/webm"><source src="/media/loops/share-social.mp4" type="video/mp4"></video>
+    </div>
+  </div>
+</div></section>
+
+<section class="section" id="share"><div class="mkt-wrap">
+  <div class="feat rev">
+    <div class="feat-copy">
+      <p class="eyebrow">Share and planner</p>
+      <h2>Plan the rollout, stay in control of every post</h2>
+      <p>Queue posts for LinkedIn, Instagram and X, tune the wording per platform, and mark each one shared once it is out.</p>
+      <p>Nothing posts automatically. The planner lines up the work, and you always press the button.</p>
+    </div>
+    <div class="feat-media">
+      <img src="/media/screens/06-social-planner-1280.png" width="1280" height="800" loading="lazy" decoding="async" alt="The Social Planner with planned LinkedIn and Instagram posts, each with a date and a Share action">
+    </div>
+  </div>
+</div></section>
+
+<section class="section" id="publish"><div class="mkt-wrap">
+  <div class="pg-lead">
+    <p class="eyebrow">Publish</p>
+    <h2>One click, one commit, live on a blog you own</h2>
+    <p>Publishing writes a single atomic commit to your own GitHub repository. A Pages Action builds the site and your post goes live at your own address. No middle server ever holds your words.</p>
+  </div>
+  <ol class="flow" aria-label="From composer to a live post: write, commit, build, publish">
+    <li class="flow-step"><span class="flow-ico" aria-hidden="true">&#9998;</span><b>Composer</b><span class="flow-cap">Write the post</span></li>
+    <li class="flow-link" aria-hidden="true"><span class="flow-dot"></span></li>
+    <li class="flow-step"><span class="flow-ico" aria-hidden="true">&#9095;</span><b>Commit</b><span class="flow-cap">Atomic push to your repo</span></li>
+    <li class="flow-link" aria-hidden="true"><span class="flow-dot"></span></li>
+    <li class="flow-step"><span class="flow-ico" aria-hidden="true">&#9881;</span><b>Action</b><span class="flow-cap">A Pages build runs</span></li>
+    <li class="flow-link" aria-hidden="true"><span class="flow-dot"></span></li>
+    <li class="flow-step"><span class="flow-ico" aria-hidden="true">&#9673;</span><b>Live post</b><span class="flow-cap">On your own address</span></li>
+  </ol>
+</div></section>
+
+<section class="section" id="phone"><div class="mkt-wrap">
+  <div class="pg-lead">
+    <p class="eyebrow">On your phone</p>
+    <h2>Install it like an app and write from anywhere</h2>
+    <p>Add Chapbook to your home screen as a progressive web app. Capture a note on the move, attach a photo, and publish from your pocket. The same drafts are waiting when you get back to the desktop.</p>
+  </div>
+  <div class="phones">
+    <div class="phone"><img src="/media/screens/01-composer-390.png" width="390" height="844" loading="lazy" decoding="async" alt="Chapbook composer on a phone"></div>
+    <div class="phone"><img src="/media/screens/02-posts-390.png" width="390" height="844" loading="lazy" decoding="async" alt="The posts manager on a phone"></div>
+    <div class="phone"><img src="/media/screens/05-darkroom-390.png" width="390" height="844" loading="lazy" decoding="async" alt="The photo darkroom on a phone"></div>
+  </div>
+</div></section>
+
+<section class="section" id="get"><div class="mkt-wrap" style="text-align:center">
+  <p class="eyebrow">Ready when you are</p>
+  <h2>Start writing on a blog that is yours</h2>
+  <div class="hero-cta" style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:20px">
+    <a class="btn-primary" href="/pricing#trial">Try Chapbook free</a>
+    <a class="btn-ghost" href="%%STRIPE_BUY_URL%%">%%PRICE%%/yr</a>
+  </div>
+</div></section>
+
+<!-- MKT:TRIAL -->
+</main>
+<!-- MKT:FOOTER -->
+<script>
+/* Lazy-play the feature loops: start a muted loop only when it scrolls into view, and
+   never at all under reduced motion (the poster stands in). Pauses when scrolled away. */
+(function(){
+  var vids = document.querySelectorAll('video.loop');
+  if(!vids.length) return;
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!('IntersectionObserver' in window)){ return; }
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      var v = en.target;
+      if(en.isIntersecting && !reduce){ v.play().catch(function(){}); }
+      else { v.pause(); }
+    });
+  }, { threshold: .25 });
+  vids.forEach(function(v){ io.observe(v); });
+})();
+/* Pause the publish-diagram animation while the tab is hidden. */
+(function(){
+  var flow = document.querySelector('.flow');
+  if(!flow) return;
+  function sync(){ flow.style.setProperty('--flow-play', document.hidden ? 'paused' : 'running'); }
+  document.addEventListener('visibilitychange', sync);
+  sync();
+})();
+</script>
+</body></html>
