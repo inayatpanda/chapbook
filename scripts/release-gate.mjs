@@ -30,7 +30,7 @@
 // SKIP never fails the gate, but is surfaced in the summary.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
@@ -97,14 +97,26 @@ function run(args, opts = {}) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Extract the SHELL array literal from the LOCAL dist/sw.js. We assert against
-// the artifact that will actually deploy.
-function readShell() {
-  const sw = readFileSync(join(REPO_ROOT, 'dist', 'sw.js'), 'utf8');
+// the artifact that will actually deploy. Accepts optional `swText` so the parser
+// is unit-testable (release-gate.test.mjs) without touching the filesystem; when
+// omitted it reads the real dist/sw.js.
+export function readShell(swText) {
+  const sw = swText ?? readFileSync(join(REPO_ROOT, 'dist', 'sw.js'), 'utf8');
   const m = sw.match(/const\s+SHELL\s*=\s*\[([\s\S]*?)\]/);
   if (!m) throw new Error('SHELL array not found in dist/sw.js');
   const paths = [...m[1].matchAll(/['"]([^'"]+)['"]/g)].map((x) => x[1]);
   if (!paths.length) throw new Error('SHELL array is empty in dist/sw.js');
   return paths;
+}
+
+// Extract the CACHE name from the LOCAL dist/sw.js so check8 tracks the current
+// cache version (v6 now, and every future bump) instead of a hardcoded literal.
+// Accepts optional `swText` for the same test reasons as readShell().
+export function readCacheName(swText) {
+  const sw = swText ?? readFileSync(join(REPO_ROOT, 'dist', 'sw.js'), 'utf8');
+  const m = sw.match(/const\s+CACHE\s*=\s*['"]([^'"]+)['"]/);
+  if (!m) throw new Error('CACHE name not found in dist/sw.js');
+  return m[1];
 }
 
 // Check 1 — every URL in the SW shell returns 200 on the deploy.
@@ -225,24 +237,26 @@ async function check5_grepGate() {
   return pass(5, 'grep-gate over dist/ is clean', last || 'exit 0');
 }
 
-// Check 6 — no `buy.stripe.com/test_` in served `/` HTML; the live link IS present.
+// Check 6 — the live Stripe link is present on BOTH `/` (home CTA, Task 4) AND
+// `/pricing` (Task 7), and `buy.stripe.com/test_` appears on NEITHER. After the
+// /app migration `/` is the marketing home, so both surfaces must carry the live
+// checkout link (Task 1 review follow-up, controller-mandated).
 async function check6_stripe(origin) {
-  try {
-    const res = await fetchT(new URL('/', origin).href);
-    if (res.status !== 200) return fail(6, 'Stripe: live link present, no test link', `/ returned ${res.status}`);
-    const html = await res.text();
-    const hasTest = html.includes(TEST_STRIPE_PREFIX);
-    const hasLive = html.includes(LIVE_STRIPE_LINK);
-    if (hasTest || !hasLive) {
-      const why = [];
-      if (hasTest) why.push(`found forbidden ${TEST_STRIPE_PREFIX}`);
-      if (!hasLive) why.push(`live link ${LIVE_STRIPE_LINK} MISSING`);
-      return fail(6, 'Stripe: live link present, no test link', why.join('; '));
+  const NAME = 'Stripe: live link on / and /pricing, no test link';
+  const bad = [];
+  for (const p of ['/', '/pricing']) {
+    try {
+      const res = await fetchT(new URL(p, origin).href);
+      if (res.status !== 200) { bad.push(`${p} → ${res.status}`); continue; }
+      const html = await res.text();
+      if (html.includes(TEST_STRIPE_PREFIX)) bad.push(`${p} has forbidden ${TEST_STRIPE_PREFIX}`);
+      if (!html.includes(LIVE_STRIPE_LINK)) bad.push(`${p} missing live link ${LIVE_STRIPE_LINK}`);
+    } catch (e) {
+      bad.push(`${p} → ${errStr(e)}`);
     }
-    return pass(6, 'Stripe: live link present, no test link', 'live link present, no test link');
-  } catch (e) {
-    return fail(6, 'Stripe: live link present, no test link', errStr(e));
   }
+  if (bad.length) return fail(6, NAME, bad.join('; '));
+  return pass(6, NAME, 'live link present on / and /pricing; no test link on either');
 }
 
 // Check 7 — every shipped template passes validateDoc (runs the templates test suite).
@@ -254,6 +268,66 @@ async function check7_templates() {
   }
   const m = stdout.match(/# pass (\d+)/);
   return pass(7, 'templates pass validateDoc', m ? `${m[1]} test(s) pass` : 'exit 0');
+}
+
+// Check 10 — every marketing + legal page returns 200 with the security headers,
+// the sitemap is valid XML, and the trial CTA is present on `/` and `/pricing`.
+async function check10_marketing(origin) {
+  const pages = ['/', '/features', '/themes', '/pricing', '/download', '/privacy', '/terms', '/refunds'];
+  const bad = [];
+  for (const p of pages) {
+    try {
+      const res = await fetchT(new URL(p, origin).href);
+      if (res.status !== 200) { bad.push(`${p} → ${res.status}`); continue; }
+      const missing = REQUIRED_HEADERS.filter((h) => !res.headers.get(h));
+      if (missing.length) bad.push(`${p} missing ${missing.join(',')}`);
+    } catch (e) { bad.push(`${p} → ${errStr(e)}`); }
+  }
+  // sitemap valid + trial CTA present on pricing + home
+  try {
+    const sm = await fetchT(new URL('/sitemap.xml', origin).href);
+    const smx = await sm.text();
+    if (!smx.startsWith('<?xml') || !smx.includes('<loc>')) bad.push('sitemap.xml invalid');
+    for (const p of ['/', '/pricing']) {
+      const h = await (await fetchT(new URL(p, origin).href)).text();
+      if (!h.includes('functions/trial-request') && !h.includes('href="#trial"') && !h.includes('/pricing#trial')) bad.push(`${p} has no trial CTA`);
+    }
+  } catch (e) { bad.push(`sitemap/CTA: ${errStr(e)}`); }
+  if (bad.length) return fail(10, 'Marketing pages: 200 + headers + sitemap + trial CTA', bad.join(' | '));
+  return pass(10, 'Marketing pages: 200 + headers + sitemap + trial CTA', `${pages.length} pages OK`);
+}
+
+// Check 11 — no U+2014 em-dash in the AUTHORED marketing copy. Reads LOCAL dist
+// HTML. Legal pages (privacy/terms/refunds) are excluded: they are extracted
+// verbatim from index.html's app modal, whose legal prose legitimately uses
+// em-dashes; this lint targets the hand-authored marketing pages only.
+async function check11_noEmDash() {
+  const files = ['index.html', 'features.html', 'themes.html', 'pricing.html', 'download.html'];
+  const bad = [];
+  for (const f of files) {
+    try { if (readFileSync(join(REPO_ROOT, 'dist', f), 'utf8').includes('—')) bad.push(f); } catch { /* absent → skip */ }
+  }
+  if (bad.length) return fail(11, 'No em-dash in visible marketing copy', `found in ${bad.join(', ')}`);
+  return pass(11, 'No em-dash in visible marketing copy', `${files.length} pages clean`);
+}
+
+// Check 12 — the app doc is reachable end-to-end: `/app` and `/app/index.html`
+// BOTH return 200 with a `text/html` content-type. This validates the `_redirects`
+// `/app → /app/index.html 200` rule in a real deploy, complementing check1's shell
+// sweep (Task 1 review follow-up, controller-mandated).
+async function check12_appDoc(origin) {
+  const NAME = '/app + /app/index.html → 200 text/html';
+  const bad = [];
+  for (const p of ['/app', '/app/index.html']) {
+    try {
+      const res = await fetchT(new URL(p, origin).href);
+      if (res.status !== 200) { bad.push(`${p} → ${res.status}`); continue; }
+      const ct = res.headers.get('content-type') || '';
+      if (!ct.includes('text/html')) bad.push(`${p} content-type "${ct}" (not text/html)`);
+    } catch (e) { bad.push(`${p} → ${errStr(e)}`); }
+  }
+  if (bad.length) return fail(12, NAME, bad.join('; '));
+  return pass(12, NAME, 'both serve text/html (200)');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -317,9 +391,19 @@ async function buildSanitiserHarness() {
   return out.outputFiles[0].text;
 }
 
-// Check 8 — SW activation: active worker + caches includes 'chapbook-v1'.
+// Check 8 — SW activation: active worker + caches includes the current CACHE name.
+// The cache name is read dynamically from dist/sw.js so this tracks v6 and every
+// future bump automatically (no hardcoded literal to rot).
 async function check8_swActivation(origin, page) {
-  await page.goto(new URL('/', origin).href, { waitUntil: 'load', timeout: 30000 });
+  let cacheName;
+  try {
+    cacheName = readCacheName();
+  } catch (e) {
+    return fail(8, 'SW activation + cache present', `could not read CACHE from dist/sw.js: ${errStr(e)}`);
+  }
+  const NAME = `SW activation + '${cacheName}' cache`;
+  // The app now lives at /app; register + install the SW from there.
+  await page.goto(new URL('/app', origin).href, { waitUntil: 'load', timeout: 30000 });
   // Poll for an active worker + the named cache (install caches the shell async).
   const deadline = Date.now() + 20000;
   let state = { hasActive: false, caches: [] };
@@ -334,14 +418,14 @@ async function check8_swActivation(origin, page) {
       try { keys = await caches.keys(); } catch { /* Cache API unsupported */ }
       return { hasActive, caches: keys };
     });
-    if (state.hasActive && state.caches.includes('chapbook-v1')) break;
+    if (state.hasActive && state.caches.includes(cacheName)) break;
     await new Promise((r) => setTimeout(r, 750));
   }
-  if (!state.hasActive) return fail(8, 'SW activation + chapbook-v1 cache', 'no active service worker after 20s');
-  if (!state.caches.includes('chapbook-v1')) {
-    return fail(8, 'SW activation + chapbook-v1 cache', `active worker but caches.keys()=[${state.caches.join(', ')}] lacks 'chapbook-v1'`);
+  if (!state.hasActive) return fail(8, NAME, 'no active service worker after 20s');
+  if (!state.caches.includes(cacheName)) {
+    return fail(8, NAME, `active worker but caches.keys()=[${state.caches.join(', ')}] lacks '${cacheName}'`);
   }
-  return pass(8, 'SW activation + chapbook-v1 cache', "active worker; caches includes 'chapbook-v1'");
+  return pass(8, NAME, `active worker; caches includes '${cacheName}'`);
 }
 
 // Check 9 — MANDATORY XSS assertion. Drive the app's sanitiseHtml (via blocks.js
@@ -423,9 +507,11 @@ async function check9_xss(origin, page) {
 
 async function runBrowserChecks(origin) {
   const driver = await resolveBrowser();
+  // Static label for the SKIP/error records where the dynamic cache name is not to hand.
+  const SW_NAME = 'SW activation + cache present';
   if (!driver) {
     const msg = 'needs a headless browser (playwright/puppeteer) in node_modules — run the Task 15 headless check';
-    skip(8, 'SW activation + chapbook-v1 cache', `SKIP (needs browser) — ${msg}`);
+    skip(8, SW_NAME, `SKIP (needs browser) — ${msg}`);
     skip(9, 'XSS: onerror/onload neutralised (MANDATORY)', `SKIP — REQUIRED manual check — Task 15 (${msg})`);
     return;
   }
@@ -433,14 +519,14 @@ async function runBrowserChecks(origin) {
   try {
     session = await driver.open();
   } catch (e) {
-    skip(8, 'SW activation + chapbook-v1 cache', `SKIP (browser launch failed) — Task 15: ${errStr(e)}`);
+    skip(8, SW_NAME, `SKIP (browser launch failed) — Task 15: ${errStr(e)}`);
     skip(9, 'XSS: onerror/onload neutralised (MANDATORY)', `SKIP — REQUIRED manual check — Task 15 (browser launch failed: ${errStr(e)})`);
     return;
   }
   try {
     await check8_swActivation(origin, session.page);
   } catch (e) {
-    fail(8, 'SW activation + chapbook-v1 cache', errStr(e));
+    fail(8, SW_NAME, errStr(e));
   }
   try {
     await check9_xss(origin, session.page);
@@ -481,6 +567,9 @@ async function main() {
   await check5_grepGate();
   await check6_stripe(origin);
   await check7_templates();
+  await check10_marketing(origin);
+  await check11_noEmDash();
+  await check12_appDoc(origin);
 
   console.log('(B) Browser checks');
   await runBrowserChecks(origin);
@@ -510,8 +599,18 @@ async function main() {
   process.exit(0);
 }
 
-main().catch((e) => {
-  // Last-resort guard — the gate must never crash with an unhandled rejection.
-  console.error(`\nrelease-gate: unexpected error — ${errStr(e)}`);
-  process.exit(1);
-});
+// Only run the gate when this file is executed directly (`node scripts/release-gate.mjs`),
+// NOT when imported by release-gate.test.mjs for unit-testing the pure parsers.
+function isDirectRun() {
+  try {
+    return !!process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch { return false; }
+}
+
+if (isDirectRun()) {
+  main().catch((e) => {
+    // Last-resort guard — the gate must never crash with an unhandled rejection.
+    console.error(`\nrelease-gate: unexpected error — ${errStr(e)}`);
+    process.exit(1);
+  });
+}
