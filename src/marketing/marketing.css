@@ -1,0 +1,43 @@
+/* Chapbook marketing shell: the one shared visual language for every marketing page.
+   The @font-face block and :root tokens are copied VERBATIM from src/download.html so
+   the palette, type and focus discipline cannot drift; the rest are shared components
+   (nav, footer, headings, buttons, cards, sections) the pages compose. Self-hosted
+   faces only, no external hosts. */
+@font-face{font-family:'Inter';font-weight:400;font-style:normal;font-display:swap;src:url('/fonts/inter-400.woff2') format('woff2')}
+@font-face{font-family:'Inter';font-weight:500;font-style:normal;font-display:swap;src:url('/fonts/inter-500.woff2') format('woff2')}
+@font-face{font-family:'Inter';font-weight:600;font-style:normal;font-display:swap;src:url('/fonts/inter-600.woff2') format('woff2')}
+@font-face{font-family:'Space Grotesk';font-weight:600;font-style:normal;font-display:swap;src:url('/fonts/space-grotesk-600.woff2') format('woff2')}
+@font-face{font-family:'Space Grotesk';font-weight:700;font-style:normal;font-display:swap;src:url('/fonts/space-grotesk-700.woff2') format('woff2')}
+:root{--well:#05070e;--midnight:#0b1120;--paper:#e6edf7;--mist:rgba(230,237,247,.62);--faint:rgba(230,237,247,.38);--hairline:rgba(230,237,247,.09);--teal:#2dd4bf;--cyan:#22d0ee;--violet:#8b5cf6;--ink:#06121a}
+*{box-sizing:border-box;margin:0;padding:0}
+html{color-scheme:dark}
+body.mkt{font:400 16px/1.6 'Inter',system-ui,sans-serif;color:var(--paper);background:linear-gradient(180deg,var(--midnight) 0%,var(--well) 100%) fixed;min-height:100dvh;-webkit-font-smoothing:antialiased}
+.mkt a{color:var(--teal)}
+.mkt :focus-visible{outline:2px solid var(--teal);outline-offset:3px;border-radius:4px}
+.mkt-wrap{width:min(1080px,100% - 2*clamp(18px,5vw,48px));margin-inline:auto}
+/* nav */
+.mkt-nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(8px);background:rgba(11,17,32,.72);border-bottom:1px solid var(--hairline)}
+.mkt-nav .mkt-wrap{display:flex;align-items:center;gap:16px;padding-block:14px}
+.mkt-nav .lockup{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--paper);margin-right:auto}
+.mkt-nav .lockup img{width:26px;height:26px}
+.mkt-nav .lockup b{font:700 17px 'Space Grotesk',sans-serif;letter-spacing:-.01em}
+.mkt-nav a.lnk{font-size:14px;font-weight:500;color:var(--mist);text-decoration:none}
+.mkt-nav a.lnk[aria-current="page"],.mkt-nav a.lnk:hover{color:var(--teal)}
+.mkt-nav .cta{font:600 13.5px 'Inter',sans-serif;color:var(--ink);background:linear-gradient(90deg,var(--teal),var(--cyan));padding:8px 13px;border-radius:8px;text-decoration:none}
+/* headings, buttons, cards, sections, eyebrow */
+.mkt h1{font:700 clamp(2.3rem,6vw,3.6rem)/1.06 'Space Grotesk',sans-serif;letter-spacing:-.025em}
+.mkt h2{font:700 clamp(1.5rem,3.4vw,2.2rem)/1.15 'Space Grotesk',sans-serif;letter-spacing:-.02em}
+.mkt .brand{background:linear-gradient(100deg,var(--teal),var(--cyan) 60%,var(--violet) 130%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.btn-primary{display:inline-block;text-decoration:none;font:600 15px 'Inter',sans-serif;padding:12px 20px;border-radius:10px;color:var(--ink);background:linear-gradient(90deg,var(--teal),var(--cyan))}
+.btn-primary:hover{filter:brightness(1.06)}
+.btn-ghost{display:inline-block;text-decoration:none;font:600 15px 'Inter',sans-serif;padding:12px 20px;border-radius:10px;color:var(--teal);border:1px solid rgba(45,212,191,.45)}
+.btn-ghost:hover{background:rgba(45,212,191,.1)}
+.eyebrow{font:600 12px 'Inter',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan)}
+.section{padding-block:clamp(48px,8vh,96px)}
+.card{border:1px solid var(--hairline);border-radius:14px;background:linear-gradient(180deg,rgba(230,237,247,.035),rgba(230,237,247,.012));padding:22px}
+/* footer */
+.mkt-foot{border-top:1px solid var(--hairline);margin-top:clamp(40px,8vh,80px)}
+.mkt-foot .mkt-wrap{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center;padding-block:24px;font-size:13px;color:var(--faint)}
+.mkt-foot a{color:var(--mist);text-decoration:none}
+.mkt-foot a:hover{color:var(--teal)}
+@media (prefers-reduced-motion:no-preference){/* entrance animations opt-in per page */}
