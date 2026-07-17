@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chapbook themes - twenty live blog looks you can try on a real post</title>
+<meta name="description" content="Twenty blog themes for Chapbook, in five categories from clean and editorial to kids and photo. Try every look live on a real post, then publish the one you like.">
+<link rel="canonical" href="https://chapbook.rqai.co.uk/themes">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Chapbook themes - twenty live blog looks you can try on a real post">
+<meta property="og:description" content="Twenty themes in five categories. Click any one to restyle a real post live, then publish the look you like to a blog you own.">
+<meta property="og:url" content="https://chapbook.rqai.co.uk/themes">
+<meta property="og:image" content="/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/marketing.css">
+<style>
+/* ---- themes: page intro + hero loop -------------------------------------- */
+.themes-hero{padding-bottom:clamp(16px,2.4vh,28px)}
+.themes-hero h1{max-width:20ch;margin-bottom:16px}
+.themes-hero p.lede{color:var(--mist);max-width:56ch;font-size:clamp(1rem,1.3vw,1.14rem)}
+.themes-hero-media{margin-top:26px;border:1px solid var(--hairline);border-radius:16px;overflow:hidden;
+  background:#0a0f1c;box-shadow:0 34px 80px -46px rgba(0,0,0,.9)}
+.themes-hero-media video{display:block;width:100%;height:auto}
+
+/* ---- the live switcher: preview + category rows -------------------------- */
+.switch-lead{max-width:60ch}
+.switch-lead .eyebrow{display:block;margin-bottom:12px}
+.switch-lead h2{margin-bottom:12px}
+.switch-lead p{color:var(--mist)}
+.switcher-grid{display:grid;gap:clamp(22px,3vw,38px);align-items:start;margin-top:26px}
+@media (min-width:900px){.switcher-grid{grid-template-columns:1.08fr .92fr}}
+.switcher{position:relative}
+@media (min-width:900px){.switcher{position:sticky;top:84px}}
+.switcher .hint{margin:10px 2px 0;font-size:.82rem;color:var(--faint)}
+
+.theme-cats{display:flex;flex-direction:column;gap:clamp(16px,2.4vw,22px)}
+.cat h3{font:650 1rem 'Space Grotesk',sans-serif;letter-spacing:-.01em;margin-bottom:9px;color:var(--paper)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:8px;font:600 13.5px 'Inter',sans-serif;color:var(--paper);
+  background:rgba(230,237,247,.04);border:1px solid var(--hairline);border-radius:999px;
+  padding:7px 13px 7px 11px;cursor:pointer;transition:border-color .15s,background .15s,transform .12s}
+.chip::before{content:"";width:11px;height:11px;border-radius:50%;background:var(--sw);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--sw) 24%,transparent)}
+.chip:hover{border-color:rgba(230,237,247,.3);background:rgba(230,237,247,.08);transform:translateY(-1px)}
+.chip[aria-pressed="true"]{border-color:var(--sw);background:color-mix(in srgb,var(--sw) 16%,transparent);color:#fff}
+.cat-note{margin-top:11px;font-size:.86rem;line-height:1.55;color:var(--mist);max-width:56ch}
+
+/* ---- the screenshot strip ------------------------------------------------ */
+.shots-lead{max-width:60ch}
+.shots-lead .eyebrow{display:block;margin-bottom:12px}
+.shots-lead h2{margin-bottom:12px}
+.shots-lead p{color:var(--mist)}
+.shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-top:26px}
+.shot-card{border:1px solid var(--hairline);border-radius:12px;overflow:hidden;background:#0a0f1c}
+.shot-card img{display:block;width:100%;height:auto;border-bottom:1px solid var(--hairline)}
+.shot-cap{display:block;padding:9px 12px;font:600 13px 'Inter',sans-serif;color:var(--mist)}
+</style>
+</head><body class="mkt">
+<!-- MKT:NAV -->
+<main>
+
+<section class="section themes-hero"><div class="mkt-wrap">
+  <p class="eyebrow">Every look, one click</p>
+  <h1>Twenty themes. The same words, a completely different blog.</h1>
+  <p class="lede">Every theme restyles your whole blog, from the masthead to the footer. Try each one live below on a real post, then pick the look that fits your writing.</p>
+  <div class="themes-hero-media">
+    <video class="loop" muted loop playsinline preload="none" poster="/media/loops/themes.jpg" aria-label="One blog cycling through several themes, from a newspaper front page to a bright kids notebook"><source src="/media/loops/themes.webm" type="video/webm"><source src="/media/loops/themes.mp4" type="video/mp4"></video>
+  </div>
+</div></section>
+
+<section class="section"><div class="mkt-wrap">
+  <div class="switch-lead">
+    <p class="eyebrow">Twenty themes, live</p>
+    <h2>Try any look on a real post</h2>
+    <p>Click a theme to restyle the post on the left. It updates instantly, exactly as it would render on your published blog.</p>
+  </div>
+  <div class="switcher-grid">
+    <div class="switcher">
+      <iframe id="theme-frame" title="Live theme preview" src="/themes-css/sample-post.html"
+        style="width:100%;height:520px;border:1px solid var(--hairline);border-radius:14px;background:#04060c"></iframe>
+      <p class="hint">A real Chapbook post, restyled live. The words never change; only the look does.</p>
+    </div>
+    <div class="theme-cats">
+      <div class="cat"><h3>Clean &amp; Simple</h3><div class="chips">
+        <button class="chip" data-theme="observatory" style="--sw:#22d3ee" aria-pressed="true">Observatory</button>
+        <button class="chip" data-theme="ledger" style="--sw:#0f766e" aria-pressed="false">Ledger</button>
+        <button class="chip" data-theme="air" style="--sw:#2f6bff" aria-pressed="false">Air</button>
+        <button class="chip" data-theme="graphite" style="--sw:#aeb7c2" aria-pressed="false">Graphite</button>
+      </div></div>
+      <div class="cat"><h3>Editorial</h3><div class="chips">
+        <button class="chip" data-theme="broadsheet" style="--sw:#8a1f14" aria-pressed="false">Broadsheet</button>
+        <button class="chip" data-theme="journal" style="--sw:#7c4a1e" aria-pressed="false">Journal</button>
+        <button class="chip" data-theme="kiosk" style="--sw:#e11d2a" aria-pressed="false">Kiosk</button>
+        <button class="chip" data-theme="gazette" style="--sw:#1f3a5f" aria-pressed="false">Gazette</button>
+      </div></div>
+      <div class="cat"><h3>Creative &amp; Fun</h3><div class="chips">
+        <button class="chip" data-theme="neon" style="--sw:#22f5ff" aria-pressed="false">Neon</button>
+        <button class="chip" data-theme="zine" style="--sw:#ff2d55" aria-pressed="false">Zine</button>
+        <button class="chip" data-theme="scrapbook" style="--sw:#d1495b" aria-pressed="false">Scrapbook</button>
+        <button class="chip" data-theme="arcade" style="--sw:#ffcf33" aria-pressed="false">Arcade</button>
+      </div></div>
+      <div class="cat"><h3>First Blogs (ages 10 to 15)</h3><div class="chips">
+        <button class="chip" data-theme="doodle" style="--sw:#2f5fd0" aria-pressed="false">Doodle</button>
+        <button class="chip" data-theme="rocket" style="--sw:#4dd6ff" aria-pressed="false">Rocket</button>
+        <button class="chip" data-theme="pixel" style="--sw:#5a9e3f" aria-pressed="false">Pixel</button>
+        <button class="chip" data-theme="comic" style="--sw:#ff3b3b" aria-pressed="false">Comic</button>
+      </div>
+      <p class="cat-note">These First Blogs themes add two extras for younger writers: a floating reading toggle that switches the post to a dyslexia-friendly font, and a one-time celebration the first time they publish a post.</p></div>
+      <div class="cat"><h3>Photo &amp; Portfolio</h3><div class="chips">
+        <button class="chip" data-theme="gallery" style="--sw:#2b2b2b" aria-pressed="false">Gallery</button>
+        <button class="chip" data-theme="darkroom" style="--sw:#d4d4d8" aria-pressed="false">Darkroom</button>
+        <button class="chip" data-theme="contact-sheet" style="--sw:#f4a11f" aria-pressed="false">Contact Sheet</button>
+        <button class="chip" data-theme="polaroid" style="--sw:#3a7ca5" aria-pressed="false">Polaroid</button>
+      </div></div>
+    </div>
+  </div>
+</div></section>
+
+<section class="section"><div class="mkt-wrap">
+  <div class="shots-lead">
+    <p class="eyebrow">Every theme, a real blog</p>
+    <h2>See the whole look, not just a swatch</h2>
+    <p>Each theme reshapes the home page too, not only the post. Here is how they open when a reader lands on your blog.</p>
+  </div>
+  <div class="shots">
+    <figure class="shot-card"><img class="shot" data-theme="observatory" src="/media/screens/observatory.png" width="900" height="633" loading="lazy" decoding="async" alt="The Observatory theme home page"><figcaption class="shot-cap">Observatory</figcaption></figure>
+    <figure class="shot-card"><img class="shot" data-theme="ledger" src="/media/screens/ledger.png" width="900" height="633" loading="lazy" decoding="async" alt="The Ledger theme home page"><figcaption class="shot-cap">Ledger</figcaption></figure>
+    <figure class="shot-card"><img class="shot" data-theme="air" src="/media/screens/air.png" width="900" height="633" loading="lazy" decoding="async" alt="The Air theme home page"><figcaption class="shot-cap">Air</figcaption></figure>
+    <figure class="shot-card"><img class="shot" data-theme="graphite" src="/media/screens/graphite.png" width="900" height="633" loading="lazy" decoding="async" alt="The Graphite theme home page"><figcaption class="shot-cap">Graphite</figcaption></figure>
+    <figure class="shot-card"><img class="shot" data-theme="broadsheet" src="/media/screens/broadsheet.png" width="900" height="633" loading="lazy" decoding="async" alt="The Broadsheet theme home page"><figcaption class="shot-cap">Broadsheet</figcaption></figure>
+    <figure class="shot-card"><img class="shot" data-theme="journal" src="/media/screens/journal.png" width="900" height="633" loading="lazy" decoding="async" alt="The Journal theme home page"><figcaption class="shot-cap">Journal</figcaption></figure>
+    <figure class="shot-card"><img class="shot" data-theme="kiosk" src="/media/screens/kiosk.png" width="900" height="633" loading="lazy" decoding="async" alt="The Kiosk theme home page"><figcaption class="shot-cap">Kiosk</figcaption></figure>
+    <figure class="shot-card"><img class="shot" data-theme="gazette" src="/media/screens/gazette.png" width="900" height="633" loading="lazy" decoding="async" alt="The Gazette theme home page"><figcaption class="shot-cap">Gazette</figcaption></figure>
+    <figure class="shot-card"><img class="shot" data-theme="neon" src="/media/screens/neon.png" width="900" height="633" loading="lazy" decoding="async" alt="The Neon theme home page"><figcaption class="shot-cap">Neon</figcaption></figure>
+    <figure class="shot-card"><img class="shot" data-theme="zine" src="/media/screens/zine.png" width="900" height="633" loading="lazy" decoding="async" alt="The Zine theme home page"><figcaption class="shot-cap">Zine</figcaption></figure>
+    <figure class="shot-card"><img class="shot" data-theme="scrapbook" src="/media/screens/scrapbook.png" width="900" height="633" loading="lazy" decoding="async" alt="The Scrapbook theme home page"><figcaption class="shot-cap">Scrapbook</figcaption></figure>
+    <figure class="shot-card"><img class="shot" data-theme="arcade" src="/media/screens/arcade.png" width="900" height="633" loading="lazy" decoding="async" alt="The Arcade theme home page"><figcaption class="shot-cap">Arcade</figcaption></figure>
+    <figure class="shot-card"><img class="shot" data-theme="doodle" src="/media/screens/doodle.png" width="900" height="633" loading="lazy" decoding="async" alt="The Doodle theme home page"><figcaption class="shot-cap">Doodle</figcaption></figure>
+    <figure class="shot-card"><img class="shot" data-theme="rocket" src="/media/screens/rocket.png" width="900" height="633" loading="lazy" decoding="async" alt="The Rocket theme home page"><figcaption class="shot-cap">Rocket</figcaption></figure>
+    <figure class="shot-card"><img class="shot" data-theme="pixel" src="/media/screens/pixel.png" width="900" height="633" loading="lazy" decoding="async" alt="The Pixel theme home page"><figcaption class="shot-cap">Pixel</figcaption></figure>
+    <figure class="shot-card"><img class="shot" data-theme="comic" src="/media/screens/comic.png" width="900" height="633" loading="lazy" decoding="async" alt="The Comic theme home page"><figcaption class="shot-cap">Comic</figcaption></figure>
+    <figure class="shot-card"><img class="shot" data-theme="gallery" src="/media/screens/gallery.png" width="900" height="633" loading="lazy" decoding="async" alt="The Gallery theme home page"><figcaption class="shot-cap">Gallery</figcaption></figure>
+    <figure class="shot-card"><img class="shot" data-theme="darkroom" src="/media/screens/darkroom.png" width="900" height="633" loading="lazy" decoding="async" alt="The Darkroom theme home page"><figcaption class="shot-cap">Darkroom</figcaption></figure>
+    <figure class="shot-card"><img class="shot" data-theme="contact-sheet" src="/media/screens/contact-sheet.png" width="900" height="633" loading="lazy" decoding="async" alt="The Contact Sheet theme home page"><figcaption class="shot-cap">Contact Sheet</figcaption></figure>
+    <figure class="shot-card"><img class="shot" data-theme="polaroid" src="/media/screens/polaroid.png" width="900" height="633" loading="lazy" decoding="async" alt="The Polaroid theme home page"><figcaption class="shot-cap">Polaroid</figcaption></figure>
+  </div>
+</div></section>
+
+<section class="section" id="get"><div class="mkt-wrap" style="text-align:center">
+  <p class="eyebrow">Ready to pick one</p>
+  <h2>Your blog, your look</h2>
+  <div class="hero-cta" style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:20px">
+    <a class="btn-primary" href="/pricing#trial">Try Chapbook free</a>
+    <a class="btn-ghost" href="%%STRIPE_BUY_URL%%">%%PRICE%%/yr</a>
+  </div>
+</div></section>
+
+<!-- MKT:TRIAL -->
+</main>
+<!-- MKT:FOOTER -->
+<script>
+/* The live theme switcher (Task 6). Clicking a chip posts {blogTheme:id} into the
+   same-origin sample-post iframe; its own listener validates the id (/^[a-z-]+$/) and
+   sets data-blog-theme, so every theme's CSS takes effect. postMessage (not a direct
+   cross-frame DOM write) keeps the sample doc self-driving regardless of load timing. */
+(function(){
+  var frame = document.querySelector('.switcher iframe');
+  if(!frame) return;
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.chip'));
+  var current = 'observatory';
+  function send(id){ try { frame.contentWindow.postMessage({ blogTheme: id }, location.origin); } catch (e) {} }
+  function pick(id){
+    current = id;
+    send(id);
+    chips.forEach(function(c){ c.setAttribute('aria-pressed', c.dataset.theme === id ? 'true' : 'false'); });
+  }
+  chips.forEach(function(c){ c.addEventListener('click', function(){ pick(c.dataset.theme); }); });
+  // If the frame reloads, re-apply the current pick so a mid-load click is never lost.
+  frame.addEventListener('load', function(){ if (current !== 'observatory') send(current); });
+})();
+
+/* Lazy-play the intro theme loop: start the muted loop only when it scrolls into view,
+   never under reduced motion (the poster stands in), and pause it when scrolled away. */
+(function(){
+  var vids = document.querySelectorAll('video.loop');
+  if(!vids.length) return;
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!('IntersectionObserver' in window)) return;
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      var v = en.target;
+      if(en.isIntersecting && !reduce){ v.play().catch(function(){}); } else { v.pause(); }
+    });
+  }, { threshold: .25 });
+  vids.forEach(function(v){ io.observe(v); });
+})();
+
+/* The screenshot strip references /media/screens/<id>.png for all twenty themes. The
+   parallel gallery pipeline fills any not yet staged; until a file exists its tile hides
+   itself (captured error event) rather than showing a broken image. */
+(function(){
+  window.addEventListener('error', function(e){
+    var t = e && e.target;
+    if(t && t.tagName === 'IMG' && t.classList && t.classList.contains('shot')){
+      var card = t.closest('.shot-card');
+      if(card) card.style.display = 'none';
+    }
+  }, true);
+})();
+</script>
+</body></html>
