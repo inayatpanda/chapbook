@@ -57,19 +57,45 @@ jobs:
         working-directory: desktop
         run: npm ci
 
+      # Enable mac code-signing ONLY when the Apple secrets are present on this repo.
+      # We must NOT export APPLE_SIGNING_IDENTITY at all when it's empty: an empty-but-
+      # defined value still makes the Tauri bundler attempt codesigning, which then fails
+      # at `security import` because no certificate was imported. Writing the vars to
+      # $GITHUB_ENV only in the `-n` branch means an unset secret => truly-absent env =>
+      # an UNSIGNED (but successful) mac build.
+      - name: Configure mac signing (only if Apple secrets exist)
+        if: matrix.platform == 'macos-latest'
+        env:
+          SIGN_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          CERT_B64: ${{ secrets.CSC_LINK }}
+          CERT_PW: ${{ secrets.CSC_KEY_PASSWORD }}
+          A_ID: ${{ secrets.APPLE_ID }}
+          A_PW: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          A_TEAM: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -n "$SIGN_IDENTITY" ]; then
+            echo "Apple secrets present → building a SIGNED + notarized DMG."
+            {
+              echo "APPLE_SIGNING_IDENTITY=$SIGN_IDENTITY"
+              echo "APPLE_CERTIFICATE_PASSWORD=$CERT_PW"
+              echo "APPLE_ID=$A_ID"
+              echo "APPLE_PASSWORD=$A_PW"
+              echo "APPLE_TEAM_ID=$A_TEAM"
+              # cert is base64 and may span lines → heredoc form is newline-safe
+              echo "APPLE_CERTIFICATE<<__CERT_EOF__"
+              echo "$CERT_B64"
+              echo "__CERT_EOF__"
+            } >> "$GITHUB_ENV"
+          else
+            echo "No Apple secrets → building an UNSIGNED mac app (this is expected)."
+          fi
+
       - name: Build + (mac) sign & notarize
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # macOS signing — all empty until the Apple secrets are added to THIS repo.
-          # Empty APPLE_SIGNING_IDENTITY => an UNSIGNED mac build (which still succeeds);
-          # set it (+ the cert secrets) to get a signed + notarized DMG.
-          APPLE_CERTIFICATE: ${{ secrets.CSC_LINK }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # macOS signing vars (if any) are injected into the environment by the
+          # "Configure mac signing" step above via $GITHUB_ENV — never hardcoded here.
         with:
           projectPath: desktop
           tauriScript: npx tauri
