@@ -24,3 +24,19 @@
     Referrer-Policy = "no-referrer"
     Strict-Transport-Security = "max-age=31536000; includeSubDomains"
     Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com https://api.groq.com https://api.crossref.org https://github.com https://api.github.com https://*.workers.dev https://*.r2.dev https://inayatpanda.com; font-src 'self'; frame-src 'self' https://www.youtube-nocookie.com https://player.vimeo.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+
+# Scoped framing relaxation for the /themes live switcher (Task 6). The themed sample
+# post is the document the /themes page iframes to demo all 20 blog themes; it must be
+# framable by our own origin. Netlify applies BOTH matching header rules, but for a
+# repeated header the MORE SPECIFIC path (this exact file) wins, so this doc is served
+# same-origin framing + frame-ancestors 'self', while every OTHER path keeps the global
+# DENY / 'none' above. This is the ONLY sanctioned deviation from the global policy.
+# The CSP here mirrors the global one MINUS connect-src (the sample doc makes no network
+# calls) and swaps frame-ancestors 'none' for 'self'. Verified against Netlify's own
+# header parser: the served header on /themes-css/sample-post.html is same-origin only
+# (see task-6-report.md).
+[[headers]]
+  for = "/themes-css/sample-post.html"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; frame-ancestors 'self'; object-src 'none'; base-uri 'self'"
