@@ -27,6 +27,22 @@ test('marketing.css re-declares the exact :root token contract from download.htm
   assert.ok(!/https?:\/\//.test(css), 'marketing.css must reference no external hosts');
 });
 
+// ---- source: filled-button label colour can never be repainted by a link rule ----
+// Regression: `.mkt a{color:var(--teal)}` (0,1,1) once out-specified the unscoped
+// `.btn-primary` (0,1,0), painting the filled button's dark-ink label teal-on-teal —
+// an invisible CTA. The contract: an anchor-scoped colour rule (0,2,1) pins each
+// button's label colour above every anchor rule in the sheet.
+test('marketing.css pins the button label colours above every anchor colour rule', () => {
+  const css = readFileSync('src/marketing/marketing.css', 'utf8');
+  assert.match(css, /\.mkt a\.btn-primary\{color:var\(--ink\)\}/,
+    'filled button label must be explicitly ink at anchor-level specificity');
+  assert.match(css, /\.mkt a\.btn-ghost\{color:var\(--teal\)\}/,
+    'ghost button label must be explicitly teal at anchor-level specificity');
+  // and the base rules themselves are .mkt-scoped so they beat `.mkt a` for non-anchors too
+  assert.match(css, /\.mkt \.btn-primary\{[^}]*color:var\(--ink\)/);
+  assert.match(css, /\.mkt \.btn-ghost\{[^}]*color:var\(--teal\)/);
+});
+
 // ---- source: nav partial -----------------------------------------------------
 test('_nav.html carries the full nav link set, the trial CTA, and the aria-current script', () => {
   const nav = readFileSync('src/marketing/_nav.html', 'utf8');
