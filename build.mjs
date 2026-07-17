@@ -203,6 +203,20 @@ console.log('SEO: sitemap.xml + robots.txt emitted');
 mkdirSync(`${DIST}/vendor`, { recursive: true });
 copyFileSync(`${SRC}/vendor/exifr.esm.js`, `${DIST}/vendor/exifr.esm.js`);
 
+// Vendored blog-theme catalogue → dist/themes-css/ (Task 3). The exact CSS the published
+// blogs use (global.css + themes.css + 20 theme files + kids extras + theme fonts) plus the
+// themed sample post the /themes live switcher iframes. Copied as a tree so themes.css's
+// relative `@import './themes/<id>.css'` and fonts.css's /themes-css/fonts/ urls resolve.
+function copyTree(src, dst) {
+  mkdirSync(dst, { recursive: true });
+  for (const entry of readdirSync(src, { withFileTypes: true })) {
+    const s = `${src}/${entry.name}`, d = `${dst}/${entry.name}`;
+    if (entry.isDirectory()) copyTree(s, d); else copyFileSync(s, d);
+  }
+}
+copyTree(`${MKT}/themes-css`, `${DIST}/themes-css`);
+console.log('themes-css: vendored blog-theme catalogue copied to dist/themes-css/');
+
 // Self-hosted fonts → dist/fonts/ (referenced by /fonts/*.woff2 @font-face in index.html).
 // Copy every .woff2; the OFL licence text files travel with them for attribution.
 mkdirSync(`${DIST}/fonts`, { recursive: true });

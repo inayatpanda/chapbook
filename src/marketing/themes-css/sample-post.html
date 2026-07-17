@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en" data-blog-theme="observatory"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sample post</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="/themes-css/fonts.css">
+<link rel="stylesheet" href="/themes-css/global.css">
+<link rel="stylesheet" href="/themes-css/themes.css">
+<style>body{margin:0}</style>
+</head><body>
+  <!-- Mirrors chapbook-template src/pages/blog/[slug].astro: article[data-template] wraps
+       the grid (themes key drop caps + heading flair off that ancestor). -->
+  <article data-template="observatory">
+    <div class="container article-grid">
+      <div class="article-col">
+        <header class="post-hero"><div class="post-hero-inner">
+          <a class="back-link" href="#">All Posts</a>
+          <div class="post-title-row"><h1 class="display scrim-text">The loaf that finally worked</h1></div>
+          <div class="post-hero-meta">
+            <time datetime="2026-05-04">4 May 2026</time><span aria-hidden="true">&middot;</span>
+            <span>4 min read</span><a class="tag-chip" href="#">baking</a>
+          </div>
+        </div></header>
+        <div class="article-body">
+          <p>Third time is the charm. The crumb finally opened up, and the crust cracked the way it is supposed to. I have been chasing this loaf since the start of spring, and it turns out the fix was mostly patience.</p>
+          <h2>What changed</h2>
+          <p>Two things: a longer cold proof, and a much wetter dough than felt sensible. The kitchen scale helped too, because guessing flour by the cup was quietly ruining every bake.</p>
+          <blockquote>Trust the dough, not the clock.</blockquote>
+          <h3>The method</h3>
+          <ul><li>Autolyse for one hour.</li><li>Fold every thirty minutes, four times.</li><li>Cold proof overnight.</li></ul>
+          <p>Next loaf I want to push the hydration a little <strong>further</strong> and see where it <em>breaks</em>. If the dough turns to soup, the oven is set to <code>230C</code> and we call it flatbread night.</p>
+          <figure><img src="/themes-css/sample.jpg" alt="A cross-section of a sourdough loaf" width="800" height="500"><figcaption>Open crumb, at last.</figcaption></figure>
+        </div>
+      </div>
+    </div>
+  </article>
+  <script>
+    // Theme switch hook for the /themes page (Task 6): the parent posts
+    // {blogTheme:'<id>'} into this iframe; ids are letters/hyphens only.
+    addEventListener('message', function (e) {
+      var t = e && e.data && e.data.blogTheme;
+      if (typeof t === 'string' && /^[a-z-]+$/.test(t)) document.documentElement.setAttribute('data-blog-theme', t);
+    });
+  </script>
+</body></html>
