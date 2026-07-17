@@ -73,7 +73,7 @@ test('home: the hero CTAs use the trial anchor and the price/stripe tokens', () 
 // ---- the four content sections below the hero -------------------------------
 test('home: the teasers, theme strip, pricing teaser and download strip are present', () => {
   const html = src();
-  for (const href of ['/features#composer', '/features#interactives', '/features#themes', '/features#publish']) {
+  for (const href of ['/features#composer', '/features#interactives', '/themes', '/features#publish']) {
     assert.ok(html.includes(`href="${href}"`), `teaser missing ${href}`);
   }
   assert.match(html, /class="section theme-strip"/, 'the theme strip section');
