@@ -50,6 +50,25 @@ body.mkt{font:400 16px/1.6 'Inter',system-ui,sans-serif;color:var(--paper);backg
 .eyebrow{font:600 12px 'Inter',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan)}
 .section{padding-block:clamp(48px,8vh,96px)}
 .card{border:1px solid var(--hairline);border-radius:14px;background:linear-gradient(180deg,rgba(230,237,247,.035),rgba(230,237,247,.012));padding:22px}
+/* trial: the shared 7-day email-capture partial (home + features + pricing).
+   Styles live here (not in the partial) so the one _trial.html injected on three pages
+   carries no duplicated <style>. The button is a real <button> here, so it must reset the
+   UA border/background that the anchor .btn-primary never has to. */
+.trial{padding-block:clamp(40px,7vh,84px)}
+.trial-card{max-width:560px;margin-inline:auto;text-align:center;padding:clamp(26px,4vw,36px);
+  background:linear-gradient(180deg,rgba(45,212,191,.08),rgba(139,92,246,.05));border-color:rgba(45,212,191,.24)}
+.trial-card .eyebrow{display:block;margin-bottom:12px}
+.trial-card h2{margin-bottom:10px}
+.trial-card > p{color:var(--mist);max-width:44ch;margin:0 auto 22px}
+.trial-form{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:440px;margin-inline:auto}
+.trial-form input[type=email]{flex:1 1 220px;min-width:0;font:400 15px 'Inter',sans-serif;color:var(--paper);
+  background:rgba(4,7,14,.5);border:1px solid var(--hairline);border-radius:10px;padding:12px 14px}
+.trial-form input[type=email]::placeholder{color:var(--faint)}
+.trial-form input[type=email]:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-color:transparent}
+.trial-form .btn-primary{flex:0 0 auto;border:0;cursor:pointer}
+.trial-msg{min-height:1.4em;margin-top:14px;font-size:14px;color:var(--mist)}
+.trial-msg:empty{margin-top:0;min-height:0}
+@media (max-width:460px){.trial-form .btn-primary{flex:1 1 100%}}
 /* footer */
 .mkt-foot{border-top:1px solid var(--hairline);margin-top:clamp(40px,8vh,80px)}
 .mkt-foot .mkt-wrap{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center;padding-block:24px;font-size:13px;color:var(--faint)}
