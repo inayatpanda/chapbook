@@ -16,7 +16,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
-import { readShell, readCacheName } from './scripts/release-gate.mjs';
+import { readShell, readCacheName, isAppFinalPath, samePathModuloTrailingSlash } from './scripts/release-gate.mjs';
 
 const FIXTURE = `// service worker fixture
 const CACHE = 'chapbook-v6';
@@ -50,6 +50,41 @@ test('readShell throws when the SHELL array is absent', () => {
 
 test('readShell throws on an empty SHELL array', () => {
   assert.throws(() => readShell('const SHELL = [ ]'), /SHELL array is empty/);
+});
+
+// ── final-URL decision logic on the redirect-following /app probes ───────────
+// check1 and check12 FOLLOW redirects for the /app probes (Netlify canonicalises
+// the bare /app directory to /app/ before serving 200). Following redirects means
+// a regression that bounces /app → / (the marketing home — ALSO a 200 text/html
+// response) would otherwise still PASS. These pin the final-URL guards that fail it.
+
+test('isAppFinalPath accepts the app doc\'s canonical landing forms', () => {
+  assert.equal(isAppFinalPath('/app'), true);
+  assert.equal(isAppFinalPath('/app/'), true);          // Netlify directory canonicalisation
+  assert.equal(isAppFinalPath('/app/index.html'), true);
+});
+
+test('isAppFinalPath rejects a redirect that bounces away from the app', () => {
+  assert.equal(isAppFinalPath('/'), false);             // the marketing-home regression this guards
+  assert.equal(isAppFinalPath('/pricing'), false);
+  assert.equal(isAppFinalPath('/appendix'), false);     // exact match only — must not prefix-match /app
+});
+
+test('samePathModuloTrailingSlash: an identical final path passes', () => {
+  assert.equal(samePathModuloTrailingSlash('/app', '/app'), true);
+  assert.equal(samePathModuloTrailingSlash('/app/index.html', '/app/index.html'), true);
+  assert.equal(samePathModuloTrailingSlash('/manifest.json', '/manifest.json'), true);
+});
+
+test('samePathModuloTrailingSlash: trailing-slash canonicalisation passes', () => {
+  assert.equal(samePathModuloTrailingSlash('/app', '/app/'), true);  // /app → /app/ (Netlify)
+  assert.equal(samePathModuloTrailingSlash('/app/', '/app'), true);  // symmetric
+});
+
+test('samePathModuloTrailingSlash: a redirect to a different path fails', () => {
+  assert.equal(samePathModuloTrailingSlash('/app', '/'), false);           // /app → marketing home
+  assert.equal(samePathModuloTrailingSlash('/app', '/index.html'), false);
+  assert.equal(samePathModuloTrailingSlash('/app/index.html', '/'), false);
 });
 
 // Contract test against the REAL built artifact (skips cleanly if dist/ absent).

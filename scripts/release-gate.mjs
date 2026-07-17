@@ -122,6 +122,30 @@ export function readCacheName(swText) {
   return m[1];
 }
 
+// ── final-URL guards for the redirect-following probes ───────────────────────
+// check1 and check12 FOLLOW redirects for the /app probes because Netlify
+// canonicalises the bare `/app` directory to `/app/` (a benign 301) before
+// serving 200 — exactly how the boot-shim, manifest start_url and SW reach it.
+// But following redirects blindly is unsafe: a regression that redirects
+// /app → / (the marketing home, which ALSO returns 200 text/html) would sail
+// through unless the gate asserts WHERE the follow actually landed. These pure
+// helpers encode that decision so they can be unit-tested (release-gate.test.mjs).
+
+// The app doc's own canonical forms — the only landing spots a followed /app or
+// /app/index.html probe may end on. Anything else (notably `/`) is a regression.
+export const APP_FINAL_PATHS = ['/app', '/app/', '/app/index.html'];
+export function isAppFinalPath(pathname) {
+  return APP_FINAL_PATHS.includes(pathname);
+}
+
+// A followed redirect is legal only if the final pathname equals the requested
+// path modulo a trailing slash (Netlify's /app → /app/ directory canonicalisation
+// stays legal; /app → / must fail).
+export function samePathModuloTrailingSlash(requested, finalPathname) {
+  const strip = (s) => (s.length > 1 && s.endsWith('/') ? s.slice(0, -1) : s);
+  return strip(requested) === strip(finalPathname);
+}
+
 // Check 1 — every URL in the SW shell returns 200 on the deploy.
 async function check1_shell(origin) {
   let shell;
@@ -138,7 +162,12 @@ async function check1_shell(origin) {
       // this mirrors real reachability. `/app` canonicalises to `/app/` (a Netlify
       // directory 301) before serving 200 — benign, and exactly what the app hits.
       const res = await fetchT(url, { redirect: 'follow' });
-      if (res.status !== 200) bad.push(`${p} → ${res.status}`);
+      if (res.status !== 200) { bad.push(`${p} → ${res.status}`); continue; }
+      // …but a followed 200 is only trustworthy if it stayed on the requested path.
+      // Netlify's /app → /app/ canonicalisation is legal; a regression that bounces
+      // /app → / (the marketing home, also 200) must FAIL, not pass as "reachable".
+      const finalPath = new URL(res.url).pathname;
+      if (!samePathModuloTrailingSlash(p, finalPath)) bad.push(`${p} → redirected to ${finalPath}`);
     } catch (e) {
       bad.push(`${p} → ${errStr(e)}`);
     }
@@ -320,9 +349,12 @@ async function check11_noEmDash() {
 // Check 12 — the app doc is reachable end-to-end as HTML: `/app` and
 // `/app/index.html` both resolve to a 200 `text/html` response. Netlify
 // canonicalises the bare `/app` directory to `/app/` with a benign 301 before
-// serving 200, so `/app` is probed with redirects FOLLOWED (exactly how the
-// boot-shim's location.replace('/app'), the manifest start_url and the SW hit it);
-// `/app/index.html` is probed directly. Complements check1's shell sweep
+// serving 200, so BOTH paths are probed with redirects FOLLOWED (exactly how the
+// boot-shim's location.replace('/app'), the manifest start_url and the SW hit
+// them). Because the follow is unconditional, the gate then asserts the FINAL
+// pathname is still the app doc (`/app`, `/app/` or `/app/index.html`): a
+// regression that redirects /app → / (the marketing home — also a 200 text/html
+// response) must FAIL here, not slip through. Complements check1's shell sweep
 // (Task 1 review follow-up, controller-mandated).
 async function check12_appDoc(origin) {
   const NAME = '/app + /app/index.html → 200 text/html';
@@ -333,8 +365,12 @@ async function check12_appDoc(origin) {
       const res = await fetchT(new URL(p, origin).href, { redirect: 'follow' });
       if (res.status !== 200) { bad.push(`${p} → ${res.status}`); continue; }
       const ct = res.headers.get('content-type') || '';
-      if (!ct.includes('text/html')) bad.push(`${p} content-type "${ct}" (not text/html)`);
-      else if (res.redirected) notes.push(`${p} via ${new URL(res.url).pathname}`);
+      if (!ct.includes('text/html')) { bad.push(`${p} content-type "${ct}" (not text/html)`); continue; }
+      // A 200 text/html is not enough: the follow must have landed INSIDE the app,
+      // not on the marketing home. Assert the final pathname is the app doc itself.
+      const finalPath = new URL(res.url).pathname;
+      if (!isAppFinalPath(finalPath)) { bad.push(`${p} → landed on ${finalPath} (not the app doc)`); continue; }
+      if (res.redirected) notes.push(`${p} via ${finalPath}`);
     } catch (e) { bad.push(`${p} → ${errStr(e)}`); }
   }
   if (bad.length) return fail(12, NAME, bad.join('; '));
