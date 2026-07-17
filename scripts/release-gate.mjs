@@ -67,7 +67,10 @@ async function fetchT(url, opts = {}, ms = 15000) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(new Error(`timeout after ${ms}ms`)), ms);
   try {
-    return await fetch(url, { ...opts, redirect: 'manual', signal: ctrl.signal });
+    // Default to manual redirects (so a stray 3xx is visible), but let a caller opt
+    // into 'follow' where the platform legitimately redirects (e.g. Netlify's
+    // directory canonicalisation /app → /app/). signal always wins.
+    return await fetch(url, { redirect: 'manual', ...opts, signal: ctrl.signal });
   } finally {
     clearTimeout(t);
   }
@@ -131,7 +134,10 @@ async function check1_shell(origin) {
   for (const p of shell) {
     const url = new URL(p, origin).href;
     try {
-      const res = await fetchT(url);
+      // Follow redirects: the SW precaches via cache.addAll, which follows too, so
+      // this mirrors real reachability. `/app` canonicalises to `/app/` (a Netlify
+      // directory 301) before serving 200 — benign, and exactly what the app hits.
+      const res = await fetchT(url, { redirect: 'follow' });
       if (res.status !== 200) bad.push(`${p} → ${res.status}`);
     } catch (e) {
       bad.push(`${p} → ${errStr(e)}`);
@@ -311,23 +317,28 @@ async function check11_noEmDash() {
   return pass(11, 'No em-dash in visible marketing copy', `${files.length} pages clean`);
 }
 
-// Check 12 — the app doc is reachable end-to-end: `/app` and `/app/index.html`
-// BOTH return 200 with a `text/html` content-type. This validates the `_redirects`
-// `/app → /app/index.html 200` rule in a real deploy, complementing check1's shell
-// sweep (Task 1 review follow-up, controller-mandated).
+// Check 12 — the app doc is reachable end-to-end as HTML: `/app` and
+// `/app/index.html` both resolve to a 200 `text/html` response. Netlify
+// canonicalises the bare `/app` directory to `/app/` with a benign 301 before
+// serving 200, so `/app` is probed with redirects FOLLOWED (exactly how the
+// boot-shim's location.replace('/app'), the manifest start_url and the SW hit it);
+// `/app/index.html` is probed directly. Complements check1's shell sweep
+// (Task 1 review follow-up, controller-mandated).
 async function check12_appDoc(origin) {
   const NAME = '/app + /app/index.html → 200 text/html';
   const bad = [];
+  const notes = [];
   for (const p of ['/app', '/app/index.html']) {
     try {
-      const res = await fetchT(new URL(p, origin).href);
+      const res = await fetchT(new URL(p, origin).href, { redirect: 'follow' });
       if (res.status !== 200) { bad.push(`${p} → ${res.status}`); continue; }
       const ct = res.headers.get('content-type') || '';
       if (!ct.includes('text/html')) bad.push(`${p} content-type "${ct}" (not text/html)`);
+      else if (res.redirected) notes.push(`${p} via ${new URL(res.url).pathname}`);
     } catch (e) { bad.push(`${p} → ${errStr(e)}`); }
   }
   if (bad.length) return fail(12, NAME, bad.join('; '));
-  return pass(12, NAME, 'both serve text/html (200)');
+  return pass(12, NAME, `both serve text/html (200)${notes.length ? ` [${notes.join(', ')}]` : ''}`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
