@@ -8,6 +8,7 @@ import { readFileSync, writeFileSync, copyFileSync, mkdirSync, rmSync, readdirSy
 import { AI_DEFAULT_MODELS } from './src/core/aiDefaults.js';
 import { PUBLIC_KEY as LICENCE_PUBLIC_KEY } from './src/lib/licence-pubkey.js';
 import { assertInlineModulesParse } from './checkInlineModule.mjs';
+import { extractStripeUrl, extractLegalBlock, LEGAL_TITLES, renderLegalPage, injectMarketing } from './src/marketing/build-marketing.mjs';
 
 const SRC = 'src';
 const DIST = 'dist';
@@ -122,16 +123,49 @@ console.log('device-flow client id:', GH_CLIENT_ID || '(none)');
 console.log('build stamp:', BUILD_STAMP || '(none — local build)');
 console.log('blog template:', `${TEMPLATE_OWNER}/${TEMPLATE_REPO}`);
 
-// (a) load the engine bundle before the inline module
-html = html.replace('</head>', '  <script type="module" src="./studio.js"></script>\n</head>');
+// (a) load the engine bundle before the inline module. Root-relative (/studio.js) so it
+//     resolves from the app doc's new home at /app/index.html (studio.js stays at dist root).
+html = html.replace('</head>', '  <script type="module" src="/studio.js"></script>\n</head>');
 
 // (b) api() delegates to the BYOK client router (window.__studioApi) in source, and
 //     the boot gate (window.__studioConfig.isReady()) is baked into index.html too,
 //     so no rewrite is needed here. Just sanity-check the client-router branch is present.
 if (!html.includes('if(window.__studioApi){')) throw new Error('build: api() no longer delegates to window.__studioApi — index.html changed?');
 
-// (c) assets are already root-relative in source — write index.html straight through.
-writeFileSync(`${DIST}/index.html`, html);
+// (c) The app now lives at /app. Assets stay root-relative at the dist root (studio.js,
+//     manifest.json, icons, fonts) so the app doc at /app/index.html loads them from '/'.
+mkdirSync(`${DIST}/app`, { recursive: true });
+writeFileSync(`${DIST}/app/index.html`, html);
+
+// ---- marketing shell inputs ----
+// Partials + tokens shared by every marketing page. _nav/_footer are stubs in Task 1
+// (fleshed out in Task 2); _trial is empty-safe until Task 7. The legal wrapper and the
+// live Stripe link + legal copy all come from single sources so nothing drifts.
+const MKT = `${SRC}/marketing`;
+const nav = readFileSync(`${MKT}/_nav.html`, 'utf8');
+const footer = readFileSync(`${MKT}/_footer.html`, 'utf8');
+const trial = readFileSync(`${MKT}/_trial.html`, 'utf8');
+const legalTpl = readFileSync(`${MKT}/legal.template.html`, 'utf8');
+const idxSrc = readFileSync(`${SRC}/index.html`, 'utf8');
+const STRIPE = extractStripeUrl(idxSrc);
+const PRICE = process.env.CHAPBOOK_PRICE || '£49';
+const YEAR = new Date().getUTCFullYear();
+const inject = (pageHtml) => injectMarketing(pageHtml, { nav, footer, trial, stripeUrl: STRIPE, price: PRICE, year: YEAR });
+
+// ---- marketing pages (each authored in its own task; guard-emit those that exist yet) ----
+for (const page of ['index.html', 'features.html', 'themes.html', 'pricing.html']) {
+  const p = `${MKT}/${page}`;
+  try { writeFileSync(`${DIST}/${page}`, inject(readFileSync(p, 'utf8'))); }
+  catch (e) { if (page === 'index.html') throw e; /* others land in later tasks */ }
+}
+
+// ---- legal pages, single-sourced from index.html's legal modal (never re-typed) ----
+for (const kind of ['privacy', 'terms', 'refunds']) {
+  const inner = extractLegalBlock(idxSrc, kind);
+  const page = renderLegalPage({ kind, title: LEGAL_TITLES[kind], inner, tpl: legalTpl, nav, footer, year: YEAR });
+  writeFileSync(`${DIST}/${kind}.html`, page);
+}
+console.log('legal pages: privacy/terms/refunds extracted from index.html ✓');
 
 // --- copy every other emitted file verbatim ---
 // Source paths are already root-relative, so manifest.json + sw.js are plain copies
@@ -153,7 +187,11 @@ console.log('fonts:', readdirSync(`${SRC}/fonts`).filter((f) => f.endsWith('.wof
 // The product lives at chapbook.rqai.co.uk ONLY — Netlify serves the *.netlify.app name
 // too but never redirects it by itself, so enforce the canonical host here. (Netlify
 // _redirects host conditions: the 301! forces even though the file exists.)
+// Canonical-host 301 (Netlify serves the *.netlify.app name too but never redirects it
+// itself), plus an explicit /app rule so the app doc is served without a trailing-slash
+// bounce. No SPA catch-all: marketing/legal .html are served by Netlify pretty-URLs.
 writeFileSync(`${DIST}/_redirects`,
-  'https://inayat-studio.netlify.app/* https://chapbook.rqai.co.uk/:splat 301!\n');
+  'https://inayat-studio.netlify.app/* https://chapbook.rqai.co.uk/:splat 301!\n' +
+  '/app /app/index.html 200\n');
 console.log('canonical-host redirect: inayat-studio.netlify.app → chapbook.rqai.co.uk');
 console.log('emitted', DIST, '(deployable static site)');
