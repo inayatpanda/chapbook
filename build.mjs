@@ -170,9 +170,34 @@ console.log('legal pages: privacy/terms/refunds extracted from index.html ✓');
 // --- copy every other emitted file verbatim ---
 // Source paths are already root-relative, so manifest.json + sw.js are plain copies
 // (no more /studio/ → / rewriting). index.html is written above with config injected.
-for (const f of ['manifest.json', 'sw.js', 'studio.js', 'darkroom-upload.js', 'preview.css', 'resize.js', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icons-manifest.json', 'icons-sprite.svg', 'download.html']) {
+for (const f of ['manifest.json', 'sw.js', 'studio.js', 'darkroom-upload.js', 'preview.css', 'resize.js', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icons-manifest.json', 'icons-sprite.svg']) {
   copyFileSync(`${SRC}/${f}`, `${DIST}/${f}`);
 }
+
+// download.html is a marketing surface: run it through inject() (not a verbatim copy) so it
+// carries the SAME shared nav as every other page. It is self-styled, so it does NOT link
+// marketing.css — only its <!-- MKT:NAV --> marker is filled (its own footer stays bespoke).
+writeFileSync(`${DIST}/download.html`, inject(readFileSync(`${SRC}/download.html`, 'utf8')));
+
+// Shared marketing shell assets → dist root. marketing.css is the one visual language every
+// marketing page links; og-image.png is the committed Open Graph share card (1200x630).
+copyFileSync(`${MKT}/marketing.css`, `${DIST}/marketing.css`);
+copyFileSync(`${MKT}/og-image.png`, `${DIST}/og-image.png`);
+console.log('marketing shell: marketing.css + og-image.png → dist root');
+
+// SEO plumbing. The sitemap lists every crawlable marketing + legal route (not /app, a
+// private tool with no SEO value). robots allows the crawl, keeps /app out of the index
+// (advisory only — the app stays reachable), and points crawlers at the sitemap.
+const SITE = 'https://chapbook.rqai.co.uk';
+const pages = ['/', '/features', '/themes', '/pricing', '/download', '/privacy', '/terms', '/refunds'];
+const today = new Date().toISOString().slice(0, 10);
+writeFileSync(`${DIST}/sitemap.xml`,
+  '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+  pages.map((p) => `  <url><loc>${SITE}${p}</loc><lastmod>${today}</lastmod></url>`).join('\n') +
+  '\n</urlset>\n');
+writeFileSync(`${DIST}/robots.txt`,
+  `User-agent: *\nAllow: /\nDisallow: /app\nSitemap: ${SITE}/sitemap.xml\n`);
+console.log('SEO: sitemap.xml + robots.txt emitted');
 // vendored libs (exifr browser build) live in a subdir — preserve the path so the Darkroom
 // module's external `./vendor/exifr.esm.js` import resolves at the dist root too.
 mkdirSync(`${DIST}/vendor`, { recursive: true });
