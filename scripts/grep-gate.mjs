@@ -66,6 +66,7 @@ const PATTERNS = [
 const SKIP_EXT = new Set([
   '.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.avif',
   '.woff', '.woff2', '.ttf', '.otf', '.eot', '.map',
+  '.dmg', '.exe', // staged installers in dist/downloads/ — binary, not text to gate
 ]);
 
 function* walk(dir) {

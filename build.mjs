@@ -136,7 +136,7 @@ writeFileSync(`${DIST}/index.html`, html);
 // --- copy every other emitted file verbatim ---
 // Source paths are already root-relative, so manifest.json + sw.js are plain copies
 // (no more /studio/ → / rewriting). index.html is written above with config injected.
-for (const f of ['manifest.json', 'sw.js', 'studio.js', 'darkroom-upload.js', 'preview.css', 'resize.js', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icons-manifest.json', 'icons-sprite.svg']) {
+for (const f of ['manifest.json', 'sw.js', 'studio.js', 'darkroom-upload.js', 'preview.css', 'resize.js', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icons-manifest.json', 'icons-sprite.svg', 'download.html']) {
   copyFileSync(`${SRC}/${f}`, `${DIST}/${f}`);
 }
 // vendored libs (exifr browser build) live in a subdir — preserve the path so the Darkroom
