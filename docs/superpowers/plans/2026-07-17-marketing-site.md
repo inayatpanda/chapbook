@@ -1111,6 +1111,7 @@ Reduced-motion: `@media (prefers-reduced-motion: reduce)` freezes the scene on t
   }
   ```
   Call it from `main()` after `check7_templates()`. Check5 (grep-gate over dist) and check6 (live Stripe link on `/`, no test link) already cover PII + Stripe for the whole site.
+- [ ] **(Task 1 review follow-up, controller-mandated)** check6 currently asserts the live Stripe link on `/` only; after the migration `/` is marketing and the link must exist there (home CTA, Task 4) AND on `/pricing` (Task 7). Extend check6 to assert `LIVE_STRIPE_LINK` present on BOTH `/` and `/pricing`, and `buy.stripe.com/test_` absent from both. Also add an explicit probe that `/app` and `/app/index.html` both return 200 with `text/html` (validates the `_redirects` 200 rule end-to-end, complementing check1's shell sweep).
 - [ ] Add a marketing copy lint to the gate (or to grep-gate): fail if any dist marketing HTML contains U+2014 (em-dash) in visible text. Simplest as a new gate check reading local dist:
   ```js
   async function check11_noEmDash() {
