@@ -8689,63 +8689,9 @@ function edText(b, isSel){
   ce.addEventListener('paste', e => maybeMdPaste(e, b, ce));
   wrap.appendChild(ce);
 
-  // Format toolbar — only visible when block is selected
-  if(isSel){
-    const fmt = document.createElement('div');
-    fmt.className = 'be-fmt';
-
-    const mkBtn = (label, action, cls) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      if(cls) btn.className = cls;
-      btn.innerHTML = label;
-      btn.addEventListener('mousedown', e => {
-        e.preventDefault(); // keep focus in ce
-        action();
-        b.html = ce.innerHTML;
-        markDirty();
-      });
-      fmt.appendChild(btn);
-    };
-
-    mkBtn('<b>B</b>', () => document.execCommand('bold', false, null));
-    mkBtn('<i>I</i>', () => document.execCommand('italic', false, null));
-    mkBtn('&lt;/&gt;', () => wrapInlineCode(ce), 'code');
-    // Link: inline popover (set / edit / remove), not a bare prompt.
-    const linkBtn = document.createElement('button');
-    linkBtn.type = 'button';
-    linkBtn.innerHTML = '<span class="link">🔗</span>';
-    linkBtn.title = 'Link';
-    linkBtn.addEventListener('mousedown', e => {
-      e.preventDefault();
-      openLinkPopover(ce, wrap, () => { b.html = ce.innerHTML; markDirty(); });
-    });
-    fmt.appendChild(linkBtn);
-
-    // [1] Cite — insert a footnote marker at the caret (pick existing / add new inline)
-    const citeBtn = document.createElement('button');
-    citeBtn.type = 'button'; citeBtn.className = 'cite'; citeBtn.title = 'Cite a reference';
-    citeBtn.innerHTML = '[1]';
-    citeBtn.addEventListener('mousedown', e => {
-      e.preventDefault();
-      openCitePopover(ce, wrap, () => { b.html = ce.innerHTML; markDirty(); });
-    });
-    fmt.appendChild(citeBtn);
-
-    // ✦ AI draft-assist — opens a sheet; deliberate action, no focus-preservation needed
-    const aiBtn = document.createElement('button');
-    aiBtn.type = 'button';
-    aiBtn.className = 'be-ai';
-    aiBtn.title = 'Draft with AI';
-    aiBtn.innerHTML = '✦';
-    aiBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      openAiDraft(b.id);
-    });
-    fmt.appendChild(aiBtn);
-
-    wrap.appendChild(fmt);
-  }
+  // (The isSel-gated per-block .be-fmt bar is gone - unreachable once selection stopped
+  // being set. Its live replacement is the floating #selFmt bar, which reuses the .be-fmt
+  // CSS and serves the text-selection formatting for every editable.)
 
   return wrap;
 }
@@ -10970,168 +10916,10 @@ function rerenderBlock(b){
   host.replaceChild(fresh, existing);
 }
 
-/* ─── drag-to-resize media (width + alignment) ─────────────────────────────
-   Resizable block types carry an optional `width` (percent 10–100 of the
-   article content column) + `align` ('left'|'center'|'right', default center).
-   width supersedes the legacy image `size` when set; reset returns to full
-   width. The handles use Pointer Events (mouse / trackpad / finger / pencil)
-   with touch-action:none, snap to sensible steps with free-drag between, and
-   show a live "NN%" readout. The site serialiser emits `--blk-w` + data-align;
-   here we drive the SAME model + a live frame so the editor matches the post. */
-const RESIZABLE = new Set(['image','figure','embed','playground','gallery']);
-const RS_SNAP = [25, 33, 50, 66, 75, 100];
-const RS_MIN = 20;
-function rsClampWidth(b){
-  const n = Number(b && b.width);
-  if(!Number.isFinite(n) || n >= 100) return 100;       // 100 / unset = full width
-  return Math.max(RS_MIN, Math.min(100, Math.round(n)));
-}
-function rsAlign(b){ const a = String(b && b.align || '').toLowerCase();
-  return (a==='left'||a==='right'||a==='center') ? a : 'center'; }
-function rsSnap(pct){
-  for(const s of RS_SNAP){ if(Math.abs(pct - s) <= 2.5) return s; } // snap within ~a few px
-  return Math.max(RS_MIN, Math.min(100, pct));
-}
-/* The element inside a selected block whose box we wrap with the resize frame.
-   For image/gallery the visible media is the natural target (resizing it shows
-   the real thing). Figure/playground/embed previews collapse until toggled, so
-   for those we build a small always-visible proxy strip the frame can size —
-   dragging it sets the SAME width the post will use. Returns {target, proxy}. */
-function rsTargetEl(body, type){
-  if(type==='image'){ const el = body.querySelector('img.be-img-preview'); if(el) return { target: el }; }
-  if(type==='gallery'){ const el = body.querySelector('.be-gal-grid'); if(el) return { target: el }; }
-  // figure / playground / embed (or empty image/gallery): a labelled proxy bar
-  const proxy = document.createElement('div');
-  proxy.style.cssText = 'height:38px;border-radius:8px;background:linear-gradient(90deg,rgba(45,212,191,.18),rgba(34,211,238,.14),rgba(129,140,248,.16));border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--mut);font:600 .72rem system-ui;letter-spacing:.04em;text-transform:uppercase';
-  proxy.textContent = type + ' width';
-  return { target: proxy, isProxy: true, host: body };
-}
-/* Wrap the media in a sized .rs-frame with handles + a width/align bar. Mutates
-   b.width / b.align, marks dirty, and keeps the frame width live while dragging. */
-function attachResize(blockWrap, body, b){
-  if(!RESIZABLE.has(b.type)) return;
-  const t = rsTargetEl(body, b.type);
-  const target = t.target;
-
-  // frame wraps the target in place (or prepends a proxy into the body)
-  const frame = document.createElement('div');
-  frame.className = 'rs-frame';
-  frame.dataset.rsAlign = rsAlign(b);
-  const setFrameW = (w) => { frame.style.setProperty('--rs-w', w >= 100 ? '100%' : w + '%'); };
-  setFrameW(rsClampWidth(b));
-  if(t.isProxy){
-    t.host.insertBefore(frame, t.host.firstChild);
-    frame.appendChild(target);
-  } else {
-    if(!target.parentNode) return;
-    target.parentNode.insertBefore(frame, target);
-    frame.appendChild(target);
-  }
-
-  // readout shown only while dragging
-  const readout = document.createElement('div');
-  readout.className = 'rs-readout';
-  frame.appendChild(readout);
-
-  // three handles: bottom-right + bottom-left corners + right edge (touch-first)
-  const handles = [['br','↘'],['bl','↙'],['e','⇿']].map(([k]) => {
-    const h = document.createElement('div');
-    h.className = 'rs-handle ' + k;
-    h.dataset.edge = k;
-    frame.appendChild(h);
-    return h;
-  });
-
-  // control bar (live %, alignment, reset) — under the media, only when selected
-  const bar = document.createElement('div');
-  bar.className = 'rs-bar';
-  const lbl = document.createElement('span'); lbl.className = 'rs-lbl'; lbl.textContent = 'Width';
-  const pct = document.createElement('span'); pct.className = 'rs-pct';
-  const setPct = (w) => { pct.textContent = (w >= 100 ? 'Full' : w + '%'); readout.textContent = w + '%'; };
-  setPct(rsClampWidth(b));
-  bar.append(lbl, pct);
-
-  // alignment toggle (only meaningful under 100%)
-  const alignWrap = document.createElement('span'); alignWrap.className = 'rs-align';
-  const alignBtns = {};
-  [['left','⇤'],['center','↔'],['right','⇥']].forEach(([k,glyph]) => {
-    const ab = document.createElement('button'); ab.type='button'; ab.textContent = glyph;
-    ab.title = 'Align ' + k;
-    ab.addEventListener('click', e => {
-      e.stopPropagation();
-      b.align = k; frame.dataset.rsAlign = k;
-      Object.values(alignBtns).forEach(x => x.classList.remove('on'));
-      ab.classList.add('on');
-      markDirty();
-    });
-    alignBtns[k] = ab; alignWrap.appendChild(ab);
-  });
-  const syncAlignUI = () => {
-    const a = rsAlign(b); const full = rsClampWidth(b) >= 100;
-    Object.entries(alignBtns).forEach(([k,el]) => el.classList.toggle('on', k===a));
-    alignWrap.style.opacity = full ? '.4' : '1';
-    Object.values(alignBtns).forEach(el => el.disabled = full);
-  };
-  bar.appendChild(alignWrap);
-
-  const reset = document.createElement('button'); reset.type='button'; reset.className='rs-reset';
-  reset.textContent = '⤢ Full width';
-  reset.addEventListener('click', e => {
-    e.stopPropagation();
-    delete b.width; b.align = 'center';
-    setFrameW(100); setPct(100); frame.dataset.rsAlign = 'center'; syncAlignUI();
-    markDirty();
-  });
-  bar.appendChild(reset);
-  syncAlignUI();
-  // place the bar right after the frame
-  if(frame.nextSibling) frame.parentNode.insertBefore(bar, frame.nextSibling);
-  else frame.parentNode.appendChild(bar);
-
-  // ── pointer drag ─────────────────────────────────────────────────────────
-  let dragging = false, startX = 0, startW = 0, basePx = 1, edge = 'br';
-  const colW = () => { const host = $('blockList'); return (host && host.clientWidth) || frame.parentNode.clientWidth || 600; };
-  const onMove = (e) => {
-    if(!dragging) return;
-    const dx = e.clientX - startX;
-    // a left-edge handle grows when dragged left (mirror); right/right-corner grow rightwards
-    const dir = (edge === 'bl') ? -1 : 1;
-    let px = basePx + dir * dx;
-    let raw = Math.round((px / colW()) * 100);
-    raw = Math.max(RS_MIN, Math.min(100, raw));
-    const snapped = rsSnap(raw);
-    setFrameW(snapped); setPct(snapped);
-    b.width = snapped; // live model update (autosave-safe)
-    e.preventDefault();
-  };
-  const onUp = (e) => {
-    if(!dragging) return;
-    dragging = false;
-    frame.classList.remove('dragging');
-    try{ e.target.releasePointerCapture?.(e.pointerId); }catch{}
-    window.removeEventListener('pointermove', onMove);
-    window.removeEventListener('pointerup', onUp);
-    window.removeEventListener('pointercancel', onUp);
-    // 100% → drop width (back to default); keep align
-    if(rsClampWidth(b) >= 100) delete b.width;
-    syncAlignUI();
-    markDirty();
-  };
-  handles.forEach(h => {
-    h.addEventListener('pointerdown', (e) => {
-      e.stopPropagation(); e.preventDefault();
-      dragging = true; edge = h.dataset.edge;
-      startX = e.clientX;
-      startW = rsClampWidth(b);
-      basePx = frame.getBoundingClientRect().width || (colW() * startW / 100);
-      frame.classList.add('dragging');
-      try{ h.setPointerCapture?.(e.pointerId); }catch{}
-      window.addEventListener('pointermove', onMove);
-      window.addEventListener('pointerup', onUp);
-      window.addEventListener('pointercancel', onUp);
-    });
-  });
-}
+/* (The drag-to-resize surface (attachResize + rs* helpers) was removed with the dead
+   isSel selection path - it only ever ran on a selected block, and selection stopped
+   being set when the composer went chat-first. Saved width/align still render: the
+   site serialiser (lib/blocks.js) emits --blk-w + data-align from the model.) */
 
 function renderBlockEl(b, idx){
   const isSel = b.id === selectedId;
@@ -11152,30 +10940,9 @@ function renderBlockEl(b, idx){
   const body = blockEditor(b, isSel);
   wrap.appendChild(body);
 
-  // Drag-to-resize: only on a selected resizable block (image/figure/embed/
-  // playground/gallery). Adds the sized frame + handles + width/align bar.
-  if(isSel && RESIZABLE.has(b.type)) attachResize(wrap, body, b);
-
-  // Context toolbar shown only on selected block
-  if(isSel){
-    const tb = document.createElement('div');
-    tb.className = 'btoolbar';
-
-    const up = document.createElement('button');
-    up.textContent = '▲'; up.title = 'Move up';
-    up.onclick = e => { e.stopPropagation(); moveBlock(b.id, -1); };
-
-    const dn = document.createElement('button');
-    dn.textContent = '▼'; dn.title = 'Move down';
-    dn.onclick = e => { e.stopPropagation(); moveBlock(b.id, 1); };
-
-    const del = document.createElement('button');
-    del.textContent = '✕'; del.title = 'Delete'; del.className = 'del';
-    del.onclick = e => { e.stopPropagation(); deleteBlock(b.id); };
-
-    tb.append(up, dn, del);
-    wrap.appendChild(tb);
-  }
+  // (The isSel-gated resize frame and per-block move/delete toolbar are gone: selection
+  // is never set in the chat-first composer, so they were unreachable. Move/delete live
+  // on the bound card's .chat-acts row now.)
 
   return wrap;
 }
