@@ -3,6 +3,7 @@
 // deps: { posts, partner, ai, storage, studio, playgrounds, figures, stencils, stickers, blocks, prepublish, templates, config, gh }
 import { getSiteConfig, putSiteConfig } from './core/siteConfig.js';
 import { getTopicsConfig, putTopicsConfig } from './core/topicsConfig.js';
+import { createThread, parseThread, serializeThread, buildAskPrompt } from './core/thread.js';
 export function makeRouter(deps) {
   const { posts, partner, ai, storage, studio, playgrounds, figures, stencils, stickers, blocks, prepublish, templates, config, gh } = deps;
   let _ctx = null; // cached partner system-context (gathered once per load)
@@ -253,6 +254,27 @@ export function makeRouter(deps) {
     if (a === 'drafts' && !b && method === 'POST') { const id = 'd-' + (globalThis.crypto?.randomUUID?.() || Date.now()); const rec = { id, ...body }; await storage.put('drafts', rec); return rec; }
     if (a === 'drafts' && b && method === 'PUT') { const rec = { id: b, ...body }; await storage.put('drafts', rec); return rec; }
     if (a === 'drafts' && b && method === 'DELETE') { await storage.del('drafts', b); return { deleted: b }; }
+
+    // ---- thread sidecar (storage 'threads') - device-local conversation layer for the
+    // chat-mode editor, keyed by post slug or provisional draft id. Mirrors the /drafts
+    // record-keyed-by-id idiom; parseThread strips the record id back off on read, so GET
+    // always returns exactly the thread shape (fresh thread when absent - never 404).
+    // /thread/turn goes to the SAME ai seam text call the /draft engine uses.
+    if (a === 'thread' && b === 'turn' && method === 'POST') {
+      const { system, user, wantsInsertable } = buildAskPrompt(body || {});
+      const { text } = await ai.generateText({ system, prompt: user, maxTokens: 900 });
+      return { text, insertable: wantsInsertable };
+    }
+    if (a === 'thread' && b && method === 'GET') {
+      const raw = await storage.get('threads', b);
+      return raw ? parseThread(typeof raw === 'string' ? raw : JSON.stringify(raw)) : createThread();
+    }
+    if (a === 'thread' && b && method === 'PUT') {
+      const cleaned = parseThread(serializeThread(body || {})); // validates + strips junk
+      await storage.put('threads', { id: b, ...cleaned });
+      return { ok: true };
+    }
+    if (a === 'thread' && b && method === 'DELETE') { await storage.del('threads', b); return { ok: true }; }
 
     // ---- my shapes (storage) — saved drawings re-placed from the stencil palette.
     // A saved shape has the SAME { viewBox:[w,h], strokes:[[[x,y],…]] } shape as a stencil,

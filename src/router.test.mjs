@@ -105,3 +105,47 @@ test('GET /settings/ai (generic) still returns the status shape after the sub-ro
   assert.ok(r.providers && r.providers.groq && r.providers.groq.configured === true);
   assert.equal(r.providers.groq.model, 'llama-3.3-70b-versatile');
 });
+
+// ---- /thread sidecar routes (chat-mode editor) ----
+// Contract: GET of an absent id returns a fresh thread (never 404); PUT validates the
+// body via the parseThread(serializeThread()) round-trip; DELETE clears. Storage mirrors
+// the /drafts idiom (records keyed by id, collection 'threads'); parseThread strips the
+// record id back off on read, so GET returns exactly the thread shape.
+const memStorage = () => {
+  const db = new Map();
+  return {
+    async get(store, id) { return db.get(store + '/' + id) || null; },
+    async put(store, obj) { db.set(store + '/' + obj.id, obj); return obj; },
+    async del(store, id) { db.delete(store + '/' + id); },
+  };
+};
+
+test('thread routes: GET missing id returns a fresh thread; PUT round-trips; DELETE clears', async () => {
+  const { api } = makeRouter({ storage: memStorage() });
+  const fresh = await api('/thread/my-post');
+  assert.deepEqual(fresh, { v: 1, mode: 'chat', turns: [] });
+  const t = { v: 1, mode: 'doc', turns: [{ id: 't1', role: 'aside', kind: 'guidance', text: 'x', blockRef: null, ts: 1, state: 'open' }] };
+  assert.deepEqual(await api('/thread/my-post', { method: 'PUT', body: JSON.stringify(t) }), { ok: true });
+  assert.deepEqual(await api('/thread/my-post'), t);
+  await api('/thread/my-post', { method: 'DELETE' });
+  assert.deepEqual(await api('/thread/my-post'), { v: 1, mode: 'chat', turns: [] });
+});
+
+// The ai seam's text call is generateText({ system, prompt, … }) → { text } — the same
+// call the /draft route's engine makes. A guidance ask (reply/aside) must come back
+// insertable:false with the guide system prompt; exactly ONE model call per turn.
+test('thread turn: guidance ask returns insertable:false and calls the ai seam once', async () => {
+  const calls = [];
+  const ai = { async generateText({ system, prompt }) { calls.push({ system, user: prompt }); return { text: 'why that angle?' }; } };
+  const { api } = makeRouter({ ai });
+  const res = await api('/thread/turn', { method: 'POST', body: JSON.stringify({ ask: 'reply', text: 'good?', block: { type: 'text', text: 'para' }, title: 'T' }) });
+  assert.deepEqual(res, { text: 'why that angle?', insertable: false });
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].system, /guide/i);
+});
+
+test('thread turn: tighten returns insertable:true', async () => {
+  const { api } = makeRouter({ ai: { async generateText() { return { text: 'tighter.' }; } } });
+  const res = await api('/thread/turn', { method: 'POST', body: JSON.stringify({ ask: 'tighten', block: { type: 'text', text: 'wordy' } }) });
+  assert.deepEqual(res, { text: 'tighter.', insertable: true });
+});
