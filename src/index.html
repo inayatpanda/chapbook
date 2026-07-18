@@ -8956,7 +8956,8 @@ async function chatSend(){
   // Editing an existing box: the text is already live-synced (chatSyncInput repaints per
   // keystroke) — Send just finalises and STAYS on the box. No repaint here: a rebuild
   // would destroy the box's caret if the user was typing in the box itself.
-  if(_chatBound){ markDirty(); return; }
+  // Send is a completed action: capture it now, not 1.2s later (flush = same save path).
+  if(_chatBound){ markDirty(); flushAutosaveNow(); return; }
   const t = (inp.value || '').trim();
   if(!t) return;
   pushHistory();   // a sent message is a structural add — one ⌘Z step
@@ -8975,6 +8976,10 @@ async function chatSend(){
     _composeAnchorId = b.id;   // advance the anchor so consecutive messages stack in order
     focusId = b.id;
     markDirty(); renderBlocks();
+    // A sent message must land in the P3c snapshot (or the titled draft) IMMEDIATELY:
+    // waiting out the 1200ms debounce left a window where closing the tab warned about
+    // work the app was about to capture anyway.
+    flushAutosaveNow();
   } else {
     const last = doc.blocks[doc.blocks.length - 1];
     const lastEmpty = last && last.type === 'text' && !String(last.html || '').replace(/<[^>]+>/g, '').trim();
@@ -8983,6 +8988,7 @@ async function chatSend(){
     // the box when it actually landed blocks — else the user's typed message is silently lost.
     if(!added) return;
     chatRelease(true);   // import auto-binds its first block — a SENT message should leave the box free
+    flushAutosaveNow();  // markdown sends are sends too: capture the landed blocks now
   }
   inp.value = ''; chatAutosize();
   requestAnimationFrame(() => {
@@ -11625,8 +11631,10 @@ function syncEditorBack(){
   btn.textContent = (editorSection === 'write') ? '← Write' : '← Posts';
 }
 $('editorBackBtn').addEventListener('click', ()=>{
-  // flush any pending autosave so work isn't left only in the debounce timer
-  if(_dirty && currentSlug){ clearTimeout(_saveDebounce); autosaveDraft(); }
+  // flush any pending autosave so work isn't left only in the debounce timer;
+  // an OWNED titleless post flushes to the provisional snapshot the same way
+  // (its write can't hit the foreign-slot refusal, so it can't re-arm _dirty)
+  if(_dirty && (currentSlug || _ownsProvisional)){ clearTimeout(_saveDebounce); autosaveDraft(); }
   _dirty = false; // in-app nav is not data loss
   if(editorSection === 'write'){ go('newpost'); refreshUntitledRecovery(); }   // back to the New-post landing (no auto-picker); refresh any titleless-draft recovery card (P3c)
   else { go('posts'); loadPosts(); }
@@ -11647,12 +11655,25 @@ function setSaveState(state, text){
 }
 
 /* ── markDirty — autosave debounced PUT (local draft, no commit) ─────────── */
+/* _editSeq bumps on every edit; autosaveDraft compares it after its PUT so a save
+   whose payload predates newer keystrokes can never report the doc as captured. */
+let _editSeq = 0;
 function markDirty(){
+  _editSeq++;
   setSaveState('dirty');
   clearTimeout(_saveDebounce);
   _saveDebounce = setTimeout(autosaveDraft, 1200);
   clearTimeout(_wordCountDebounce);
   _wordCountDebounce = setTimeout(updateWordCount, 400);
+}
+
+/* Flush the pending autosave debounce NOW, through the same write path (titled
+   posts save to their slug; titleless work snapshots to the provisional slot).
+   Used by compose-bar sends (a sent message is a completed action and should be
+   captured immediately, not 1.2s later) and by the pagehide last-chance flush. */
+function flushAutosaveNow(){
+  clearTimeout(_saveDebounce);
+  autosaveDraft();
 }
 
 /* Re-arm the autosave debounce after a publish/schedule path bails.
@@ -11685,10 +11706,13 @@ async function autosaveDraft(){
       }
       setSaveState('saving');
       try{
+        const seq = _editSeq;   // the payload serialises NOW; later keystrokes are not in it
         await api('/posts/'+PROVISIONAL_SLUG+'/blocks', { method:'PUT', body: JSON.stringify({ doc, meta }) });
         _ownsProvisional = true;
         _lastLocalSaveTs = Date.now();
-        setSaveState('saved','Unsaved title · draft kept');
+        // Only report "captured" if nothing was typed while the PUT was in flight; a newer
+        // markDirty() has already set state dirty and re-armed the debounce to re-save.
+        if(_editSeq === seq) setSaveState('saved','Unsaved title · draft kept');
         refreshUntitledRecovery();
       }catch(e){
         setSaveState('error');
@@ -11699,22 +11723,45 @@ async function autosaveDraft(){
   }
   setSaveState('saving');
   try{
+    const seq = _editSeq;   // the payload serialises NOW; later keystrokes are not in it
     await api('/posts/'+currentSlug+'/blocks', {
       method: 'PUT',
       body: JSON.stringify({ doc, meta }),
     });
     _lastLocalSaveTs = Date.now();
-    setSaveState('saved','Draft · saved');
+    // Same in-flight-edit guard as the provisional branch: never mark newer work captured.
+    if(_editSeq === seq) setSaveState('saved','Draft · saved');
   }catch(e){
     setSaveState('error');
     toast('Autosave failed — '+(e.message||'will retry on next edit'));
   }
 }
 
-/* Unsaved-changes guard: warn ONLY when genuinely dirty (never on clean state
-   or in-app navigation, which clears _dirty as it saves/loads). */
+/* Unsaved-changes guard: warn ONLY when edits are not yet captured anywhere.
+   _dirty is exactly that: the debounced snapshot/autosave is still pending or
+   failed ('dirty'/'error'), or a write/publish is in flight ('saving'). A state
+   the P3c provisional snapshot or a successful autosave has captured ('saved')
+   closes silently: the work is recoverable, so a popup would be pure noise.
+   Un-sent compose-bar text also counts as uncaptured: it lives only in the
+   textarea (a bound block's text is live-synced into the doc, so the dirty
+   machine already covers that case). */
+function hasUncapturedWork(){
+  if(_dirty) return true;
+  const inp = $('chatInput');
+  return !!(inp && !inp.disabled && !_chatBound && inp.value.trim()
+    && $('v-editor').classList.contains('on'));
+}
 window.addEventListener('beforeunload', (e)=>{
-  if(_dirty){ e.preventDefault(); e.returnValue=''; return ''; }
+  if(hasUncapturedWork()){ e.preventDefault(); e.returnValue=''; return ''; }
+});
+
+/* Last-chance flush on pagehide: fire the pending debounced writes NOW through
+   their existing paths (autosaveDraft for blocks, _threadSaveNow for the thread
+   sidecar). IndexedDB writes started here normally complete even as the tab
+   closes; if the work was still uncaptured, beforeunload above already warned. */
+window.addEventListener('pagehide', ()=>{
+  if(_threadSaveT){ clearTimeout(_threadSaveT); _threadSaveT = 0; _threadSaveNow(); }
+  if(_dirty){ clearTimeout(_saveDebounce); autosaveDraft(); }
 });
 
 /* ── first-text snippet helper for description ───────────────────────────── */
