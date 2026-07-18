@@ -120,3 +120,48 @@ the workshop; the post is the shelf.
 - Implementation: Fable 5 writes; Codex gpt-5.6-sol reviews each milestone's diff (owner's
   routing). Milestones: (1) core/thread.js + tests, (2) canvas + bubble rendering + toggle,
   (3) Ask/reply/chips + AI turns, (4) persistence + resume, (5) sol review + polish.
+
+## 9. Addendum (owner, 2026-07-18, post-implementation review)
+
+**Turn presentation.** AI suggestions/replies render in a *smaller* font than post content,
+in a distinct accent colour (theme-aware tint, not body ink) — visually unmistakable as
+"the Partner speaking", never post text. Author asides keep their italic small treatment.
+
+**Context-aware asks (field awareness).** The Partner reads which surface the author is in
+and shapes its reply accordingly, staying light-touch:
+- Title field → suggest a variation of the title (short, one alternative, offered not imposed).
+- Heading block → variation or sharpening suggestion.
+- Body/text block → encouragement, a conversational reaction, or a small suggestion — never
+  a rewrite unless the author explicitly asked (Tighten/Continue remain the explicit paths).
+The existing rule stands: the AI only ever speaks when addressed, and only tighten/continue/
+title-style asks yield insertable text. This addendum tunes *tone and target*, not agency.
+
+**Approved improvement bundles (owner-selected 2026-07-18; all free of AI cost except none):**
+*Alive bundle:* (a) Inbox ideas surface at the top of a NEW post's thread as tappable
+"messages from past-you" (existing promoteIdea flow, chat-native entry); (b) warm re-entry:
+reopening a draft renders a local recap line in the thread (sidecar timestamps + block/word
+count, no AI call); (c) session momentum: a quiet "+N words this session" beside the saved
+tick; (d) Enter sends in chat mode (Shift+Enter = newline), Doc mode unchanged, affordance
+visible in the compose bar.
+*Polish bundle:* (e) compose-bar camera button on phones — a photo "sent" like a message via
+the existing darkroom/resize pipeline; (f) aria-live="polite" on incoming Partner turns;
+(g) typing indicator respects prefers-reduced-motion.
+*Parked (Smarter Partner bundle, future wave):* title-workshop 3-variation chips, reaction
+thumbs feeding ask context, pre-publish-as-conversation chip, token-cost annotation.
+
+**Rough draft rail (owner, 2026-07-18): REPLACES the Outline entirely.**
+The editor's left rail becomes a per-post scratchpad for quickly jotting ideas and random
+sentences to use in the post later. The Outline (rail + phone sheet + heading navigation)
+is removed; the existing mobile toggle button and bottom sheet are repurposed as the Rough
+draft entry points on narrow layouts.
+- Storage: a `scratch` field on the thread sidecar (core/thread.js schema — parse/serialize
+  carry it; device-local, migrates provisional-to-slug with the rest; NOT part of the blocks
+  doc, never published).
+- Interaction: line-based jots with an always-visible add-note input; tapping a jot places
+  its text into the compose bar for edit-then-send (chat-native "use this"); a small delete
+  affordance per jot. Doc mode shows the same rail content.
+- Distinct from the Inbox: Inbox is global idea capture; Rough draft is per-post scratch.
+- FOCUS MODE: the Rough draft stays available in focus mode (owner). Desktop: the rail
+  remains visible (focus mode strips the other chrome but keeps the scratchpad); narrow
+  layouts: the sheet toggle stays reachable. Rationale: focus mode is precisely when stray
+  thoughts need a place to land without breaking the writing flow.
