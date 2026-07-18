@@ -110,6 +110,17 @@ function figureClasses(b) {
   return out;
 }
 
+// Placement class for the non-figure media wrappers (embed / playground / preview
+// gallery) — the SAME classes the image path emits ('wide' → .breakout full-bleed,
+// 'left'/'right' → .img-left/.img-right floats), so the site CSS that styles image
+// placement drives these too. 'standard'/absent returns '' so every existing post
+// serialises byte-identically. Returned with a leading space, safe to splice after
+// the wrapper's base class.
+function placementClass(b) {
+  const p = b && b.placement;
+  return p === 'wide' ? ' breakout' : p === 'left' ? ' img-left' : p === 'right' ? ' img-right' : '';
+}
+
 // Height cap (short/medium/tall) for media blocks — an inline style on the media
 // element itself, so it works on any page with no site CSS change. Aspect is kept
 // (width:auto), the element centres, and an unset cap emits nothing (byte-identical
@@ -208,25 +219,35 @@ export function serialiseBlock(block, ctx = {}) {
       // would NOT be rewritten). The .gallery wrapper is built later by rehype-gallery,
       // so width/align is carried to it via a sentinel marker line directly before the
       // image run — a plain-text token that always survives markdown — which
-      // rehype-gallery reads and removes. Emitted ONLY when a width is set, so a
-      // width-less gallery serialises exactly as before.
+      // rehype-gallery reads and removes. Placement rides the same sentinel (`p=wide|
+      // left|right`) so rehype-gallery can put the image-path classes (breakout /
+      // img-left / img-right) on the .gallery wrapper it builds. Marker tokens are
+      // emitted ONLY when set, so a width-less standard-placement gallery serialises
+      // exactly as before and a sized one keeps today's exact `w=NN,a=X` bytes.
       const w = blkWidth(block);
-      const marker = w == null ? '' : `[[blk-gallery:w=${w},a=${blkAlign(block)}]]\n\n`;
+      const p = block.placement === 'wide' || block.placement === 'left' || block.placement === 'right' ? block.placement : '';
+      const tokens = [];
+      if (w != null) tokens.push(`w=${w}`, `a=${blkAlign(block)}`);
+      if (p) tokens.push(`p=${p}`);
+      const marker = tokens.length ? `[[blk-gallery:${tokens.join(',')}]]\n\n` : '';
       return `${marker}${imgs.join('\n')}`;
     }
     case 'embed': {
       const ra = resizeAttrs(block);
+      // placement mirrors images (breakout / img-left / img-right on the wrapper);
+      // '' when standard/absent so existing posts serialise byte-identically.
+      const pl = placementClass(block);
       // videoId flows into a src="…" attribute — escAttr it (as preview does) so a crafted/
       // imported id like `x" onload="…` can't break out of the attribute on the published page.
       if (block.provider === 'youtube' && block.videoId)
-        return `<div class="embed-16x9"${ra}>\n  <iframe src="https://www.youtube-nocookie.com/embed/${escAttr(block.videoId)}" title="${escAttr(block.title)}" loading="lazy" allowfullscreen></iframe>\n</div>`;
+        return `<div class="embed-16x9${pl}"${ra}>\n  <iframe src="https://www.youtube-nocookie.com/embed/${escAttr(block.videoId)}" title="${escAttr(block.title)}" loading="lazy" allowfullscreen></iframe>\n</div>`;
       if (block.provider === 'vimeo' && block.videoId)
-        return `<div class="embed-16x9"${ra}>\n  <iframe src="https://player.vimeo.com/video/${escAttr(block.videoId)}" title="${escAttr(block.title)}" loading="lazy" allowfullscreen></iframe>\n</div>`;
+        return `<div class="embed-16x9${pl}"${ra}>\n  <iframe src="https://player.vimeo.com/video/${escAttr(block.videoId)}" title="${escAttr(block.title)}" loading="lazy" allowfullscreen></iframe>\n</div>`;
       // A self-hosted <video> may carry a poster (still backdrop) + caption. It has no
-      // sized container, so wrap it in a resizable figure only when sized or captioned;
-      // otherwise emit the bare <video> exactly as before (byte-identical for old posts).
-      // M3: require an https (or same-site) src so the published https blog never gets a
-      // blocked mixed-content player; an uncoercible src drops the whole block.
+      // sized container, so wrap it in a resizable figure only when sized, captioned or
+      // placed; otherwise emit the bare <video> exactly as before (byte-identical for
+      // old posts). M3: require an https (or same-site) src so the published https blog
+      // never gets a blocked mixed-content player; an uncoercible src drops the whole block.
       if (block.src) {
         const src = safeEmbedSrc(block.src);
         if (!src) return '';
@@ -234,7 +255,7 @@ export function serialiseBlock(block, ctx = {}) {
         const poster = psrc ? ` poster="${escAttr(psrc)}"` : '';
         const tag = `<video src="${escAttr(src)}"${poster}${heightCapStyle(block)} controls preload="metadata" playsinline></video>`;
         const cap = block.caption ? `<figcaption>${escHtml(block.caption)}</figcaption>` : '';
-        return ra || cap ? `<figure class="blk-video"${ra}>${tag}${cap}</figure>` : tag;
+        return ra || cap || pl ? `<figure class="blk-video${pl}"${ra}>${tag}${cap}</figure>` : tag;
       }
       return '';
     }
@@ -246,9 +267,7 @@ export function serialiseBlock(block, ctx = {}) {
       // its own page, so an unscoped <style> is also safe — id is for multi-playground pages.
       const idAttr = block.domId && /^[a-zA-Z][\w-]*$/.test(block.domId) ? ` id="${block.domId}"` : '';
       // placement mirrors images: wide → full-bleed breakout, left/right → float.
-      const place = block.placement === 'wide' ? ' breakout'
-        : block.placement === 'left' ? ' img-left'
-        : block.placement === 'right' ? ' img-right' : '';
+      const place = placementClass(block);
       // The .playground div is a CommonMark *type-6* HTML block — it ends at the first
       // blank line, so its inner html must be blank-line-free (pgHtml guarantees that).
       // <style> and <script> must be separated by a BLANK LINE so each starts its own
@@ -352,7 +371,6 @@ export function renderPreviewHtml(blocks, ctx = {}) {
   // already-committed image; then the editor src; finally the conventional per-slug
   // path. url/file are root-relative, so prefix the preview origin for them.
   const imgSrc = (b) => b.base64 ? asDataUri(b.base64) : b.url ? `${origin}${b.url}` : (b.src || `${origin}/images/posts/${slug}/${b.file}`);
-  const placeCls = (p) => p === 'wide' ? ' breakout' : p === 'left' ? ' img-left' : p === 'right' ? ' img-right' : '';
   const figure = (b) => {
     const cap = b.caption ? `<figcaption>${escHtml(b.caption)}</figcaption>` : '';
     const cls = figureClasses(b).join(' ');
@@ -382,17 +400,21 @@ export function renderPreviewHtml(blocks, ctx = {}) {
       case 'gallery': {
         const ims = (b.images || []).filter((im) => im && (im.file || im.base64));
         if (!ims.length) return '';
-        return `<div class="gallery"${resizeAttrs(b)}>${ims.map((im) => `<figure><img src="${escAttr(im.base64 ? asDataUri(im.base64) : `${origin}/images/${slug}/${im.file}`)}" alt="${escAttr(im.alt)}">${im.alt ? `<figcaption>${escHtml(im.alt)}</figcaption>` : ''}</figure>`).join('')}</div>`;
+        // The preview builds the .gallery wrapper itself (no rehype pass), so placement
+        // lands directly as the image-path classes — mirroring what rehype-gallery does
+        // on the published site from the serialiser's `p=` sentinel token.
+        return `<div class="gallery${placementClass(b)}"${resizeAttrs(b)}>${ims.map((im) => `<figure><img src="${escAttr(im.base64 ? asDataUri(im.base64) : `${origin}/images/${slug}/${im.file}`)}" alt="${escAttr(im.alt)}">${im.alt ? `<figcaption>${escHtml(im.alt)}</figcaption>` : ''}</figure>`).join('')}</div>`;
       }
       case 'embed': {
         const ra = resizeAttrs(b);
-        if (b.provider === 'youtube' && b.videoId) return `<div class="embed-16x9"${ra}><iframe src="https://www.youtube-nocookie.com/embed/${escAttr(b.videoId)}" title="${escAttr(b.title)}" loading="lazy" allowfullscreen></iframe></div>`;
-        if (b.provider === 'vimeo' && b.videoId) return `<div class="embed-16x9"${ra}><iframe src="https://player.vimeo.com/video/${escAttr(b.videoId)}" title="${escAttr(b.title)}" loading="lazy" allowfullscreen></iframe></div>`;
+        const pl = placementClass(b);
+        if (b.provider === 'youtube' && b.videoId) return `<div class="embed-16x9${pl}"${ra}><iframe src="https://www.youtube-nocookie.com/embed/${escAttr(b.videoId)}" title="${escAttr(b.title)}" loading="lazy" allowfullscreen></iframe></div>`;
+        if (b.provider === 'vimeo' && b.videoId) return `<div class="embed-16x9${pl}"${ra}><iframe src="https://player.vimeo.com/video/${escAttr(b.videoId)}" title="${escAttr(b.title)}" loading="lazy" allowfullscreen></iframe></div>`;
         if (b.src) {
           const poster = b.poster ? ` poster="${escAttr(b.poster)}"` : '';
           const tag = `<video src="${escAttr(b.src)}"${poster}${heightCapStyle(b)} controls preload="metadata" playsinline></video>`;
           const cap = b.caption ? `<figcaption>${escHtml(b.caption)}</figcaption>` : '';
-          return ra || cap ? `<figure class="blk-video"${ra}>${tag}${cap}</figure>` : tag;
+          return ra || cap || pl ? `<figure class="blk-video${pl}"${ra}>${tag}${cap}</figure>` : tag;
         }
         return '';
       }
@@ -400,7 +422,7 @@ export function renderPreviewHtml(blocks, ctx = {}) {
         const html = pgHtml(b.html), js = String(b.js || '').trim(), css = pgHtml(b.css || '');
         if (!html && !js && !css) return '';
         const idAttr = b.domId && /^[a-zA-Z][\w-]*$/.test(b.domId) ? ` id="${b.domId}"` : '';
-        return `<div class="playground${placeCls(b.placement)}"${idAttr}${resizeAttrs(b)}>${css ? `<style>${css}</style>` : ''}${html}${js ? `<script>${js}</script>` : ''}</div>`;
+        return `<div class="playground${placementClass(b)}"${idAttr}${resizeAttrs(b)}>${css ? `<style>${css}</style>` : ''}${html}${js ? `<script>${js}</script>` : ''}</div>`;
       }
       case 'table': {
         const header = Array.isArray(b.header) ? b.header : [];

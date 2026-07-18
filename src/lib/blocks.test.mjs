@@ -223,3 +223,83 @@ test('validateDoc rejects a figure whose base.file traverses', () => {
 test('validateDoc rejects an image that has base64 but no filename', () => {
   assert.throws(() => validateDoc({ blocks: [{ id: 'i', type: 'image', base64: 'AAAA', alt: 'x' }] }), /filename/i);
 });
+
+// ── placement flows through gallery + embed serialisation (adversarial-review fix) ──
+// The studio's placement grid writes block.placement ('standard'|'wide'|'left'|'right')
+// on gallery and embed blocks; the serialiser must carry it to the published output the
+// same way image blocks do (breakout / img-left / img-right), while a block without a
+// placement — or with the editor-stamped default 'standard' — keeps today's exact bytes.
+
+const gblock = (extra = {}) => ({ id: 'g', type: 'gallery', images: [{ file: 'a.jpg', alt: 'one' }, { file: 'b.jpg', alt: 'two' }], ...extra });
+const GAL_MD = '![one](./_images/s/a.jpg)\n![two](./_images/s/b.jpg)';
+
+test('placement: gallery with placement=wide emits the p= sentinel for rehype-gallery', () => {
+  const out = serialiseBlock(gblock({ placement: 'wide' }), { slug: 's' });
+  assert.equal(out, `[[blk-gallery:p=wide]]\n\n${GAL_MD}`);
+});
+
+test('placement: gallery with width AND placement emits w,a,p in one sentinel', () => {
+  const out = serialiseBlock(gblock({ width: 55, placement: 'right' }), { slug: 's' });
+  assert.equal(out, `[[blk-gallery:w=55,a=center,p=right]]\n\n${GAL_MD}`);
+});
+
+test('placement regression pin: gallery without placement serialises exactly as before', () => {
+  assert.equal(serialiseBlock(gblock(), { slug: 's' }), GAL_MD);
+});
+
+test('placement regression pin: editor-stamped placement=standard changes nothing (gallery)', () => {
+  assert.equal(serialiseBlock(gblock({ placement: 'standard' }), { slug: 's' }), GAL_MD);
+});
+
+test('placement regression pin: width-only gallery keeps the exact legacy w,a sentinel', () => {
+  const out = serialiseBlock(gblock({ width: 55 }), { slug: 's' });
+  assert.equal(out, `[[blk-gallery:w=55,a=center]]\n\n${GAL_MD}`);
+});
+
+const yt = (extra = {}) => ({ id: 'e', type: 'embed', provider: 'youtube', videoId: 'abc123', title: 'T', ...extra });
+const YT_MD = '<div class="embed-16x9">\n  <iframe src="https://www.youtube-nocookie.com/embed/abc123" title="T" loading="lazy" allowfullscreen></iframe>\n</div>';
+
+test('placement: embed (youtube) with placement=wide emits breakout on the 16x9 wrapper', () => {
+  const out = serialiseBlock(yt({ placement: 'wide' }));
+  assert.equal(out, YT_MD.replace('class="embed-16x9"', 'class="embed-16x9 breakout"'));
+});
+
+test('placement: embed (vimeo) with placement=left emits img-left on the 16x9 wrapper', () => {
+  const out = serialiseBlock({ id: 'e', type: 'embed', provider: 'vimeo', videoId: '123456', title: 'V', placement: 'left' });
+  assert.match(out, /^<div class="embed-16x9 img-left">/);
+});
+
+test('placement regression pin: embed without placement serialises exactly as before', () => {
+  assert.equal(serialiseBlock(yt()), YT_MD);
+});
+
+test('placement regression pin: editor-stamped placement=standard changes nothing (embed)', () => {
+  assert.equal(serialiseBlock(yt({ placement: 'standard' })), YT_MD);
+});
+
+test('placement: self-hosted embed video with placement=right gains the placed figure wrapper', () => {
+  const out = serialiseBlock({ id: 'e', type: 'embed', provider: 'video', src: 'https://cdn.example.com/clip.mp4', placement: 'right' });
+  assert.match(out, /^<figure class="blk-video img-right"><video src="https:\/\/cdn\.example\.com\/clip\.mp4"/);
+  assert.match(out, /<\/figure>$/);
+});
+
+test('placement regression pin: self-hosted embed with placement=standard stays a bare <video>', () => {
+  const out = serialiseBlock({ id: 'e', type: 'embed', provider: 'video', src: 'https://cdn.example.com/clip.mp4', placement: 'standard' });
+  assert.equal(out, '<video src="https://cdn.example.com/clip.mp4" controls preload="metadata" playsinline></video>');
+});
+
+test('placement: preview gallery wrapper carries the placement class', () => {
+  const html = renderPreviewHtml([gblock({ placement: 'wide' })], { slug: 's' });
+  assert.match(html, /<div class="gallery breakout">/);
+});
+
+test('placement: preview embed wrapper carries the placement class', () => {
+  const html = renderPreviewHtml([yt({ placement: 'right' })]);
+  assert.match(html, /<div class="embed-16x9 img-right">/);
+});
+
+test('placement regression pin: preview gallery/embed without placement keep their plain classes', () => {
+  const html = renderPreviewHtml([gblock(), yt()], { slug: 's' });
+  assert.match(html, /<div class="gallery">/);
+  assert.match(html, /<div class="embed-16x9">/);
+});

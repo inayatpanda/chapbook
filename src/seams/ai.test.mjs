@@ -150,3 +150,24 @@ test('a fast provider response is unaffected by the timeout wrapper', async () =
   const r = await ai.generateText({ prompt: 'hi', maxTokens: 5 });
   assert.equal(r.text, 'hello');
 });
+
+// ── generateImage must NOT forward the configured CHAT model ──────────────────
+// The chat model (e.g. gpt-4o / a custom fine-tune) 400s at /v1/images/generations. The seam
+// passes model:undefined so each adapter falls back to its OWN image default (openai →
+// gpt-image-1). We drive the real openai adapter via a captured fetch and assert the request
+// body carries the image default, NOT the configured chat model.
+test('generateImage does not forward the configured chat model — adapter picks its image default', async () => {
+  const calls = [];
+  const imgFetch = async (url, init = {}) => {
+    calls.push({ url: String(url), body: init.body ? JSON.parse(init.body) : null });
+    return { ok: true, status: 200, text: async () => JSON.stringify({ data: [{ b64_json: 'IMG' }] }) };
+  };
+  const cfg = fakeCfg({ aiProvider: 'openai', aiKey: 'sk-test', aiModel: 'gpt-4o-my-chat-model' });
+  const ai = makeAi(cfg, imgFetch);
+  const out = await ai.generateImage({ prompt: 'a fox', size: '1024x1024' });
+  assert.deepEqual(out, { base64: 'IMG', mimeType: 'image/png' });
+  const imgCall = calls.find((c) => c.url.includes('/v1/images/generations'));
+  assert.ok(imgCall, 'called the images endpoint');
+  assert.equal(imgCall.body.model, 'gpt-image-1');               // adapter's own image default
+  assert.notEqual(imgCall.body.model, 'gpt-4o-my-chat-model');   // never the configured chat model
+});

@@ -61,11 +61,28 @@ test('safeName caps an absurdly long stem', () => {
   assert.equal(out.endsWith('.mp4'), true);
 });
 
-test('r2Key shape: videos/<ts36>-<safeName>, deterministic ts prefix', () => {
-  const k = r2Key('Hello World.mp4', 0);
-  assert.equal(k, 'videos/0-hello-world.mp4');
+test('r2Key shape: videos/<ts36><rand>-<safeName>, deterministic when ts+rand supplied', () => {
+  // rand is a param (like now) so the key is deterministic in tests: ts36 prefix + rand stamp.
+  const k = r2Key('Hello World.mp4', 0, 'ab12');
+  assert.equal(k, 'videos/0ab12-hello-world.mp4');
   const k2 = r2Key('clip.webm', 1700000000000);
   assert.match(k2, /^videos\/[0-9a-z]+-clip\.webm$/);
+  // titleFromKey still round-trips: the ts36+rand stamp is dropped, leaving the words.
+  assert.equal(titleFromKey(k), 'hello world');
+});
+
+test('r2Key: same name in the SAME millisecond gets DISTINCT keys (no collision/overwrite)', () => {
+  // Two uploads of the same file at an identical `now` must not produce the same object key,
+  // or the unconditional PUT would silently replace the first clip. The rand stamp diverges —
+  // asserted with INJECTED suffixes (two live draws could collide at ~1/36^4 and flake).
+  const a = r2Key('clip.mp4', 1700000000000, 'aaaa');
+  const b = r2Key('clip.mp4', 1700000000000, 'bbbb');
+  assert.notEqual(a, b);
+  // Live draws keep the shape: same sortable ts36 prefix and the same safeName tail.
+  assert.match(r2Key('clip.mp4', 1700000000000), /^videos\/[0-9a-z]+-clip\.mp4$/);
+  assert.match(r2Key('clip.mp4', 1700000000000), /^videos\/[0-9a-z]+-clip\.mp4$/);
+  // An explicit rand override wins (deterministic) — the default is random per call.
+  assert.equal(r2Key('clip.mp4', 1700000000000, 'zzzz'), r2Key('clip.mp4', 1700000000000, 'zzzz'));
 });
 
 test('contentTypeFor prefers file.type, falls back by extension', () => {

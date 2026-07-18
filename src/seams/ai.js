@@ -79,7 +79,11 @@ export function makeAi(cfg, fetchImpl = fetch, { timeoutMs = 120_000 } = {}) {
     async generateImage({ prompt, size }) {
       const { adapter, a } = pick();
       if (!adapter.capabilities?.image) throw Object.assign(new Error(`${a.provider} cannot generate images`), { code: 'AI_CAP' });
-      return adapter.generateImage({ prompt, size, model: a.model || adapter.DEFAULT_MODEL, key: a.key }, browserFetch);
+      // NEVER forward the configured CHAT model to an image endpoint: it's a text model
+      // (e.g. gpt-4o / gemini-*), which /images/generations rejects with a 400. Pass
+      // model:undefined so each adapter picks its OWN image default (openai → gpt-image-1,
+      // google → imagen-3.0-*), which is exactly what those fallbacks are for.
+      return adapter.generateImage({ prompt, size, model: undefined, key: a.key }, browserFetch);
     },
     // Document import (PDF / image → structured blocks). studio.importDocument calls this;
     // it was missing here, so /ai/read-document threw "ai.readDocument is not a function"

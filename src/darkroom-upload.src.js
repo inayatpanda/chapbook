@@ -113,9 +113,34 @@ function fmtDate(iso) {
 }
 
 // ---- post picker ----------------------------------------------------------
+// P2: which slug should stay selected after the <select> is rebuilt. Keep the previously
+// selected slug when it still exists in the new list (staged `photos` stay targeted at the SAME
+// post); otherwise fall back to the first slug. A blind rebuild leaves NOTHING selected, so the
+// browser silently picks the FIRST option while `photos` persist — Commit could target the wrong
+// post. PURE (no DOM): prevValue + slug list in → the slug to select out ('' when the list empty).
+export function pickSelectValue(prevValue, slugs) {
+  const list = (Array.isArray(slugs) ? slugs : []).map((s) => String(s == null ? '' : s));
+  const prev = String(prevValue == null ? '' : prevValue);
+  if (prev && list.includes(prev)) return prev;
+  return list.length ? list[0] : '';
+}
+
+// P2: the last REAL post selection (a non-empty slug), tracked OUTSIDE the DOM. The live
+// <select> value alone is not enough: a failed load replaces the options with an empty-valued
+// error option, so after an error-then-success cycle the DOM remembers NOTHING and the rebuild
+// would silently fall back to the FIRST post while staged `photos` persist — exactly the
+// wrong-post-commit hazard pickSelectValue exists to kill. Updated on every successful restore
+// and on every user change of #dkPost; every rebuild restores from it via pickSelectValue.
+let lastPostSlug = '';
+
 async function loadPosts() {
   const sel = $('dkPost');
   if (!sel) return;
+  // Capture the current selection BEFORE the options are overwritten (the 'Loading…' line below
+  // already wipes sel.value). Only a NON-empty live value updates the tracked slug — an empty
+  // value means the select is showing a placeholder/error option, and overwriting the tracked
+  // slug with '' is precisely how a failed load used to lose the selection (P2).
+  if (sel.value) lastPostSlug = sel.value;
   sel.innerHTML = '<option value="">Loading posts…</option>';
   try {
     posts = (await D.api('/posts')) || [];
@@ -126,6 +151,10 @@ async function loadPosts() {
     sel.innerHTML = posts.map((p) =>
       `<option value="${esc(p.slug)}">${esc(p.title || p.slug)}</option>`
     ).join('');
+    // Restore the TRACKED selection so neither re-entry nor an error-then-success cycle silently
+    // re-points staged photos (P2), then re-sync the tracker with what actually stuck.
+    sel.value = pickSelectValue(lastPostSlug, posts.map((p) => p.slug));
+    lastPostSlug = sel.value;
     showDarkroomCount();
   } catch (e) {
     sel.innerHTML = '<option value="">Could not load posts</option>';
@@ -149,13 +178,35 @@ async function showDarkroomCount() {
   el.textContent = 'Checking existing photos…';
   const names = await existingImageNames(gh, slug);
   if (seq !== countSeq) return; // a newer selection superseded this one
+  if (!names) { el.textContent = ''; return; } // couldn't check (transient) — stay silent (best-effort count)
   const c = names.length;
   el.textContent = c ? `${c} photo${c === 1 ? '' : 's'} already in this post's gallery` : 'No photos in this post yet';
 }
 
 // ---- staging a dropped/selected batch -------------------------------------
+// P2 (HEIC/empty-MIME): split a dropped batch into files we'll try to decode vs. ones to skip.
+// An EMPTY MIME type PASSES — Chrome/macOS report HEIC with NO type, and resize.js already emits
+// a friendly per-file "Couldn't read that image" if it genuinely can't decode, so an empty-type
+// file must REACH decode instead of vanishing silently. Only a real NON-image MIME is skipped.
+// PURE (no DOM): a file list in → { accepted, skipped } out.
+export function partitionImageFiles(fileList) {
+  const accepted = [], skipped = [];
+  for (const f of [...(fileList || [])].filter(Boolean)) {
+    const type = f.type || '';
+    if (type === '' || /^image\//.test(type)) accepted.push(f);
+    else skipped.push(f);
+  }
+  return { accepted, skipped };
+}
+
 async function addFiles(fileList) {
-  const files = [...(fileList || [])].filter((f) => f && /^image\//.test(f.type || ''));
+  // P3: the drop zone stays clickable/droppable during a commit, but commit() has already captured
+  // the count + dedupe, so a late add would silently diverge from what's being committed. No-op.
+  if (busy) { toast('Hang on — finishing the current commit…'); return; }
+  const { accepted, skipped } = partitionImageFiles(fileList);
+  // Tell the user when genuinely non-image files were dropped instead of returning without a word.
+  if (skipped.length) toast('Skipped ' + skipped.length + ' file' + (skipped.length > 1 ? 's' : '') + " that aren't photos");
+  const files = accepted;
   if (!files.length) return;
   toast('Reading ' + files.length + ' photo' + (files.length > 1 ? 's' : '') + '…');
   let added = 0, skippedBig = 0, skippedCap = 0;
@@ -202,16 +253,19 @@ function dedupeFilenames(existingNames = []) {
 }
 
 // List the filenames already committed under the post's _images/<slug>/ folder (minus meta.json).
-// Used to dedupe new uploads against existing photos. Returns [] on any error (best-effort guard).
-async function existingImageNames(gh, slug) {
+// Used to dedupe new uploads against existing photos. Returns null (NOT []) when the folder can't
+// be listed — a missing seam or a transient GitHub error. C1: [] would read as "empty folder" and
+// disable dedupe, letting a commit OVERWRITE existing photos, so commit() must treat null as
+// "couldn't check" and abort. A genuinely-empty (but SUCCESSFUL) listing still returns [].
+export async function existingImageNames(gh, slug) {
+  if (!gh || typeof gh.listTree !== 'function') return null;
   try {
-    if (!gh || typeof gh.listTree !== 'function') return [];
     const entries = await gh.listTree(IMG_DIR(slug));
     return (entries || [])
       .map((e) => (e.path || '').split('/').pop())
       .filter((name) => name && name.toLowerCase() !== 'meta.json');
   } catch {
-    return [];
+    return null;
   }
 }
 
@@ -358,7 +412,14 @@ async function commit() {
     // Dedupe staged filenames against what's ALREADY committed under _images/<slug>/ (C1) so an
     // upload never overwrites an existing photo or clobbers its meta entry. Done now (not at stage
     // time) because it needs the live repo listing; colliding names get -2, -3… appended.
-    dedupeFilenames(await existingImageNames(gh, slug));
+    const existingNames = await existingImageNames(gh, slug);
+    if (existingNames === null) {
+      // C1: couldn't confirm what's already there → we can't guarantee we won't overwrite a
+      // committed photo. Abort BEFORE any archive/commit; the finally block resets the button.
+      toast("Couldn't check existing photos on GitHub — try again in a moment");
+      return;
+    }
+    dedupeFilenames(existingNames);
 
     // HELM IMAGE ARCHIVE: when a Helm backend is reachable, push each ORIGINAL full-res file
     // to the server first so the irreplaceable master is kept on the Mac (data/originals/).
@@ -382,7 +443,7 @@ async function commit() {
     const res = await gh.commitMany(changes, `studio: add ${n} photo${n > 1 ? 's' : ''} to ${slug}`);
 
     toast('Committed ' + n + ' photo' + (n > 1 ? 's' : '') + ' ✓');
-    showSuccess(slug, n, res && res.commit);
+    showSuccess(slug, n, res && res.commit, await siteOrigin());
     photos = [];
     await loadPosts();
     $('dkPost').value = slug;
@@ -398,13 +459,67 @@ async function commit() {
   }
 }
 
-// Success card. M4: do NOT guess an `<owner>.github.io/<repo>/` Pages URL — the owner's site is a
-// custom domain (inayatpanda.com, FTP-deployed), so that guess 404s. Link the RELATIVE `/darkroom/`
-// (correct whatever the host/domain), and name the post so the owner can find the new shots.
-function showSuccess(slug, n, commit) {
+// Normalise a configured site `url` to a bare scheme+host (no trailing slash); junk/empty → ''.
+// Mirrors core/shareIntents.js normaliseOrigin so the Darkroom link matches the Studio's Share
+// links exactly. PURE (no DOM/network). Used to absolutise the success-card href below.
+export function normaliseSiteOrigin(url) {
+  const raw = String(url == null ? '' : url).trim();
+  if (!raw) return '';
+  let u; try { u = new URL(/^https?:\/\//i.test(raw) ? raw : 'https://' + raw); } catch { return ''; }
+  return (u.origin && u.origin !== 'null') ? u.origin : '';
+}
+
+// Build the "Open your blog's Darkroom" href. M4/P2: do NOT guess an `<owner>.github.io/<repo>/`
+// Pages URL — hosted buyers use custom domains and that guess 404s. Instead absolutise against the
+// CONFIGURED site origin (site.json `url`) when we know it; else a RELATIVE `/darkroom/`, which is
+// correct on the local same-origin Helm build (Studio IS the blog) and when the origin is unknown.
+// PURE (no DOM): a site url (or '') in → the href out.
+export function darkroomHref(siteUrl) {
+  const o = normaliseSiteOrigin(siteUrl);
+  return o ? o + '/darkroom/' : '/darkroom/';
+}
+
+// Memoising site-origin resolver factory. Caches the IN-FLIGHT promise (concurrent success-card
+// renders share ONE fetch) and keeps it only when a NON-empty origin resolved. A failed or empty
+// fetch clears the cache so the NEXT call retries — caching '' permanently is exactly the bug this
+// replaces: one transient /settings/site error and every later hosted success card fell back to
+// the relative '/darkroom/' forever. Never rejects; callers always get a string ('' = unknown).
+// PURE (no DOM/window): fetchOrigin() in → memoised async resolver out. Exported for unit tests.
+export function createSiteOriginResolver(fetchOrigin) {
+  let inflight = null; // Promise<string> while fetching / after a non-empty resolve; null = retry
+  return function resolve() {
+    if (inflight) return inflight;
+    inflight = Promise.resolve()
+      .then(fetchOrigin)
+      .then((origin) => {
+        const o = String(origin == null ? '' : origin);
+        if (!o) inflight = null;      // resolved but empty → not a real origin, retry next render
+        return o;
+      })
+      .catch(() => { inflight = null; return ''; }); // failed → forget, retry next render
+    return inflight;
+  };
+}
+
+// The buyer's blog origin (site.json `url`) — the SAME source the Studio's _siteOrigin() reads via
+// /settings/site. Only the hosted product (window.__studioConfig present) can be cross-origin; the
+// local build has no __studioConfig and is same-origin, so we skip the fetch and stay relative.
+// Best-effort ('' → relative fallback); a failed fetch is retried on the next success card.
+const resolveSiteOrigin = createSiteOriginResolver(async () => {
+  const r = await D.api('/settings/site');
+  return (r && r.data && r.data.url) || '';
+});
+async function siteOrigin() {
+  if (typeof window === 'undefined' || !window.__studioConfig || !D || typeof D.api !== 'function') return '';
+  return resolveSiteOrigin();
+}
+
+// Success card. Names the post so the owner can find the new shots, and links their blog's
+// Darkroom (absolute for hosted cross-origin blogs, relative on the same-origin local build).
+function showSuccess(slug, n, commit, origin) {
   const el = $('dkDone');
   if (!el) return;
-  const href = '/darkroom/';
+  const href = darkroomHref(origin);
   el.innerHTML =
     `<div class="dk-done-card">✓ ${n} photo${n > 1 ? 's' : ''} committed to <b>${esc(slug)}</b>` +
     (commit ? ` <code style="opacity:.7">${esc(String(commit).slice(0, 7))}</code>` : '') +
@@ -436,7 +551,11 @@ function wireOnce() {
     dz.addEventListener('drop', (e) => { if (e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files); });
   }
   const post = $('dkPost');
-  if (post) post.addEventListener('change', () => { showDarkroomCount(); renderGrid(); });
+  if (post) post.addEventListener('change', () => {
+    // Track the user's real choice (P2) — never let a placeholder/error option ('' value) clobber it.
+    if (post.value) lastPostSlug = post.value;
+    showDarkroomCount(); renderGrid();
+  });
   const bt = $('dkBulkTagsBtn'); if (bt) bt.addEventListener('click', bulkTags);
   const ba = $('dkBulkAlbumBtn'); if (ba) ba.addEventListener('click', bulkAlbum);
   const cm = $('dkCommit'); if (cm) cm.addEventListener('click', commit);

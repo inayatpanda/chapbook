@@ -127,7 +127,7 @@ export default async function handler(req) {
   // Best-effort per-IP throttle (see rateLimited note).
   const ip = (req.headers.get('x-nf-client-connection-ip') || req.headers.get('x-forwarded-for') || '').split(',')[0].trim();
   if (rateLimited(ip)) {
-    return json(429, { ok: false, error: 'rate_limited', message: 'Too many trial requests — try again later.' }, origin);
+    return json(429, { ok: false, error: 'rate_limited', message: 'Too many trial requests. Try again later.' }, origin);
   }
 
   const token = process.env.GITHUB_QUEUE_TOKEN;

@@ -59,7 +59,15 @@ export function makeGithub(gh, fetchImpl = fetch) {
       if (res.status === 404) return null;
       if (!res.ok) throw await err(res);
       const j = await res.json();
-      return { base64: (j.content || '').replace(/\s/g, ''), sha: j.sha };
+      // The Contents API inlines base64 only for files under 1MB. For 1–100MB blobs it
+      // returns content:"" with encoding:"none" (and >100MB errors) — so returning
+      // j.content blindly hands callers an EMPTY blob and silently corrupts the image on
+      // the next commit. When the content isn't inlined, fetch the real bytes via the Git
+      // Blobs API using the sha (base64-encoded, no size cap on read). Same { base64, sha }.
+      const inlined = (j.content || '').replace(/\s/g, '');
+      if (j.encoding !== 'none' && (inlined || !(j.size > 0))) return { base64: inlined, sha: j.sha };
+      const blob = await gj(`${repoBase}/git/blobs/${j.sha}`);
+      return { base64: String(blob.content || '').replace(/\s/g, ''), sha: j.sha };
     },
     // List every committed file under a directory prefix in ONE recursive git-trees call.
     // Filters the tree to blobs under `prefix`. Returns [{ path, size }]. Empty if absent.
@@ -143,10 +151,15 @@ export function makeGithub(gh, fetchImpl = fetch) {
       }
       if (res.ok || res.status === 204) return { ok: true, alreadySet: false };
       if (res.status === 422) {
-        // 422 usually means "this domain is already set on this repo" → benign. (A domain
-        // taken by ANOTHER repo also 422s but with a distinct message; surface that one.)
+        // 422 is ambiguous: it's benign ONLY when the domain is already set on THIS repo
+        // ("taken by your site" / "already set" / "is the same"). GitHub uses the SAME status
+        // for a domain that's "already taken" by a DIFFERENT user's repo — that MUST surface
+        // as a failure, never a false success. So a plain "already taken" (i.e. NOT "…by your
+        // site") always throws; only the this-repo phrasings return ok.
         const e = await err(res);
-        if (/already|same|taken by your site/i.test(e.message || '')) return { ok: true, alreadySet: true };
+        const msg = e.message || '';
+        if (/already taken/i.test(msg) && !/taken by your site/i.test(msg)) throw e;
+        if (/taken by your site|already set|is the same/i.test(msg)) return { ok: true, alreadySet: true };
         throw e;
       }
       throw await err(res);

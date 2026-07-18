@@ -39,7 +39,8 @@
     // Theme switch hook for the /themes page (Task 6): the parent posts
     // {blogTheme:'<id>'} into this iframe; ids are letters/hyphens only.
     addEventListener('message', function (e) {
-      var t = e && e.data && e.data.blogTheme;
+      if (!e || e.origin !== location.origin) return;
+      var t = e.data && e.data.blogTheme;
       if (typeof t === 'string' && /^[a-z-]+$/.test(t)) document.documentElement.setAttribute('data-blog-theme', t);
     });
   </script>

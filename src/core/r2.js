@@ -56,11 +56,20 @@ export function safeName(name) {
   return ext ? `${stem}.${ext}` : stem;
 }
 
-// key = videos/<ts36>-<safeName>. The ts36 prefix keeps uploads unique + roughly sortable
-// without reading the bucket first (no list/dedupe round-trip on the BYOK path).
-export function r2Key(name, now = Date.now()) {
+// 4 chars of base36 randomness from Math.random — the collision guard. padStart covers the
+// rare tiny draw where toString(36) yields fewer than 4 fractional digits.
+const randSuffix = () => Math.random().toString(36).slice(2, 6).padStart(4, '0');
+
+// key = videos/<ts36><rand>-<safeName>. The ts36 prefix keeps uploads roughly sortable
+// without reading the bucket first (no list/dedupe round-trip on the BYOK path). The 4-char
+// base36 <rand> tacked onto that prefix stops two same-named uploads in the SAME millisecond
+// from producing an identical key — otherwise the unconditional PUT would silently overwrite
+// the earlier clip. ts36+rand stay ONE dash-terminated stamp token so titleFromKey (which
+// drops a single leading stamp) keeps working for both these and older single-stamp keys.
+// `now` and `rand` are params (defaulting to live values) so tests get deterministic keys.
+export function r2Key(name, now = Date.now(), rand = randSuffix()) {
   const ts = Math.floor(now).toString(36);
-  return `videos/${ts}-${safeName(name)}`;
+  return `videos/${ts}${rand}-${safeName(name)}`;
 }
 
 // content-type from the file (browser sets file.type for camera clips); fall back by ext.

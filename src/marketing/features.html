@@ -260,5 +260,17 @@
   document.addEventListener('visibilitychange', sync);
   sync();
 })();
+/* Screenshot slots reference /media/screens/<id>.png. Until the gallery pipeline stages
+   a file, hide its tile (captured error event) rather than show a broken image. Mirrors
+   the themes page handler; scoped to the screenshot imgs so the loop videos are untouched. */
+(function(){
+  window.addEventListener('error', function(e){
+    var t = e && e.target;
+    if(t && t.tagName === 'IMG' && /^\/media\/screens\//.test(t.getAttribute('src') || '')){
+      var tile = t.closest('.phone');
+      if(tile){ tile.style.display = 'none'; } else { t.style.display = 'none'; }
+    }
+  }, true);
+})();
 </script>
 </body></html>

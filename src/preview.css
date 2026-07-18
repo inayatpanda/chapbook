@@ -38,8 +38,9 @@ body{padding:1.6rem clamp(1rem,4vw,2.4rem) 3rem}
 .article-body figure{margin-block:2rem}
 .article-body img{max-width:100%;height:auto;border-radius:12px;display:block}
 .article-body figcaption{font-size:.85rem;color:var(--ink-faint);margin-top:.5rem;text-align:center}
-.article-body figure.img-left{max-width:46%;float:left;margin:.4rem 1.6rem 1rem 0}
-.article-body figure.img-right{max-width:46%;float:right;margin:.4rem 0 1rem 1.6rem}
+.article-body figure.img-left,.article-body .gallery.img-left,.article-body .embed-16x9.img-left{max-width:46%;float:left;margin:.4rem 1.6rem 1rem 0}
+.article-body figure.img-right,.article-body .gallery.img-right,.article-body .embed-16x9.img-right{max-width:46%;float:right;margin:.4rem 0 1rem 1.6rem}
+@media (max-width:640px){.article-body figure.img-left,.article-body .gallery.img-left,.article-body .embed-16x9.img-left,.article-body figure.img-right,.article-body .gallery.img-right,.article-body .embed-16x9.img-right{float:none;max-width:100%;margin:1rem 0}}
 .article-body .breakout{width:min(960px,100%)}
 /* image size — Small/Medium centre; Large = column width (no class). Floats narrow instead. */
 .article-body figure.img-sm:not(.img-left):not(.img-right){width:min(300px,55%);margin-inline:auto}
