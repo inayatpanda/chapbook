@@ -54,11 +54,24 @@
     --r:      16px;
     --font-display:'Space Grotesk',system-ui,sans-serif;
     --font-body:'Inter','Inter Variable',system-ui,-apple-system,sans-serif;
+    /* thread mode: the canvas is a clearly LIGHTER raised surface; sent bubbles are
+       clearly darker posts sitting on it (fill contrast, not border-only) */
+    --thread-canvas:#131d33;
+    --thread-canvas-line:#202d47;
+    --thread-post:#070b14;
+    --thread-post-line:#26334d;
+    /* the Partner's voice: a small coloured voice, never body ink (spec addendum 9) */
+    --partner-voice:#a5b4fc;
+    --partner-wash:rgba(129,140,248,.09);
+    --partner-line:rgba(129,140,248,.28);
   }
   :root[data-theme="light"] {
     --bg:#eef1f6; --bg-1:#e7ecf4; --surface:#ffffff; --surface-2:#f3f6fb;
     --ink:#1b2433; --mut:#5b6b80; --faint:#8a97a8;
     --line:#e4e9f0; --line-2:#d3dbe7; --acc:#0ea5a3;
+    --thread-canvas:#fbfaf7; --thread-canvas-line:#e4e1db;
+    --thread-post:#e7edf6; --thread-post-line:#d1dae7;
+    --partner-voice:#574fd6; --partner-wash:rgba(87,79,214,.07); --partner-line:rgba(87,79,214,.24);
     --shadow:0 14px 40px rgba(20,30,60,.12); --glow:0 0 0 1px rgba(14,165,163,.16);
     --ring:0 0 0 3px rgba(14,165,163,.2);
     /* Brand palette re-toned for the light field. The dark-mode brights (teal/cyan-400,
@@ -72,6 +85,9 @@
 
   /* ── RESET + BASE ────────────────────────────────────────────────────────── */
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  /* paint the root too: a fixed, translucent bottom bar must never let the browser's
+     default (dark) canvas bleed through in the light theme */
+  html{background:var(--bg)}
   body{background:var(--bg);color:var(--ink);
     font:16px/1.6 var(--font-body);font-weight:430;
     padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 90px);min-height:100vh;
@@ -1643,6 +1659,9 @@
     box-shadow:0 -8px 32px rgba(0,0,0,.14);
     z-index:201;transform:translateY(100%);
     transition:transform .25s cubic-bezier(.32,1,.24,1)}
+  /* closed sheets sit just BELOW the viewport - a dozen of their up-cast shadows
+     stack into a dark band along the bottom edge (glaring in light theme) */
+  .picker-sheet:not(.open){box-shadow:none}
   .picker-sheet.open{transform:translateY(0)}
   /* desktop: the picker opens as a compact popover AT the + you clicked (not a far-away
      bottom sheet). Position is set inline by openPicker; phone keeps the thumb sheet. */
@@ -1774,8 +1793,10 @@
   #focusMeter[hidden]{display:none}
   #focusMeter .fm-x{color:var(--faint);font-weight:400}
 
-  /* FOCUS MODE — hide rails + chrome for distraction-free writing */
-  body.focus-mode #v-editor .editor-bar > *:not(.back):not(#focusExitBtn){display:none !important}
+  /* FOCUS MODE - hide rails + chrome for distraction-free writing.
+     The bar's children now live inside .editor-bar-main / .editor-bar-tools
+     (display:contents on wide screens), so target the wrappers' children. */
+  body.focus-mode #v-editor .editor-bar :is(.editor-bar-main,.editor-bar-tools) > *:not(.back):not(#focusExitBtn){display:none !important}
   body.focus-mode #v-editor #outlineRail,
   body.focus-mode #v-editor #settingsRail{display:none !important}
   body.focus-mode #v-editor #editorActions,
@@ -2119,9 +2140,22 @@
     background:color-mix(in srgb,var(--bg) 92%,transparent);
     border-top:1px solid var(--line);padding:.5rem .65rem calc(.55rem + env(safe-area-inset-bottom));
     backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  /* light theme: the fixed bar goes OPAQUE (a translucent blur over a fixed dark
+     root read as a grey band along the bottom edge) */
+  :root[data-theme="light"] .chat-bar{background:#eef1f6;
+    backdrop-filter:none;-webkit-backdrop-filter:none;
+    border-top-color:#dfe5ee;box-shadow:0 -10px 28px rgba(30,41,59,.06)}
   /* desktop: clear the left nav rail so the bar never sits under it */
   @media(min-width:900px){ .chat-bar{left:88px} }
   .chat-row{display:flex;align-items:flex-end;gap:.45rem;max-width:760px;margin:0 auto}
+  /* phones: Dictate and Send swap (messenger-style) so the input keeps its width;
+     .has-text is toggled by chatAutosize() on every value change */
+  @media(max-width:640px){
+    .chat-row{gap:.35rem}
+    #chatInput{min-width:0;overflow-y:hidden}
+    .chat-row:not(.has-text) #chatSendBtn{display:none}
+    .chat-row.has-text #chatMic{display:none}
+  }
   #chatInput{flex:1;min-height:44px;max-height:140px;resize:none;background:var(--bg);border:1px solid var(--line);
     border-radius:22px;color:var(--ink);padding:.62rem .95rem;font:inherit;font-size:16px;line-height:1.4;outline:none}
   #chatInput:focus{border-color:var(--acc)}
@@ -2159,22 +2193,53 @@
   /* ── chat-mode canvas: the post as a conversation. The canvas is an elevated
      surface (owner: "big container, lighter background") - literal light panel in
      light theme, one-step-elevated surface in dark. Bubbles float on it. ── */
-  .thread-canvas{border-radius:20px;padding:1rem 1rem 5.5rem;background:var(--surface);
-    border:1px solid var(--line);box-shadow:0 8px 30px rgba(0,0,0,.18)}
-  :root[data-theme="light"] .thread-canvas{background:#fbfaf7;box-shadow:0 8px 30px rgba(30,30,60,.07)}
+  .thread-canvas{border-radius:20px;padding:1rem 1rem 5.5rem;background:var(--thread-canvas);
+    border:1px solid var(--thread-canvas-line);
+    box-shadow:0 18px 48px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.035)}
+  :root[data-theme="light"] .thread-canvas{box-shadow:0 16px 42px rgba(30,41,59,.10)}
   /* thread view: the compose bar adds blocks; no inline "+" dividers between bubbles */
   .thread-on .adddiv{display:none}
-  .thread-on .block{max-width:78%;margin-left:auto;border-radius:16px 16px 4px 16px;
-    background:var(--bg-1);border:1px solid var(--line);padding:.7rem .9rem}
-  .thread-on .block.chat-bound{max-width:100%;margin-left:0}
+  /* sent bubbles are content-sized (chat rhythm), clearly darker than the canvas */
+  .thread-on .block{width:fit-content;min-width:14rem;max-width:78%;
+    margin:.42rem 0 .42rem auto;border-radius:16px 16px 4px 16px;
+    background:var(--thread-post);border:1px solid var(--thread-post-line);padding:.62rem .85rem}
+  .thread-on .block.chat-bound{width:auto;max-width:100%;margin-left:0}
+  @media(max-width:640px){ .thread-on .block{min-width:0;max-width:88%} }
+  /* block-type labels are Doc-mode chrome: in the thread keep the drag grip but
+     drop the label; reveal on hover/focus (always faintly on touch screens) */
+  .thread-on .htag{opacity:0;padding:2px;background:var(--thread-canvas);transition:opacity .12s}
+  .thread-on .htag-lbl{display:none}
+  .thread-on .block:hover .htag,
+  .thread-on .block:focus-within .htag{opacity:.75}
+  @media(pointer:coarse){ .thread-on .htag{opacity:.45} }
   .turn{max-width:78%;margin:.5rem auto .5rem 0;border-radius:16px 16px 16px 4px;
     padding:.65rem .85rem;font-size:.92rem;line-height:1.45;border:1px solid var(--line);
     white-space:pre-wrap}
-  .turn-aside{max-width:60%;margin-left:auto;margin-right:0;font-style:italic;
-    border-radius:16px 16px 4px 16px;color:var(--mut);background:transparent;border-style:dashed}
-  .turn-assistant{background:var(--surface-2,var(--bg-1));color:var(--ink)}
-  .turn-error{border-color:#b4552f;color:#c96}
-  :root[data-theme="light"] .turn-error{border-color:#c0602f;color:#a04a20}
+  /* the author's aside: a quiet right-aligned margin note, no bubble of its own */
+  .turn-aside{max-width:56%;margin-left:auto;margin-right:0;font-style:italic;
+    padding:.35rem .65rem;border:0;border-right:2px solid var(--line-2);border-radius:0;
+    background:transparent;color:var(--mut);font-size:.78rem;line-height:1.5}
+  /* the Partner speaks smaller than post text, in its own colour (spec addendum 9) */
+  .turn-assistant{max-width:68%;padding:.55rem .75rem;border-radius:12px 12px 12px 3px;
+    font-size:.84rem;line-height:1.5;background:var(--surface-2,var(--bg-1));color:var(--ink)}
+  .turn-guidance{color:var(--partner-voice);background:var(--partner-wash);border-color:var(--partner-line)}
+  .turn-speaker{display:block;margin-bottom:.22rem;color:inherit;
+    font:700 .625rem var(--font-display);letter-spacing:.09em;text-transform:uppercase}
+  /* a suggestion presents candidate copy: ink text, Partner-accent frame + Accept */
+  .turn-insertable{color:var(--ink);background:var(--surface-2);border-color:var(--partner-line);
+    border-left:3px solid var(--partner-voice)}
+  .turn-insertable .turn-speaker{color:var(--partner-voice)}
+  .turn-insertable .turn-acts button:first-child{color:var(--partner-voice);border-color:var(--partner-line)}
+  /* errors are amber, never the Partner's violet */
+  .turn-error{color:#f0a35b;background:rgba(240,163,91,.08);border-color:rgba(240,163,91,.48);
+    border-left:3px solid #f0a35b}
+  :root[data-theme="light"] .turn-error{color:#93451f;background:rgba(192,96,47,.07);
+    border-color:rgba(160,74,32,.42);border-left-color:#a04a20}
+  .turn-error .turn-speaker{color:inherit}
+  @media(max-width:640px){
+    .turn-assistant{max-width:82%;font-size:.875rem}
+    .turn-aside{max-width:80%;font-size:.8125rem}
+  }
   .turn-acts{display:flex;gap:.4rem;margin-top:.45rem;white-space:normal}
   .turn-acts button{font-size:.78rem;padding:.25rem .6rem;border-radius:999px;
     border:1px solid var(--line);background:rgba(140,160,200,.08);color:var(--ink);cursor:pointer}
@@ -2182,12 +2247,25 @@
   .thread-typing{opacity:.7;font-style:italic}
   /* Ask toggle: ✦ flips the next message from "write into the post" to "say to the Partner" */
   #chatAskToggle.on{border-color:var(--acc);color:var(--acc);background:rgba(45,212,191,.12)}
-  /* quick chips: rendering them is free; tapping one spends tokens (spec 4.2) */
+  /* quick chips: rendering them is free; tapping one spends tokens (spec 4.2).
+     Partner-washed + ✦-marked so they read as the Partner offering, not toolbar chrome. */
   #threadChips[hidden]{display:none}   /* class rule below would otherwise defeat [hidden] */
-  #threadChips{display:flex;gap:.4rem;max-width:760px;margin:0 auto .45rem;flex-wrap:wrap}
-  #threadChips button{border:1px solid var(--line);border-radius:999px;background:rgba(140,160,200,.06);
-    color:var(--ink);font:600 .78rem var(--font-display);padding:.35rem .7rem;cursor:pointer;min-height:34px}
-  #threadChips button:hover{border-color:var(--acc)}
+  #threadChips{display:flex;gap:.4rem;max-width:760px;margin:0 auto .45rem;
+    flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  #threadChips::-webkit-scrollbar{display:none}
+  #threadChips button{flex:0 0 auto;border:1px solid var(--partner-line);border-radius:999px;
+    background:var(--partner-wash);color:var(--mut);font:500 .78rem var(--font-display);
+    padding:.35rem .7rem;cursor:pointer;min-height:34px}
+  #threadChips button::before{content:"✦";margin-right:.35rem;color:var(--partner-voice)}
+  #threadChips button:hover{border-color:var(--partner-voice)}
+  #threadChips button:focus-visible{outline:2px solid var(--partner-voice);outline-offset:2px}
+  @media(max-width:640px){ #threadChips button{min-height:44px} }
+  /* thread mode hides Doc-mode import chrome (all reachable from the [+] sheet);
+     the canvas holds a calm minimum height instead of trailing dead padding */
+  #v-editor.thread-mode #editorActions,
+  #v-editor.thread-mode #importDropZone,
+  #v-editor.thread-mode #importDocMsg{display:none}
+  #v-editor.thread-mode .thread-canvas{min-height:clamp(360px,58vh,680px);padding:1.25rem 1.25rem 2rem}
 
   .tpllib-preview{max-width:620px;margin:0 auto}
   .tpllib-frame{width:100%;min-height:220px;border:1px solid var(--line);border-radius:11px;
@@ -2453,6 +2531,26 @@
   @media(max-width:899px){
     #v-editor .editor-bar{flex-wrap:wrap;row-gap:.45rem}
     #v-editor .editor-bar #cmdkBtn{display:none}
+    /* the editor owns the bottom edge on phones (the compose bar lives there);
+       Back in the top bar is the way out - the tab bar returns on leaving */
+    body.editor-open nav.bottom{display:none !important}
+  }
+  /* wide screens: the two wrappers dissolve so the bar keeps its one-row flex layout */
+  @media(min-width:641px){
+    .editor-bar-main,.editor-bar-tools{display:contents}
+    /* DOM puts Publish inside .editor-bar-main; order keeps it visually last (unchanged) */
+    #v-editor .editor-bar .pub-btn{order:1}
+  }
+  /* phones: a compact two-row header - primary row (Back / status / Publish) plus a
+     horizontally scrollable tools row, instead of four wrapped rows of controls */
+  @media(max-width:640px){
+    #v-editor .editor-bar{display:block;padding:.55rem .75rem .45rem}
+    .editor-bar-main{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;
+      align-items:center;gap:.45rem}
+    .editor-bar-tools{display:flex;gap:.4rem;margin-top:.45rem;overflow-x:auto;
+      flex-wrap:nowrap;scrollbar-width:none;overscroll-behavior-inline:contain}
+    .editor-bar-tools::-webkit-scrollbar{display:none}
+    .editor-bar-tools > *{flex:0 0 auto}
   }
   #v-editor .editor-bar .back{background:transparent;border:0;color:var(--acc);
     font:inherit;cursor:pointer;padding:0;white-space:nowrap;font-size:1.1rem}
@@ -3626,10 +3724,16 @@
        clearly-labelled standalone control; Publish stays prominent on the right.
        Every original control keeps its id, so the existing handlers still bind. -->
   <div class="editor-bar">
+    <!-- primary row: Back / save status / word count / Publish (phones show this row
+         alone on top; the tools below become one horizontally scrollable strip) -->
+    <div class="editor-bar-main">
     <button class="back" id="editorBackBtn"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-arrow-left"/></svg> Posts</button>
     <button class="iconBtn" id="focusExitBtn" title="Exit focus mode (Esc)"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-x"/></svg> Focus</button>
     <span class="status-slot" id="editorStatus" data-save="saved"><i class="save-dot" aria-hidden="true"></i><span id="editorStatusText">Draft · saved</span></span>
     <span class="status-slot" id="editorWords" hidden></span>
+    <button class="pub-btn" id="editorPublishBtn">Publish</button>
+    </div>
+    <div class="editor-bar-tools">
 
     <button class="iconBtn tb-labelled" id="focusToggleBtn" title="Focus mode (⌘⇧F)" aria-label="Toggle focus mode"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-focus-2"/></svg> Focus</button>
 
@@ -3662,7 +3766,7 @@
     <button class="themeBtn" id="themeToggleEditor" title="Toggle theme" onclick="toggleTheme()">☀️</button>
     <button class="iconBtn tb-labelled" id="settingsToggleBtn" style="display:none" title="Post settings"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-settings"/></svg> Post settings</button>
     <button class="iconBtn tb-labelled" id="editorScheduleBtn" title="Schedule for later"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-calendar-time"/></svg> Schedule</button>
-    <button class="pub-btn" id="editorPublishBtn">Publish</button>
+    </div><!-- /.editor-bar-tools -->
   </div>
   <!-- Schedule for later (overlay) — commits a hidden draft + publishAt; the site's
        GitHub Action flips it live on the date. Nothing local needs to be running. -->
@@ -3690,7 +3794,7 @@
       <span id="chatStripLbl"></span>
       <button id="chatStripX" type="button" aria-label="Stop editing this block">✕</button>
     </div>
-    <div id="threadChips" hidden></div>
+    <div id="threadChips" role="group" aria-label="Partner shortcuts" hidden></div>
     <div class="chat-row">
       <button class="cbtn" id="chatPlus" type="button" title="Add — image, interactive, figure…" aria-label="Add a block"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-plus"/></svg></button>
       <textarea id="chatInput" rows="1" placeholder="Write a message…" autocomplete="off"></textarea>
@@ -4797,6 +4901,10 @@ function setTheme(t){
   // dark is the default/base (empty data-theme); light is the opt-in override
   document.documentElement.dataset.theme = t==='light' ? 'light' : '';
   localStorage.setItem('helm-theme', t==='light' ? 'light' : 'dark');
+  // keep the browser chrome in step (a dark theme-color under a light UI paints
+  // a dark band around fixed bottom bars on phones)
+  const mc = document.querySelector('meta[name="theme-color"]');
+  if(mc) mc.content = t==='light' ? '#eef1f6' : '#04060c';
   const icon = tico(t==='light' ? 'sun' : 'moon');
   const t1=$('themeToggleMain'), t2=$('themeToggleEditor'), t3=$('themeToggleSettings');
   if(t1) t1.innerHTML=icon;
@@ -5170,6 +5278,9 @@ function go(v){
   const isEditor = v==='editor';
   $('app').style.display = isEditor ? 'none' : 'block';
   $('v-editor').classList.toggle('on', isEditor);
+  // phones: while the editor is open it owns the bottom edge (the compose bar
+  // docks there) - the tab bar hides via body.editor-open and returns on leave
+  document.body.classList.toggle('editor-open', isEditor);
   if(typeof chatOnViewChange === 'function') chatOnViewChange(isEditor);
 
   if(!isEditor){
@@ -8915,7 +9026,7 @@ function chatRelease(silent){
   $('chatStrip').hidden = true;
   const inp = $('chatInput');
   inp.disabled = false; inp.value = '';
-  inp.placeholder = 'Write a message…';
+  inp.placeholder = chatPlaceholder(false);
   chatAutosize();
   if(!silent) chatPaint();
 }
@@ -9078,6 +9189,19 @@ function chatOpenSheet(){
     b.addEventListener('click', () => { chatCloseSheet(); fn(); });
     host.appendChild(b);
   }
+  // Doc-import utilities: thread mode hides #editorActions/#importDropZone, so the
+  // sheet is where imports live in the thread (same handlers as the Doc-mode buttons)
+  const util = [
+    ['markdown', 'Import Markdown', () => openMdImport()],
+    ['file-import', 'Import .docx / .pdf', () => { const inp = $('importDocInput'); if(inp) inp.click(); }],
+  ];
+  for(const [icon, label, fn] of util){
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'chat-sheet-tile';
+    b.innerHTML = tico(icon) + '<span>' + esc(label) + '</span>';
+    b.addEventListener('click', () => { chatCloseSheet(); fn(); });
+    host.appendChild(b);
+  }
   $('chatSheet').hidden = false;
 }
 function chatCloseSheet(){ $('chatSheet').hidden = true; }
@@ -9143,11 +9267,22 @@ function chatAutosize(){
   const inp = $('chatInput'); if(!inp) return;
   inp.style.height = 'auto';
   inp.style.height = Math.min(inp.scrollHeight, 140) + 'px';
+  // Dictate/Send swap (mobile CSS keys off .has-text): every path that changes the
+  // input's value already runs through here, so this is the single toggle point
+  const row = inp.closest('.chat-row');
+  if(row) row.classList.toggle('has-text', !!inp.value.trim());
+}
+/* compose-bar placeholders: shorter on phones so the input never truncates them */
+function chatPlaceholder(ask){
+  const narrow = matchMedia('(max-width:640px)').matches;
+  return ask ? (narrow ? 'Ask Partner…' : 'Ask the Partner…')
+             : (narrow ? 'Write…' : 'Write a message…');
 }
 
 /* ── wiring ── */
 (function wireChat(){
   const inp = $('chatInput'); if(!inp) return;
+  inp.placeholder = chatPlaceholder(false);   // phones get the short form from the start
   inp.addEventListener('input', () => { chatAutosize(); chatSyncInput(); });
   inp.addEventListener('keydown', e => {
     if(e.key === 'Escape' && _chatBound){ e.preventDefault(); chatRelease(); }
@@ -9236,6 +9371,9 @@ function _applyThreadMode(on){
   if(!host) return;
   host.classList.toggle('thread-canvas', _threadMode);
   host.classList.toggle('thread-on', _threadMode);
+  // the editor shell carries the mode too: thread-mode hides Doc-only import chrome
+  const ved = $('v-editor');
+  if(ved) ved.classList.toggle('thread-mode', _threadMode);
   const btn = $('threadToggleBtn');
   if(btn) btn.innerHTML = _threadMode ? tico('file-text') + ' Doc' : tico('message-circle') + ' Chat';
   if(window.__threadRenderTurns) window.__threadRenderTurns();   // conversation layer hook; harmless no-op before it exists
@@ -9328,7 +9466,7 @@ function setAskMode(on, blockId){
   }
   const btn = $('chatAskToggle'); if(btn) btn.classList.toggle('on', _askMode);
   const inp = $('chatInput');
-  if(inp && !_chatBound) inp.placeholder = _askMode ? 'Ask the Partner…' : 'Write a message…';
+  if(inp && !_chatBound) inp.placeholder = chatPlaceholder(_askMode);
 }
 function threadReplyTo(blockId){
   setAskMode(true, blockId);   // pin the block; the next send is a 'reply' ask about it
@@ -9380,12 +9518,16 @@ async function askPartner(ask, { text = '', blockId = null, reAsk = false } = {}
   } catch (e) {
     dropPending();
     const err = classifyError({ raw: e, status: e && e.status });
-    const friendly = isNoKeyErr(e)
+    const noKey = isNoKeyErr(e);
+    const friendly = noKey
       ? 'Connect an AI provider in Settings → Keys to chat with the Partner.'
       : (err.message || 'Something went wrong - please try again.');
     doneId = 'e' + Date.now().toString(36);
+    // noKey routes the turn's action row to Open settings (retrying without a key
+    // can only fail again); JSON.stringify drops the undefined on ordinary errors
     reqThread.turns.push({ id: doneId, role: 'assistant', kind: 'guidance', text: friendly,
-      blockRef: blockId, ts: Date.now(), state: 'open', error: true, retry: { ask, text, blockId } });
+      blockRef: blockId, ts: Date.now(), state: 'open', error: true, noKey: noKey || undefined,
+      retry: { ask, text, blockId } });
   } finally {
     _askBusy = false;
     if(reqThread === _thread){
@@ -9413,9 +9555,21 @@ function _threadScrollTo(tid){
 
 function _mkTurnEl(t){
   const el = document.createElement('div');
-  el.className = 'turn ' + (t.role === 'aside' ? 'turn-aside' : 'turn-assistant')
+  const isAssistant = t.role !== 'aside';
+  el.className = 'turn ' + (isAssistant ? 'turn-assistant' : 'turn-aside')
+    + (isAssistant ? (t.kind === 'insertable' ? ' turn-insertable' : ' turn-guidance') : '')
     + (t.error ? ' turn-error' : '') + (t.typing ? ' thread-typing' : '');
   el.dataset.tid = t.id;
+  if(isAssistant){
+    // errors interrupt (alert); ordinary Partner turns announce politely as they land
+    if(t.error){ el.setAttribute('role', 'alert'); }
+    else { el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite'); }
+    // the Partner always signs its turns - suggestions say so (spec addendum 9)
+    const speaker = document.createElement('span');
+    speaker.className = 'turn-speaker';
+    speaker.textContent = t.kind === 'insertable' ? 'Partner suggestion' : 'Partner';
+    el.appendChild(speaker);
+  }
   el.appendChild(document.createTextNode(t.text));   // textContent path - AI text is never HTML
   if(t.role !== 'assistant' || t.typing) return el;
   const acts = document.createElement('div'); acts.className = 'turn-acts';
@@ -9424,7 +9578,9 @@ function _mkTurnEl(t){
     b.addEventListener('click', ev => { ev.stopPropagation(); fn(); }); acts.appendChild(b);
   };
   if(t.kind === 'insertable' && t.state === 'open') btn('Accept', () => acceptThreadTurn(t));
-  if(t.error || (t.kind === 'insertable' && t.state === 'open')) btn('Retry', () => retryThreadTurn(t));
+  // no-key errors route to the fix (Settings → Keys) - a Retry without a key only fails again
+  if(t.error && t.noKey) btn('Open settings', () => { go('settings'); loadSettings(); });
+  else if(t.error || (t.kind === 'insertable' && t.state === 'open')) btn('Retry', () => retryThreadTurn(t));
   if(t.state === 'open') btn('Dismiss', () => dismissThreadTurn(t));
   if(acts.children.length) el.appendChild(acts);
   return el;
@@ -9508,11 +9664,24 @@ function retryThreadTurn(t){
   askPartner(r.ask || 'aside', { text: r.text || '', blockId: r.blockId || null, reAsk: true });
 }
 
-/* quick chips under the thread: rendering them is free; tapping one spends tokens */
+/* quick chips under the thread: rendering them is free; tapping one spends tokens.
+   Light-touch reveal: the chips only appear after ~4s WITHOUT input events - the
+   Partner offers itself when the author pauses, never while they are typing. */
+let _chipIdleT = 0, _chipsIdle = false;
+function _chipIdleArm(){
+  clearTimeout(_chipIdleT);
+  _chipIdleT = setTimeout(() => { _chipIdleT = 0; _chipsIdle = true; renderThreadChips(); }, 4000);
+}
+function _chipIdlePoke(){
+  if(_chipsIdle){ _chipsIdle = false; renderThreadChips(); }
+  _chipIdleArm();
+}
 function renderThreadChips(){
   const host = $('threadChips'); if(!host) return;
   const blocks = (doc && doc.blocks) || [];
-  host.hidden = !(_threadMode && blocks.length > 0 && !_askBusy);
+  const want = _threadMode && blocks.length > 0 && !_askBusy;
+  if(want && !_chipsIdle && !_chipIdleT) _chipIdleArm();   // start the quiet clock
+  host.hidden = !(want && _chipsIdle);
   if(host.hidden || host.dataset.built) return;
   host.dataset.built = '1';
   const chip = (label, ask) => {
@@ -9528,6 +9697,9 @@ function renderThreadChips(){
   chip('Suggest a title', 'title');
 }
 
+// typing anywhere (bar or block) hides the chips and re-arms the 4s idle reveal
+$('chatInput')?.addEventListener('input', _chipIdlePoke);
+$('blockList')?.addEventListener('input', _chipIdlePoke);
 $('chatAskToggle')?.addEventListener('click', () => setAskMode(!_askMode));
 // Wrap the send path rather than duplicate it: a capture-phase listener on the bar runs
 // BEFORE the send button's own chatSend listener, so in ask mode the message goes to the
