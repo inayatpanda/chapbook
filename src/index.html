@@ -2180,6 +2180,14 @@
     border:1px solid var(--line);background:rgba(140,160,200,.08);color:var(--ink);cursor:pointer}
   .turn-acts button:hover{border-color:var(--acc)}
   .thread-typing{opacity:.7;font-style:italic}
+  /* Ask toggle: ✦ flips the next message from "write into the post" to "say to the Partner" */
+  #chatAskToggle.on{border-color:var(--acc);color:var(--acc);background:rgba(45,212,191,.12)}
+  /* quick chips: rendering them is free; tapping one spends tokens (spec 4.2) */
+  #threadChips[hidden]{display:none}   /* class rule below would otherwise defeat [hidden] */
+  #threadChips{display:flex;gap:.4rem;max-width:760px;margin:0 auto .45rem;flex-wrap:wrap}
+  #threadChips button{border:1px solid var(--line);border-radius:999px;background:rgba(140,160,200,.06);
+    color:var(--ink);font:600 .78rem var(--font-display);padding:.35rem .7rem;cursor:pointer;min-height:34px}
+  #threadChips button:hover{border-color:var(--acc)}
 
   .tpllib-preview{max-width:620px;margin:0 auto}
   .tpllib-frame{width:100%;min-height:220px;border:1px solid var(--line);border-radius:11px;
@@ -3682,9 +3690,11 @@
       <span id="chatStripLbl"></span>
       <button id="chatStripX" type="button" aria-label="Stop editing this block">✕</button>
     </div>
+    <div id="threadChips" hidden></div>
     <div class="chat-row">
       <button class="cbtn" id="chatPlus" type="button" title="Add — image, interactive, figure…" aria-label="Add a block"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-plus"/></svg></button>
       <textarea id="chatInput" rows="1" placeholder="Write a message…" autocomplete="off"></textarea>
+      <button class="cbtn" id="chatAskToggle" type="button" title="Ask the Partner" aria-label="Ask the Partner instead of writing into the post">✦</button>
       <button class="cbtn" id="chatMic" type="button" title="Dictate" aria-label="Dictate" hidden><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-microphone"/></svg></button>
       <button class="cbtn" id="chatSendBtn" type="button" title="Send" aria-label="Send"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-send-2"/></svg></button>
     </div>
@@ -9064,6 +9074,13 @@ function chatDecorate(){
   mk('arrow-up', 'Move up', () => chatMoveBound(-1));
   mk('arrow-down', 'Move down', () => chatMoveBound(1));
   mk('trash', 'Delete block', chatDeleteBound);
+  if(_threadMode){
+    // thread mode: the bubble's Partner affordances (spec 4.2) - each is a deliberate tap
+    const bid = _chatBound;
+    mk('message-circle', 'Reply: ask the Partner about this block', () => threadReplyTo(bid));
+    mk('sparkles', 'Tighten this block', () => askPartner('tighten', { blockId: bid }));
+    mk('player-track-next', 'Continue the post from this block', () => askPartner('continue', { blockId: bid }));
+  }
   card.appendChild(row);
 }
 function chatMoveBound(d){
@@ -9271,6 +9288,213 @@ function setThreadMode(on){
 window.setThreadMode = setThreadMode;
 $('threadToggleBtn')?.addEventListener('click', () => setThreadMode(!_threadMode));
 setThreadMode(false);   // initialise the toggle label before any post opens
+
+/* ── the conversation layer: author asides + Partner turns over the thread.
+   Turns live in _thread (the sidecar shape from core/thread.js; per-draft persistence
+   lands with the /thread routes wiring). The Partner speaks ONLY when addressed
+   (spec 4.2): the ✦ Ask toggle, a bubble's Reply/Tighten/Continue, or a quick chip.
+   Guidance-first: only tighten/continue/title replies are insertable (Accept);
+   asides and replies guide - questions, nudges, feedback - never draft text. ── */
+let _thread = { v: 1, mode: 'chat', turns: [] };
+let _askMode = false, _askBlockId = null, _askBusy = false;
+function saveThread(){ /* per-draft persistence lands with the /thread routes wiring */ }
+
+function setAskMode(on, blockId){
+  _askMode = !!on;
+  _askBlockId = _askMode ? (blockId || null) : null;
+  if(_askMode && _chatBound){
+    chatRelease(true);   // an ask must never edit the bound block's text
+    chatDecorate();      // the silent release skips the repaint - strip the bound-card chrome here
+  }
+  const btn = $('chatAskToggle'); if(btn) btn.classList.toggle('on', _askMode);
+  const inp = $('chatInput');
+  if(inp && !_chatBound) inp.placeholder = _askMode ? 'Ask the Partner…' : 'Write a message…';
+}
+function threadReplyTo(blockId){
+  setAskMode(true, blockId);   // pin the block; the next send is a 'reply' ask about it
+  const inp = $('chatInput'); if(inp) inp.focus();
+}
+
+/* blocks store paragraph content as html - flatten to the plain {type, text} shape
+   the /thread/turn prompt assembly reads (core/thread.js blockText) */
+function _threadBlockForPrompt(b){
+  if(!b) return null;
+  const f = chatFieldFor(b);
+  const text = f && f.field === 'html' ? chatHtmlToText(b.html || '') : String(b.text || b.caption || '');
+  return { type: b.type, text };
+}
+
+async function askPartner(ask, { text = '', blockId = null, reAsk = false } = {}){
+  if(_askBusy) return;
+  _askBusy = true;
+  const blocks = (doc && doc.blocks) || [];
+  const i = blockId ? blocks.findIndex(b => b.id === blockId) : -1;
+  const payload = { ask, text,
+    title: (meta && meta.title) || ($('editorTitle') && $('editorTitle').value) || '',
+    block: i >= 0 ? _threadBlockForPrompt(blocks[i]) : null,
+    prevBlock: i > 0 ? _threadBlockForPrompt(blocks[i - 1]) : null,
+    nextBlock: i >= 0 ? _threadBlockForPrompt(blocks[i + 1] || null) : null };
+  // the author's spoken turn renders as an italic aside bubble (asks that carry a
+  // message) - but a Retry re-asks an already-spoken message, so it never re-bubbles
+  if((ask === 'aside' || ask === 'reply') && text && !reAsk)
+    _thread.turns.push({ id: 'a' + Date.now().toString(36) + '-' + _thread.turns.length,
+      role: 'aside', kind: 'guidance', text, blockRef: blockId, ts: Date.now(), state: 'open' });
+  const pending = { id: 'pending', role: 'assistant', kind: 'guidance', text: '…',
+    blockRef: blockId, ts: Date.now(), state: 'open', typing: true };
+  _thread.turns.push(pending);
+  renderTurns(); _threadScrollTo('pending');
+  let doneId = null;
+  try {
+    const r = await api('/thread/turn', { method: 'POST', body: JSON.stringify(payload) });
+    _thread.turns.splice(_thread.turns.indexOf(pending), 1);
+    doneId = 't' + Date.now().toString(36) + '-' + _thread.turns.length;
+    _thread.turns.push({ id: doneId, role: 'assistant',
+      kind: r && r.insertable ? 'insertable' : 'guidance', text: String((r && r.text) || ''),
+      blockRef: blockId, ts: Date.now(), state: 'open', retry: { ask, text, blockId } });
+    saveThread();
+  } catch (e) {
+    _thread.turns.splice(_thread.turns.indexOf(pending), 1);
+    const err = classifyError({ raw: e, status: e && e.status });
+    const friendly = isNoKeyErr(e)
+      ? 'Connect an AI provider in Settings → Keys to chat with the Partner.'
+      : (err.message || 'Something went wrong - please try again.');
+    doneId = 'e' + Date.now().toString(36);
+    _thread.turns.push({ id: doneId, role: 'assistant', kind: 'guidance', text: friendly,
+      blockRef: blockId, ts: Date.now(), state: 'open', error: true, retry: { ask, text, blockId } });
+  } finally {
+    _askBusy = false;
+    renderTurns();
+    if(doneId) _threadScrollTo(doneId);
+  }
+}
+
+function _threadScrollTo(tid){
+  requestAnimationFrame(() => {
+    const el = document.querySelector('#blockList .turn[data-tid="' + tid + '"]');
+    if(el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  });
+}
+
+function _mkTurnEl(t){
+  const el = document.createElement('div');
+  el.className = 'turn ' + (t.role === 'aside' ? 'turn-aside' : 'turn-assistant')
+    + (t.error ? ' turn-error' : '') + (t.typing ? ' thread-typing' : '');
+  el.dataset.tid = t.id;
+  el.appendChild(document.createTextNode(t.text));   // textContent path - AI text is never HTML
+  if(t.role !== 'assistant' || t.typing) return el;
+  const acts = document.createElement('div'); acts.className = 'turn-acts';
+  const btn = (label, fn) => {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = label;
+    b.addEventListener('click', ev => { ev.stopPropagation(); fn(); }); acts.appendChild(b);
+  };
+  if(t.kind === 'insertable' && t.state === 'open') btn('Accept', () => acceptThreadTurn(t));
+  if(t.error || (t.kind === 'insertable' && t.state === 'open')) btn('Retry', () => retryThreadTurn(t));
+  if(t.state === 'open') btn('Dismiss', () => dismissThreadTurn(t));
+  if(acts.children.length) el.appendChild(acts);
+  return el;
+}
+
+function renderTurns(){
+  const host = $('blockList'); if(!host) return;
+  host.querySelectorAll('.turn').forEach(n => n.remove());
+  renderThreadChips();
+  if(!_threadMode) return;
+  // dismissed turns hide; accepted insertable text crossed into the post (it IS a sent
+  // bubble now) so the assistant bubble stops echoing it
+  const live = _thread.turns.filter(t => t.state !== 'dismissed' && !(t.kind === 'insertable' && t.state === 'accepted'));
+  if(!live.length) return;
+  const ids = new Set(((doc && doc.blocks) || []).map(b => b.id));
+  host.querySelectorAll('.block[data-id]').forEach(card => {
+    let anchor = card;   // anchored turns sit just under their bubble, in turn order
+    for(const t of live){
+      if(t.blockRef === card.dataset.id){ const el = _mkTurnEl(t); anchor.after(el); anchor = el; }
+    }
+  });
+  // unanchored turns (and turns whose block was deleted) sit at the thread tail
+  for(const t of live){ if(!t.blockRef || !ids.has(t.blockRef)) host.appendChild(_mkTurnEl(t)); }
+}
+window.__threadRenderTurns = renderTurns;
+
+function acceptThreadTurn(t){
+  if(t.kind !== 'insertable' || t.state !== 'open') return;
+  const ask = (t.retry && t.retry.ask) || '';
+  const clean = String(t.text || '').trim();
+  if(ask === 'title'){
+    const inp = $('editorTitle');
+    if(inp){
+      inp.value = clean.replace(/^["']|["']$/g, '');
+      inp.dispatchEvent(new Event('input'));   // the real listener: meta.title + markDirty + slug debounce
+    }
+  } else {
+    const i = doc.blocks.findIndex(b => b.id === t.blockRef);
+    const f = i >= 0 ? chatFieldFor(doc.blocks[i]) : null;
+    pushHistory();   // a content/structure change - one ⌘Z step
+    if(ask === 'tighten' && f && f.field !== 'title'){
+      const b = doc.blocks[i];                  // tighten REPLACES the block's text
+      if(f.field === 'html') b.html = inlineMdToHtml(clean).replace(/\n/g, '<br>');
+      else if(f.field === 'text') b.text = clean;
+      else b.caption = clean;
+    } else {                                    // continue (and any other insert) lands after its block
+      const at = i >= 0 ? i + 1 : doc.blocks.length;
+      doc.blocks.splice(at, 0, { id: mkId(), type: 'text', html: inlineMdToHtml(clean).replace(/\n/g, '<br>') });
+    }
+    markDirty();
+  }
+  t.state = 'accepted';
+  saveThread();
+  renderBlocks();   // repaint the thread; the wrapper below re-renders turns
+}
+function dismissThreadTurn(t){ t.state = 'dismissed'; saveThread(); renderTurns(); }
+function retryThreadTurn(t){
+  t.state = 'dismissed';   // the old bubble makes way for the fresh attempt
+  const r = t.retry || {};
+  askPartner(r.ask || 'aside', { text: r.text || '', blockId: r.blockId || null, reAsk: true });
+}
+
+/* quick chips under the thread: rendering them is free; tapping one spends tokens */
+function renderThreadChips(){
+  const host = $('threadChips'); if(!host) return;
+  const blocks = (doc && doc.blocks) || [];
+  host.hidden = !(_threadMode && blocks.length > 0 && !_askBusy);
+  if(host.hidden || host.dataset.built) return;
+  host.dataset.built = '1';
+  const chip = (label, ask) => {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = label;
+    b.addEventListener('click', () => {
+      const last = doc.blocks[doc.blocks.length - 1] || {};
+      askPartner(ask, { blockId: last.id || null });
+    });
+    host.appendChild(b);
+  };
+  chip('Continue this thought', 'continue');
+  chip('Tighten', 'tighten');
+  chip('Suggest a title', 'title');
+}
+
+$('chatAskToggle')?.addEventListener('click', () => setAskMode(!_askMode));
+// Wrap the send path rather than duplicate it: a capture-phase listener on the bar runs
+// BEFORE the send button's own chatSend listener, so in ask mode the message goes to the
+// Partner and never into the post.
+$('chatBar')?.addEventListener('click', (e) => {
+  if(!_askMode || !e.target.closest('#chatSendBtn')) return;
+  e.preventDefault(); e.stopPropagation();
+  const inp = $('chatInput');
+  const text = ((inp && inp.value) || '').trim();
+  if(!text) return;
+  const blockId = _askBlockId;
+  if(inp){ inp.value = ''; chatAutosize(); }
+  setAskMode(false);
+  askPartner(blockId ? 'reply' : 'aside', { text, blockId });
+}, true);
+$('chatInput')?.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape' && _askMode){ e.preventDefault(); setAskMode(false); }
+});
+
+// re-attach the conversation after every block repaint (renderBlocks resets #blockList)
+{
+  const _renderBlocksPre = renderBlocks;
+  renderBlocks = function(){ _renderBlocksPre(); renderTurns(); };
+}
 
 function edImage(b, isSel){
   const wrap = document.createElement('div');
@@ -11090,6 +11314,8 @@ async function startNewPost(seedDoc){
   setSeriesUI();
   setSaveState('idle','New post');
   _dirty = false; _lastLocalSaveTs = 0;
+  _thread = { v: 1, mode: 'chat', turns: [] };   // fresh conversation; per-draft resume lands with persistence
+  setAskMode(false);
   setThreadMode(true);   // new posts open in Chat (spec 4.1); per-post mode memory lands with persistence
   renderBlocks();
   updateWordCount();   // editor-open: reflect the (empty) new post — hides the readout
@@ -11134,6 +11360,8 @@ async function openBlockEditor(slug){
   selectedId = null;
   _dirty = false; _lastLocalSaveTs = 0;
   setSaveState('loading','Loading…');
+  _thread = { v: 1, mode: 'chat', turns: [] };   // fresh conversation; per-draft resume lands with persistence
+  setAskMode(false);
   setThreadMode(false);  // existing posts open in Doc (spec 4.1); per-post mode memory lands with persistence
   go('editor');
   try{
