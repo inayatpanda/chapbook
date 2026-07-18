@@ -9274,7 +9274,7 @@ function chatAutosize(){
 /* ── 💬 chat-mode presentation (Thread): a class flip over the SAME block list.
    Doc mode is the untouched editor; nothing here re-implements block editing
    (chatBind). The canvas + bubble styling is pure CSS (.thread-canvas/.thread-on). ── */
-let _threadMode = false;
+let _threadMode = false, _threadId = null, _threadSaveT = 0, _threadReq = 0;
 function setThreadMode(on){
   _threadMode = !!on;
   const host = $('blockList');
@@ -9284,20 +9284,59 @@ function setThreadMode(on){
   const btn = $('threadToggleBtn');
   if(btn) btn.innerHTML = _threadMode ? tico('file-text') + ' Doc' : tico('message-circle') + ' Chat';
   if(window.__threadRenderTurns) window.__threadRenderTurns();   // conversation layer hook; harmless no-op before it exists
+  saveThread();   // per-post mode memory (spec 4.1); no-op until a post opens (_threadId null)
 }
 window.setThreadMode = setThreadMode;
 $('threadToggleBtn')?.addEventListener('click', () => setThreadMode(!_threadMode));
 setThreadMode(false);   // initialise the toggle label before any post opens
 
 /* ── the conversation layer: author asides + Partner turns over the thread.
-   Turns live in _thread (the sidecar shape from core/thread.js; per-draft persistence
-   lands with the /thread routes wiring). The Partner speaks ONLY when addressed
+   Turns live in _thread (the sidecar shape from core/thread.js), persisted per post
+   through /thread/:id below. The Partner speaks ONLY when addressed
    (spec 4.2): the ✦ Ask toggle, a bubble's Reply/Tighten/Continue, or a quick chip.
    Guidance-first: only tighten/continue/title replies are insertable (Accept);
    asides and replies guide - questions, nudges, feedback - never draft text. ── */
 let _thread = { v: 1, mode: 'chat', turns: [] };
 let _askMode = false, _askBlockId = null, _askBusy = false;
-function saveThread(){ /* per-draft persistence lands with the /thread routes wiring */ }
+
+/* ── per-draft persistence: the sidecar lives in the 'threads' store via /thread/:id,
+   keyed by the post's slug. A titleless new post writes under the single provisional
+   slot (PROVISIONAL_SLUG) and migrates to the real slug the moment reserveSlug() lands
+   one - the same P3c model the blocks draft follows. Saves debounce 800ms; loads carry
+   a request token so a slow read for one post can never clobber the thread of the post
+   the user switched to meanwhile. ── */
+function _threadSaveNow(){
+  if(!_threadId) return;
+  _thread.mode = _threadMode ? 'chat' : 'doc';
+  api('/thread/' + encodeURIComponent(_threadId), { method: 'PUT', body: JSON.stringify(_thread) }).catch(() => {});
+}
+function saveThread(){
+  clearTimeout(_threadSaveT);
+  _threadSaveT = setTimeout(_threadSaveNow, 800);
+}
+async function loadThread(id){
+  // flush any pending save for the OUTGOING post before its in-memory state is replaced
+  if(_threadSaveT){ clearTimeout(_threadSaveT); _threadSaveT = 0; if(_threadId && _threadId !== id) _threadSaveNow(); }
+  _threadId = id;
+  const req = ++_threadReq;
+  let t = null;
+  try { t = await api('/thread/' + encodeURIComponent(id)); } catch { t = null; }
+  if(req !== _threadReq || _threadId !== id) return;   // stale response - a newer post opened mid-flight
+  _thread = (t && Array.isArray(t.turns)) ? t : { v: 1, mode: 'chat', turns: [] };
+  // Default rule (spec 4.1): new-post entries (editorSection 'write') default to Chat,
+  // existing posts default to Doc. An ABSENT sidecar reads back as a fresh chat-mode
+  // thread (GET never 404s), indistinguishable from a saved turn-less one - so for an
+  // existing post a conversation must exist for Chat to resume; turn-less means Doc.
+  setThreadMode(editorSection === 'write' ? _thread.mode !== 'doc'
+    : (_thread.mode === 'chat' && _thread.turns.length > 0));
+  renderTurns();
+}
+async function migrateThread(fromId, toId){
+  if(!fromId || fromId === toId){ _threadId = toId; return; }
+  _threadId = toId;
+  _threadSaveNow();   // write under the new id NOW - the delete below must never win alone
+  api('/thread/' + encodeURIComponent(fromId), { method: 'DELETE' }).catch(() => {});
+}
 
 function setAskMode(on, blockId){
   _askMode = !!on;
@@ -11314,9 +11353,11 @@ async function startNewPost(seedDoc){
   setSeriesUI();
   setSaveState('idle','New post');
   _dirty = false; _lastLocalSaveTs = 0;
-  _thread = { v: 1, mode: 'chat', turns: [] };   // fresh conversation; per-draft resume lands with persistence
+  _thread = { v: 1, mode: 'chat', turns: [] };   // blank while the sidecar loads (a prior post's turns must never paint)
   setAskMode(false);
-  setThreadMode(true);   // new posts open in Chat (spec 4.1); per-post mode memory lands with persistence
+  // Resume the single untitled slot's conversation + mode (Chat by default for a new
+  // post); the sidecar migrates to the real slug when reserveSlug() lands one.
+  await loadThread(PROVISIONAL_SLUG);
   renderBlocks();
   updateWordCount();   // editor-open: reflect the (empty) new post — hides the readout
   // Switch views FIRST — loadEditorSettings() fetches /topics and, on a slow or
@@ -11360,9 +11401,9 @@ async function openBlockEditor(slug){
   selectedId = null;
   _dirty = false; _lastLocalSaveTs = 0;
   setSaveState('loading','Loading…');
-  _thread = { v: 1, mode: 'chat', turns: [] };   // fresh conversation; per-draft resume lands with persistence
+  _thread = { v: 1, mode: 'chat', turns: [] };   // blank while the sidecar loads (a prior post's turns must never paint)
   setAskMode(false);
-  setThreadMode(false);  // existing posts open in Doc (spec 4.1); per-post mode memory lands with persistence
+  await loadThread(slug);   // resume this post's conversation + mode (Doc unless a chat was left open)
   go('editor');
   try{
     const r = await api('/posts/'+slug+'/blocks');
@@ -11694,6 +11735,10 @@ async function reserveSlug({ surface = false } = {}){
       // P3c: fold any titleless work saved under the provisional slug into this real
       // slug, so there is exactly one draft (not an orphaned '__untitled__').
       await migrateProvisionalDraft(currentSlug);
+      // The thread sidecar follows its post: rehome the untitled slot's conversation
+      // under the reserved slug. reserveSlug() is the single choke point, so this
+      // covers the doPublish/doSchedule self-heal paths AND the title debounce/blur.
+      if(_threadId === PROVISIONAL_SLUG) await migrateThread(PROVISIONAL_SLUG, currentSlug);
     }
     return currentSlug;
   }catch(e){
@@ -11755,6 +11800,9 @@ async function openUntitledDraft(){
   currentSlug = null;
   _ownsProvisional = true;               // this session continues the single provisional slot
   _composeAnchorId = null;
+  _thread = { v: 1, mode: 'chat', turns: [] };   // blank while the sidecar loads (a prior post's turns must never paint)
+  setAskMode(false);
+  await loadThread(PROVISIONAL_SLUG);    // the untitled slot's conversation resumes with its recovered draft
   doc = saved.doc || { version:1, blocks:[ { id:mkId(), type:'text', html:'' } ] };
   meta = metaFromData('', saved.data);
   meta.title = '';                       // keep it titleless so titling reserves a real slug

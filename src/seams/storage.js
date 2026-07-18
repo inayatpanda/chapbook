@@ -3,7 +3,7 @@
 
 // Exported so draft export/import (lib/draftsIo.js) and the app-reset enumerator share one
 // source of truth for the store list — add a store here and both pick it up.
-export const STORES = ['drafts', 'blockdrafts', 'partner', 'shapes', 'versions', 'ideas'];
+export const STORES = ['drafts', 'blockdrafts', 'partner', 'shapes', 'versions', 'ideas', 'threads'];
 
 export function memoryBackend() {
   const db = Object.fromEntries(STORES.map((s) => [s, new Map()]));
@@ -19,7 +19,7 @@ export function memoryBackend() {
 
 export function idbBackend(name = 'helm-studio') {
   const open = () => new Promise((res, rej) => {
-    const r = indexedDB.open(name, 4); // v2 adds 'shapes'; v3 adds 'versions' (snapshots); v4 adds 'ideas' (inbox)
+    const r = indexedDB.open(name, 5); // v2 adds 'shapes'; v3 adds 'versions' (snapshots); v4 adds 'ideas' (inbox); v5 adds 'threads' (chat-mode conversation sidecars)
     r.onupgradeneeded = () => { const d = r.result; for (const s of STORES) if (!d.objectStoreNames.contains(s)) d.createObjectStore(s, { keyPath: 'id' }); };
     r.onsuccess = () => res(r.result);
     r.onerror = () => rej(r.error);
