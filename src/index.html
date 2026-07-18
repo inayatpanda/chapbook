@@ -2156,6 +2156,31 @@
   .chat-sheet-tile .tico{width:20px;height:20px;color:var(--acc)}
   .chat-sheet-tile.ai{border-color:rgba(45,212,191,.4);color:var(--acc)}
 
+  /* ── chat-mode canvas: the post as a conversation. The canvas is an elevated
+     surface (owner: "big container, lighter background") - literal light panel in
+     light theme, one-step-elevated surface in dark. Bubbles float on it. ── */
+  .thread-canvas{border-radius:20px;padding:1rem 1rem 5.5rem;background:var(--surface);
+    border:1px solid var(--line);box-shadow:0 8px 30px rgba(0,0,0,.18)}
+  :root[data-theme="light"] .thread-canvas{background:#fbfaf7;box-shadow:0 8px 30px rgba(30,30,60,.07)}
+  /* thread view: the compose bar adds blocks; no inline "+" dividers between bubbles */
+  .thread-on .adddiv{display:none}
+  .thread-on .block{max-width:78%;margin-left:auto;border-radius:16px 16px 4px 16px;
+    background:var(--bg-1);border:1px solid var(--line);padding:.7rem .9rem}
+  .thread-on .block.chat-bound{max-width:100%;margin-left:0}
+  .turn{max-width:78%;margin:.5rem auto .5rem 0;border-radius:16px 16px 16px 4px;
+    padding:.65rem .85rem;font-size:.92rem;line-height:1.45;border:1px solid var(--line);
+    white-space:pre-wrap}
+  .turn-aside{max-width:60%;margin-left:auto;margin-right:0;font-style:italic;
+    border-radius:16px 16px 4px 16px;color:var(--mut);background:transparent;border-style:dashed}
+  .turn-assistant{background:var(--surface-2,var(--bg-1));color:var(--ink)}
+  .turn-error{border-color:#b4552f;color:#c96}
+  :root[data-theme="light"] .turn-error{border-color:#c0602f;color:#a04a20}
+  .turn-acts{display:flex;gap:.4rem;margin-top:.45rem;white-space:normal}
+  .turn-acts button{font-size:.78rem;padding:.25rem .6rem;border-radius:999px;
+    border:1px solid var(--line);background:rgba(140,160,200,.08);color:var(--ink);cursor:pointer}
+  .turn-acts button:hover{border-color:var(--acc)}
+  .thread-typing{opacity:.7;font-style:italic}
+
   .tpllib-preview{max-width:620px;margin:0 auto}
   .tpllib-frame{width:100%;min-height:220px;border:1px solid var(--line);border-radius:11px;
     background:#04060c;display:block}
@@ -2515,6 +2540,11 @@
   /* ── MOBILE: show settings toggle button ──────────────────────────────────── */
   @media(max-width:899px){
     #settingsToggleBtn{ display:flex !important; }
+  }
+
+  /* ── show outline toggle whenever the outline rail is hidden (below 1200px) ── */
+  @media(max-width:1199px){
+    #outlineToggleBtn{ display:flex !important; }
   }
 
   /* ── DESKTOP 3-COLUMN EDITOR (@900px+) ──────────────────────────────────── */
@@ -3129,7 +3159,7 @@
     <div class="set-row" id="connRow" style="display:none">
       <div>
         <strong>Connection</strong>
-        <div class="sub" id="connStatus" style="margin:0">Local-only</div>
+        <div class="sub" id="connStatusKeys" style="margin:0">Local-only</div>
       </div>
       <button class="btn ghost" id="connBtn" onclick="window.__studioOnboard&&window.__studioOnboard()">Change…</button>
     </div>
@@ -3217,7 +3247,7 @@
           <input type="checkbox" id="r2-worker-on" onchange="toggleR2Worker()" style="width:auto" />
           <span style="font:700 .95rem var(--font-display)">Use a Worker (recommended if S3 is blocked)</span>
         </label>
-        <p class="sub" style="margin-top:.35rem">Uploads go through a small Cloudflare&nbsp;Worker that writes to the <i>same</i> bucket via an R2 binding — it never touches <code>&lt;account&gt;.r2.cloudflarestorage.com</code> (which can fail a TLS handshake on some accounts). Deploy the Worker in <code>cloudflare/r2-upload-worker</code>, then paste its URL + secret here. Access key / secret above aren't needed on this path — but keep the <b>Public base URL</b> set.</p>
+        <p class="sub" style="margin-top:.35rem">Uploads go through a small Cloudflare&nbsp;Worker that writes to the <i>same</i> bucket via an R2 binding — it never touches <code>&lt;account&gt;.r2.cloudflarestorage.com</code> (which can fail a TLS handshake on some accounts). Deploy the Worker from the <code>cloudflare/r2-upload-worker</code> folder in your blog repo (the repo Chapbook created for you), then paste its URL + secret here. Access key / secret above aren't needed on this path — but keep the <b>Public base URL</b> set.</p>
         <p class="sub" style="margin-top:.35rem">The same Worker also powers <b>free image generation</b> (✦ Generate on any image block) via Cloudflare Workers AI (FLUX) — no AI key needed. Add the <code>[ai]</code> binding to the Worker's <code>wrangler.toml</code> and redeploy (<code>npx wrangler deploy</code>) to enable it.</p>
         <div id="r2WorkerFields" style="display:none">
           <label style="margin-top:.7rem">Worker URL</label>
@@ -3248,7 +3278,7 @@
 
       <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem">
         <button class="btn ghost" type="button" onclick="exportDrafts()">⤓ Export drafts</button>
-        <button class="btn ghost" type="button" onclick="$('draftsImportInput')&&$('draftsImportInput').click()">⤒ Import drafts</button>
+        <button class="btn ghost" type="button" onclick="document.getElementById('draftsImportInput').click()">⤒ Import drafts</button>
         <input id="draftsImportInput" type="file" accept="application/json,.json" hidden />
       </div>
       <div id="draftsMsg" class="msg"></div>
@@ -3618,6 +3648,8 @@
       </div>
     </details>
 
+    <button class="iconBtn" id="outlineToggleBtn" style="display:none" title="Post outline" aria-label="Post outline"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-list"/></svg></button>
+    <button class="iconBtn tb-labelled" type="button" id="threadToggleBtn" title="Switch between chat and document view" aria-label="Switch between chat and document view"></button>
     <button class="iconBtn" id="cmdkBtn" title="Command palette (⌘K)" aria-label="Command palette">⌘K</button>
     <button class="themeBtn" id="themeToggleEditor" title="Toggle theme" onclick="toggleTheme()">☀️</button>
     <button class="iconBtn tb-labelled" id="settingsToggleBtn" style="display:none" title="Post settings"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-settings"/></svg> Post settings</button>
@@ -4784,6 +4816,8 @@ function classifyError({ status, payload, raw } = {}){
   const e = new Error();
   e.status = status || (raw && raw.status) || 0;
   e.detail = String(rawMsg || (status ? 'HTTP '+status : '') || '').slice(0,400);
+  // keep the source's typed code (e.g. AI_NO_KEY) so callers can branch on it (isNoKeyErr)
+  const srcCode=String((payload&&payload.code)||(raw&&raw.code)||''); if(srcCode) e.code=srcCode;
   // network / offline: a fetch that never reached GitHub (TypeError), or no status
   // at all (status 0 — request blocked by CORS, or the device is offline).
   if((raw && (raw.name === 'TypeError' || /failed to fetch|networkerror|load failed/.test(low))) || (e.status===0 && !low.includes('not configured')) ){
@@ -5235,6 +5269,16 @@ async function doDraft(){
   try{
     const r=await api('/draft',{method:'POST',body:JSON.stringify({idea:state.idea,platform:state.platform})});
     state.post=r.post; state.hooks=r.hooks||[];
+    // fresh draft → reset the share-image grid (a prior share-from-post's images must not
+    // linger), then carry any Compose-attached image in as a freshly-added, toggled-on image
+    _share.fresh=[]; _setShareImages([]);
+    if(state.imageDataUrl){
+      const im={ url:state.imageDataUrl, label:'Added', sel:true, fresh:true, file:state.imageFile||undefined };
+      _share.fresh.push(im); _share.images.push(im); _renderShareImages();
+      state.imageFile=null; state.imageDataUrl=null;   // handed off; don't double-add next draft
+      if($('imgPreview')){ $('imgPreview').src=''; $('imgPreview').style.display='none'; }
+      if($('img')) $('img').value='';
+    }
     renderReview(); go('review'); msg('composeMsg','','ok');$('composeMsg').className='msg';
   }catch(e){ msg('composeMsg',e.message,'err'); }
   finally{ $('draftBtn').disabled=false; }
@@ -5243,6 +5287,11 @@ window.doDraft=doDraft;
 
 function renderReview(){
   $('draftText').value=state.post; updateCount();
+  // a fresh draft invalidates any pack/repurpose cards and the desktop intents built from
+  // the previous text (a programmatic .value write fires no 'input' event, so refresh here)
+  if($('packCards')) $('packCards').innerHTML='';
+  if($('repurposeCards')) $('repurposeCards').innerHTML='';
+  if($('shareDesktop')?.style.display!=='none') _renderDesktopIntents();
   syncParkedAsset();   // surface a flipbook GIF/video parked by the Draw canvas
   if(state.hooks.length){ $('hooksWrap').style.display='block';
     $('hooks').innerHTML=state.hooks.map((h,i)=>`<button onclick="useHook(${i})">${h.replace(/</g,'&lt;')}</button>`).join('');
@@ -5472,9 +5521,23 @@ window.expandBlog=expandBlog;
 
 /* ── social pack: one source → LinkedIn / Instagram / X variants ─────────── */
 const PACK_PLATS=[['linkedin','LinkedIn'],['instagram','Instagram'],['x','X'],['facebook','Facebook']];
-const PLAT_LABEL={linkedin:'LinkedIn',instagram:'Instagram',x:'X'};
+const PLAT_LABEL={linkedin:'LinkedIn',instagram:'Instagram',x:'X',facebook:'Facebook'};
 const PLAT_LIMIT={x:280};
-function isNoKeyErr(t){ return /key configured/i.test(t||'') || /Settings\s*→\s*AI/i.test(t||''); }
+function isNoKeyErr(t){
+  // Accepts the classified Error or a plain message string. Typed signal first: the AI
+  // layer tags a genuinely-unconfigured provider AI_NO_KEY (src/lib/ai), and classifyError
+  // keeps the raw text in .detail even when it rewrites .message. A live no-key call fails
+  // as a provider 401 ("Authentication failed"), so also treat an ai/auth-kind failure with
+  // NO stored AI key as "not configured" rather than a bad key; a bad key stays an auth error.
+  if(t && typeof t==='object'){
+    if(String(t.code||'')==='AI_NO_KEY') return true;
+    if(/ai_no_key|key configured|Settings\s*→\s*AI/i.test(String(t.detail||''))) return true;
+    if((t.kind==='ai'||t.kind==='auth') && !_aiKeyStored()) return true;
+    t=t.message||'';
+  }
+  return /key configured/i.test(t||'') || /Settings\s*→\s*AI/i.test(t||'');
+}
+function _aiKeyStored(){ try{ return !!(JSON.parse(localStorage.getItem('helm.studio.config.v1')||'{}').aiKey); }catch{ return false; } }
 
 /* Share one chunk of text via the native share sheet (manual — nothing auto-posts).
    Falls back to clipboard where Web Share is unsupported (e.g. desktop). */
@@ -5509,7 +5572,7 @@ function makePackCard(platform, txt, idxLabel){
   shareBtn.addEventListener('click',()=>shareText(ta.value,label));
   const queueBtn=document.createElement('button'); queueBtn.type='button'; queueBtn.className='btn ghost'; queueBtn.textContent='Save to Planner';
   queueBtn.addEventListener('click',async()=>{
-    try{ await addToQueue({ text:ta.value, platform:(platform==='x'||platform==='linkedin'||platform==='instagram')?platform:'', postUrl:_shareLink() }); toast('Saved to Planner ✓'); }
+    try{ await addToQueue({ text:ta.value, platform:(platform==='x'||platform==='linkedin'||platform==='instagram'||platform==='facebook')?platform:'', postUrl:_shareLink() }); toast('Saved to Planner ✓'); }
     catch(e){ toast(e.message||'Could not queue'); }
   });
   acts.appendChild(copyBtn); acts.appendChild(shareBtn); acts.appendChild(queueBtn);
@@ -5534,7 +5597,7 @@ async function socialPack(){
     if(!any) msg('reviewMsg','No variants came back — try redrafting.','err');
   }catch(e){
     const t=String(e.message||e);
-    if(isNoKeyErr(t)){
+    if(isNoKeyErr(e)){
       msg('reviewMsg','No AI provider configured.','err');
       const link=document.createElement('button'); link.type='button'; link.className='pack-settings-link';
       link.textContent='Configure a provider in Settings';
@@ -5702,7 +5765,7 @@ async function repurpose(format){
     parts.forEach((txt,i)=>{ host.appendChild(makePackCard(platform, txt, (isThread?'Tweet ':'Slide ')+(i+1)+' / '+parts.length)); });
   }catch(e){
     const t=String(e.message||e);
-    if(isNoKeyErr(t)){
+    if(isNoKeyErr(e)){
       msg('reviewMsg','No AI provider configured.','err');
       const link=document.createElement('button'); link.type='button'; link.className='pack-settings-link';
       link.textContent='Configure a provider in Settings';
@@ -5842,9 +5905,16 @@ async function loadDrafts(){
   }catch(e){ $('draftList').textContent=e.message; }
 }
 window.loadDrafts=loadDrafts;
-function reopen(d){ state.idea=''; state.post=d.text||d.post||d.idea||''; state.platform=(d.platform==='instagram'?'instagram':'linkedin'); state.hooks=[]; renderReview(); go('review'); }
+function reopen(d){
+  // seed the idea too, so "↻ Redraft" (which reads $('idea')) has a source to work from
+  state.idea=(d.idea||d.text||d.post||'').trim(); if($('idea')) $('idea').value=state.idea;
+  state.post=d.text||d.post||d.idea||'';
+  state.platform=['linkedin','instagram','x','facebook'].includes(d.platform)?d.platform:'linkedin';
+  if($('platform')) [...$('platform').children].forEach(x=>x.classList.toggle('on',x.dataset.p===state.platform));
+  state.hooks=[]; renderReview(); go('review');
+}
 window.reopen=reopen;
-async function delDraft(id){ await api('/drafts/'+id,{method:'DELETE'}); loadDrafts(); }
+async function delDraft(id){ try{ await api('/drafts/'+id,{method:'DELETE'}); loadDrafts(); }catch(e){ toast('Couldn’t delete draft: '+e.message); } }
 window.delDraft=delDraft;
 
 /* ── Idea inbox — quick capture → backlog → promote to a post draft ──────────
@@ -6129,7 +6199,7 @@ function makeQueueItem(d, today){
   const ctl=document.createElement('div'); ctl.className='q-controls';
   const dateIn=document.createElement('input'); dateIn.type='date'; dateIn.value=d.date||''; dateIn.setAttribute('aria-label','Intended date'); ctl.appendChild(dateIn);
   const platSel=document.createElement('select'); platSel.setAttribute('aria-label','Platform');
-  for(const [v,l] of [['','Any platform'],['linkedin','LinkedIn'],['instagram','Instagram'],['x','X']]){
+  for(const [v,l] of [['','Any platform'],['linkedin','LinkedIn'],['instagram','Instagram'],['x','X'],['facebook','Facebook']]){
     const o=document.createElement('option'); o.value=v; o.textContent=l; if((d.platform||'')===v) o.selected=true; platSel.appendChild(o);
   }
   ctl.appendChild(platSel);
@@ -6139,7 +6209,8 @@ function makeQueueItem(d, today){
   const persist=async()=>{
     const next={ id:d.id, status:d.status, text:ta.value, platform:platSel.value, date:dateIn.value, postUrl:d.postUrl||'', createdAt:d.createdAt||new Date().toISOString() };
     Object.assign(d,next);
-    try{ await api('/drafts/'+d.id,{method:'PUT',body:JSON.stringify(next)}); }catch(e){ toast(e.message||'Could not save'); }
+    try{ await api('/drafts/'+d.id,{method:'PUT',body:JSON.stringify(next)}); }
+    catch(e){ toast(e.message||'Could not save'); loadQueue(); }   // failed PUT: revert to server truth
   };
   let _t=null; ta.addEventListener('input',()=>{ clearTimeout(_t); _t=setTimeout(persist,700); });
   dateIn.addEventListener('change',()=>{ persist().then(renderQueue); });
@@ -6152,11 +6223,11 @@ function makeQueueItem(d, today){
   acts.appendChild(shareBtn);
   if(d.status!=='shared'){
     const markBtn=document.createElement('button'); markBtn.type='button'; markBtn.className='btn ghost'; markBtn.textContent='Mark shared';
-    markBtn.addEventListener('click',async()=>{ d.status='shared'; try{ await api('/drafts/'+d.id,{method:'PUT',body:JSON.stringify({id:d.id,status:'shared',text:ta.value,platform:platSel.value,date:dateIn.value,postUrl:d.postUrl||'',createdAt:d.createdAt||new Date().toISOString()})}); toast('Marked shared ✓'); renderQueue(); }catch(e){ toast(e.message||'Could not update'); } });
+    markBtn.addEventListener('click',async()=>{ d.status='shared'; try{ await api('/drafts/'+d.id,{method:'PUT',body:JSON.stringify({id:d.id,status:'shared',text:ta.value,platform:platSel.value,date:dateIn.value,postUrl:d.postUrl||'',createdAt:d.createdAt||new Date().toISOString()})}); toast('Marked shared ✓'); renderQueue(); }catch(e){ toast(e.message||'Could not update'); loadQueue(); } });
     acts.appendChild(markBtn);
   } else {
     const reqBtn=document.createElement('button'); reqBtn.type='button'; reqBtn.className='btn ghost'; reqBtn.textContent='Re-queue';
-    reqBtn.addEventListener('click',async()=>{ d.status='queued'; try{ await api('/drafts/'+d.id,{method:'PUT',body:JSON.stringify({id:d.id,status:'queued',text:ta.value,platform:platSel.value,date:dateIn.value,postUrl:d.postUrl||'',createdAt:d.createdAt||new Date().toISOString()})}); renderQueue(); }catch(e){ toast(e.message||'Could not update'); } });
+    reqBtn.addEventListener('click',async()=>{ d.status='queued'; try{ await api('/drafts/'+d.id,{method:'PUT',body:JSON.stringify({id:d.id,status:'queued',text:ta.value,platform:platSel.value,date:dateIn.value,postUrl:d.postUrl||'',createdAt:d.createdAt||new Date().toISOString()})}); renderQueue(); }catch(e){ toast(e.message||'Could not update'); loadQueue(); } });
     acts.appendChild(reqBtn);
   }
   const copyBtn=document.createElement('button'); copyBtn.type='button'; copyBtn.className='btn ghost'; copyBtn.textContent='Copy';
@@ -6328,6 +6399,9 @@ async function shareFromPost(p){
   go('review');
   _setShareUrl(url);
   if($('draftText')) $('draftText').value=source;
+  // reset to the app default so the char counter + X 280-cap don't key off Compose's last platform
+  state.platform='linkedin';
+  if($('platform')) [...$('platform').children].forEach(x=>x.classList.toggle('on',x.dataset.p==='linkedin'));
   state.post=source; state.hooks=[]; updateCount();
   // seed the compose idea + state so "Redraft" has a source to work from (it reads $('idea'))
   if($('idea')) $('idea').value=source;
@@ -6804,7 +6878,7 @@ function refreshConnStatus(){
   const cfg=window.__studioConfig;
   if(!cfg){ row.style.display='none'; return; } // local same-origin build: no connection row
   row.style.display='';
-  const st=$('connStatus');
+  const st=$('connStatusKeys');
   st.textContent='Local-only (this device · bring your own keys)'; st.style.color='';
 }
 window.refreshConnStatus=refreshConnStatus;
@@ -7095,28 +7169,30 @@ function saveR2Settings(){
   const cfg=window.__studioConfig; if(!cfg||!cfg.saveR2) return;
   const r2=window.__studioR2;
   const patch={ endpoint:$('r2-endpoint').value, bucket:$('r2-bucket').value, accessKeyId:$('r2-akid').value, secretAccessKey:$('r2-secret').value, publicBase:$('r2-public').value };
-  // Validate the merged result (blank secret = keep stored one) before saving.
-  cfg.saveR2(patch);
-  // Worker route (if the toggle is on) — saved AFTER saveR2 so it survives the r2 patch.
-  const workerOn = $('r2-worker-on') && $('r2-worker-on').checked;
-  if(workerOn && cfg.saveR2Worker){
-    cfg.saveR2Worker({ url:$('r2-worker-url')?$('r2-worker-url').value:'', secret:$('r2-worker-secret')?$('r2-worker-secret').value:'' });
-  } else if(!workerOn && cfg.clearR2Worker){
-    cfg.clearR2Worker();
-  }
-  if(window.__studioRefresh) window.__studioRefresh();       // rebuild the R2 seam with new keys
-  // Validate whichever path is now active. Worker path needs URL+secret+publicBase;
-  // direct path needs the full S3 config.
-  let v = { ok:true, errors:[] };
-  if(workerOn){
-    const wk = cfg.getR2Worker ? cfg.getR2Worker() : { url:'', secret:'' };
-    v = (r2 && r2.validateWorker) ? r2.validateWorker({ worker:wk, publicBase:cfg.getR2().publicBase }) : { ok:true, errors:[] };
-  } else {
-    v = (r2 && r2.validate) ? r2.validate(cfg.getR2()) : { ok:true, errors:[] };
-  }
-  if(!v.ok){ msg('r2Msg', v.errors[0]||'Check the fields.', 'err'); }
-  else { msg('r2Msg', workerOn ? 'Saved. Uploads now go through your Worker.' : 'Saved. You can now upload video and image media to your R2.','ok'); }
-  loadR2Settings();                                          // re-render; secret fields reset to empty
+  try{
+    // Validate the merged result (blank secret = keep stored one) before saving.
+    cfg.saveR2(patch);
+    // Worker route (if the toggle is on) — saved AFTER saveR2 so it survives the r2 patch.
+    const workerOn = $('r2-worker-on') && $('r2-worker-on').checked;
+    if(workerOn && cfg.saveR2Worker){
+      cfg.saveR2Worker({ url:$('r2-worker-url')?$('r2-worker-url').value:'', secret:$('r2-worker-secret')?$('r2-worker-secret').value:'' });
+    } else if(!workerOn && cfg.clearR2Worker){
+      cfg.clearR2Worker();
+    }
+    if(window.__studioRefresh) window.__studioRefresh();       // rebuild the R2 seam with new keys
+    // Validate whichever path is now active. Worker path needs URL+secret+publicBase;
+    // direct path needs the full S3 config.
+    let v = { ok:true, errors:[] };
+    if(workerOn){
+      const wk = cfg.getR2Worker ? cfg.getR2Worker() : { url:'', secret:'' };
+      v = (r2 && r2.validateWorker) ? r2.validateWorker({ worker:wk, publicBase:cfg.getR2().publicBase }) : { ok:true, errors:[] };
+    } else {
+      v = (r2 && r2.validate) ? r2.validate(cfg.getR2()) : { ok:true, errors:[] };
+    }
+    if(!v.ok){ msg('r2Msg', v.errors[0]||'Check the fields.', 'err'); }
+    else { msg('r2Msg', workerOn ? 'Saved. Uploads now go through your Worker.' : 'Saved. You can now upload video and image media to your R2.','ok'); }
+    loadR2Settings();                                          // re-render; secret fields reset to empty
+  }catch(e){ msg('r2Msg', e.message||'Could not save the R2 settings','err'); }
 }
 window.saveR2Settings=saveR2Settings;
 
@@ -7175,18 +7251,26 @@ const NAV_CATALOGUE = [
 /* In-memory nav rows for the editor: { href, label, on, primary }.
    `label` defaults to the catalogue label; `on` = appears in the nav. */
 let _navRows = [];
+/* Nav items whose href isn't in the catalogue (hand-added custom entries). The editor
+   can't show them, but they're preserved verbatim as { item, index } (index = position
+   in the saved nav array) and re-inserted at that position on save, so a Save neither
+   erases them nor shoves an interleaved custom tab to the end. */
+let _navExtras = [];
 
 /* Build the editor rows from a saved `nav` array (in its saved order). Catalogue
    pages absent from `nav` follow, switched off. Empty `nav` → all-on, catalogue order. */
 function navRowsFromConfig(nav) {
   const cat = new Map(NAV_CATALOGUE.map(p => [p.href, p.label]));
+  _navExtras = [];                                                       // re-captured below from `nav`
   if (!Array.isArray(nav) || !nav.length) {
     return NAV_CATALOGUE.map(p => ({ href: p.href, label: p.label, on: true, primary: false }));
   }
   const rows = [];
   const seen = new Set();
-  for (const item of nav) {
-    if (!item || !cat.has(item.href) || seen.has(item.href)) continue;   // only built-in pages, no dupes
+  for (let i = 0; i < nav.length; i++) {
+    const item = nav[i];
+    if (!item || seen.has(item.href)) continue;                          // skip invalid + dupes
+    if (!cat.has(item.href)) { seen.add(item.href); _navExtras.push({ item, index: i }); continue; }  // custom entry: preserve verbatim + original position, re-inserted on save
     seen.add(item.href);
     rows.push({
       href: item.href,
@@ -7261,29 +7345,67 @@ function renderSiteThemePicker(selected) {
   }
 }
 
+/* True while the last /settings/site fetch failed. While set, the form below is
+   filled with blanks/defaults, so a Save would overwrite the real config with empty
+   fields the moment connectivity returns. Both the Save button (disabled) and
+   saveSiteSettings (hard guard) key off this until a load succeeds. */
+let _siteSettingsLoadFailed = false;
+
 async function loadSiteSettings() {
+  // The fetch can fail (GitHub unreachable). The theme picker + static form are
+  // offline-capable (baked catalogue), so we render them REGARDLESS of the outcome and
+  // only surface the failure as a friendly message — the form stays usable either way.
+  let d = {}, err = null;
   try {
     const { data, sha } = await api('/settings/site');
     _siteSha = sha;
-    const d = data || {};
+    d = data || {};
     _siteCfgCache = d;          // keep the preview card's source in sync
-    $('ss-name').value = d.name || '';
-    $('ss-masthead').value = d.masthead || '';
-    $('ss-tagline').value = d.tagline || '';
-    $('ss-role').value = d.role || '';
-    $('ss-description').value = d.description || '';
-    $('ss-url').value = d.url || '';
-    renderSiteThemePicker(d.defaultTheme || 'observatory');
-    $('ss-core').value = d.core || 'tori';
-    $('ss-linkedin').value = d.socials?.linkedin || '';
-    $('ss-instagram').value = d.socials?.instagram || '';
-    $('ss-github').value = d.socials?.github || '';
-    $('ss-newsletter').value = d.newsletter?.endpoint || '';
-    $('ss-contact').value = d.contact?.endpoint || '';
-    _navRows = navRowsFromConfig(d.nav);
-    renderNavEditor();
-    try { renderDnsPreview(); } catch {}   // refresh the default-address hint for the real repo
-  } catch (e) { msg('ssMsg', e.message, 'err'); }
+  } catch (e) {
+    err = (e && e.kind) ? e : classifyError({ raw: e instanceof Error ? e : new Error(String(e)) });
+  }
+  $('ss-name').value = d.name || '';
+  $('ss-masthead').value = d.masthead || '';
+  $('ss-tagline').value = d.tagline || '';
+  $('ss-role').value = d.role || '';
+  $('ss-description').value = d.description || '';
+  $('ss-url').value = d.url || '';
+  renderSiteThemePicker(d.defaultTheme || 'observatory');
+  $('ss-core').value = d.core || 'tori';
+  $('ss-linkedin').value = d.socials?.linkedin || '';
+  $('ss-instagram').value = d.socials?.instagram || '';
+  $('ss-github').value = d.socials?.github || '';
+  $('ss-newsletter').value = d.newsletter?.endpoint || '';
+  $('ss-contact').value = d.contact?.endpoint || '';
+  _navRows = navRowsFromConfig(d.nav);
+  renderNavEditor();
+  try { renderDnsPreview(); } catch {}   // refresh the default-address hint for the real repo
+  const saveBtn = $('ssSaveBtn');
+  if (err) {
+    // Blank-overwrite guard: the fields above were just filled with blanks/defaults,
+    // so saving now would wipe the real config. Disable Save until a load succeeds,
+    // and keep the error + a Retry button visible (no msg() auto-hide) so the way
+    // back is always on screen.
+    _siteSettingsLoadFailed = true;
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.title = 'Reload before saving'; }
+    const m = $('ssMsg');
+    if (m) {
+      m.textContent = (err.message || 'Could not load site settings.') + ' ';
+      m.className = 'msg err';
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'btn ghost';
+      retry.textContent = 'Retry loading';
+      retry.style.marginLeft = '.6em';
+      retry.style.padding = '.2em .8em';
+      retry.addEventListener('click', () => loadSiteSettings());
+      m.appendChild(retry);
+    }
+  } else {
+    if (_siteSettingsLoadFailed) { const m = $('ssMsg'); if (m) { m.textContent = ''; m.className = 'msg'; } }
+    _siteSettingsLoadFailed = false;
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.title = ''; }
+  }
 }
 window.loadSiteSettings = loadSiteSettings;
 
@@ -7299,10 +7421,22 @@ function navFromRows() {
     if (row.href === '/observatory/' && label === 'Observatory') item.themeLabel = true;
     out.push(item);
   }
+  // Hand-added custom entries: re-insert each at (or as close as possible to) its
+  // original position in the saved nav array. Ascending index order so earlier
+  // inserts are already in place when later indices are applied.
+  for (const ex of _navExtras.slice().sort((a, b) => a.index - b.index)) {
+    out.splice(Math.min(ex.index, out.length), 0, ex.item);
+  }
   return out;
 }
 
 async function saveSiteSettings() {
+  // Hard guard against the blank-overwrite hazard: if the last load failed, the form
+  // holds blanks/defaults, and writing them would erase the real config.
+  if (_siteSettingsLoadFailed) {
+    msg('ssMsg', 'Settings did not load, so saving is disabled. Retry loading first.', 'err');
+    return;
+  }
   // Read-modify-write the FULL config: putSiteConfig writes `data` verbatim (no merge
   // layer), so we must carry every field forward and only set the ones this form owns.
   $('ssSaveBtn').disabled = true; msg('ssMsg', 'Saving…', 'busy');
@@ -7323,9 +7457,14 @@ async function saveSiteSettings() {
     data.nav = navFromRows();
     await api('/settings/site', { method: 'PUT', body: JSON.stringify({ data, sha }) });
     await loadSiteSettings();          // refresh the sha + re-render rows from the saved order
-    msg('ssMsg', '', 'ok'); toast('Site settings saved');
+    // The save succeeded even if the refresh failed — keep the refresh's retry row (with its
+    // Retry control) in #ssMsg rather than clobbering it with an empty ok message.
+    if (!_siteSettingsLoadFailed) msg('ssMsg', '', 'ok');
+    toast('Site settings saved');
   } catch (e) { msg('ssMsg', e.message, 'err'); }
-  finally { $('ssSaveBtn').disabled = false; }
+  // The post-save loadSiteSettings() above can itself fail and re-disable Save via the
+  // flag; don't clobber that here.
+  finally { $('ssSaveBtn').disabled = _siteSettingsLoadFailed; }
 }
 window.saveSiteSettings = saveSiteSettings;
 
@@ -9115,6 +9254,24 @@ function chatAutosize(){
   };
 })();
 
+/* ── 💬 chat-mode presentation (Thread): a class flip over the SAME block list.
+   Doc mode is the untouched editor; nothing here re-implements block editing
+   (chatBind). The canvas + bubble styling is pure CSS (.thread-canvas/.thread-on). ── */
+let _threadMode = false;
+function setThreadMode(on){
+  _threadMode = !!on;
+  const host = $('blockList');
+  if(!host) return;
+  host.classList.toggle('thread-canvas', _threadMode);
+  host.classList.toggle('thread-on', _threadMode);
+  const btn = $('threadToggleBtn');
+  if(btn) btn.innerHTML = _threadMode ? tico('file-text') + ' Doc' : tico('message-circle') + ' Chat';
+  if(window.__threadRenderTurns) window.__threadRenderTurns();   // conversation layer hook; harmless no-op before it exists
+}
+window.setThreadMode = setThreadMode;
+$('threadToggleBtn')?.addEventListener('click', () => setThreadMode(!_threadMode));
+setThreadMode(false);   // initialise the toggle label before any post opens
+
 function edImage(b, isSel){
   const wrap = document.createElement('div');
   wrap.className = 'be-img';
@@ -9519,6 +9676,14 @@ function edGallery(b, isSel){
   add.appendChild(fileIn);
   wrap.appendChild(add);
 
+  // Placement control — mirrors edImage; sets block.placement (standard/wide/left/right).
+  const plLbl = document.createElement('div');
+  plLbl.className = 'be-img-lbl';
+  plLbl.style.marginTop = '.5rem';
+  plLbl.textContent = 'Placement';
+  wrap.appendChild(plLbl);
+  wrap.appendChild(buildPlacementGrid(b, markDirty));
+
   return wrap;
 }
 
@@ -9633,6 +9798,14 @@ function edEmbed(b, isSel){
   // Height cap — only meaningful for self-hosted <video> (YouTube/Vimeo embeds
   // keep their fixed 16:9 container).
   wrap.appendChild(buildHeightRow(b, 'Height (self-hosted video only)'));
+
+  // Placement control — mirrors edImage; sets block.placement (standard/wide/left/right).
+  const plLbl = document.createElement('div');
+  plLbl.className = 'be-embed-lbl';
+  plLbl.style.marginTop = '.3rem';
+  plLbl.textContent = 'Placement';
+  wrap.appendChild(plLbl);
+  wrap.appendChild(buildPlacementGrid(b, markDirty));
 
   wrap.appendChild(preview);
   renderPreview();
@@ -10917,6 +11090,7 @@ async function startNewPost(seedDoc){
   setSeriesUI();
   setSaveState('idle','New post');
   _dirty = false; _lastLocalSaveTs = 0;
+  setThreadMode(true);   // new posts open in Chat (spec 4.1); per-post mode memory lands with persistence
   renderBlocks();
   updateWordCount();   // editor-open: reflect the (empty) new post — hides the readout
   // Switch views FIRST — loadEditorSettings() fetches /topics and, on a slow or
@@ -10960,6 +11134,7 @@ async function openBlockEditor(slug){
   selectedId = null;
   _dirty = false; _lastLocalSaveTs = 0;
   setSaveState('loading','Loading…');
+  setThreadMode(false);  // existing posts open in Doc (spec 4.1); per-post mode memory lands with persistence
   go('editor');
   try{
     const r = await api('/posts/'+slug+'/blocks');
@@ -11423,6 +11598,7 @@ function setSaveState(state, text){
   slot.dataset.save = state;
   const txtEl=$('editorStatusText');
   const labels={ saving:'Saving…', saved:'Saved', dirty:'Unsaved changes', error:'Save failed', idle:'New post', loading:'Loading…' };
+  if(_threadMode && state==='saved') text = '✓ saved';   // chat mode: the thread's delivered tick replaces the doc-mode label
   if(txtEl) txtEl.textContent = text || labels[state] || '';
   _dirty = (state==='dirty' || state==='saving' || state==='error');
 }
@@ -11434,6 +11610,18 @@ function markDirty(){
   _saveDebounce = setTimeout(autosaveDraft, 1200);
   clearTimeout(_wordCountDebounce);
   _wordCountDebounce = setTimeout(updateWordCount, 400);
+}
+
+/* Re-arm the autosave debounce after a publish/schedule path bails.
+   doPublish/doSchedule cancel the pending debounce up front (a stray autosave
+   firing DURING an explicit commit would race it), so every validation
+   early-return and every failure path must put persistence back: without this,
+   recent edits sit only in memory with no timer left to save them. Uses the
+   same delay markDirty arms so behaviour stays consistent with the editor. */
+function rearmAutosaveIfDirty(){
+  if(!_dirty) return;
+  clearTimeout(_saveDebounce);
+  _saveDebounce = setTimeout(autosaveDraft, 1200);
 }
 
 async function autosaveDraft(){
@@ -11709,12 +11897,14 @@ function publishMeta(){
   };
 }
 async function doPublish(){
+  clearTimeout(_saveDebounce);   // cancel the pending autosave — we save explicitly below
   // Self-heal the slug. A title-bearing post that never reserved a slug (the debounce
   // hadn't fired, or an earlier /slug call failed) reserves one HERE before committing —
   // publish must NEVER silently no-op. Every failure path below shows a visible reason.
   if(!currentSlug){
     const titleText = (meta.title || $('editorTitle')?.value || '').trim();
-    if(!titleText){ toast('Add a title before publishing.'); setSaveState('idle','New post'); return; }
+    // rearm BEFORE setSaveState('idle') below — 'idle' clears _dirty, which would skip the re-arm
+    if(!titleText){ toast('Add a title before publishing.'); rearmAutosaveIfDirty(); setSaveState('idle','New post'); return; }
     try{
       // surface:true → a real /slug failure (GitHub down, network) throws its true reason
       // instead of being swallowed and mis-reported as "add a title".
@@ -11722,9 +11912,10 @@ async function doPublish(){
     }catch(e){
       setSaveState('error','Publish failed');
       showError(e, { title:'Couldn’t publish', onRetry: doPublish });
+      rearmAutosaveIfDirty();
       return;
     }
-    if(!currentSlug){ toast('Publish failed: couldn’t create a web address from that title — try a longer title.'); return; }
+    if(!currentSlug){ toast('Publish failed: couldn’t create a web address from that title — try a longer title.'); rearmAutosaveIfDirty(); return; }
   }
   const btn = $('editorPublishBtn');
   setBusy(btn, true);
@@ -11743,6 +11934,7 @@ async function doPublish(){
   }catch(e){
     setSaveState('error','Publish failed');
     showError(e, { title:'Couldn’t publish', onRetry: doPublish });
+    rearmAutosaveIfDirty();   // failed publish must not leave the edits without a pending save
   }finally{
     setBusy(btn, false);
   }
@@ -11782,20 +11974,21 @@ function openSchedule(){
 }
 function closeSchedule(){ $('schedulePanel').hidden = true; }
 async function doSchedule(){
+  clearTimeout(_saveDebounce);   // cancel the pending autosave — we commit explicitly below
   const raw = ($('schWhen').value||'').trim();
-  if(!raw){ $('schHint').textContent='Pick a date and time.'; return; }
+  if(!raw){ $('schHint').textContent='Pick a date and time.'; rearmAutosaveIfDirty(); return; }
   // datetime-local has no timezone → parse as LOCAL time, then store as a UTC ISO string.
   const when = new Date(raw);
-  if(isNaN(when)){ $('schHint').textContent='That date didn’t parse.'; return; }
-  if(when.getTime() <= Date.now()){ $('schHint').textContent='Pick a time in the future (a past time would publish on the next Action run).'; return; }
+  if(isNaN(when)){ $('schHint').textContent='That date didn’t parse.'; rearmAutosaveIfDirty(); return; }
+  if(when.getTime() <= Date.now()){ $('schHint').textContent='Pick a time in the future (a past time would publish on the next Action run).'; rearmAutosaveIfDirty(); return; }
   // Self-heal the slug (same contract as doPublish): reserve from the title before
   // committing the scheduled draft, and surface the real reason rather than no-op silently.
   if(!currentSlug){
     const titleText = (meta.title || $('editorTitle')?.value || '').trim();
-    if(!titleText){ $('schHint').textContent='Add a title before scheduling.'; return; }
+    if(!titleText){ $('schHint').textContent='Add a title before scheduling.'; rearmAutosaveIfDirty(); return; }
     try{ await reserveSlug({ surface:true }); }
-    catch(e){ setSaveState('error','Schedule failed'); showError(e, { title:'Couldn’t schedule', onRetry: doSchedule }); return; }
-    if(!currentSlug){ $('schHint').textContent='Couldn’t create a web address from that title — try a longer title.'; return; }
+    catch(e){ setSaveState('error','Schedule failed'); showError(e, { title:'Couldn’t schedule', onRetry: doSchedule }); rearmAutosaveIfDirty(); return; }
+    if(!currentSlug){ $('schHint').textContent='Couldn’t create a web address from that title — try a longer title.'; rearmAutosaveIfDirty(); return; }
   }
   const iso = when.toISOString();
   const btn = $('schConfirm');
@@ -11814,6 +12007,7 @@ async function doSchedule(){
   }catch(e){
     setSaveState('error','Schedule failed');
     showError(e, { title:'Couldn’t schedule', onRetry: doSchedule });
+    rearmAutosaveIfDirty();   // failed schedule must not leave the edits without a pending save
   }finally{ setBusy(btn, false); }
 }
 $('editorScheduleBtn').addEventListener('click', async ()=>{ if(!meta.title.trim()){ toast('Title required'); return; } if($('chatInput') && $('chatInput').value.trim()){ await chatSend(); } openSchedule(); });
@@ -18191,13 +18385,15 @@ function initPartner(){
   $('ptMsg').addEventListener('keydown',e=>{ if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){ e.preventDefault(); const m=$('ptMsg').value.trim(); if(m) ptTurn(m); }});
   $('ptPreviewToggle').addEventListener('click',()=>$('ptPreview').classList.toggle('show'));
   $('ptNew').addEventListener('click',ptNew);
-  $('ptUndo').addEventListener('click',async()=>{ if(!ptSession) return; const s=await api('/partner/'+ptSession); const v=(s.versions.length||1)-1; if(v<1){ toast('Nothing earlier to undo to'); return; } const r=await api('/partner/'+ptSession+'/revert',{method:'POST',body:JSON.stringify({version:v})}); ptAddMsg('ai','↩ reverted to turn '+v); await ptRenderDoc(r&&r.doc); });
+  $('ptUndo').addEventListener('click',async()=>{ if(!ptSession) return; try{ const s=await api('/partner/'+ptSession); const v=(s.versions.length||1)-1; if(v<1){ toast('Nothing earlier to undo to'); return; } const r=await api('/partner/'+ptSession+'/revert',{method:'POST',body:JSON.stringify({version:v})}); ptAddMsg('ai','↩ reverted to turn '+v); await ptRenderDoc(r&&r.doc); }catch(e){ ptAddMsg('ai','⚠ '+e.message); } });
   $('ptPublish').addEventListener('click',async()=>{ if(!ptSession) return;
     let _pubHost=''; { const _o=_siteOrigin(); if(_o){ try{ _pubHost=new URL(_o).host; }catch{} } }
     if(!await helmConfirm({ title:'Publish this post to '+(_pubHost||'your blog')+' now?', text:'It will be live in ~2 minutes. You can take it down again from Posts.', okText:'Publish' })) return;
-    const r=await api('/partner/'+ptSession+'/publish',{method:'POST'});
-    if(r.ok){ const src=(_ptLastText||'').slice(0,1500); await offerAnnounce(r.url, src); }
-    else toast((r.errors||[]).map(e=>e.message).join('; ')); });
+    try{
+      const r=await api('/partner/'+ptSession+'/publish',{method:'POST'});
+      if(r.ok){ const src=(_ptLastText||'').slice(0,1500); await offerAnnounce(r.url, src); }
+      else toast((r.errors||[]).map(e=>e.message).join('; '));
+    }catch(e){ ptAddMsg('ai','⚠ '+e.message); } });
   ptResume(); // restore last session on first open
 }
 window.initPartner=initPartner;
@@ -18846,7 +19042,7 @@ $('libIconSearch')?.addEventListener('input',()=>{ clearTimeout(window._libIconT
 $('libIconCat')?.addEventListener('change',e=>{ _libIconCat=e.target.value||''; syncLibIconCatUI(); applyLibIconSearch(); });
 $('libIconCatChips')?.addEventListener('click',e=>{ const b=e.target.closest('[data-cat]'); if(!b) return; _libIconCat=b.dataset.cat||''; syncLibIconCatUI(); applyLibIconSearch(); });
 $('libIconMore')?.addEventListener('click',()=>renderLibIcons(false));
-$('libIconGrid')?.addEventListener('click',e=>{ const t=e.target.closest('.gp-tile'); if(!t) return; const tok='icon:'+t.dataset.n; (navigator.clipboard&&navigator.clipboard.writeText(tok)); toast('Copied “'+tok+'”'); });
+$('libIconGrid')?.addEventListener('click',e=>{ const t=e.target.closest('.gp-tile'); if(!t) return; const tok='icon:'+t.dataset.n; copyToClip(tok, 'Copied “'+tok+'”'); });
 
 /* "Make a video" (storyboard → server render) was removed — it required a Helm/Remotion
    backend this self-owned build does not have. Self-hosted video now lives in the R2-backed
