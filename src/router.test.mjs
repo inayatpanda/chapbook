@@ -125,7 +125,8 @@ const memStorage = () => {
 test('thread routes: GET missing id returns null; PUT round-trips; DELETE clears', async () => {
   const { api } = makeRouter({ storage: memStorage() });
   assert.equal(await api('/thread/my-post'), null); // absent record → null, not a synthesized thread
-  const t = { v: 1, mode: 'doc', turns: [{ id: 't1', role: 'aside', kind: 'guidance', text: 'x', blockRef: null, ts: 1, state: 'open' }] };
+  const t = { v: 1, mode: 'doc', turns: [{ id: 't1', role: 'aside', kind: 'guidance', text: 'x', blockRef: null, ts: 1, state: 'open' }],
+    scratch: [{ id: 's1', text: 'a jot', ts: 2 }] };
   assert.deepEqual(await api('/thread/my-post', { method: 'PUT', body: JSON.stringify(t) }), { ok: true });
   assert.deepEqual(await api('/thread/my-post'), t);
   await api('/thread/my-post', { method: 'DELETE' });
@@ -138,7 +139,8 @@ test('thread routes: GET missing id returns null; PUT round-trips; DELETE clears
 test('thread routes: a saved turn-less chat thread reads back saved (not null)', async () => {
   const { api } = makeRouter({ storage: memStorage() });
   await api('/thread/quiet-post', { method: 'PUT', body: JSON.stringify({ v: 1, mode: 'chat', turns: [] }) });
-  assert.deepEqual(await api('/thread/quiet-post'), { v: 1, mode: 'chat', turns: [] });
+  // a pre-scratch record reads back with scratch [] (parseThread backward-compat)
+  assert.deepEqual(await api('/thread/quiet-post'), { v: 1, mode: 'chat', turns: [], scratch: [] });
 });
 
 // The ai seam's text call is generateText({ system, prompt, … }) → { text } — the same

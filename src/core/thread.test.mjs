@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createThread, appendTurn, acceptTurn, dismissTurn, turnsFor, serializeThread, parseThread, buildAskPrompt } from './thread.js';
+import { createThread, appendTurn, acceptTurn, dismissTurn, turnsFor, serializeThread, parseThread, buildAskPrompt, addScratch, removeScratch } from './thread.js';
 
-test('createThread: v1, chat mode, empty turns', () => {
-  assert.deepEqual(createThread(), { v: 1, mode: 'chat', turns: [] });
+test('createThread: v1, chat mode, empty turns + empty scratch', () => {
+  assert.deepEqual(createThread(), { v: 1, mode: 'chat', turns: [], scratch: [] });
 });
 
 test('appendTurn: deterministic id from now, ts stamped, state open', () => {
@@ -95,4 +95,120 @@ test('buildAskPrompt: block + neighbours + title flow into the user prompt', () 
   assert.match(p.user, /My Post/);
   assert.match(p.user, /wordy paragraph/);
   assert.match(p.user, /Intro/);
+});
+
+// ---- field-aware asks (spec addendum 9) -----------------------------------
+
+test('buildAskPrompt: title ask with a current title asks for ONE variation, offered not imposed', () => {
+  const p = buildAskPrompt({ ask: 'title', field: 'title', title: 'My Post' });
+  assert.equal(p.wantsInsertable, true);
+  assert.match(p.user, /one|ONE/);
+  assert.match(p.user, /variation|alternative/i);
+  assert.match(p.user, /take or leave|may use or ignore/i);   // offered, never imposed
+  assert.match(p.user, /My Post/);                            // the current title is the seed
+});
+
+test('buildAskPrompt: title ask with NO title yet falls back to suggesting a fresh title', () => {
+  const p = buildAskPrompt({ ask: 'title', field: 'title', title: '' });
+  assert.equal(p.wantsInsertable, true);
+  assert.match(p.user, /Suggest one strong title/);
+});
+
+test('buildAskPrompt: heading field shades guidance toward a variation/sharpening suggestion', () => {
+  const p = buildAskPrompt({ ask: 'reply', text: 'thoughts?', field: 'heading',
+    block: { type: 'heading', text: 'Why ships sink' } });
+  assert.equal(p.wantsInsertable, false);
+  assert.match(p.system, /heading/i);
+  assert.match(p.system, /variation|sharpen/i);
+  assert.match(p.system, /do not (write|draft)/i);   // guidance-first rule survives the shading
+});
+
+test('buildAskPrompt: body-text field shades guidance toward encouragement/reaction, never a rewrite', () => {
+  for (const ask of ['reply', 'aside']) {
+    const p = buildAskPrompt({ ask, text: 'how is this?', field: 'text',
+      block: { type: 'text', text: 'a paragraph' } });
+    assert.equal(p.wantsInsertable, false);
+    assert.match(p.system, /encouragement|reaction|small suggestion/i);
+    assert.match(p.system, /never rewrite|do not rewrite/i);
+    assert.match(p.system, /do not (write|draft)/i);
+  }
+});
+
+test('buildAskPrompt: field never changes wantsInsertable for ANY ask type', () => {
+  for (const field of ['title', 'heading', 'text', 'image', null]) {
+    for (const ask of ['tighten', 'continue', 'title']) {
+      assert.equal(buildAskPrompt({ ask, field, block: { type: 'text', text: 'x' }, title: 'T' }).wantsInsertable, true);
+    }
+    for (const ask of ['aside', 'reply']) {
+      assert.equal(buildAskPrompt({ ask, field, block: { type: 'text', text: 'x' }, title: 'T' }).wantsInsertable, false);
+    }
+  }
+});
+
+test('buildAskPrompt: insertable asks keep the write-only system prompt (no guidance shading)', () => {
+  const p = buildAskPrompt({ ask: 'tighten', field: 'heading', block: { type: 'heading', text: 'H' } });
+  assert.match(p.system, /Reply ONLY with the requested text/);
+  assert.doesNotMatch(p.system, /sharpen/i);
+});
+
+// ---- rough-draft scratch (spec addendum 9: Rough draft rail) ---------------
+
+test('addScratch: newest first, id/ts stamped, trims, returns the jot', () => {
+  const t = createThread();
+  const a = addScratch(t, '  first thought  ', 1000);
+  const b = addScratch(t, 'second thought', 2000);
+  assert.equal(t.scratch.length, 2);
+  assert.deepEqual(t.scratch.map(x => x.text), ['second thought', 'first thought']);
+  assert.equal(a.text, 'first thought');
+  assert.equal(a.ts, 1000);
+  assert.notEqual(a.id, b.id);
+  assert.equal(addScratch(t, '   ', 3000), null);   // blank jots never land
+  assert.equal(t.scratch.length, 2);
+});
+
+test('addScratch: initialises a missing scratch array (pre-scratch in-memory threads)', () => {
+  const t = { v: 1, mode: 'chat', turns: [] };
+  addScratch(t, 'hello', 1);
+  assert.deepEqual(t.scratch.map(x => x.text), ['hello']);
+});
+
+test('removeScratch: removes by id and returns the jot; unknown id returns null', () => {
+  const t = createThread();
+  const a = addScratch(t, 'keep', 1);
+  const b = addScratch(t, 'drop', 2);
+  assert.equal(removeScratch(t, b.id).text, 'drop');
+  assert.deepEqual(t.scratch.map(x => x.text), ['keep']);
+  assert.equal(removeScratch(t, 'nope'), null);
+  assert.equal(removeScratch({ v: 1, mode: 'chat', turns: [] }, a.id), null);
+  assert.equal(t.scratch.length, 1);
+});
+
+test('scratch: serialize/parse round-trip keeps jots (the PUT path re-parses)', () => {
+  const t = createThread();
+  addScratch(t, 'a stray sentence', 5);
+  addScratch(t, 'an idea', 6);
+  assert.deepEqual(parseThread(serializeThread(t)), t);
+});
+
+test('parseThread: old sidecars without scratch parse to scratch []', () => {
+  const raw = JSON.stringify({ v: 1, mode: 'chat', turns: [] });
+  assert.deepEqual(parseThread(raw).scratch, []);
+});
+
+test('parseThread: drops malformed scratch entries, keeps valid jots', () => {
+  const raw = JSON.stringify({ v: 1, mode: 'chat', turns: [], scratch: [
+    { id: 's1', text: 'good', ts: 1 },
+    { id: 42, text: 'bad id', ts: 2 },
+    { id: 's3', text: null, ts: 3 },
+    { id: 's4', text: 'no ts' },
+    'garbage',
+    null,
+  ]});
+  const t = parseThread(raw);
+  assert.deepEqual(t.scratch, [{ id: 's1', text: 'good', ts: 1 }]);
+});
+
+test('parseThread: non-array scratch resets to []', () => {
+  const raw = JSON.stringify({ v: 1, mode: 'chat', turns: [], scratch: { not: 'an array' } });
+  assert.deepEqual(parseThread(raw).scratch, []);
 });

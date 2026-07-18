@@ -1793,11 +1793,13 @@
   #focusMeter[hidden]{display:none}
   #focusMeter .fm-x{color:var(--faint);font-weight:400}
 
-  /* FOCUS MODE - hide rails + chrome for distraction-free writing.
+  /* FOCUS MODE - hide chrome for distraction-free writing.
      The bar's children now live inside .editor-bar-main / .editor-bar-tools
-     (display:contents on wide screens), so target the wrappers' children. */
-  body.focus-mode #v-editor .editor-bar :is(.editor-bar-main,.editor-bar-tools) > *:not(.back):not(#focusExitBtn){display:none !important}
-  body.focus-mode #v-editor #outlineRail,
+     (display:contents on wide screens), so target the wrappers' children.
+     The Rough draft scratchpad STAYS available (owner: focus is precisely when
+     stray thoughts need a place to land): the rail keeps its wide-desktop column,
+     and on narrower widths the ☰ sheet toggle stays in the bar. */
+  body.focus-mode #v-editor .editor-bar :is(.editor-bar-main,.editor-bar-tools) > *:not(.back):not(#focusExitBtn):not(#outlineToggleBtn){display:none !important}
   body.focus-mode #v-editor #settingsRail{display:none !important}
   body.focus-mode #v-editor #editorActions,
   body.focus-mode #v-editor #importDropZone{opacity:.5}
@@ -1805,7 +1807,8 @@
     body.focus-mode #v-editor #editorOuter{grid-template-columns:minmax(0,1fr) !important}
   }
   @media(min-width:1200px){
-    body.focus-mode #v-editor #editorOuter{grid-template-columns:minmax(0,1fr) !important}
+    /* keep the Rough draft rail's column; only the settings rail collapses */
+    body.focus-mode #v-editor #editorOuter{grid-template-columns:180px minmax(0,1fr) !important}
   }
   #focusExitBtn{display:none}
   body.focus-mode #focusExitBtn{display:inline-flex !important}
@@ -2155,7 +2158,11 @@
     #chatInput{min-width:0;overflow-y:hidden}
     .chat-row:not(.has-text) #chatSendBtn{display:none}
     .chat-row.has-text #chatMic{display:none}
+    /* camera joins the bar on phones only, and steps aside while typing (like Dictate) */
+    .chat-row:not(.has-text) #chatCam{display:flex}
   }
+  /* compose-bar camera: photos "send" like messages on narrow layouts (spec 9e) */
+  #chatCam{display:none}
   #chatInput{flex:1;min-height:44px;max-height:140px;resize:none;background:var(--bg);border:1px solid var(--line);
     border-radius:22px;color:var(--ink);padding:.62rem .95rem;font:inherit;font-size:16px;line-height:1.4;outline:none}
   #chatInput:focus{border-color:var(--acc)}
@@ -2245,6 +2252,38 @@
     border:1px solid var(--line);background:rgba(140,160,200,.08);color:var(--ink);cursor:pointer}
   .turn-acts button:hover{border-color:var(--acc)}
   .thread-typing{opacity:.7;font-style:italic}
+  /* typing indicator: three Partner-coloured dots; prefers-reduced-motion swaps the
+     animation for the static "Partner is thinking…" text (spec addendum 9g) */
+  .thread-typing .typing-text{display:none;font-size:.8rem}
+  .typing-dots{display:inline-flex;gap:4px;align-items:center;padding:.15rem 0}
+  .typing-dots i{width:6px;height:6px;border-radius:50%;background:var(--partner-voice);
+    opacity:.35;animation:threadTyping 1.1s infinite}
+  .typing-dots i:nth-child(2){animation-delay:.18s}
+  .typing-dots i:nth-child(3){animation-delay:.36s}
+  @keyframes threadTyping{40%{opacity:1;transform:translateY(-2px)}}
+  @media (prefers-reduced-motion: reduce){
+    .typing-dots{display:none}
+    .thread-typing .typing-text{display:inline}
+  }
+  /* warm re-entry: the local recap divider at the canvas top (spec addendum 9b) */
+  .thread-recap{display:flex;align-items:center;gap:.6rem;margin:.2rem 0 .7rem;
+    color:var(--faint);font-size:.72rem;letter-spacing:.02em;white-space:nowrap}
+  .thread-recap::before,.thread-recap::after{content:"";flex:1;height:1px;background:var(--thread-post-line)}
+  .thread-recap span{overflow:hidden;text-overflow:ellipsis}
+  /* inbox ideas on a NEW post's thread: incoming-style cards from past-you (spec 9a) */
+  .thread-inbox{max-width:78%;margin:.2rem auto .8rem 0}
+  .thread-inbox .ti-head{display:flex;align-items:center;gap:.5rem;margin-bottom:.15rem;
+    font:700 .625rem var(--font-display);letter-spacing:.09em;text-transform:uppercase;
+    color:var(--partner-voice)}
+  .thread-inbox .ti-head button{margin-left:auto;border:0;background:transparent;color:var(--faint);
+    cursor:pointer;font-size:.85rem;min-width:28px;min-height:28px;border-radius:7px}
+  .thread-inbox .ti-head button:hover{color:var(--ink)}
+  .ti-card{display:block;width:fit-content;max-width:100%;text-align:left;margin:.3rem 0;
+    border:1px solid var(--partner-line);background:var(--partner-wash);color:var(--ink);
+    border-radius:12px 12px 12px 3px;padding:.5rem .7rem;font:inherit;font-size:.84rem;
+    line-height:1.45;cursor:pointer;white-space:pre-wrap}
+  .ti-card:hover,.ti-card:focus-visible{border-color:var(--partner-voice);outline:none}
+  @media(max-width:640px){ .thread-inbox{max-width:88%} }
   /* Ask toggle: ✦ flips the next message from "write into the post" to "say to the Partner" */
   #chatAskToggle.on{border-color:var(--acc);color:var(--acc);background:rgba(45,212,191,.12)}
   /* quick chips: rendering them is free; tapping one spends tokens (spec 4.2).
@@ -2489,35 +2528,32 @@
     cursor:pointer;margin-left:.4rem}
   .be-img-genmsg .ai-settings-link:hover{border-color:var(--acc);background:rgba(45,212,191,.07)}
 
-  /* outline list */
-  .outlist{font-size:.82rem}
-  .out{
-    padding:.3em .5em;border-radius:6px;cursor:pointer;
-    color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .out:hover{background:rgba(45,212,191,.08);color:var(--acc)}
-
-  /* outline — touch-friendly sheet list (mobile/all widths via the ☰ button) */
-  .outlist-sheet{list-style:none;margin:0;padding:0;max-height:50vh;overflow:auto}
-  .outlist-sheet li{
-    padding:.6em .7em;border-radius:9px;cursor:pointer;color:var(--ink);
-    font-size:.95rem;line-height:1.3;border:1px solid transparent;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .outlist-sheet li:hover,.outlist-sheet li:focus-visible{background:var(--surface-2);outline:none}
-  .outlist-sheet li.cur{background:rgba(45,212,191,.12);color:var(--acc);font-weight:600}
-  .outlist-sheet li.lvl3{padding-left:1.5em;color:var(--mut);font-size:.9rem}
-  .outlist-sheet li.lvl4{padding-left:2.4em;color:var(--mut);font-size:.86rem}
-  .outlist-empty{color:var(--faint);font-size:.85rem;padding:.4em .2em}
-  .ol-ghost{color:var(--faint) !important;font-style:italic}   /* guide headings not yet written over */
-  /* desktop rail: indent by level + collapse state */
-  #outlineRail.collapsed #outlineList{display:none}
+  /* ── rough draft (replaces the outline): per-post jots on the thread sidecar.
+     Same styles power the desktop rail and the ☰ bottom sheet; both themes via vars. */
+  .rd-add{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:9px;
+    color:var(--ink);padding:.45em .6em;font:inherit;font-size:.82rem;outline:none}
+  .rd-add::placeholder{color:var(--faint)}
+  .rd-add:focus{border-color:var(--acc)}
+  .rd-list{list-style:none;margin:.55rem 0 0;padding:0;display:flex;flex-direction:column;gap:.3rem}
+  .rd-jot{display:flex;align-items:flex-start;gap:.25rem}
+  .rd-jot-text{flex:1;min-width:0;text-align:left;background:rgba(140,160,200,.07);border:1px solid var(--line);
+    border-radius:9px;color:var(--ink);padding:.4em .55em;font:inherit;font-size:.8rem;line-height:1.4;
+    cursor:pointer;overflow-wrap:break-word}
+  .rd-jot-text:hover,.rd-jot-text:focus-visible{border-color:var(--acc);outline:none}
+  .rd-jot-x{flex:0 0 auto;border:0;background:transparent;color:var(--faint);cursor:pointer;
+    font-size:.85rem;min-width:28px;min-height:28px;border-radius:7px}
+  .rd-jot-x:hover{color:#f472b6}
+  .rd-empty{color:var(--faint);font-size:.78rem;margin-top:.5rem;line-height:1.45}
+  /* sheet variant: 16px input (no iOS zoom) + bigger touch targets */
+  #outlineSheet .rd-add{font-size:16px;padding:.6em .7em;margin-top:.2rem}
+  #outlineSheet .rd-list{max-height:50vh;overflow:auto}
+  #outlineSheet .rd-jot-text{font-size:.95rem;padding:.6em .7em}
+  #outlineSheet .rd-jot-x{min-width:40px;min-height:40px;font-size:1rem}
+  /* desktop rail: collapse state */
+  #outlineRail.collapsed .rd-body{display:none}
   #outlineRail h4{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
   #outlineRail h4 .ocaret{font-size:.7rem;transition:transform .15s}
   #outlineRail.collapsed h4 .ocaret{transform:rotate(-90deg)}
-  #outlineList li{cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #outlineList li:hover{color:var(--acc)}
-  #outlineList li.lvl3{padding-left:1.1em;font-size:.78rem}
-  #outlineList li.lvl4{padding-left:1.9em;font-size:.75rem;color:var(--faint)}
-  #outlineList .outlist-empty{padding:.2em .5em}
 
   /* ── EDITOR SHELL ────────────────────────────────────────────────────────── */
 
@@ -2597,12 +2633,23 @@
   #editorInner{
     width:min(680px,94vw);margin-inline:auto;padding:1.4rem 0 2rem}
 
-  /* title input */
+  /* title input (in a row so the thread-mode ✦ ask button can sit beside it) */
+  .title-row{display:flex;align-items:center;gap:.45rem;margin-bottom:1rem}
   .title-in{
     font-size:1.6rem;font-weight:750;width:100%;border:none;background:none;
-    color:var(--ink);margin-bottom:1rem;line-height:1.2;
+    color:var(--ink);line-height:1.2;
     padding:0;outline:none}
+  .title-row .title-in{flex:1;min-width:0;margin-bottom:0}
   .title-in::placeholder{color:var(--faint)}
+  /* ✦ on the title: thread-mode only - one tap asks the Partner for a title variation */
+  #titleAskBtn{display:none;flex:0 0 auto;width:34px;height:34px;border-radius:50%;
+    border:1px solid var(--partner-line);background:var(--partner-wash);color:var(--partner-voice);
+    font-size:1rem;cursor:pointer;align-items:center;justify-content:center}
+  #titleAskBtn:hover,#titleAskBtn:focus-visible{border-color:var(--partner-voice);outline:none}
+  #v-editor.thread-mode .title-row #titleAskBtn{display:inline-flex}
+  /* "+N words this session" beside the saved tick (thread mode, spec addendum 9c) */
+  #sessionWords{margin-left:.55em;color:var(--mut);white-space:nowrap}
+  #sessionWords[hidden]{display:none}
 
   /* add block button */
   #addBlockBtn{
@@ -2612,7 +2659,7 @@
     margin-top:.8rem;transition:border-color .15s,color .15s}
   #addBlockBtn:hover{border-color:var(--acc);color:var(--acc)}
 
-  /* outline + settings rails (hidden on mobile) */
+  /* rough-draft + settings rails (hidden on mobile; the ☰ sheet covers narrow widths) */
   #outlineRail,#settingsRail{display:none}
 
   /* ── MOBILE EDITOR: chat-like typing ─────────────────────────────────────────
@@ -2648,7 +2695,7 @@
     #settingsToggleBtn{ display:flex !important; }
   }
 
-  /* ── show outline toggle whenever the outline rail is hidden (below 1200px) ── */
+  /* ── show the Rough draft toggle whenever the rail is hidden (below 1200px) ── */
   @media(max-width:1199px){
     #outlineToggleBtn{ display:flex !important; }
   }
@@ -2662,7 +2709,7 @@
       min-height:calc(100vh - env(safe-area-inset-top))}
 
     /* canvas + settings from 900px; minmax(0,1fr) lets the centre shrink instead of
-       shoving the settings rail off-screen. Outline rail joins at 1200px+. */
+       shoving the settings rail off-screen. Rough draft rail joins at 1200px+. */
     #editorOuter{
       display:grid;
       grid-template-columns:minmax(0,1fr) 210px;
@@ -2675,9 +2722,6 @@
     #outlineRail h4{
       font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;
       color:var(--faint);margin-bottom:.8rem;font-weight:700}
-    #outlineList{list-style:none;font-size:.82rem;color:var(--mut)}
-    #outlineList li{padding:.3em .5em;border-radius:6px}
-    #outlineList li.cur{background:rgba(45,212,191,.12);color:var(--acc);font-weight:600}
 
     #editorInner{
       width:100%;max-width:700px;min-width:0;margin-inline:auto;
@@ -2735,7 +2779,7 @@
   .mset-label{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;
     color:var(--faint);margin-bottom:.4rem;font-weight:700}
 
-  /* ── WIDE DESKTOP: add the outline rail (3 columns) at 1200px+ ──────────── */
+  /* ── WIDE DESKTOP: add the Rough draft rail (3 columns) at 1200px+ ──────── */
   @media(min-width:1200px){
     #editorOuter{grid-template-columns:180px minmax(0,1fr) 210px}
     #outlineRail{display:block}
@@ -3729,7 +3773,7 @@
     <div class="editor-bar-main">
     <button class="back" id="editorBackBtn"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-arrow-left"/></svg> Posts</button>
     <button class="iconBtn" id="focusExitBtn" title="Exit focus mode (Esc)"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-x"/></svg> Focus</button>
-    <span class="status-slot" id="editorStatus" data-save="saved"><i class="save-dot" aria-hidden="true"></i><span id="editorStatusText">Draft · saved</span></span>
+    <span class="status-slot" id="editorStatus" data-save="saved"><i class="save-dot" aria-hidden="true"></i><span id="editorStatusText">Draft · saved</span><span id="sessionWords" hidden></span></span>
     <span class="status-slot" id="editorWords" hidden></span>
     <button class="pub-btn" id="editorPublishBtn">Publish</button>
     </div>
@@ -3737,8 +3781,8 @@
 
     <button class="iconBtn tb-labelled" id="focusToggleBtn" title="Focus mode (⌘⇧F)" aria-label="Toggle focus mode"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-focus-2"/></svg> Focus</button>
 
-    <!-- Live preview — was a "View ▾" menu; Outline dropped per owner. The Outline rail
-         still auto-joins on wide screens, so nothing is lost on desktop. -->
+    <!-- Live preview — was a "View ▾" menu. (The old Outline is gone entirely: the
+         left rail + ☰ sheet are the Rough draft scratchpad now, spec addendum 9.) -->
     <button class="iconBtn tb-labelled" id="previewBtn" type="button" title="Live preview"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-eye"/></svg> Live preview</button>
 
     <!-- AI ▾ — whole-draft editor pass -->
@@ -3760,7 +3804,7 @@
       </div>
     </details>
 
-    <button class="iconBtn" id="outlineToggleBtn" style="display:none" title="Post outline" aria-label="Post outline"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-list"/></svg></button>
+    <button class="iconBtn" id="outlineToggleBtn" style="display:none" title="Rough draft · jot ideas for this post" aria-label="Rough draft · jot ideas for this post"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-notes"/></svg></button>
     <button class="iconBtn tb-labelled" type="button" id="threadToggleBtn" title="Switch between chat and document view" aria-label="Switch between chat and document view"></button>
     <button class="iconBtn" id="cmdkBtn" title="Command palette (⌘K)" aria-label="Command palette">⌘K</button>
     <button class="themeBtn" id="themeToggleEditor" title="Toggle theme" onclick="toggleTheme()">☀️</button>
@@ -3799,6 +3843,8 @@
       <button class="cbtn" id="chatPlus" type="button" title="Add — image, interactive, figure…" aria-label="Add a block"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-plus"/></svg></button>
       <textarea id="chatInput" rows="1" placeholder="Write a message…" autocomplete="off"></textarea>
       <button class="cbtn" id="chatAskToggle" type="button" title="Ask the Partner" aria-label="Ask the Partner instead of writing into the post">✦</button>
+      <button class="cbtn" id="chatCam" type="button" title="Add a photo" aria-label="Add a photo to the post"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-camera"/></svg></button>
+      <input id="chatCamInput" type="file" accept="image/*" capture="environment" multiple hidden />
       <button class="cbtn" id="chatMic" type="button" title="Dictate" aria-label="Dictate" hidden><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-microphone"/></svg></button>
       <button class="cbtn" id="chatSendBtn" type="button" title="Send" aria-label="Send"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-send-2"/></svg></button>
     </div>
@@ -4027,15 +4073,24 @@
   <!-- 3-column grid on desktop; single column on mobile -->
   <div id="editorOuter">
 
-    <!-- LEFT: outline rail (collapsible; click the header to toggle) -->
+    <!-- LEFT: Rough draft rail (collapsible; click the header to toggle). A per-post
+         scratchpad - jot ideas and stray sentences, tap one to drop it into the
+         compose bar. Jots live on the thread sidecar (never published). -->
     <div id="outlineRail">
-      <h4 id="outlineRailHdr">Outline<span class="ocaret">▼</span></h4>
-      <ul id="outlineList"></ul>
+      <h4 id="outlineRailHdr">Rough draft<span class="ocaret">▼</span></h4>
+      <div class="rd-body">
+        <input class="rd-add" id="rdAddInput" type="text" placeholder="Jot something…" aria-label="Jot something for this post" autocomplete="off" />
+        <ul id="rdList" class="rd-list" aria-label="Rough draft jots"></ul>
+        <p id="rdEmpty" class="rd-empty">Stray thoughts land here · tap a jot to drop it into the compose bar.</p>
+      </div>
     </div>
 
     <!-- CENTRE: document canvas -->
     <div id="editorInner">
-      <input class="title-in" id="editorTitle" placeholder="Post title…" />
+      <div class="title-row">
+        <input class="title-in" id="editorTitle" placeholder="Post title…" />
+        <button id="titleAskBtn" type="button" title="Ask the Partner for a title variation" aria-label="Ask the Partner for a title variation">✦</button>
+      </div>
       <div id="blockList"></div>
       <div id="editorActions">
         <button id="addBlockBtn">＋ Add block</button>
@@ -4664,13 +4719,14 @@
   </div>
 </div>
 
-<!-- ===== OUTLINE (bottom-sheet) — headings of the current post ===== -->
+<!-- ===== ROUGH DRAFT (bottom-sheet) · per-post scratchpad on narrow layouts ===== -->
 <div class="picker-scrim" id="outlineScrim"></div>
 <div class="picker-sheet" id="outlineSheet">
   <div class="picker-grab"></div>
-  <h3>Outline</h3>
-  <ul id="outlineSheetList" class="outlist-sheet"></ul>
-  <p id="outlineSheetEmpty" class="outlist-empty">No headings yet — add Heading blocks to build the outline.</p>
+  <h3>Rough draft</h3>
+  <input class="rd-add" id="rdSheetInput" type="text" placeholder="Jot something…" aria-label="Jot something for this post" autocomplete="off" />
+  <ul id="rdSheetList" class="rd-list" aria-label="Rough draft jots"></ul>
+  <p id="rdSheetEmpty" class="rd-empty">Stray thoughts land here · tap a jot to drop it into the compose bar.</p>
 </div>
 
 <!-- ===== IMPORT MARKDOWN (bottom-sheet) — offline, no AI ===== -->
@@ -8180,7 +8236,6 @@ function edHeading(b, isSel){
   inp.addEventListener('input', () => {
     b.text = inp.value;
     markDirty();
-    refreshOutline();
   });
   wrap.appendChild(inp);
 
@@ -8926,6 +8981,11 @@ window.importMarkdownText = importMarkdownText;
    Pure logic mirrored from studio-app/core/chatCompose.js (tested there).
    ═══════════════════════════════════════════════════════════════════════════ */
 let _chatOn = false, _chatBound = null, _chatRebuildT = null, _chatPaintT = null, _composeAnchorId = null;
+// thread (chat) mode + ask state - declared here, ABOVE the compose-bar helpers that
+// read them (chatPlaceholder / chatEnterSends / _applyThreadMode run during eval-time
+// setup; a later `let` would put them in the temporal dead zone).
+let _threadMode = false;
+let _askMode = false, _askBlockId = null, _askBusy = false;
 const _chatCoarse = () => window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
 
 /* ── mirror of core/chatCompose.js — keep in lockstep ── */
@@ -8944,8 +9004,12 @@ function chatFieldFor(block){
     default: return null;
   }
 }
-/* WhatsApp rule everywhere: Enter = new paragraph, only ➤ (Send) commits. */
-function chatEnterSends(){ return false; }
+/* Enter behaviour, per mode (spec addendum 9d):
+   Chat (thread) mode - Enter SENDS, Shift+Enter = new line (messenger rule).
+   Doc mode - the WhatsApp rule stands: Enter = new paragraph, only ➤ (Send) commits.
+   (core/chatCompose.js enterSends() documents the Doc-mode rule; this inline gate
+   adds the thread-mode divergence deliberately.) */
+function chatEnterSends(){ return _threadMode; }
 function chatIsPlainParagraph(text){
   const t = String(text == null ? '' : text).trim();
   if(!t || /\n/.test(t)) return false;
@@ -9272,20 +9336,36 @@ function chatAutosize(){
   const row = inp.closest('.chat-row');
   if(row) row.classList.toggle('has-text', !!inp.value.trim());
 }
-/* compose-bar placeholders: shorter on phones so the input never truncates them */
+/* compose-bar placeholders: shorter on phones so the input never truncates them.
+   Chat mode carries the Enter-behaviour hint (spec addendum 9d - the affordance is
+   visible in the bar); Doc mode keeps the plain prompt. */
 function chatPlaceholder(ask){
   const narrow = matchMedia('(max-width:640px)').matches;
-  return ask ? (narrow ? 'Ask Partner…' : 'Ask the Partner…')
-             : (narrow ? 'Write…' : 'Write a message…');
+  if(ask) return narrow ? 'Ask Partner…' : 'Ask the Partner…';
+  if(chatEnterSends()) return narrow ? 'Write… Enter sends' : 'Write a message… Enter sends · Shift+Enter for a new line';
+  return narrow ? 'Write…' : 'Write a message…';
 }
 
 /* ── wiring ── */
 (function wireChat(){
   const inp = $('chatInput'); if(!inp) return;
   inp.placeholder = chatPlaceholder(false);   // phones get the short form from the start
+  // the placeholder is width- and mode-aware (short forms + the Enter-sends hint):
+  // recompute when the viewport crosses the narrow breakpoint, never while bound
+  matchMedia('(max-width:640px)').addEventListener('change', () => {
+    if(!_chatBound) inp.placeholder = chatPlaceholder(_askMode);
+  });
   inp.addEventListener('input', () => { chatAutosize(); chatSyncInput(); });
   inp.addEventListener('keydown', e => {
-    if(e.key === 'Escape' && _chatBound){ e.preventDefault(); chatRelease(); }
+    if(e.key === 'Escape' && _chatBound){ e.preventDefault(); chatRelease(); return; }
+    // Chat mode only: Enter sends, Shift+Enter = new line. Doc mode falls through to
+    // the textarea's native newline (chatEnterSends() is false there). Ask mode routes
+    // to the Partner exactly like the send button's capture-phase interceptor.
+    if(e.key === 'Enter' && !e.shiftKey && !e.isComposing && chatEnterSends()){
+      e.preventDefault();
+      if(typeof _askMode !== 'undefined' && _askMode) _sendAskFromBar();
+      else chatSend();
+    }
   });
   $('chatSendBtn').addEventListener('click', chatSend);
   $('chatStripX').addEventListener('click', () => chatRelease());
@@ -9361,7 +9441,7 @@ function chatPlaceholder(ask){
 /* ── 💬 chat-mode presentation (Thread): a class flip over the SAME block list.
    Doc mode is the untouched editor; nothing here re-implements block editing
    (chatBind). The canvas + bubble styling is pure CSS (.thread-canvas/.thread-on). ── */
-let _threadMode = false, _threadId = null, _threadSaveT = 0, _threadReq = 0;
+let _threadId = null, _threadSaveT = 0, _threadReq = 0;   // _threadMode is declared above wireChat
 /* UI-only mode applier: class flips + toggle label + turn repaint. Never schedules a
    save — loadThread applies an ABSENT sidecar's default through this, so the default
    can never overwrite a saved mode (or write a record that shouldn't exist yet). */
@@ -9376,10 +9456,18 @@ function _applyThreadMode(on){
   if(ved) ved.classList.toggle('thread-mode', _threadMode);
   const btn = $('threadToggleBtn');
   if(btn) btn.innerHTML = _threadMode ? tico('file-text') + ' Doc' : tico('message-circle') + ' Chat';
+  // the compose bar's Enter-behaviour hint lives in the placeholder - keep it in step
+  // with the mode (never while a block is bound: the bound placeholder names the field)
+  const cin = $('chatInput');
+  if(cin && !_chatBound) cin.placeholder = chatPlaceholder(_askMode);
+  // "+N words this session" rides the thread-mode saved tick only
+  const sw = $('sessionWords');
+  if(sw && !_threadMode) sw.hidden = true;
   if(window.__threadRenderTurns) window.__threadRenderTurns();   // conversation layer hook; harmless no-op before it exists
 }
 function setThreadMode(on){
   _applyThreadMode(on);
+  updateWordCount();   // re-sync the "+N words this session" chip with the new mode
   saveThread();   // per-post mode memory (spec 4.1); no-op until a post opens (_threadId null)
 }
 window.setThreadMode = setThreadMode;
@@ -9392,8 +9480,17 @@ _applyThreadMode(false);   // initialise the toggle label before any post opens
    (spec 4.2): the ✦ Ask toggle, a bubble's Reply/Tighten/Continue, or a quick chip.
    Guidance-first: only tighten/continue/title replies are insertable (Accept);
    asides and replies guide - questions, nudges, feedback - never draft text. ── */
-let _thread = { v: 1, mode: 'chat', turns: [] };
-let _askMode = false, _askBlockId = null, _askBusy = false;
+let _thread = { v: 1, mode: 'chat', turns: [], scratch: [] };
+// (_askMode/_askBlockId/_askBusy are declared above wireChat, beside _threadMode)
+// warm re-entry (spec addendum 9b): armed by loadThread when a saved sidecar comes back
+let _threadRecapOn = false, _threadRecapTs = 0;
+// inbox ideas on a new post's thread (spec addendum 9a): null = not fetched yet;
+// the dismiss is session-only by design (a JS flag, nothing persisted)
+let _inboxIdeas = null, _inboxDismissed = false;
+// words in the doc when this editor session opened - drives the recap line's
+// "N words so far" AND the "+N words this session" chip beside the saved tick
+let _sessionWordsBase = 0;
+function resetSessionWords(){ _sessionWordsBase = docWordCount(); }
 
 /* ── per-draft persistence: the sidecar lives in the 'threads' store via /thread/:id,
    keyed by the post's slug. A titleless new post writes under the single provisional
@@ -9423,7 +9520,7 @@ async function loadThread(id){
   // post inside the debounce window used to cancel the write, then read the stale record.
   await _threadFlushPending();
   _threadId = id;
-  _thread = { v: 1, mode: 'chat', turns: [] };   // blank while the sidecar loads (a prior post's turns must never paint)
+  _thread = { v: 1, mode: 'chat', turns: [], scratch: [] };   // blank while the sidecar loads (a prior post's turns must never paint)
   const req = ++_threadReq;
   let t = null;
   try { t = await api('/thread/' + encodeURIComponent(id)); } catch { t = null; }
@@ -9432,10 +9529,16 @@ async function loadThread(id){
     // A saved sidecar exists - honour its mode EXACTLY (a chat-toggled post with zero
     // turns reopens in Chat). GET returns null when no record exists, so saved ≠ default.
     _thread = t;
+    if(!Array.isArray(_thread.scratch)) _thread.scratch = [];   // records saved before scratch existed
+    // warm re-entry (spec addendum 9b): a saved sidecar means this draft is being
+    // PICKED UP, not started - arm the local recap divider. Pure presentation, no AI.
+    _threadRecapOn = true;
+    _threadRecapTs = t.turns.reduce((m, x) => Math.max(m, x.ts || 0), 0);
     _applyThreadMode(t.mode === 'chat');
   } else {
     // Absent sidecar (or offline) - defaults per spec 4.1: new-post entry Chat, existing
     // post Doc. Applied WITHOUT scheduling a save, so a default never writes the store.
+    _threadRecapOn = false; _threadRecapTs = 0;
     _applyThreadMode(editorSection === 'write');
   }
   renderTurns();
@@ -9492,7 +9595,14 @@ async function askPartner(ask, { text = '', blockId = null, reAsk = false } = {}
   const reqThread = _thread, reqId = _threadId;
   const blocks = (doc && doc.blocks) || [];
   const i = blockId ? blocks.findIndex(b => b.id === blockId) : -1;
-  const payload = { ask, text,
+  // field awareness (spec addendum 9): tell the prompt which surface the author is in -
+  // the title entry point, or the anchored block's type - so the Partner shapes tone
+  // and target (title variation / heading sharpening / body encouragement). Tone only;
+  // it never changes which asks are insertable.
+  const field = ask === 'title' ? 'title'
+    : i >= 0 ? (blocks[i].type === 'heading' ? 'heading' : blocks[i].type === 'text' ? 'text' : blocks[i].type)
+    : null;
+  const payload = { ask, text, field,
     title: (meta && meta.title) || ($('editorTitle') && $('editorTitle').value) || '',
     block: i >= 0 ? _threadBlockForPrompt(blocks[i]) : null,
     prevBlock: i > 0 ? _threadBlockForPrompt(blocks[i - 1]) : null,
@@ -9570,8 +9680,24 @@ function _mkTurnEl(t){
     speaker.textContent = t.kind === 'insertable' ? 'Partner suggestion' : 'Partner';
     el.appendChild(speaker);
   }
+  if(t.typing){
+    // typing indicator: animated dots normally; prefers-reduced-motion swaps in the
+    // static "Partner is thinking…" text (CSS toggles which shows). The aria-label
+    // keeps the announcement identical either way (the dots are decoration).
+    el.setAttribute('aria-label', 'Partner is thinking…');
+    const dots = document.createElement('span');
+    dots.className = 'typing-dots';
+    dots.setAttribute('aria-hidden', 'true');
+    for(let k = 0; k < 3; k++) dots.appendChild(document.createElement('i'));
+    el.appendChild(dots);
+    const tx = document.createElement('span');
+    tx.className = 'typing-text';
+    tx.textContent = 'Partner is thinking…';
+    el.appendChild(tx);
+    return el;
+  }
   el.appendChild(document.createTextNode(t.text));   // textContent path - AI text is never HTML
-  if(t.role !== 'assistant' || t.typing) return el;
+  if(t.role !== 'assistant') return el;
   const acts = document.createElement('div'); acts.className = 'turn-acts';
   const btn = (label, fn) => {
     const b = document.createElement('button'); b.type = 'button'; b.textContent = label;
@@ -9588,9 +9714,12 @@ function _mkTurnEl(t){
 
 function renderTurns(){
   const host = $('blockList'); if(!host) return;
-  host.querySelectorAll('.turn').forEach(n => n.remove());
+  host.querySelectorAll('.turn, .thread-recap, .thread-inbox').forEach(n => n.remove());
   renderThreadChips();
+  renderRoughDraft();   // the rail lives outside #blockList but re-syncs on every repaint
   if(!_threadMode) return;
+  _renderThreadRecap(host);
+  _renderInboxIdeas(host);
   // dismissed turns hide; accepted insertable text crossed into the post (it IS a sent
   // bubble now) so the assistant bubble stops echoing it
   const live = _thread.turns.filter(t => t.state !== 'dismissed' && !(t.kind === 'insertable' && t.state === 'accepted'));
@@ -9664,6 +9793,138 @@ function retryThreadTurn(t){
   askPartner(r.ask || 'aside', { text: r.text || '', blockId: r.blockId || null, reAsk: true });
 }
 
+/* ── warm re-entry (spec addendum 9b): a LOCAL recap divider at the canvas top when a
+   draft with a saved conversation reopens. "Picked up from <relative time> · <N> words
+   so far" - sidecar turn timestamps + the word count captured at editor-open. Pure
+   presentation: not a turn, never persisted, no AI call. ── */
+function _renderThreadRecap(host){
+  if(!_threadRecapOn) return;
+  const words = _sessionWordsBase;
+  if(!words && !_threadRecapTs) return;   // nothing meaningful to recap yet
+  const el = document.createElement('div');
+  el.className = 'thread-recap';
+  const span = document.createElement('span');
+  span.textContent = (_threadRecapTs ? 'Picked up from ' + relTime(_threadRecapTs) : 'Picked up')
+    + (words ? ' · ' + words.toLocaleString('en-GB') + ' words so far' : '');
+  el.appendChild(span);
+  host.prepend(el);
+}
+
+/* ── inbox ideas as messages (spec addendum 9a): on a NEW post's thread (write entry,
+   empty doc) the 3 most recent inbox ideas render as tappable incoming-style cards -
+   "messages from past-you". Tapping one places its text in the compose bar for
+   edit-then-send; the idea is NOT deleted (the author may not use it). The group is
+   dismissible for this session only. ── */
+function _renderInboxIdeas(host){
+  if(_inboxDismissed || editorSection !== 'write' || currentSlug || editorHasContent()) return;
+  if(_inboxIdeas === null){
+    _inboxIdeas = 'loading';
+    api('/ideas').then(list => { _inboxIdeas = Array.isArray(list) ? list : []; renderTurns(); })
+                 .catch(() => { _inboxIdeas = []; });
+    return;
+  }
+  if(!Array.isArray(_inboxIdeas) || !_inboxIdeas.length) return;
+  const ideas = _inboxIdeas.slice()
+    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+    .slice(0, 3);
+  const box = document.createElement('div');
+  box.className = 'thread-inbox';
+  const head = document.createElement('div'); head.className = 'ti-head';
+  const lbl = document.createElement('span'); lbl.textContent = 'From your inbox';
+  head.appendChild(lbl);
+  const x = document.createElement('button');
+  x.type = 'button'; x.textContent = '✕';
+  x.setAttribute('aria-label', 'Hide inbox ideas for this session');
+  x.addEventListener('click', () => { _inboxDismissed = true; renderTurns(); });
+  head.appendChild(x);
+  box.appendChild(head);
+  for(const it of ideas){
+    const c = document.createElement('button');
+    c.type = 'button'; c.className = 'ti-card';
+    c.textContent = String(it.text || '').slice(0, 280);
+    c.title = 'Put this idea in the compose bar · it stays in your inbox';
+    c.addEventListener('click', () => {
+      if(_chatBound) chatRelease(true);   // never live-sync an idea into a bound block
+      const inp = $('chatInput'); if(!inp) return;
+      inp.value = String(it.text || '');
+      chatAutosize();
+      inp.focus();
+    });
+    box.appendChild(c);
+  }
+  host.prepend(box);   // after the recap prepend, so the inbox sits topmost
+}
+
+/* ── rough draft rail (spec addendum 9): the per-post scratchpad that REPLACED the
+   Outline. Jots live on the thread sidecar (_thread.scratch, newest first - mirrors
+   core/thread.js addScratch/removeScratch; the inline module can't import core/).
+   Renders the desktop rail AND the phone bottom sheet; works in Chat and Doc modes
+   and stays available in focus mode (spec: focus is precisely when stray thoughts
+   need a place to land). ── */
+let _rdSeq = 0;
+function rdAdd(text){
+  const t = String(text || '').trim();
+  if(!t) return;
+  if(!Array.isArray(_thread.scratch)) _thread.scratch = [];
+  _thread.scratch.unshift({ id: 's' + Date.now().toString(36) + '-' + (_rdSeq++), text: t, ts: Date.now() });
+  saveThread();
+  renderRoughDraft();
+}
+function rdRemove(id){
+  if(!Array.isArray(_thread.scratch)) return;
+  const i = _thread.scratch.findIndex(s => s && s.id === id);
+  if(i < 0) return;
+  _thread.scratch.splice(i, 1);
+  saveThread();
+  renderRoughDraft();
+}
+/* tap a jot → its text lands in the compose bar for edit-then-send (chat-native "use
+   this"); the jot stays until deleted. Bound blocks release first - placing text while
+   bound would live-sync it INTO the block. */
+function rdUse(text){
+  if(_chatBound) chatRelease(true);
+  const inp = $('chatInput'); if(!inp) return;
+  const sheet = $('outlineSheet');
+  if(sheet && sheet.classList.contains('open')) closeOutlineSheet();
+  inp.value = String(text || '');
+  chatAutosize();
+  inp.focus();
+}
+function renderRoughDraft(){
+  const jots = (_thread && Array.isArray(_thread.scratch)) ? _thread.scratch : [];
+  for(const [listId, emptyId] of [['rdList', 'rdEmpty'], ['rdSheetList', 'rdSheetEmpty']]){
+    const ul = $(listId); if(!ul) continue;
+    ul.innerHTML = '';
+    for(const j of jots){
+      const li = document.createElement('li'); li.className = 'rd-jot';
+      const use = document.createElement('button');
+      use.type = 'button'; use.className = 'rd-jot-text';
+      use.textContent = j.text;
+      use.title = 'Put this jot in the compose bar';
+      use.addEventListener('click', () => rdUse(j.text));
+      const del = document.createElement('button');
+      del.type = 'button'; del.className = 'rd-jot-x'; del.textContent = '✕';
+      del.setAttribute('aria-label', 'Delete this jot');
+      del.addEventListener('click', () => rdRemove(j.id));
+      li.appendChild(use); li.appendChild(del);
+      ul.appendChild(li);
+    }
+    const empty = $(emptyId);
+    if(empty) empty.style.display = jots.length ? 'none' : 'block';
+  }
+}
+(function wireRoughDraft(){
+  for(const id of ['rdAddInput', 'rdSheetInput']){
+    const inp = $(id); if(!inp) continue;
+    inp.addEventListener('keydown', e => {
+      if(e.key !== 'Enter' || e.isComposing) return;
+      e.preventDefault();
+      rdAdd(inp.value);
+      inp.value = '';
+    });
+  }
+})();
+
 /* quick chips under the thread: rendering them is free; tapping one spends tokens.
    Light-touch reveal: the chips only appear after ~4s WITHOUT input events - the
    Partner offers itself when the author pauses, never while they are typing. */
@@ -9701,12 +9962,30 @@ function renderThreadChips(){
 $('chatInput')?.addEventListener('input', _chipIdlePoke);
 $('blockList')?.addEventListener('input', _chipIdlePoke);
 $('chatAskToggle')?.addEventListener('click', () => setAskMode(!_askMode));
+// ✦ on the title field (thread mode only, CSS-gated): a deliberate tap → ONE title
+// variation, insertable like every 'title' ask (field-aware: the prompt riffs on the
+// current title when there is one)
+$('titleAskBtn')?.addEventListener('click', () => askPartner('title', {}));
+// compose-bar camera (narrow layouts, spec addendum 9e): one tap → capture/pick → the
+// photo lands as a sent image block via the SAME resize pipeline as the [+] sheet's
+// Image tile (bulkAddImageBlocks), just after the compose anchor.
+(function wireChatCam(){
+  const btn = $('chatCam'), inp = $('chatCamInput');
+  if(!btn || !inp) return;
+  btn.addEventListener('click', () => inp.click());
+  inp.addEventListener('change', async () => {
+    const files = [...(inp.files || [])];
+    inp.value = '';                          // allow re-capturing the same shot
+    if(!files.length) return;
+    const at = chatInsertAt();
+    await bulkAddImageBlocks(files, at > 0 ? doc.blocks[at - 1] : null);
+  });
+})();
 // Wrap the send path rather than duplicate it: a capture-phase listener on the bar runs
 // BEFORE the send button's own chatSend listener, so in ask mode the message goes to the
-// Partner and never into the post.
-$('chatBar')?.addEventListener('click', (e) => {
-  if(!_askMode || !e.target.closest('#chatSendBtn')) return;
-  e.preventDefault(); e.stopPropagation();
+// Partner and never into the post. _sendAskFromBar is shared with the Enter-to-send
+// keydown path (chat mode), so both routes stay identical.
+function _sendAskFromBar(){
   const inp = $('chatInput');
   const text = ((inp && inp.value) || '').trim();
   if(!text) return;
@@ -9714,6 +9993,11 @@ $('chatBar')?.addEventListener('click', (e) => {
   if(inp){ inp.value = ''; chatAutosize(); }
   setAskMode(false);
   askPartner(blockId ? 'reply' : 'aside', { text, blockId });
+}
+$('chatBar')?.addEventListener('click', (e) => {
+  if(!_askMode || !e.target.closest('#chatSendBtn')) return;
+  e.preventDefault(); e.stopPropagation();
+  _sendAskFromBar();
 }, true);
 $('chatInput')?.addEventListener('keydown', (e) => {
   if(e.key === 'Escape' && _askMode){ e.preventDefault(); setAskMode(false); }
@@ -11220,78 +11504,42 @@ function renderBlocks(){
   });
   host.appendChild(lastDiv);
 
-  refreshOutline();
   if(typeof renumberCiteMarkers==='function') renumberCiteMarkers();   // keep footnote pill numbers correct after any re-render
 }
 
-/* Select a heading block AND scroll it into view (used by both outline surfaces). */
-function selectAndScrollTo(id){
-  selectBlock(id);
-  setTimeout(() => {
-    const el = document.querySelector('.block[data-id="'+id+'"]');
-    if(el) el.scrollIntoView({ behavior:'smooth', block:'center' });
-  }, 0);
-}
-
-/* Live outline: the post's heading blocks, indented by level (H2/H3/H4). Renders to
-   the desktop rail AND the outline bottom-sheet so both stay in sync as headings change. */
-function refreshOutline(){
-  const heads = doc.blocks.filter(b => b.type === 'heading');
-
-  // desktop rail
-  const ul = $('outlineList');
-  if(ul){
-    ul.innerHTML = '';
-    if(!heads.length){
-      const li = document.createElement('li');
-      li.className = 'outlist-empty'; li.textContent = 'No headings yet';
-      ul.appendChild(li);
-    } else heads.forEach(b => {
-      const lvl = Math.min(Math.max(b.level || 2, 2), 4);
-      const li = document.createElement('li');
-      li.textContent = b.text || b.ph || '(heading)';
-      if(!b.text) li.classList.add('ol-ghost');   // untouched guide heading — show its guide text, faintly
-      li.className = (b.id === selectedId ? 'cur ' : '') + 'lvl' + lvl;
-      li.onclick = () => selectAndScrollTo(b.id);
-      ul.appendChild(li);
-    });
-  }
-
-  // bottom-sheet (touch)
-  const sul = $('outlineSheetList'), empty = $('outlineSheetEmpty');
-  if(sul){
-    sul.innerHTML = '';
-    heads.forEach(b => {
-      const lvl = Math.min(Math.max(b.level || 2, 2), 4);
-      const li = document.createElement('li');
-      li.textContent = b.text || b.ph || '(heading)';
-      if(!b.text) li.classList.add('ol-ghost');   // untouched guide heading — show its guide text, faintly
-      li.className = (b.id === selectedId ? 'cur ' : '') + 'lvl' + lvl;
-      li.tabIndex = 0;
-      li.onclick = () => { selectAndScrollTo(b.id); closeOutlineSheet(); };
-      sul.appendChild(li);
-    });
-    if(empty) empty.style.display = heads.length ? 'none' : 'block';
-  }
-}
+/* (The heading Outline that used to render here is gone - the left rail and the ☰
+   bottom sheet are the Rough draft scratchpad now, rendered by renderRoughDraft()
+   from the thread sidecar's `scratch` jots. Spec addendum 9, "Rough draft rail".) */
 
 /* Live word count + reading time in the toolbar. Idempotent and O(blocks): strips
    tags from text/quote HTML, adds heading text and media captions, counts \S+ runs.
    Hidden (0 words) on an empty draft. Called debounced from markDirty + once at
    editor-open — never on every renderBlocks repaint. */
-function updateWordCount(){
-  const el = $('editorWords'); if(!el) return;
+function docWordCount(){
   let text = '';
   for(const b of (doc && doc.blocks || [])){
     if(b.type === 'heading') text += ' ' + (b.text || '');
     else if(b.type === 'text' || b.type === 'quote') text += ' ' + String(b.html || '').replace(/<[^>]+>/g, ' ');
     else if(b.caption) text += ' ' + b.caption;
   }
-  const words = (text.match(/\S+/g) || []).length;
+  return (text.match(/\S+/g) || []).length;
+}
+function updateWordCount(){
+  const el = $('editorWords'); if(!el) return;
+  const words = docWordCount();
   el.hidden = !words;
   if(words){
     const mins = Math.max(1, Math.round(words / 230));
     el.textContent = words.toLocaleString('en-GB') + ' words · ' + mins + ' min';
+  }
+  // session momentum (spec addendum 9c): a quiet "+N words this session" beside the
+  // thread-mode saved tick. Only when the session actually ADDED words (N > 0).
+  const sw = $('sessionWords');
+  if(sw){
+    const delta = words - _sessionWordsBase;
+    const show = _threadMode && delta > 0;
+    sw.hidden = !show;
+    if(show) sw.textContent = '+' + delta.toLocaleString('en-GB') + ' words this session';
   }
 }
 
@@ -11359,6 +11607,8 @@ async function startNewPost(seedDoc){
   meta = { title:'', tags:[], accent:'#2dd4bf', draft:true, description:'', theme:'dark', template:'observatory', glyph:'', image:'', citations:[], series:'', seriesPart:null, publishAt:'' };
   selectedId = null;
   _composeAnchorId = null;   // reset the compose anchor for a fresh post
+  resetSessionWords();       // "+N words this session" counts from THIS open (seed included)
+  _inboxIdeas = null;        // a fresh new post re-reads the inbox for its idea cards
   $('editorTitle').value = '';
   setMetaDescUI('');
   setSeriesUI();
@@ -11377,7 +11627,8 @@ async function startNewPost(seedDoc){
     await _threadFlushPending();   // the OUTGOING post's pending save still lands first
     _threadReq++;                  // cancel any in-flight sidecar load
     _threadId = null;
-    _thread = { v: 1, mode: 'chat', turns: [] };
+    _thread = { v: 1, mode: 'chat', turns: [], scratch: [] };
+    _threadRecapOn = false; _threadRecapTs = 0;   // a fresh post is a start, not a re-entry
     _applyThreadMode(true);        // new posts open in Chat (spec 4.1); nothing is scheduled or written
   }
   renderBlocks();
@@ -11422,6 +11673,7 @@ async function openBlockEditor(slug){
   doc = { version:1, blocks:[] };
   selectedId = null;
   _dirty = false; _lastLocalSaveTs = 0;
+  resetSessionWords();       // blank until the real doc lands (no stale "+N" or recap count)
   setSaveState('loading','Loading…');
   setAskMode(false);
   await loadThread(slug);   // flushes the outgoing post's pending save, blanks, then resumes this post's conversation + mode
@@ -11433,6 +11685,7 @@ async function openBlockEditor(slug){
     $('editorTitle').value = meta.title;
     setMetaDescUI(meta.description);
     setSaveState('saved','Draft · saved');
+    resetSessionWords();     // the reopened words are the baseline, not "this session's"
     renderBlocks();
     updateWordCount();   // editor-open: count the freshly-loaded post's words
     await loadEditorSettings();
@@ -11464,6 +11717,7 @@ async function offerDraftRecovery(slug, savedAt){
     doc = (r && r.doc) || { version:1, blocks:[] };
     meta = metaFromData(slug, r && r.data);
     $('editorTitle').value = meta.title; setMetaDescUI(meta.description);
+    resetSessionWords();   // the discarded draft's words never counted as "this session"
     renderBlocks(); await loadEditorSettings();
     updateWordCount();   // reloaded the published version — refresh the readout (no markDirty here)
     setSaveState('saved','Draft · saved'); _dirty=false;
@@ -11699,9 +11953,11 @@ $('mSettingsDone')?.addEventListener('click', closeMobileSettings);
   });
 })();
 
-/* ── outline: bottom-sheet (☰ button) + collapsible desktop rail ───────────── */
+/* ── rough draft: bottom-sheet (☰ button) + collapsible desktop rail. The sheet
+   SHELL kept its outline-era ids (#outlineSheet/#outlineScrim/#outlineToggleBtn);
+   its content is the per-post scratchpad. ── */
 function openOutlineSheet(){
-  refreshOutline();
+  renderRoughDraft();
   $('outlineScrim').classList.add('open');
   $('outlineSheet').classList.add('open');
 }
@@ -11831,6 +12087,7 @@ async function openUntitledDraft(){
   meta.title = '';                       // keep it titleless so titling reserves a real slug
   selectedId = null;
   _dirty = false; _lastLocalSaveTs = 0;
+  resetSessionWords();                   // the recovered words are the baseline for "+N this session"
   $('editorTitle').value = '';
   setMetaDescUI(meta.description);
   setSeriesUI();
