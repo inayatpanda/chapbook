@@ -107,10 +107,12 @@ test('GET /settings/ai (generic) still returns the status shape after the sub-ro
 });
 
 // ---- /thread sidecar routes (chat-mode editor) ----
-// Contract: GET of an absent id returns a fresh thread (never 404); PUT validates the
-// body via the parseThread(serializeThread()) round-trip; DELETE clears. Storage mirrors
-// the /drafts idiom (records keyed by id, collection 'threads'); parseThread strips the
-// record id back off on read, so GET returns exactly the thread shape.
+// Contract: GET of an absent id returns NULL (never 404, never a synthesized fresh
+// thread — a saved turn-less thread must stay distinguishable from "never saved", or
+// per-post mode memory breaks); PUT validates the body via the
+// parseThread(serializeThread()) round-trip; DELETE clears. Storage mirrors the /drafts
+// idiom (records keyed by id, collection 'threads'); parseThread strips the record id
+// back off on read, so GET returns exactly the thread shape.
 const memStorage = () => {
   const db = new Map();
   return {
@@ -120,15 +122,23 @@ const memStorage = () => {
   };
 };
 
-test('thread routes: GET missing id returns a fresh thread; PUT round-trips; DELETE clears', async () => {
+test('thread routes: GET missing id returns null; PUT round-trips; DELETE clears', async () => {
   const { api } = makeRouter({ storage: memStorage() });
-  const fresh = await api('/thread/my-post');
-  assert.deepEqual(fresh, { v: 1, mode: 'chat', turns: [] });
+  assert.equal(await api('/thread/my-post'), null); // absent record → null, not a synthesized thread
   const t = { v: 1, mode: 'doc', turns: [{ id: 't1', role: 'aside', kind: 'guidance', text: 'x', blockRef: null, ts: 1, state: 'open' }] };
   assert.deepEqual(await api('/thread/my-post', { method: 'PUT', body: JSON.stringify(t) }), { ok: true });
   assert.deepEqual(await api('/thread/my-post'), t);
   await api('/thread/my-post', { method: 'DELETE' });
-  assert.deepEqual(await api('/thread/my-post'), { v: 1, mode: 'chat', turns: [] });
+  assert.equal(await api('/thread/my-post'), null);
+});
+
+// Regression (mode memory): a post toggled to Chat with ZERO turns must read back as a
+// saved chat-mode thread — under the old "GET synthesizes a fresh thread" contract it
+// was indistinguishable from "never saved", so the UI reopened it in Doc.
+test('thread routes: a saved turn-less chat thread reads back saved (not null)', async () => {
+  const { api } = makeRouter({ storage: memStorage() });
+  await api('/thread/quiet-post', { method: 'PUT', body: JSON.stringify({ v: 1, mode: 'chat', turns: [] }) });
+  assert.deepEqual(await api('/thread/quiet-post'), { v: 1, mode: 'chat', turns: [] });
 });
 
 // The ai seam's text call is generateText({ system, prompt, … }) → { text } — the same

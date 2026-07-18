@@ -9227,7 +9227,10 @@ function chatAutosize(){
    Doc mode is the untouched editor; nothing here re-implements block editing
    (chatBind). The canvas + bubble styling is pure CSS (.thread-canvas/.thread-on). ── */
 let _threadMode = false, _threadId = null, _threadSaveT = 0, _threadReq = 0;
-function setThreadMode(on){
+/* UI-only mode applier: class flips + toggle label + turn repaint. Never schedules a
+   save — loadThread applies an ABSENT sidecar's default through this, so the default
+   can never overwrite a saved mode (or write a record that shouldn't exist yet). */
+function _applyThreadMode(on){
   _threadMode = !!on;
   const host = $('blockList');
   if(!host) return;
@@ -9236,11 +9239,14 @@ function setThreadMode(on){
   const btn = $('threadToggleBtn');
   if(btn) btn.innerHTML = _threadMode ? tico('file-text') + ' Doc' : tico('message-circle') + ' Chat';
   if(window.__threadRenderTurns) window.__threadRenderTurns();   // conversation layer hook; harmless no-op before it exists
+}
+function setThreadMode(on){
+  _applyThreadMode(on);
   saveThread();   // per-post mode memory (spec 4.1); no-op until a post opens (_threadId null)
 }
 window.setThreadMode = setThreadMode;
 $('threadToggleBtn')?.addEventListener('click', () => setThreadMode(!_threadMode));
-setThreadMode(false);   // initialise the toggle label before any post opens
+_applyThreadMode(false);   // initialise the toggle label before any post opens
 
 /* ── the conversation layer: author asides + Partner turns over the thread.
    Turns live in _thread (the sidecar shape from core/thread.js), persisted per post
@@ -9258,35 +9264,58 @@ let _askMode = false, _askBlockId = null, _askBusy = false;
    a request token so a slow read for one post can never clobber the thread of the post
    the user switched to meanwhile. ── */
 function _threadSaveNow(){
-  if(!_threadId) return;
+  if(!_threadId) return Promise.resolve();
   _thread.mode = _threadMode ? 'chat' : 'doc';
-  api('/thread/' + encodeURIComponent(_threadId), { method: 'PUT', body: JSON.stringify(_thread) }).catch(() => {});
+  return api('/thread/' + encodeURIComponent(_threadId), { method: 'PUT', body: JSON.stringify(_thread) });
 }
 function saveThread(){
   clearTimeout(_threadSaveT);
-  _threadSaveT = setTimeout(_threadSaveNow, 800);
+  _threadSaveT = setTimeout(() => { _threadSaveT = 0; _threadSaveNow().catch(() => {}); }, 800);
+}
+/* Flush a pending debounced save NOW (awaited). Every post-switch/reopen path runs this
+   BEFORE replacing in-memory state or reading the store, so a write scheduled <800ms ago
+   can never be cancelled and then read back stale. */
+async function _threadFlushPending(){
+  if(!_threadSaveT) return;
+  clearTimeout(_threadSaveT); _threadSaveT = 0;
+  if(_threadId){ try{ await _threadSaveNow(); }catch(_){ /* debounced saves stay best-effort */ } }
 }
 async function loadThread(id){
-  // flush any pending save for the OUTGOING post before its in-memory state is replaced
-  if(_threadSaveT){ clearTimeout(_threadSaveT); _threadSaveT = 0; if(_threadId && _threadId !== id) _threadSaveNow(); }
+  // ALWAYS flush a pending save before the GET - same id included: reopening the same
+  // post inside the debounce window used to cancel the write, then read the stale record.
+  await _threadFlushPending();
   _threadId = id;
+  _thread = { v: 1, mode: 'chat', turns: [] };   // blank while the sidecar loads (a prior post's turns must never paint)
   const req = ++_threadReq;
   let t = null;
   try { t = await api('/thread/' + encodeURIComponent(id)); } catch { t = null; }
   if(req !== _threadReq || _threadId !== id) return;   // stale response - a newer post opened mid-flight
-  _thread = (t && Array.isArray(t.turns)) ? t : { v: 1, mode: 'chat', turns: [] };
-  // Default rule (spec 4.1): new-post entries (editorSection 'write') default to Chat,
-  // existing posts default to Doc. An ABSENT sidecar reads back as a fresh chat-mode
-  // thread (GET never 404s), indistinguishable from a saved turn-less one - so for an
-  // existing post a conversation must exist for Chat to resume; turn-less means Doc.
-  setThreadMode(editorSection === 'write' ? _thread.mode !== 'doc'
-    : (_thread.mode === 'chat' && _thread.turns.length > 0));
+  if(t && Array.isArray(t.turns)){
+    // A saved sidecar exists - honour its mode EXACTLY (a chat-toggled post with zero
+    // turns reopens in Chat). GET returns null when no record exists, so saved ≠ default.
+    _thread = t;
+    _applyThreadMode(t.mode === 'chat');
+  } else {
+    // Absent sidecar (or offline) - defaults per spec 4.1: new-post entry Chat, existing
+    // post Doc. Applied WITHOUT scheduling a save, so a default never writes the store.
+    _applyThreadMode(editorSection === 'write');
+  }
   renderTurns();
 }
+const _threadQuotaish = (e) => !!e && (e.code === 22 || e.code === 1014 ||
+  /quota/i.test(String((e && (e.detail || e.message)) || '')));
 async function migrateThread(fromId, toId){
   if(!fromId || fromId === toId){ _threadId = toId; return; }
   _threadId = toId;
-  _threadSaveNow();   // write under the new id NOW - the delete below must never win alone
+  clearTimeout(_threadSaveT); _threadSaveT = 0;   // the awaited write below supersedes any pending debounce
+  try{
+    await _threadSaveNow();   // the copy under the new id must LAND before the old record goes
+  }catch(e){
+    // PUT failed → keep the old sidecar as the backup (never delete what wasn't copied);
+    // the next save retries under the new id. Surface a full store the standard way.
+    if(_threadQuotaish(e)){ try{ window.dispatchEvent(new CustomEvent('studio:storage-full')); }catch(_){} }
+    return;
+  }
   api('/thread/' + encodeURIComponent(fromId), { method: 'DELETE' }).catch(() => {});
 }
 
@@ -9318,6 +9347,11 @@ function _threadBlockForPrompt(b){
 async function askPartner(ask, { text = '', blockId = null, reAsk = false } = {}){
   if(_askBusy) return;
   _askBusy = true;
+  // Capture the REQUEST's thread + id: the user can switch posts while the model runs,
+  // and completion must land on the thread that asked - never on whatever _thread is
+  // current by then (splicing a foreign thread deleted the new post's last turn and
+  // appended the old response into the wrong conversation).
+  const reqThread = _thread, reqId = _threadId;
   const blocks = (doc && doc.blocks) || [];
   const i = blockId ? blocks.findIndex(b => b.id === blockId) : -1;
   const payload = { ask, text,
@@ -9328,34 +9362,45 @@ async function askPartner(ask, { text = '', blockId = null, reAsk = false } = {}
   // the author's spoken turn renders as an italic aside bubble (asks that carry a
   // message) - but a Retry re-asks an already-spoken message, so it never re-bubbles
   if((ask === 'aside' || ask === 'reply') && text && !reAsk)
-    _thread.turns.push({ id: 'a' + Date.now().toString(36) + '-' + _thread.turns.length,
+    reqThread.turns.push({ id: 'a' + Date.now().toString(36) + '-' + reqThread.turns.length,
       role: 'aside', kind: 'guidance', text, blockRef: blockId, ts: Date.now(), state: 'open' });
   const pending = { id: 'pending', role: 'assistant', kind: 'guidance', text: '…',
     blockRef: blockId, ts: Date.now(), state: 'open', typing: true };
-  _thread.turns.push(pending);
+  reqThread.turns.push(pending);
   renderTurns(); _threadScrollTo('pending');
+  const dropPending = () => { const pi = reqThread.turns.indexOf(pending); if(pi >= 0) reqThread.turns.splice(pi, 1); };
   let doneId = null;
   try {
     const r = await api('/thread/turn', { method: 'POST', body: JSON.stringify(payload) });
-    _thread.turns.splice(_thread.turns.indexOf(pending), 1);
-    doneId = 't' + Date.now().toString(36) + '-' + _thread.turns.length;
-    _thread.turns.push({ id: doneId, role: 'assistant',
+    dropPending();
+    doneId = 't' + Date.now().toString(36) + '-' + reqThread.turns.length;
+    reqThread.turns.push({ id: doneId, role: 'assistant',
       kind: r && r.insertable ? 'insertable' : 'guidance', text: String((r && r.text) || ''),
       blockRef: blockId, ts: Date.now(), state: 'open', retry: { ask, text, blockId } });
-    saveThread();
   } catch (e) {
-    _thread.turns.splice(_thread.turns.indexOf(pending), 1);
+    dropPending();
     const err = classifyError({ raw: e, status: e && e.status });
     const friendly = isNoKeyErr(e)
       ? 'Connect an AI provider in Settings → Keys to chat with the Partner.'
       : (err.message || 'Something went wrong - please try again.');
     doneId = 'e' + Date.now().toString(36);
-    _thread.turns.push({ id: doneId, role: 'assistant', kind: 'guidance', text: friendly,
+    reqThread.turns.push({ id: doneId, role: 'assistant', kind: 'guidance', text: friendly,
       blockRef: blockId, ts: Date.now(), state: 'open', error: true, retry: { ask, text, blockId } });
   } finally {
     _askBusy = false;
-    renderTurns();
-    if(doneId) _threadScrollTo(doneId);
+    if(reqThread === _thread){
+      // Persist success AND error/no-key turns (an error exchange used to vanish on
+      // close because only the success path saved), then repaint as before.
+      saveThread();
+      renderTurns();
+      if(doneId) _threadScrollTo(doneId);
+    } else {
+      // The user switched posts mid-request: persist the captured thread directly under
+      // its own id and leave the live UI alone (the current post repaints only its
+      // chips, whose visibility was pinned by _askBusy).
+      renderThreadChips();
+      if(reqId) api('/thread/' + encodeURIComponent(reqId), { method: 'PUT', body: JSON.stringify(reqThread) }).catch(() => {});
+    }
   }
 }
 
@@ -9425,9 +9470,25 @@ function acceptThreadTurn(t){
       if(f.field === 'html') b.html = inlineMdToHtml(clean).replace(/\n/g, '<br>');
       else if(f.field === 'text') b.text = clean;
       else b.caption = clean;
-    } else {                                    // continue (and any other insert) lands after its block
-      const at = i >= 0 ? i + 1 : doc.blocks.length;
-      doc.blocks.splice(at, 0, { id: mkId(), type: 'text', html: inlineMdToHtml(clean).replace(/\n/g, '<br>') });
+    } else if(ask === 'draft' && f && f.field === 'html'
+        && !String(doc.blocks[i].html || '').replace(/<br\s*\/?>/gi, '').replace(/<[^>]+>/g, '').trim()){
+      // 'Draft this block' accepted onto a still-empty text block FILLS it (the sheet
+      // promised "the draft will fill it"); textToHtml keeps Doc mode's paragraph shape
+      doc.blocks[i].html = textToHtml(clean);
+    } else {                                    // continue / draft-below (and any other insert) lands after its block
+      let at = i >= 0 ? i + 1 : doc.blocks.length;
+      if(i >= 0){
+        // Repeated accepts anchored to ONE block must chain in accept order (A then B
+        // reads A,B - not B,A): insert after the LAST still-present block that a
+        // previously-accepted turn for this anchor produced; anchor+1 when none survive.
+        const prior = new Set(_thread.turns
+          .filter(x => x !== t && x.blockRef === t.blockRef && x.state === 'accepted' && x.acceptedBlockId)
+          .map(x => x.acceptedBlockId));
+        for(let j = 0; j < doc.blocks.length; j++) if(prior.has(doc.blocks[j].id)) at = j + 1;
+      }
+      const nb = { id: mkId(), type: 'text', html: ask === 'draft' ? textToHtml(clean) : inlineMdToHtml(clean).replace(/\n/g, '<br>') };
+      doc.blocks.splice(at, 0, nb);
+      t.acceptedBlockId = nb.id;   // later accepts for this anchor chain after this block
     }
     markDirty();
   }
@@ -9439,6 +9500,11 @@ function dismissThreadTurn(t){ t.state = 'dismissed'; saveThread(); renderTurns(
 function retryThreadTurn(t){
   t.state = 'dismissed';   // the old bubble makes way for the fresh attempt
   const r = t.retry || {};
+  if(r.ask === 'draft'){   // a sheet-drafted turn re-runs from its sheet, not the Partner
+    saveThread(); renderTurns();
+    openAiDraft(r.blockId || undefined);
+    return;
+  }
   askPartner(r.ask || 'aside', { text: r.text || '', blockId: r.blockId || null, reAsk: true });
 }
 
@@ -11126,11 +11192,22 @@ async function startNewPost(seedDoc){
   setSeriesUI();
   setSaveState('idle','New post');
   _dirty = false; _lastLocalSaveTs = 0;
-  _thread = { v: 1, mode: 'chat', turns: [] };   // blank while the sidecar loads (a prior post's turns must never paint)
   setAskMode(false);
-  // Resume the single untitled slot's conversation + mode (Chat by default for a new
-  // post); the sidecar migrates to the real slug when reserveSlug() lands one.
-  await loadThread(PROVISIONAL_SLUG);
+  // P3c ownership (mirrors the blocks rules): the single '__untitled__' sidecar may hold
+  // a FOREIGN session's conversation, so a fresh post reads it ONLY when this session
+  // already owns the slot. Otherwise start from a fresh in-memory thread with NO id -
+  // nothing is written to '__untitled__' until autosaveDraft claims the blocks slot
+  // (_ownsProvisional flips true), which claims the thread slot at the same moment.
+  // openUntitledDraft() - the recovery card - DOES own the slot and keeps loading it.
+  if(_ownsProvisional){
+    await loadThread(PROVISIONAL_SLUG);
+  } else {
+    await _threadFlushPending();   // the OUTGOING post's pending save still lands first
+    _threadReq++;                  // cancel any in-flight sidecar load
+    _threadId = null;
+    _thread = { v: 1, mode: 'chat', turns: [] };
+    _applyThreadMode(true);        // new posts open in Chat (spec 4.1); nothing is scheduled or written
+  }
   renderBlocks();
   updateWordCount();   // editor-open: reflect the (empty) new post — hides the readout
   // Switch views FIRST — loadEditorSettings() fetches /topics and, on a slow or
@@ -11174,9 +11251,8 @@ async function openBlockEditor(slug){
   selectedId = null;
   _dirty = false; _lastLocalSaveTs = 0;
   setSaveState('loading','Loading…');
-  _thread = { v: 1, mode: 'chat', turns: [] };   // blank while the sidecar loads (a prior post's turns must never paint)
   setAskMode(false);
-  await loadThread(slug);   // resume this post's conversation + mode (Doc unless a chat was left open)
+  await loadThread(slug);   // flushes the outgoing post's pending save, blanks, then resumes this post's conversation + mode
   go('editor');
   try{
     const r = await api('/posts/'+slug+'/blocks');
@@ -11512,6 +11588,9 @@ async function reserveSlug({ surface = false } = {}){
       // under the reserved slug. reserveSlug() is the single choke point, so this
       // covers the doPublish/doSchedule self-heal paths AND the title debounce/blur.
       if(_threadId === PROVISIONAL_SLUG) await migrateThread(PROVISIONAL_SLUG, currentSlug);
+      // A fresh post that never claimed the provisional slot (_threadId null) holds its
+      // conversation only in memory - its first persist lands directly on the real slug.
+      else if(!_threadId){ _threadId = currentSlug; _threadSaveNow().catch(() => {}); }
     }
     return currentSlug;
   }catch(e){
@@ -11573,9 +11652,8 @@ async function openUntitledDraft(){
   currentSlug = null;
   _ownsProvisional = true;               // this session continues the single provisional slot
   _composeAnchorId = null;
-  _thread = { v: 1, mode: 'chat', turns: [] };   // blank while the sidecar loads (a prior post's turns must never paint)
   setAskMode(false);
-  await loadThread(PROVISIONAL_SLUG);    // the untitled slot's conversation resumes with its recovered draft
+  await loadThread(PROVISIONAL_SLUG);    // owns the slot → the untitled conversation resumes with its recovered draft
   doc = saved.doc || { version:1, blocks:[ { id:mkId(), type:'text', html:'' } ] };
   meta = metaFromData('', saved.data);
   meta.title = '';                       // keep it titleless so titling reserves a real slug
@@ -11616,6 +11694,10 @@ window.refreshUntitledRecovery = refreshUntitledRecovery;
 async function discardUntitledDraft(){
   if(!await helmConfirm({ title:'Discard the untitled draft?', text:'This can’t be undone.', okText:'Discard', danger:true })) return;
   try{ await api('/posts/'+PROVISIONAL_SLUG+'/blocks', { method:'DELETE' }); }catch{}
+  // the slot's conversation goes with its blocks - an orphaned '__untitled__' thread
+  // would otherwise resurface inside the next session's untitled post
+  try{ await api('/thread/'+encodeURIComponent(PROVISIONAL_SLUG), { method:'DELETE' }); }catch{}
+  if(_threadId === PROVISIONAL_SLUG) _threadId = null;   // never re-mint the record from a stale in-memory thread
   _ownsProvisional = false;
   toast('Untitled draft discarded');
   refreshUntitledRecovery();
@@ -11709,6 +11791,11 @@ async function autosaveDraft(){
         const seq = _editSeq;   // the payload serialises NOW; later keystrokes are not in it
         await api('/posts/'+PROVISIONAL_SLUG+'/blocks', { method:'PUT', body: JSON.stringify({ doc, meta }) });
         _ownsProvisional = true;
+        // P3c: claiming the provisional BLOCKS slot claims its thread sidecar too - the
+        // fresh post's conversation starts persisting only from this moment (before it,
+        // '__untitled__' could have been a foreign session's thread; the check above
+        // guarantees the slot is ours now, so any orphaned record is safe to overwrite).
+        if(!_threadId){ _threadId = PROVISIONAL_SLUG; _threadSaveNow().catch(() => {}); }
         _lastLocalSaveTs = Date.now();
         // Only report "captured" if nothing was typed while the PUT was in flight; a newer
         // markDirty() has already set state dirty and re-armed the debounce to re-save.
@@ -11760,7 +11847,7 @@ window.addEventListener('beforeunload', (e)=>{
    sidecar). IndexedDB writes started here normally complete even as the tab
    closes; if the work was still uncaptured, beforeunload above already warned. */
 window.addEventListener('pagehide', ()=>{
-  if(_threadSaveT){ clearTimeout(_threadSaveT); _threadSaveT = 0; _threadSaveNow(); }
+  if(_threadSaveT){ clearTimeout(_threadSaveT); _threadSaveT = 0; _threadSaveNow().catch(()=>{}); }
   if(_dirty){ clearTimeout(_saveDebounce); autosaveDraft(); }
 });
 
@@ -17339,6 +17426,23 @@ async function doAiDraft(){
   try{
     const j = await api('/ai/draft', { method:'POST', body: JSON.stringify({ idea, tone, length }) });
     const b = doc.blocks.find(x => x.id === _aiDraftBlockId);
+    if(_threadMode){
+      // Thread mode (spec 4.2, guidance-first): the AI never writes the post directly -
+      // the draft arrives as an insertable assistant turn anchored to the block, and only
+      // an explicit Accept moves it in (same shape askPartner produces; Accept fills the
+      // still-empty block or inserts below it). Doc mode below keeps its direct write -
+      // the spec governs Thread; Doc is the untouched editor.
+      const tid = 't' + Date.now().toString(36) + '-' + _thread.turns.length;
+      _thread.turns.push({ id: tid, role: 'assistant', kind: 'insertable',
+        text: String(j.post || ''), blockRef: (b && b.id) || null, ts: Date.now(),
+        state: 'open', retry: { ask: 'draft', text: idea, blockId: (b && b.id) || null } });
+      saveThread();
+      renderTurns();
+      _threadScrollTo(tid);
+      closeAiDraft();
+      toast('Draft ready — Accept it to add it to the post');
+      return;
+    }
     if(!b){ aiFeedback('aiDraftMsg', 'That block is no longer here.', 'err'); return; }
     const draftHtml = textToHtml(j.post || '');
     const cur = (b.html || '').replace(/<br\s*\/?>/gi,'').trim();

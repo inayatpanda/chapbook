@@ -60,6 +60,22 @@ test('parseThread: keeps only turns that validate', () => {
   assert.equal(t.turns[0].text, 'ok');
 });
 
+// The app hangs extra fields on turns — `retry` (re-ask payload; also how a sheet-drafted
+// turn is recognised) and `acceptedBlockId` (which block an accept inserted, so repeated
+// Continue-accepts chain in order). parseThread filters whole turn objects but must never
+// strip these, or accept-ordering and Retry break after a reload.
+test('parseThread: keeps extra turn fields (acceptedBlockId, retry) across the round-trip', () => {
+  const raw = JSON.stringify({ v: 1, mode: 'chat', turns: [
+    { id: 't1', role: 'assistant', kind: 'insertable', text: 'next para', blockRef: 'b1',
+      ts: 1, state: 'accepted', acceptedBlockId: 'nb1', retry: { ask: 'continue', text: '', blockId: 'b1' } },
+  ]});
+  const t = parseThread(raw);
+  assert.equal(t.turns.length, 1);
+  assert.equal(t.turns[0].acceptedBlockId, 'nb1');
+  assert.deepEqual(t.turns[0].retry, { ask: 'continue', text: '', blockId: 'b1' });
+  assert.deepEqual(parseThread(serializeThread(t)), t);   // and again through the PUT path
+});
+
 test('buildAskPrompt: tighten/continue/title are insertable; aside/reply are guidance-only', () => {
   for (const ask of ['tighten', 'continue', 'title']) {
     assert.equal(buildAskPrompt({ ask, text: '', block: { type: 'text', text: 'para' }, title: 'T' }).wantsInsertable, true);
