@@ -212,3 +212,32 @@ test('parseThread: non-array scratch resets to []', () => {
   const raw = JSON.stringify({ v: 1, mode: 'chat', turns: [], scratch: { not: 'an array' } });
   assert.deepEqual(parseThread(raw).scratch, []);
 });
+
+// ---- post-session reply routing (inline module) -----------------------------
+// threadReplyKept lives in src/index.html's inline module (the inline module
+// can't import core/ at runtime). The DECISION is pure - (reqToken, postToken,
+// editorOpen) → keep/discard - so extract the real shipped source and test it
+// directly, avoiding the mirror-drift trap slug.js documents.
+import { readFileSync } from 'node:fs';
+function extractThreadReplyKept(){
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const m = html.match(/function threadReplyKept\([^)]*\)\{[^{}]*\}/);
+  assert.ok(m, 'threadReplyKept found in the inline module');
+  return new Function('return (' + m[0] + ')')();
+}
+
+test('threadReplyKept: kept ONLY when same post-session AND the editor is open', () => {
+  const kept = extractThreadReplyKept();
+  assert.equal(kept(7, 7, true), true);    // same session, editor open → reply lands live
+  assert.equal(kept(7, 8, true), false);   // switched / reopened post → discard
+  assert.equal(kept(8, 7, true), false);   // mismatch is symmetric → discard
+  assert.equal(kept(7, 7, false), false);  // editor closed → discard even with an equal token
+});
+
+test('threadReplyKept: editorOpen coerces truthy/falsy; tokens compare strictly', () => {
+  const kept = extractThreadReplyKept();
+  assert.equal(kept(7, 7, 0), false);              // falsy open state → discard
+  assert.equal(kept(7, 7, 'editor-open'), true);   // truthy open state → keep
+  assert.equal(kept('7', 7, true), false);         // no type coercion may keep a reply
+  assert.equal(kept(7, 7, true), true);            // and the strict path still keeps
+});

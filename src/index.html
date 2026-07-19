@@ -5332,6 +5332,13 @@ $('subnav').addEventListener('click',e=>{
 function go(v){
   // editor is outside #app so handle specially
   const isEditor = v==='editor';
+  // LEAVING the editor ends the post-session: mint a fresh token no in-flight AI
+  // request holds, so a completion after close takes the discard path - never a
+  // stored write. This is the single choke point where editor-open toggles, so
+  // every exit (Back, cmdk, darkroom, direct go()) invalidates here. (Safe against
+  // the counter's later `let`: editor-open can only be true after go('editor') ran,
+  // and every go() runs post-module-evaluation.)
+  if(!isEditor && document.body.classList.contains('editor-open')) _postToken = ++_postTokenSeq;
   $('app').style.display = isEditor ? 'none' : 'block';
   $('v-editor').classList.toggle('on', isEditor);
   // phones: while the editor is open it owns the bottom edge (the compose bar
@@ -9517,35 +9524,31 @@ function _threadQ(id, fn){
   tail.then(done, done);   // also marks `tail` handled - callers may ignore the returned promise
   return tail;
 }
-/* ── session post-tokens + parked late replies ─────────────────────────────
+/* ── session post-tokens: in-flight asks are post-scoped ────────────────────
    Every editor open of a post (loadThread; startNewPost's fresh-post branch)
    mints a session token. askPartner/doAiDraft capture the token at request
    time; on completion the token - not object identity, not the id - says
-   whether the SAME post-session is still on screen. A token survives reloads,
-   migrations and provisional claims of its OWN post; a switch or reopen mints
-   a new one. Same token → the reply lands on the live thread through the
-   normal save path. Different token → the reply PARKS in memory, bound to the
-   asking post's durable id AT PARK TIME (the id the editor last held while
-   that token was current - migration-proof), and attaches when that post is
-   next reopened (loadThread scans the parks). The away path NEVER writes
-   storage - no read-merge-write, no slot claims, no stored merges. */
+   whether the SAME post-session is still open. A token survives title
+   migrations and provisional claims of its OWN post (neither re-mints); a
+   switch, a reopen, or LEAVING the editor (go() away from v-editor) mints a
+   fresh value no request holds. Same token + editor open → the reply lands on
+   the live thread through the normal save path. Anything else → the reply is
+   DISCARDED with one honest toast - no parking, no stored writes, no promise
+   of later delivery. Tokens roll over SYNCHRONOUSLY at the top of every open,
+   BEFORE any await, so a reply completing during an open's flush already sees
+   a stale token. */
 let _postTokenSeq = 0, _postToken = 0;
-const _tokenLastId = new Map();    // token → the id _threadId last held while that token was current (null = never claimed)
-const _parkedTurns = new Map();    // token → { lastKnownId, turns: [...] } awaiting that post's next reopen
-function _setThreadId(id){
-  _threadId = id;
-  _tokenLastId.set(_postToken, id);   // keep the CURRENT post-session's durable identity fresh
-}
-function _parkTurns(reqToken, turns){
-  const keep = (turns || []).filter(x => x && !x.typing && x.id !== 'pending');
-  if(!keep.length) return;
-  const entry = _parkedTurns.get(reqToken) || { lastKnownId: null, turns: [] };
-  for(const turn of keep){ if(!entry.turns.some(x => x && x.id === turn.id)) entry.turns.push(turn); }
-  const lastId = _tokenLastId.get(reqToken);
-  if(lastId != null) entry.lastKnownId = lastId;   // the asking post's durable id, as of NOW
-  _parkedTurns.set(reqToken, entry);
-  toast('The Partner reply will appear when you reopen that post.');
-}
+function _setThreadId(id){ _threadId = id; }   // single choke point for the sidecar's durable identity
+/* The routing decision, pure (unit-tested via extraction in core/thread.test.mjs):
+   keep the reply ONLY while the editor is still open on the asking post-session. */
+function threadReplyKept(reqToken, postToken, editorOpen){ return !!editorOpen && reqToken === postToken; }
+const _threadEditorOpen = () => document.body.classList.contains('editor-open');
+function _discardLateReply(){ toast('You left the post, so the reply was not kept. Ask again anytime.'); }
+/* Wire form of a thread for EVERY durable write: the in-flight "pending" typing
+   bubble is UI state, never data - a queued save serialising while an ask runs
+   would otherwise persist a ghost "…" turn that repaints forever on reopen. */
+const _threadWire = (thread) => JSON.stringify({ ...thread,
+  turns: (thread.turns || []).filter(x => x && !x.typing && x.id !== 'pending') });
 function _threadSaveNow(){
   if(!_threadId) return Promise.resolve();
   const id = _threadId, thread = _thread;   // captured: the globals may describe another post by the time the queued write runs
@@ -9556,7 +9559,7 @@ function _threadSaveNow(){
     // after (and bury) a newer one - overlapping PUTs are now impossible.
     const live = thread === _thread;
     const seq = live ? _scratchSeq : 0;   // scratch-capture tracking only means anything for the on-screen thread
-    return api('/thread/' + encodeURIComponent(id), { method: 'PUT', body: JSON.stringify(thread) })
+    return api('/thread/' + encodeURIComponent(id), { method: 'PUT', body: _threadWire(thread) })
       .then(r => { if(live && seq > _scratchSeqSaved) _scratchSeqSaved = seq; return r; });
   });
 }
@@ -9583,7 +9586,9 @@ function _threadSaveFailed(e){
 async function _threadFlushPending(){
   if(_threadSaveT){
     clearTimeout(_threadSaveT); _threadSaveT = 0;
-    if(_threadId){ try{ await _threadSaveNow(); }catch(_){ /* debounced saves stay best-effort */ } }
+    // a flushed save that fails is still a FAILED save - route it through the same
+    // surfacing machinery the debounced path uses (never swallow it silently)
+    if(_threadId){ try{ await _threadSaveNow(); }catch(e){ _threadSaveFailed(e); } }
   }
   // A write that already FIRED sits on the per-id queue - await that queue's tail so
   // the caller's GET can never read the pre-save record. (Replaces the old single
@@ -9596,11 +9601,16 @@ async function _threadFlushPending(){
   }
 }
 async function loadThread(id){
+  // NEW post-session: the token rolls over SYNCHRONOUSLY, before ANY await. A reply
+  // completing during the flush below then correctly sees a stale token and discards -
+  // rolling after the flush let it see the old token as current and land on (or race)
+  // the incoming post's thread.
+  _postToken = ++_postTokenSeq;
   // ALWAYS flush a pending save before the GET - same id included: reopening the same
   // post inside the debounce window used to cancel the write, then read the stale record.
+  // (Flushes under the OUTGOING _threadId, so _setThreadId comes after.)
   await _threadFlushPending();
   _scratchSeqSaved = _scratchSeq;   // _thread is being replaced - its scratch edits are no longer pending against the new object
-  _postToken = ++_postTokenSeq;   // NEW post-session: an in-flight request from any earlier open now parks on completion
   _setThreadId(id);
   _thread = { v: 1, mode: 'chat', turns: [], scratch: [] };   // blank while the sidecar loads (a prior post's turns must never paint)
   const req = ++_threadReq;
@@ -9609,8 +9619,8 @@ async function loadThread(id){
   // token below still guards a switch during the wait)
   const qtail = _threadQTails.get(id);
   if(qtail){ try{ await qtail; }catch(_){ /* best-effort */ } }
-  let t = null, got = false;
-  try { t = await api('/thread/' + encodeURIComponent(id)); got = true; } catch { t = null; }
+  let t = null;
+  try { t = await api('/thread/' + encodeURIComponent(id)); } catch { t = null; }
   if(req !== _threadReq || _threadId !== id) return;   // stale response - a newer post opened mid-flight
   if(t && Array.isArray(t.turns)){
     // A saved sidecar exists - honour its mode EXACTLY (a chat-toggled post with zero
@@ -9630,25 +9640,6 @@ async function loadThread(id){
     _threadRecapOn = false; _threadRecapTs = 0;
     _applyThreadMode(editorSection === 'write');
   }
-  // parked late replies whose post THIS is: a reply that completed while its post was
-  // closed attaches now - appended (deduped by turn id), rendered, persisted through
-  // the normal queue - and the park is spent. Token-only parks (a post that never
-  // claimed a durable id) can never match an id here, by design. A FAILED GET (which
-  // is not "absent" - the stored record's state is unknown) skips the attach entirely:
-  // the parks stay parked for the next successful reopen, and nothing is written over
-  // unknown state (the failure branch above already applies defaults without saving).
-  let parked = null;
-  if(got) for(const [tok, p] of _parkedTurns){
-    if(p.lastKnownId != null && p.lastKnownId === id){
-      (parked || (parked = [])).push(...p.turns);
-      _parkedTurns.delete(tok);
-    }
-  }
-  if(parked){
-    _thread.turns = _thread.turns.filter(x => x && !x.typing && x.id !== 'pending');
-    for(const turn of parked){ if(!_thread.turns.some(x => x && x.id === turn.id)) _thread.turns.push(turn); }
-    saveThread();
-  }
   renderTurns();
 }
 const _threadQuotaish = (e) => !!e && (e.code === 22 || e.code === 1014 ||
@@ -9662,27 +9653,26 @@ async function migrateThread(fromId, toId){
   // ONE queued unit for the whole move: chained on the OLD id's queue so every write
   // already queued there lands first; the copy itself goes through the NEW id's queue
   // so nothing under toId interleaves either (awaits only ever flow old-id → new-id,
-  // so the nesting cannot cycle). The alias flips and the old record is deleted ONLY
-  // after the copy LANDS - a failed copy keeps the old sidecar as the backup (never
-  // delete what wasn't copied) and the next save retries under the new id.
+  // so the nesting cannot cycle). The old record is deleted ONLY after the copy
+  // LANDS - never delete what wasn't copied. NOTE: migration never re-mints
+  // _postToken - a reply completing mid-migration on the still-open post stays live.
   await _threadQ(fromId, async () => {
     try{
       await _threadQ(toId, () => {
         const live = thread === _thread;
         const seq = live ? _scratchSeq : 0;
-        return api('/thread/' + encodeURIComponent(toId), { method: 'PUT', body: JSON.stringify(thread) })
+        return api('/thread/' + encodeURIComponent(toId), { method: 'PUT', body: _threadWire(thread) })
           .then(r => { if(live && seq > _scratchSeqSaved) _scratchSeqSaved = seq; return r; });
       });
     }catch(e){
-      // Surface a full store the standard way.
-      if(_threadQuotaish(e)){ try{ window.dispatchEvent(new CustomEvent('studio:storage-full')); }catch(_){} }
+      // A FAILED copy is never silent: the old record is still the only durable copy,
+      // so the still-open post falls back to saving under the OLD id (the record that
+      // exists) and the failure surfaces through the standard machinery - quota-ish →
+      // storage-full banner, anything else → the honest retry toast.
+      if(thread === _thread && _threadId === toId) _setThreadId(fromId);
+      _threadSaveFailed(e);
       return;
     }
-    // the record MOVED: parks and token identities bound to the old id follow the
-    // post to its new slug, so a late reply from any earlier open of this post
-    // attaches under the id the post actually lives at now - never the dead one
-    for(const p of _parkedTurns.values()){ if(p.lastKnownId === fromId) p.lastKnownId = toId; }
-    for(const [tok, lid] of _tokenLastId){ if(lid === fromId) _tokenLastId.set(tok, toId); }
     await api('/thread/' + encodeURIComponent(fromId), { method: 'DELETE' }).catch(() => {});
   });
 }
@@ -9776,11 +9766,11 @@ async function askPartner(ask, { text = '', blockId = null, reAsk = false } = {}
     newTurns.push(errTurn);
   } finally {
     _askBusy = false;
-    // Route by post-session TOKEN: same token means the asking post is still on
-    // screen (even if it migrated ids or claimed the provisional slot meanwhile -
-    // the token survives everything except a switch/reopen), so the reply lands on
-    // the CURRENT thread and persists through the normal queue.
-    if(reqToken === _postToken){
+    // Route by post-session TOKEN: same token + editor still open means the asking
+    // post is still on screen (even if it migrated ids or claimed the provisional
+    // slot meanwhile - the token survives both), so the reply lands on the CURRENT
+    // thread and persists through the normal queue.
+    if(threadReplyKept(reqToken, _postToken, _threadEditorOpen())){
       // Drop the pending bubble from BOTH objects, make sure the request's turns are
       // present exactly once on the CURRENT thread, then persist + repaint it.
       // Persists success AND error/no-key turns (an error exchange used to vanish on
@@ -9792,13 +9782,23 @@ async function askPartner(ask, { text = '', blockId = null, reAsk = false } = {}
       renderTurns();
       if(doneId) _threadScrollTo(doneId);
     } else {
-      // The asking post is no longer on screen: the reply PARKS in memory, bound to
-      // that post's durable id, and attaches on its next reopen (_parkTurns owns the
-      // honest toast). NEVER a stored write here, and never a touch on the post now
-      // on screen (it repaints only its chips, whose visibility was pinned by
+      // The asking post is no longer open: the reply is DISCARDED. Scrub the
+      // assistant turns from the REQUEST's own thread object too - after a plain
+      // editor close reqThread can still be the in-memory _thread, and a queued
+      // save serialises at fire time, so a discarded reply must never ride a later
+      // legitimate save. (This finally runs synchronously after the try's push -
+      // no interleave window.) The author's own aside stays: typed user data
+      // belonging to that post. One honest toast, NEVER a stored write, never a
+      // touch on whatever is on screen now (chips only; visibility pinned by
       // _askBusy).
+      dropPending();
+      for(const turn of newTurns){
+        if(turn.role === 'aside') continue;
+        const ti = reqThread.turns.indexOf(turn);
+        if(ti >= 0) reqThread.turns.splice(ti, 1);
+      }
       renderThreadChips();
-      _parkTurns(reqToken, newTurns);
+      _discardLateReply();
     }
   }
 }
@@ -10057,7 +10057,7 @@ function _rdClaimProvisional(){
   // (the user can switch mid-claim), and the claim must persist THIS post's snapshot
   // + jots - never whatever the globals point at when it resumes. reqThread doubles
   // as the claim token: reqThread === _thread ⇔ the originating post is still open.
-  const reqDoc = doc, reqMeta = meta, reqThread = _thread, reqToken = _postToken;
+  const reqDoc = doc, reqMeta = meta, reqThread = _thread;
   _rdClaimP = _threadQ(PROVISIONAL_SLUG, async () => {
     try{
       const same = () => reqThread === _thread;
@@ -10075,7 +10075,7 @@ function _rdClaimProvisional(){
       // written directly: this unit already holds the '__untitled__' queue turn
       if(same()) reqThread.mode = _threadMode ? 'chat' : 'doc';
       const seq = same() ? _scratchSeq : 0;
-      await api('/thread/'+encodeURIComponent(PROVISIONAL_SLUG), { method:'PUT', body: JSON.stringify(reqThread) });
+      await api('/thread/'+encodeURIComponent(PROVISIONAL_SLUG), { method:'PUT', body: _threadWire(reqThread) });
       if(same()){
         // global mutations belong ONLY to the still-open originating post; after a
         // switch the claim stays a background rescue (the recovery card offers the
@@ -10085,15 +10085,10 @@ function _rdClaimProvisional(){
         _setThreadId(PROVISIONAL_SLUG);
         refreshUntitledRecovery();
         saveThread();   // re-arm: a jot typed during the claim gets its debounced save a home
-      } else {
-        // the DEPARTED post's rescue landed: the untitled slot is now that post's
-        // durable identity. Record it against its token - and onto any reply already
-        // parked for it - so the recovery-card reopen (openUntitledDraft →
-        // loadThread('__untitled__')) attaches what arrived late.
-        _tokenLastId.set(reqToken, PROVISIONAL_SLUG);
-        const p = _parkedTurns.get(reqToken);
-        if(p) p.lastKnownId = PROVISIONAL_SLUG;
       }
+      // else: the DEPARTED post's rescue landed - the captured snapshot + jots (the
+      // user's TYPED work) now live under '__untitled__' for the recovery card to
+      // offer. That is not parking: no reply routing follows the departed post.
     }catch(_){ /* best-effort: the jots stay in memory, guarded by hasUncapturedWork */ }
     finally{ _rdClaimP = null; }
   });
@@ -11865,10 +11860,10 @@ async function startNewPost(seedDoc){
   if(_ownsProvisional){
     await loadThread(PROVISIONAL_SLUG);
   } else {
+    _postToken = ++_postTokenSeq;  // NEW post-session, rolled SYNCHRONOUSLY before any await: a reply completing during the flush below discards
     await _threadFlushPending();   // the OUTGOING post's pending save still lands first
     _scratchSeqSaved = _scratchSeq;   // _thread is being replaced - its scratch edits are no longer pending
     _threadReq++;                  // cancel any in-flight sidecar load
-    _postToken = ++_postTokenSeq;  // NEW post-session (no durable id yet): earlier opens' in-flight requests now park
     _setThreadId(null);
     _thread = { v: 1, mode: 'chat', turns: [], scratch: [] };
     _threadRecapOn = false; _threadRecapTs = 0;   // a fresh post is a start, not a re-entry
@@ -12365,17 +12360,18 @@ window.refreshUntitledRecovery = refreshUntitledRecovery;
 
 async function discardUntitledDraft(){
   if(!await helmConfirm({ title:'Discard the untitled draft?', text:'This can’t be undone.', okText:'Discard', danger:true })) return;
-  try{ await api('/posts/'+PROVISIONAL_SLUG+'/blocks', { method:'DELETE' }); }catch{}
-  // the slot's conversation goes with its blocks - an orphaned '__untitled__' thread
-  // would otherwise resurface inside the next session's untitled post. Queued: the
-  // delete must never interleave with an in-flight write for the same slot.
-  try{ await _threadQ(PROVISIONAL_SLUG, () => api('/thread/'+encodeURIComponent(PROVISIONAL_SLUG), { method:'DELETE' })); }catch{}
+  // The destroy is ONE '__untitled__' queue-lane unit covering BOTH records: it can
+  // never interleave with an in-flight write for the slot (a queued jot-claim or
+  // autosave unit landing mid-discard could resurrect the record), and nothing can
+  // land between the blocks delete and the thread delete - the slot's conversation
+  // goes with its blocks, never orphaned into the next session's untitled post.
+  try{
+    await _threadQ(PROVISIONAL_SLUG, async () => {
+      await api('/posts/'+PROVISIONAL_SLUG+'/blocks', { method:'DELETE' }).catch(()=>{});
+      await api('/thread/'+encodeURIComponent(PROVISIONAL_SLUG), { method:'DELETE' }).catch(()=>{});
+    });
+  }catch{}
   if(_threadId === PROVISIONAL_SLUG) _setThreadId(null);   // never re-mint the record from a stale in-memory thread
-  // the slot's record is DESTROYED: a reply parked against it can never attach (its
-  // post is gone), and no token's durable identity lives there any more - a zombie
-  // request from a discarded post must never park onto the slot's NEXT occupant
-  for(const [tok, p] of _parkedTurns){ if(p.lastKnownId === PROVISIONAL_SLUG) _parkedTurns.delete(tok); }
-  for(const [tok, lid] of _tokenLastId){ if(lid === PROVISIONAL_SLUG) _tokenLastId.delete(tok); }
   _ownsProvisional = false;
   toast('Untitled draft discarded');
   refreshUntitledRecovery();
@@ -12467,13 +12463,6 @@ async function autosaveDraft(){
       // Still no title → keep the work under the provisional slug so a crash/reload
       // can't lose it (P3c). Nothing worth keeping for a pristine, empty new post.
       if(!editorHasContent()){ setSaveState('idle','New post'); return; }
-      // Only ONE untitled draft may exist. If a FOREIGN one already holds the single
-      // slot, don't clobber it — the user can add a title here (→ real slug), or open
-      // / discard the other from the New-post landing. beforeunload still guards this
-      // in-memory work until it's resolved.
-      if(!_ownsProvisional && await provisionalDraftExists()){
-        setSaveState('dirty','Unsaved · add a title to save'); return;
-      }
       setSaveState('saving');
       try{
         const seq = _editSeq;   // the payload serialises NOW; later keystrokes are not in it
@@ -12482,8 +12471,19 @@ async function autosaveDraft(){
         // jot-claim unit (_rdClaimProvisional) and the slot's thread writes, so a
         // concurrent claim can never interleave with it. No deadlock: this call never
         // runs from inside a queued unit (the claim unit PUTs its blocks directly -
-        // it already holds the lane).
-        await _threadQ(PROVISIONAL_SLUG, () => api('/posts/'+PROVISIONAL_SLUG+'/blocks', { method:'PUT', body }));
+        // it already holds the lane). Only ONE untitled draft may exist, and the
+        // FOREIGN-slot ownership check runs INSIDE the queued unit: while this PUT
+        // waited its turn, a departed post's rescue claim may have taken the slot -
+        // checked outside the lane, the stale answer let this PUT overwrite that
+        // freshly claimed draft. Re-checked under the lane, the unit aborts instead;
+        // the user can add a title here (→ real slug), or open / discard the other
+        // from the New-post landing. beforeunload still guards this in-memory work.
+        const wrote = await _threadQ(PROVISIONAL_SLUG, async () => {
+          if(!_ownsProvisional && await provisionalDraftExists()) return false;   // never clobber a foreign slot
+          await api('/posts/'+PROVISIONAL_SLUG+'/blocks', { method:'PUT', body });
+          return true;
+        });
+        if(!wrote){ setSaveState('dirty','Unsaved · add a title to save'); return; }
         _ownsProvisional = true;
         // P3c: claiming the provisional BLOCKS slot claims its thread sidecar too - the
         // fresh post's conversation starts persisting only from this moment (before it,
@@ -18134,15 +18134,23 @@ async function doAiDraft(){
   // open another post, or toggle Chat/Doc while the model runs - completion must
   // land where the request originated, never on whatever the globals point at by
   // then (the old code read them all after the response).
-  const reqDoc = doc, reqThread = _thread, reqToken = _postToken, reqMode = _threadMode, reqBlockId = _aiDraftBlockId;
+  const reqToken = _postToken, reqMode = _threadMode, reqBlockId = _aiDraftBlockId;
   try{
     const j = await api('/ai/draft', { method:'POST', body: JSON.stringify({ idea, tone, length }) });
-    // Same-post test mirrors askPartner's routing: the post-session TOKEN is the
-    // truth - it survives reloads, migrations and provisional claims of its own
-    // post; a switch or reopen mints a new one.
-    const samePost = reqToken === _postToken;
+    // Same-post test mirrors askPartner's routing: the post-session TOKEN + the
+    // editor still being open are the truth - the token survives title migrations
+    // and provisional claims of its own post; a switch, reopen or editor close
+    // mints a new one. A stale request DISCARDS (one honest toast, no writes).
+    const samePost = threadReplyKept(reqToken, _postToken, _threadEditorOpen());
+    if(!samePost){
+      // The originating post closed mid-draft: the draft is DISCARDED - never a
+      // stored write, never a touch on whatever is on screen now.
+      closeAiDraft();
+      _discardLateReply();
+      return;
+    }
     const mkDraftTurn = (turnsLen) => {
-      const blocksNow = ((samePost ? doc : reqDoc) || {}).blocks || [];
+      const blocksNow = (doc || {}).blocks || [];
       const bref = reqBlockId && blocksNow.some(x => x.id === reqBlockId) ? reqBlockId : null;
       return { id: 't' + Date.now().toString(36) + '-' + turnsLen, role: 'assistant',
         kind: 'insertable', text: String(j.post || ''), blockRef: bref, ts: Date.now(),
@@ -18153,34 +18161,17 @@ async function doAiDraft(){
       // is ALWAYS an insertable assistant turn - even if the user toggled to Doc
       // mid-flight - and only an explicit Accept moves it into the post (same shape
       // askPartner produces; Accept fills the still-empty block or inserts below it).
-      if(samePost){
-        const turn = mkDraftTurn(_thread.turns.length);
-        _thread.turns.push(turn);
-        saveThread();
-        renderTurns();
-        _threadScrollTo(turn.id);
-        closeAiDraft();
-        toast('Draft ready — Accept it to add it to the post');
-      } else {
-        // Switched posts (or reopened) mid-draft: the turn PARKS in memory, bound
-        // to the asking post's durable id, and attaches on that post's next reopen
-        // (_parkTurns owns the honest toast). Never a stored write, never a touch
-        // on the post now on screen.
-        closeAiDraft();
-        _parkTurns(reqToken, [mkDraftTurn(reqThread.turns.length)]);
-      }
-      return;
-    }
-    // Doc-mode-originated: keep today's direct write, but ONLY into the originating
-    // post still on screen with its block still present (captured refs guard it).
-    if(!samePost){
-      // The originating post closed mid-draft: the draft is KEPT as an insertable
-      // turn, parked in memory against that post until its next reopen (_parkTurns
-      // owns the honest toast). No stored writes on the away path, ever.
+      const turn = mkDraftTurn(_thread.turns.length);
+      _thread.turns.push(turn);
+      saveThread();
+      renderTurns();
+      _threadScrollTo(turn.id);
       closeAiDraft();
-      _parkTurns(reqToken, [mkDraftTurn(reqThread.turns.length)]);
+      toast('Draft ready — Accept it to add it to the post');
       return;
     }
+    // Doc-mode-originated: keep today's direct write - the originating post is
+    // still on screen (samePost above) and its block still present (captured ref).
     const b = doc.blocks.find(x => x.id === reqBlockId);
     if(!b){ aiFeedback('aiDraftMsg', 'That block is no longer here.', 'err'); return; }
     const draftHtml = textToHtml(j.post || '');
