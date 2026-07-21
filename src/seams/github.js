@@ -15,15 +15,31 @@ const fromB64 = (b64) => {
   return new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
 };
 
+// A ref update the branch tip has moved past: GitHub answers 422 "Update is not a
+// fast forward" / "Reference cannot be updated" (PATCH refs), or 409 "<branch> is at
+// <sha> but expected <sha>" (compare-and-swap style). Rebuilding the commit on the
+// CURRENT tip and retrying heals these; anything else (auth, validation) must not retry.
+export function isFastForwardConflict(err) {
+  const status = err && err.status;
+  if (status !== 409 && status !== 422) return false;
+  const m = String((err && err.message) || '').toLowerCase();
+  return /fast forward|reference cannot be updated|reference update failed|but expected/.test(m);
+}
+
 export function makeGithub(gh, fetchImpl = fetch) {
   const headers = () => ({ Authorization: `Bearer ${gh.token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' });
   const repoBase = `${API}/repos/${gh.owner}/${gh.repo}`;
   const base = `${repoBase}/contents`;
   async function err(res) { let m = `GitHub ${res.status}`; try { const j = await res.json(); m = j.message || m; } catch {} return Object.assign(new Error(m), { status: res.status }); }
-  async function gj(url, opts) { const res = await fetchImpl(url, { ...opts, headers: headers() }); if (!res.ok) throw await err(res); return res.json(); }
+  // cache:'no-store' on EVERY call: GitHub's REST API sends Cache-Control: max-age=60,
+  // so a default-mode browser fetch of e.g. git/ref/heads/<branch> is served the
+  // PRE-COMMIT sha from the HTTP cache for up to a minute after a publish. That made
+  // rapid publish→publish/delete build on a stale parent ("Update is not a fast
+  // forward") and made the error overlay's Retry loop on the same cached read.
+  async function gj(url, opts) { const res = await fetchImpl(url, { cache: 'no-store', ...opts, headers: headers() }); if (!res.ok) throw await err(res); return res.json(); }
   return {
     async getFile(path) {
-      const res = await fetchImpl(`${base}/${enc(path)}?ref=${gh.branch}`, { headers: headers() });
+      const res = await fetchImpl(`${base}/${enc(path)}?ref=${gh.branch}`, { cache: 'no-store', headers: headers() });
       if (res.status === 404) return null;
       if (!res.ok) throw await err(res);
       const j = await res.json();
@@ -48,14 +64,14 @@ export function makeGithub(gh, fetchImpl = fetch) {
       return true;
     },
     async listDir(path) {
-      const res = await fetchImpl(`${base}/${enc(path)}?ref=${gh.branch}`, { headers: headers() });
+      const res = await fetchImpl(`${base}/${enc(path)}?ref=${gh.branch}`, { cache: 'no-store', headers: headers() });
       if (res.status === 404) return [];
       if (!res.ok) throw await err(res);
       const j = await res.json();
       return Array.isArray(j) ? j.map(e => ({ name: e.name, path: e.path, sha: e.sha, type: e.type })) : [];
     },
     async getBinary(path) {
-      const res = await fetchImpl(`${base}/${enc(path)}?ref=${gh.branch}`, { headers: headers() });
+      const res = await fetchImpl(`${base}/${enc(path)}?ref=${gh.branch}`, { cache: 'no-store', headers: headers() });
       if (res.status === 404) return null;
       if (!res.ok) throw await err(res);
       const j = await res.json();
@@ -83,9 +99,8 @@ export function makeGithub(gh, fetchImpl = fetch) {
     // atomic multi-file commit via the Git Data API.
     // changes: [{ path, content?:string, base64?:string, delete?:true }]
     async commitMany(changes, message) {
-      const ref = await gj(`${repoBase}/git/ref/heads/${gh.branch}`);
-      const baseCommitSha = ref.object.sha;
-      const baseCommit = await gj(`${repoBase}/git/commits/${baseCommitSha}`);
+      // Blobs are content-addressed and parent-independent — upload them ONCE, outside
+      // the retry, so a rebuilt commit reuses the same blob shas.
       const tree = [];
       for (const c of changes) {
         if (c.delete) { tree.push({ path: c.path, mode: '100644', type: 'blob', sha: null }); continue; }
@@ -94,10 +109,21 @@ export function makeGithub(gh, fetchImpl = fetch) {
         const blob = await gj(`${repoBase}/git/blobs`, { method: 'POST', body: JSON.stringify({ content, encoding: enc2 }) });
         tree.push({ path: c.path, mode: '100644', type: 'blob', sha: blob.sha });
       }
-      const newTree = await gj(`${repoBase}/git/trees`, { method: 'POST', body: JSON.stringify({ base_tree: baseCommit.tree.sha, tree }) });
-      const newCommit = await gj(`${repoBase}/git/commits`, { method: 'POST', body: JSON.stringify({ message, tree: newTree.sha, parents: [baseCommitSha] }) });
-      await gj(`${repoBase}/git/refs/heads/${gh.branch}`, { method: 'PATCH', body: JSON.stringify({ sha: newCommit.sha }) });
-      return { commit: newCommit.sha };
+      // Read the CURRENT tip fresh (gj is cache:'no-store'), build the tree/commit on it,
+      // advance the ref. If the ref moved mid-flight (a rapid publish/delete landed between
+      // our read and the PATCH), isFastForwardConflict detects it and we rebuild on the new
+      // tip exactly once — the conflict self-heals instead of looping in the error overlay.
+      const attempt = async () => {
+        const ref = await gj(`${repoBase}/git/ref/heads/${gh.branch}`);
+        const baseCommitSha = ref.object.sha;
+        const baseCommit = await gj(`${repoBase}/git/commits/${baseCommitSha}`);
+        const newTree = await gj(`${repoBase}/git/trees`, { method: 'POST', body: JSON.stringify({ base_tree: baseCommit.tree.sha, tree }) });
+        const newCommit = await gj(`${repoBase}/git/commits`, { method: 'POST', body: JSON.stringify({ message, tree: newTree.sha, parents: [baseCommitSha] }) });
+        await gj(`${repoBase}/git/refs/heads/${gh.branch}`, { method: 'PATCH', body: JSON.stringify({ sha: newCommit.sha }) });
+        return { commit: newCommit.sha };
+      };
+      try { return await attempt(); }
+      catch (e) { if (!isFastForwardConflict(e)) throw e; return attempt(); }
     },
     // The signed-in user's OWN repos, newest first — for the device-flow repo picker.
     // Uses only the token (owner/repo not needed). Browser-direct (api.github.com sends CORS).

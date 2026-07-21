@@ -5255,8 +5255,10 @@ function classifyError({ status, payload, raw } = {}){
   if((payload && payload.code==='VIDEO_BUSY') || /render is already in progress/.test(low)){
     e.kind='server'; e.message=rawMsg||'A render is already in progress — wait for it to finish.'; return e;
   }
-  if(e.status===409 || /conflict|sha|fast-forward/.test(low)){
-    e.kind='github'; e.message='That post changed on GitHub since you opened it — reload the post, then publish again.'; return e;
+  if(e.status===409 || /conflict|sha|fast.forward|reference cannot be updated|but expected/.test(low)){
+    // The GitHub seam already rebuilds once on the current tip; if this still surfaces,
+    // Retry re-runs the whole operation against a freshly fetched HEAD, so it self-heals.
+    e.kind='github'; e.message='GitHub moved ahead of this app for a moment. Retry to rebuild your update on the latest version.'; e.retry=true; return e;
   }
   if(e.status===404){
     e.kind='github'; e.message='Not found on GitHub — the repo, branch or file may be wrong (check Settings).'; return e;
@@ -6251,7 +6253,7 @@ function showPublishBar(url, source){
   const bar=document.createElement('div');
   bar.id='pubBar'; bar.setAttribute('role','status');
   bar.innerHTML =
-    '<span class="pb-msg">'+tico('circle-check')+'Published</span>'
+    '<span class="pb-msg">'+tico('circle-check')+'Published live</span>'
     +viewLive
     +'<button type="button" class="pb-btn" id="pubBarSocial">Draft social posts</button>'
     +'<button type="button" class="pb-x" aria-label="Dismiss">'+tico('x')+'</button>';
@@ -6267,7 +6269,7 @@ async function offerAnnounce(url, source){
   if(url){
     try{ await ensureSiteCfg(); }catch{}   // warm the live-site origin for the View-live link
     showPublishBar(url, source||'');
-  } else { toast('Published ✓'); }
+  } else { toast('Published live ✓'); }
 }
 window.offerAnnounce=offerAnnounce;
 $('sharePostPick')?.addEventListener('focus',loadSharePicks,{once:true});
@@ -13390,12 +13392,18 @@ async function doPublish(){
       method: 'POST',
       body: JSON.stringify({ doc, meta: publishMeta() }),
     });
-    setSaveState('saved','Published'); _dirty=false; _lastLocalSaveTs = Date.now();
+    // Honest wording: Status=Draft commits draft:true, which is in the repo but NOT live
+    // on the site — never label that "Published". Scheduled posts commit as hidden drafts
+    // too (the site's Action flips them live), so they get their own wording.
+    const committedLabel = meta.publishAt ? 'Scheduled' : meta.draft ? 'Saved as draft' : 'Published live';
+    setSaveState('saved', committedLabel); _dirty=false; _lastLocalSaveTs = Date.now();
     syncActionBtns();
-    // snapshot the just-published state (label "Published") — never lose work.
-    snapshotCurrent('Published', { silent:true });
-    if(!meta.draft && r.url){ await offerAnnounce(r.url, ((meta.title?meta.title+'\n\n':'')+docToText(doc)).slice(0,1500)); }
-    else toast('Published → ' + (r.url || currentSlug));
+    // snapshot the just-committed state — never lose work.
+    snapshotCurrent(committedLabel, { silent:true });
+    if(!meta.draft && !meta.publishAt && r.url){ await offerAnnounce(r.url, ((meta.title?meta.title+'\n\n':'')+docToText(doc)).slice(0,1500)); }
+    else if(meta.publishAt) toast('Scheduled. It goes live automatically on the date.');
+    else if(meta.draft) toast('Saved as draft (not yet live on your site).');
+    else toast('Published live → ' + (r.url || currentSlug));
   }catch(e){
     setSaveState('error','Publish failed');
     showError(e, { title:'Couldn’t publish', onRetry: doPublish });
@@ -13530,7 +13538,7 @@ async function renderHistory(){
   }
   body.innerHTML = '';
   for(const v of versions){
-    const tag = v.label==='Published' ? '<span class="hist-tag">Published</span>'
+    const tag = /^(Published( live)?|Saved as draft|Scheduled)$/.test(v.label||'') ? '<span class="hist-tag">'+esc(v.label)+'</span>'
       : v.label==='Before restore' ? '<span class="hist-tag" style="background:rgba(244,114,182,.16);color:#f9a8d4">Pre-restore</span>'
       : '';
     const row = document.createElement('div');
