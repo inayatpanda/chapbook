@@ -19,7 +19,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { readShell, readCacheName, isAppFinalPath, samePathModuloTrailingSlash } from './scripts/release-gate.mjs';
 
 const FIXTURE = `// service worker fixture
-const CACHE = 'chapbook-v7';
+const CACHE = 'chapbook-v8';
 const SHELL = [
   '/app', '/app/index.html', '/manifest.json', '/studio.js',
   '/fonts/inter-400.woff2',
@@ -28,7 +28,7 @@ self.addEventListener('install', () => {});
 `;
 
 test('readCacheName extracts the CACHE literal from fixture text', () => {
-  assert.equal(readCacheName(FIXTURE), 'chapbook-v7');
+  assert.equal(readCacheName(FIXTURE), 'chapbook-v8');
 });
 
 test('readCacheName tolerates double quotes and extra whitespace', () => {
@@ -88,10 +88,10 @@ test('samePathModuloTrailingSlash: a redirect to a different path fails', () => 
 });
 
 // Contract test against the REAL built artifact (skips cleanly if dist/ absent).
-test('parsers match the current dist/sw.js contract (v7 + /app shell)', (t) => {
+test('parsers match the current dist/sw.js contract (v8 + /app shell)', (t) => {
   if (!existsSync('dist/sw.js')) { t.skip('dist/sw.js not built — run `npm run build`'); return; }
   const sw = readFileSync('dist/sw.js', 'utf8');
-  assert.equal(readCacheName(sw), 'chapbook-v7', 'dist cache should be chapbook-v7 after the /app migration');
+  assert.equal(readCacheName(sw), 'chapbook-v8', 'dist cache should be chapbook-v8 after the /app migration');
   const shell = readShell(sw);
   assert.ok(shell.includes('/app') && shell.includes('/app/index.html'), 'shell must precache the /app doc');
   assert.ok(!shell.includes('/') && !shell.includes('/index.html'),

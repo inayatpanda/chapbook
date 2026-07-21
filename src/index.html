@@ -2344,6 +2344,10 @@
   #v-editor.thread-mode #editorActions,
   #v-editor.thread-mode #importDropZone,
   #v-editor.thread-mode #importDocMsg{display:none}
+  /* …but a LIVE import message (busy/err/ok) must still surface in thread mode —
+     the + sheet offers "Import .docx / .pdf" there, and hiding the only status
+     element made an AI_PARSE / no-provider failure completely silent. */
+  #v-editor.thread-mode #importDocMsg.show{display:block}
   #v-editor.thread-mode .thread-canvas{min-height:clamp(360px,58vh,680px);padding:2.5rem 1.25rem 2rem}
   /* chat-mode Preview: docked top-right ON the thread canvas, always visible (sticky
      under the sticky editor bar), invoking the SAME live preview as the toolbar
@@ -2609,6 +2613,9 @@
   /* sheet variant: 16px input (no iOS zoom) + bigger touch targets */
   #outlineSheet .rd-add{font-size:16px;padding:.6em .7em;margin-top:.2rem}
   #outlineSheet .rd-list{max-height:50vh;overflow:auto}
+  /* desktop rail: many jots must scroll INSIDE the rail (mirrors the ☰ sheet's cap)
+     rather than growing the column taller than the canvas */
+  #outlineRail .rd-list{max-height:min(52vh,480px);overflow:auto;overscroll-behavior:contain}
   #outlineSheet .rd-jot-text{font-size:.95rem;padding:.6em .7em}
   #outlineSheet .rd-jot-x{min-width:40px;min-height:40px;font-size:1rem}
   /* desktop rail: collapse state */
@@ -11078,10 +11085,25 @@ function edEmbed(b, isSel){
    uploaded alongside it. Reuses the SAME R2 seam the image path uses (window.__studioR2).
    Gated on R2 configured; the insert flow routes to Settings when it isn't. */
 
-// Route to the R2 setup section (Settings → Video storage) with the standard nudge.
-function routeToVideoStorage(){
-  toast('Video needs your R2 media storage — set it up in Settings');
+// Route to the R2 setup section (Settings → Video storage). The eject is a CHOICE,
+// not an ambush: confirm first (Stay = no navigation), and before ANY navigation
+// away flush EVERYTHING the editor owns — the pending autosave debounce (titled
+// posts → their slug; titleless work → the untitled snapshot) AND any pending
+// thread-sidecar save. The old immediate go('settings') raced the 1.2s autosave
+// debounce and verifiably destroyed typed work in an untitled draft (P1).
+async function routeToVideoStorage(){
   if(typeof closePicker === 'function') closePicker();
+  if(typeof chatCloseSheet === 'function') chatCloseSheet();
+  const open = await helmConfirm({
+    title:'Video needs storage set up.',
+    text:'Videos are served from your own Cloudflare R2 bucket. Save your draft and open Settings?',
+    okText:'Open Settings', cancelText:'Stay',
+  });
+  if(!open) return;
+  // flush the block/doc autosave through the SAME write path the editor uses
+  try{ if(_dirty){ clearTimeout(_saveDebounce); await autosaveDraft(); } }catch(_){ /* best-effort — never block the user's choice */ }
+  // and any pending thread-sidecar save (jots / chat turns)
+  try{ await _threadFlushPending(); }catch(_){ }
   go('settings');
   if(typeof loadSettings === 'function') loadSettings();
   requestAnimationFrame(() => { const el = $('r2-endpoint'); if(el){ try{ el.scrollIntoView({ behavior:'smooth', block:'center' }); el.focus(); }catch{} } });
@@ -13299,20 +13321,28 @@ async function renderHistory(){
   }
 }
 /* Restore is itself undoable: snapshot the CURRENT state first ("Before restore"),
-   then load the chosen snapshot's doc+meta into the editor + persist it. */
+   then load the chosen snapshot's doc+meta into the editor + persist it.
+   Re-entry guarded: a double-click on "Restore" used to run this twice — two
+   stacked confirms on the shared dialog (both resolved by one OK) and a racing
+   double restore + double "Before restore" snapshot. */
+let _restoringVersion = false;
 async function restoreVersion(v){
-  if(!await helmConfirm({ title:'Restore “'+(v.label||'Snapshot')+'” from '+relTime(v.ts)+'?', text:'Your current state is snapshotted first, so this is undoable.', okText:'Restore' })) return;
-  await snapshotCurrent('Before restore', { silent:true });
-  doc = (v.doc && v.doc.blocks) ? structuredClone(v.doc) : { version:1, blocks:[] };
-  meta = metaFromData(currentSlug, v.meta || {});
-  selectedId = null;
-  $('editorTitle').value = meta.title;
-  setMetaDescUI(meta.description);
-  renderBlocks();
-  await loadEditorSettings();
-  closeHistory();
-  toast('Restored — saving…');
-  markDirty(); // persists the restored state as the new working draft
+  if(_restoringVersion) return;
+  _restoringVersion = true;
+  try{
+    if(!await helmConfirm({ title:'Restore “'+(v.label||'Snapshot')+'” from '+relTime(v.ts)+'?', text:'Your current state is snapshotted first, so this is undoable.', okText:'Restore' })) return;
+    await snapshotCurrent('Before restore', { silent:true });
+    doc = (v.doc && v.doc.blocks) ? structuredClone(v.doc) : { version:1, blocks:[] };
+    meta = metaFromData(currentSlug, v.meta || {});
+    selectedId = null;
+    $('editorTitle').value = meta.title;
+    setMetaDescUI(meta.description);
+    renderBlocks();
+    await loadEditorSettings();
+    closeHistory();
+    toast('Restored — saving…');
+    markDirty(); // persists the restored state as the new working draft
+  }finally{ _restoringVersion = false; }
 }
 const _historyBtn = $('historyBtn');
 if(_historyBtn) _historyBtn.addEventListener('click', openHistory);
@@ -13925,11 +13955,18 @@ document.addEventListener('keydown', (e) => {
     toggleFocusMode();
     return;
   }
-  // Esc closes (palette first, then slash, then focus mode)
+  // Esc closes (palette first, then slash, then the compose-bar + sheet, then focus
+  // mode). The + sheet HAD no Esc path at all, and the focus-mode branch below used
+  // to swallow Esc pressed under an open sheet — exiting focus mode while the sheet
+  // stayed up. Sheets always close before any mode change.
   if(e.key === 'Escape'){
     if(_cmdk){ e.preventDefault(); closeCmdk(); return; }
     if(_slash){ e.preventDefault(); closeSlashMenu(); return; }
-    if(focusModeOn()){ e.preventDefault(); setFocusMode(false); return; }
+    const cs = $('chatSheet');
+    if(cs && !cs.hidden){ e.preventDefault(); chatCloseSheet(); return; }
+    // an open bottom-sheet outranks focus mode too: fall through so the document-level
+    // "Escape closes any open sheet" handler closes it; focus mode survives.
+    if(focusModeOn() && !document.querySelector('.picker-sheet.open')){ e.preventDefault(); setFocusMode(false); return; }
   }
 }, true);   // capture so the palette beats inner handlers (e.g. block keydown)
 
@@ -14324,13 +14361,14 @@ function cssEscape(s){ return String(s == null ? '' : s).replace(/(["\\])/g, '\\
    Promise-based stand-ins for prompt()/confirm(). helmPrompt resolves the typed
    string (null on cancel); helmConfirm resolves true/false. Enter confirms,
    Escape cancels, focus is managed. One dialog element serves every caller. */
-function _hdOpen({ title, text, value, placeholder, okText, danger, input }){
+function _hdOpen({ title, text, value, placeholder, okText, cancelText, danger, input }){
   return new Promise(resolve => {
     const dlg = $('helmDlg'), inp = $('hdInput'), txt = $('hdText'), ok = $('hdOk');
     $('hdTitle').textContent = title || '';
     txt.style.display = text ? 'block' : 'none'; txt.textContent = text || '';
     inp.style.display = input ? 'block' : 'none'; inp.value = value || ''; inp.placeholder = placeholder || '';
     ok.textContent = okText || 'OK';
+    $('hdCancel').textContent = cancelText || 'Cancel';   // reset every open — one dialog serves all callers
     ok.classList.toggle('danger', !!danger);
     dlg.hidden = false;
     const done = (val) => {
@@ -18864,6 +18902,11 @@ function importDocMsg(text, kind){
     b.addEventListener('click', () => { go('settings'); loadSettings(); });
     el.appendChild(b);
   }
+  // The message sits below the canvas — in thread mode (import via the + sheet) the
+  // user is at the compose bar, so bring it into view; and if the element is STILL
+  // not rendered (view switched away mid-import, some future CSS gate), fall back to
+  // a toast — an import failure must NEVER be silent (goblin-style: always visible).
+  try{ if(el.offsetParent) el.scrollIntoView({ block:'nearest' }); else toast(text); }catch(_){ }
 }
 
 async function importDocument(file){
@@ -19419,22 +19462,32 @@ function buildOgMock(){
 /* Collect the post's own images (block base64 / src) as featured-image choices. */
 function _postImageChoices(){
   const out = [];
+  // Committed images are {file,alt} only (base64 is dropped on publish/reopen), and
+  // their /images/posts/… paths live on the BLOG's origin, not the studio's — so
+  // thumbs must be absolutised via the configured site URL or they 404 for hosted
+  // users. `ref` (what gets stored in meta.image) stays site-relative as before.
+  const org = (typeof _siteOrigin === 'function' && _siteOrigin()) || '';
+  const rel = (file) => '/images/posts/'+_effectiveSlug()+'/'+file;
+  const abs = (file) => org ? org + rel(file) : rel(file);
   for(const b of (doc.blocks || [])){
     if(b.type === 'image'){
-      const src = b.base64 ? 'data:image/jpeg;base64,'+b.base64 : (b.src || (b.file ? '/images/posts/'+_effectiveSlug()+'/'+b.file : ''));
-      const ref = b.file ? '/images/posts/'+_effectiveSlug()+'/'+b.file : (b.src && /^https?:|^\//.test(b.src) ? b.src : '');
+      const src = b.base64 ? 'data:image/jpeg;base64,'+b.base64 : (b.src || (b.file ? abs(b.file) : ''));
+      const ref = b.file ? rel(b.file) : (b.src && /^https?:|^\//.test(b.src) ? b.src : '');
       if(src) out.push({ thumb: src, ref });
     }
     if(b.type === 'gallery' && Array.isArray(b.images)){
       for(const im of b.images){
-        const src = im && im.base64 ? 'data:image/jpeg;base64,'+im.base64 : '';
-        const ref = im && im.file ? '/images/posts/'+_effectiveSlug()+'/'+im.file : '';
+        if(!im) continue;
+        // published/reopened gallery entries carry ONLY {file,alt} — mirror the
+        // image branch's file fallback or they are unselectable here
+        const src = im.base64 ? 'data:image/jpeg;base64,'+im.base64 : (im.file ? abs(im.file) : '');
+        const ref = im.file ? rel(im.file) : '';
         if(src) out.push({ thumb: src, ref });
       }
     }
     if(b.type === 'figure' && b.base){
-      const src = b.base.base64 ? 'data:image/jpeg;base64,'+b.base.base64 : (b.base.file ? '/images/posts/'+_effectiveSlug()+'/'+b.base.file : '');
-      const ref = b.base.file ? '/images/posts/'+_effectiveSlug()+'/'+b.base.file : '';
+      const src = b.base.base64 ? 'data:image/jpeg;base64,'+b.base.base64 : (b.base.file ? abs(b.base.file) : '');
+      const ref = b.base.file ? rel(b.base.file) : '';
       if(src) out.push({ thumb: src, ref });
     }
   }
@@ -19562,8 +19615,29 @@ window.openSharePreview = openSharePreview;
 /* ── Escape to close any open bottom-sheet ───────────────────────────────── */
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
-  [closePicker, closeAiDraft, closeStructure, closePreviewSheet, closeTplLib, closeFigLib, closeSharePreview].forEach(fn => { try { if (typeof fn === 'function') fn(); } catch {} });
+  [closePicker, closeAiDraft, closeStructure, closePreviewSheet, closeTplLib, closeFigLib, closeSharePreview,
+   closeGoblin, closeTemplatePicker, closeOutlineSheet, closeMobileSettings, closeCropEditor, closeMediaPicker,
+   closeMdImport, closeGlyphPicker].forEach(fn => { try { if (typeof fn === 'function') fn(); } catch {} });
 });
+
+/* ── closed sheets must be closed to assistive tech too ─────────────────────
+   A closed .picker-sheet is only translated off-screen (translateY(100%)), so its
+   buttons stayed in the accessibility tree and the Tab order — a screen-reader or
+   keyboard user could reach and activate controls in a dozen invisible sheets.
+   Keep `inert` + aria-hidden in lockstep with the .open class (one observer per
+   sheet; every open/close path everywhere just toggles that class). */
+(function(){
+  const syncSheetAT = (el) => {
+    const open = el.classList.contains('open');
+    try{ el.inert = !open; }catch(_){ /* very old engines: aria-hidden still applies */ }
+    el.setAttribute('aria-hidden', open ? 'false' : 'true');
+  };
+  const mo = new MutationObserver(muts => muts.forEach(m => syncSheetAT(m.target)));
+  document.querySelectorAll('.picker-sheet').forEach(el => {
+    syncSheetAT(el);
+    mo.observe(el, { attributes:true, attributeFilter:['class'] });
+  });
+})();
 
 /* ── Partner screen ─────────────────────────────────────────────────────── */
 let ptSession = null;
