@@ -53,6 +53,26 @@ export function inlineHtmlToMd(html) {
 function escAttr(s) { return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 function escHtml(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
+// Markdown-TEXT escaper for plain-text values emitted into a markdown line that must
+// render as LITERAL text (currently the quote cite). HTML-escaping is the WRONG tool in
+// markdown context: it double-encodes legit text ("AT&T" → "AT&amp;T") and still leaves
+// markdown live — a cite of "[x](javascript:alert(1))" survives an HTML-escape as an
+// executable link on the published blog (rehype-raw, no sanitiser — see inlineHtmlToMd's
+// L3 note). Instead, backslash-escape every markdown-ACTIVE character (CommonMark honours
+// \-escapes for all ASCII punctuation, rendering the bare character): \ ` * _ ~ kill code
+// spans/emphasis/strikethrough, [ ] ( ) kill links/images/footnote refs, < > kill
+// autolinks and inline HTML. & and " are left alone — they are inert in markdown text and
+// entity-encoding them is exactly the double-encode this replaces. Newlines collapse to
+// spaces FIRST, so the value can never start a fresh line — which is what keeps
+// line-start syntax (leading #, >, ``` …) inert without escaping those characters too.
+// NOT a second HTML escaper and NOT stripDangerousMdLinks (that keeps benign markdown
+// live; this renders everything literal).
+function escMdText(s) {
+  return String(s == null ? '' : s)
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/[\\`*_~\[\]()<>]/g, (c) => `\\${c}`);
+}
+
 // ─── drag-to-resize (width + alignment) ─────────────────────────────────────
 // A resizable media block may carry an optional `width` (percent 10–100 of the
 // article content column) and `align` ('left'|'center'|'right', default center).
@@ -198,11 +218,14 @@ export function serialiseBlock(block, ctx = {}) {
     case 'quote': {
       const body = inlineHtmlToMd(block.html != null ? block.html : block.text).replace(/\n/g, '\n> ');
       if (!body.trim()) return '';   // untouched guide quote — same rule as heading
-      // escHtml the citation: it is plain text from the cite input, never HTML, and the
-      // published .md renders with rehype-raw (NO sanitiser) — an unescaped cite like
-      // "<img/src=x/onerror=…>" would execute in every reader's browser (stored XSS).
-      // Mirrors renderPreviewHtml's escHtml(b.cite) so publish matches the preview.
-      return `> ${body}${block.cite ? `\n> — ${escHtml(block.cite)}` : ''}`;
+      // escMdText the citation: it is plain text from the cite input emitted into a
+      // MARKDOWN line, so markdown-active characters are backslash-escaped to render
+      // literally. An HTML-escape here is both wrong-context (double-encodes "AT&T")
+      // and insufficient — "[x](javascript:…)" would survive it as a live executable
+      // link (the published .md renders with rehype-raw, NO sanitiser). The preview
+      // (renderPreviewHtml) escHtml()s the cite instead — correct for ITS context
+      // (direct HTML emit) — and both paths agree on the end state: literal text.
+      return `> ${body}${block.cite ? `\n> — ${escMdText(block.cite)}` : ''}`;
     }
     case 'divider': return '---';
     case 'image': return imageFigure(block, ctx.slug || 'post');

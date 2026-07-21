@@ -216,14 +216,42 @@ test('serialise gallery alt is NOT html-escaped (markdown context, no double-enc
   assert.ok(!/&amp;/.test(out), 'gallery alt must not be pre-escaped');
 });
 
-// ── quote cite: plain text, must be HTML-escaped at serialise (stored-XSS fix) ──
-// The cite input stores raw text; the published .md renders with rehype-raw (no
-// sanitiser), so an unescaped cite is a second stored-XSS route (audit finding 11).
+// ── quote cite: markdown-TEXT escaped at serialise (stored-XSS fix, round 2) ──
+// The cite is plain text emitted into a MARKDOWN line; the published .md renders with
+// rehype-raw (no sanitiser). Round 1 HTML-escaped it — wrong context: a cite of
+// "[x](javascript:…)" survived the HTML-escape as a live executable markdown link, and
+// legit text ("AT&T") double-encoded. Now every markdown-active character is
+// backslash-escaped (escMdText) so the cite always renders as literal text.
 
-test('serialise quote cite is HTML-escaped (no stored XSS via the citation)', () => {
+test('serialise quote cite neutralises a javascript: markdown link (literal text, no link)', () => {
+  const out = serialiseBlock({ id: 'q', type: 'quote', html: 'Wise words', cite: '[x](javascript:alert(1))' });
+  assert.equal(out, '> Wise words\n> — \\[x\\]\\(javascript:alert\\(1\\)\\)');
+  assert.ok(!out.includes(']('), 'no active ]( link syntax survives');
+  assert.ok(/\\\[/.test(out), 'the [ is backslash-escaped');
+});
+
+test('serialise quote cite neutralises inline HTML (inert, and NOT entity-encoded)', () => {
   const out = serialiseBlock({ id: 'q', type: 'quote', html: 'Wise words', cite: '<img/src=x/onerror=alert(1)>' });
-  assert.ok(!/<img/.test(out), 'raw <img> must not survive into the cite');
-  assert.equal(out, '> Wise words\n> — &lt;img/src=x/onerror=alert(1)&gt;');
+  assert.equal(out, '> Wise words\n> — \\<img/src=x/onerror=alert\\(1\\)\\>');
+  assert.ok(!/(^|[^\\])<img/.test(out), 'no unescaped <img — no tag can form');
+  assert.ok(!/&lt;|&gt;/.test(out), 'markdown context: no HTML entities');
+});
+
+test('serialise quote cite neutralises autolinks and emphasis', () => {
+  const out = serialiseBlock({ id: 'q', type: 'quote', html: 'W', cite: '*wow* <javascript:alert(1)>' });
+  assert.equal(out, '> W\n> — \\*wow\\* \\<javascript:alert\\(1\\)\\>');
+});
+
+test('serialise quote cite keeps AT&T literal (no HTML double-encode)', () => {
+  const out = serialiseBlock({ id: 'q', type: 'quote', html: 'Wise words', cite: 'AT&T' });
+  assert.equal(out, '> Wise words\n> — AT&T');
+  assert.ok(!/&amp;/.test(out), '& must stay literal in markdown text');
+});
+
+test('serialise quote cite escapes parentheses — "Smith (2020)" reads the same, no accidental link', () => {
+  const out = serialiseBlock({ id: 'q', type: 'quote', html: 'Wise words', cite: 'Smith (2020)' });
+  // \( \) render as literal ( ) in CommonMark, so the reader still sees "Smith (2020)".
+  assert.equal(out, '> Wise words\n> — Smith \\(2020\\)');
 });
 
 test('serialise quote with a normal cite is byte-identical to before the escape fix', () => {
