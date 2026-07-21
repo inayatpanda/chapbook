@@ -37,33 +37,33 @@
     --faint:    #6f7e98;
     --line:     rgba(140,160,200,.13);
     --line-2:   rgba(140,160,200,.26);
-    --acc:      #22d3ee;
-    /* brand palette */
-    --teal:   #2dd4bf;
-    --cyan:   #22d3ee;
-    --violet: #818cf8;
+    --acc:      #64c6d3;
+    /* brand palette — desaturated for dark so violet reads as the Partner's alone */
+    --teal:   #58bbae;
+    --cyan:   #64c6d3;
+    --violet: #8191ad;
     --pink:   #f472b6;
     --goblin: #7bd86a;   /* goblin-mode chaos accent (playful, on-brand green) */
-    --editor: #818cf8;   /* editor-pass accent (violet — measured, in-palette) */
+    --editor: #8191ad;   /* editor-pass accent (slate — violet is reserved for the Partner) */
     --grad:   linear-gradient(120deg,var(--teal),var(--cyan) 52%,var(--violet));
     --grad-pub: linear-gradient(95deg,var(--teal),var(--cyan));
     /* depth + glow */
     --shadow: 0 18px 50px rgba(0,0,0,.55);
-    --glow:   0 0 22px rgba(34,211,238,.16);
-    --ring:   0 0 0 3px rgba(34,211,238,.22);
+    --glow:   0 0 14px rgba(100,198,211,.08);
+    --ring:   0 0 0 3px rgba(100,198,211,.16);
     --r:      16px;
     --font-display:'Space Grotesk',system-ui,sans-serif;
     --font-body:'Inter','Inter Variable',system-ui,-apple-system,sans-serif;
-    /* thread mode: the canvas is a clearly LIGHTER raised surface; sent bubbles are
-       clearly darker posts sitting on it (fill contrast, not border-only) */
-    --thread-canvas:#131d33;
-    --thread-canvas-line:#202d47;
-    --thread-post:#070b14;
-    --thread-post-line:#26334d;
-    /* the Partner's voice: a small coloured voice, never body ink (spec addendum 9) */
+    /* thread mode: bubble > canvas > page in luminance — sent bubbles are RAISED
+       lighter posts on the canvas, which itself sits above the near-black page */
+    --thread-canvas:#111b2a;
+    --thread-canvas-line:#263650;
+    --thread-post:#19253a;
+    --thread-post-line:#2b3b57;
+    /* the Partner's voice: the ONE recognisably violet voice in dark (spec addendum 9) */
     --partner-voice:#a5b4fc;
-    --partner-wash:rgba(129,140,248,.09);
-    --partner-line:rgba(129,140,248,.28);
+    --partner-wash:rgba(165,180,252,.06);
+    --partner-line:rgba(165,180,252,.22);
   }
   :root[data-theme="light"] {
     --bg:#eef1f6; --bg-1:#e7ecf4; --surface:#ffffff; --surface-2:#f3f6fb;
@@ -95,10 +95,15 @@
   /* atmospheric depth — fixed radial glows, never scroll-jank */
   body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
     background:
+      radial-gradient(60% 50% at 12% 0%,rgba(88,187,174,.035),transparent 70%),
+      radial-gradient(55% 50% at 100% 12%,rgba(129,145,173,.035),transparent 70%),
+      radial-gradient(70% 60% at 50% 110%,rgba(100,198,211,.025),transparent 70%)}
+  /* light keeps its original (pre-calming) glow recipe at half strength */
+  :root[data-theme="light"] body::before{opacity:.5;
+    background:
       radial-gradient(60% 50% at 12% 0%,rgba(45,212,191,.10),transparent 70%),
       radial-gradient(55% 50% at 100% 12%,rgba(129,140,248,.10),transparent 70%),
       radial-gradient(70% 60% at 50% 110%,rgba(34,211,238,.07),transparent 70%)}
-  :root[data-theme="light"] body::before{opacity:.5}
   /* one icon language — Tabler sprite refs (icons-sprite.svg #ti-*), currentColor line icons */
   .tico{width:1.15em;height:1.15em;stroke-width:2;flex:none;vertical-align:-.18em}
   /* fluid, rail-aware width — calc() always subtracts the desktop rail + a gutter so
@@ -190,6 +195,19 @@
   .lp-link:hover{border-color:var(--acc);color:var(--ink);background:var(--surface)}
   .lp-link:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
   .lp-link svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2}
+  /* dark-only hierarchy: task cards are the clear top layer (lp-primary keeps its
+     gradient ring); the secondary row reads as one recessed navigation shelf */
+  :root:not([data-theme="light"]) .lp-card:not(.lp-primary){
+    background:linear-gradient(180deg,#121d31,#0d1525);border-color:#273752;
+    box-shadow:0 8px 20px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.025)}
+  :root:not([data-theme="light"]) .lp-card:not(.lp-primary):hover{border-color:#31456a;
+    box-shadow:0 8px 20px rgba(0,0,0,.24),var(--glow),inset 0 1px 0 rgba(255,255,255,.025)}
+  :root:not([data-theme="light"]) .lp-sec{padding:.35rem;background:#080f1b;
+    border:1px solid #1d2a42;border-radius:14px}
+  :root:not([data-theme="light"]) .lp-link{background:transparent;
+    border-color:transparent;color:#9baac1}
+  :root:not([data-theme="light"]) .lp-link:hover{background:#111b2a;
+    border-color:#2a3954;color:var(--ink)}
 
   /* ── HOME: your apps (owner Helm dashboard — status + quick access only) ───── */
   .apps-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:.7rem}
@@ -963,6 +981,20 @@
   #dkDone{display:none;margin-top:.8rem}
   .dk-done-card{background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.3);
     color:#5eead4;border-radius:12px;padding:.8rem .9rem;font-size:.86rem;line-height:1.5}
+  /* dark-only: staged surfaces — page < card < field < focused field, no bright fills */
+  :root:not([data-theme="light"]) #dkDrop{background:#0d1625;border-color:#2a3954}
+  :root:not([data-theme="light"]) #dkDrop:hover,
+  :root:not([data-theme="light"]) #dkDrop:focus-visible{border-color:var(--acc)}
+  :root:not([data-theme="light"]) #dkDrop.drag{border-color:var(--acc);
+    background:rgba(100,198,211,.07)}
+  :root:not([data-theme="light"]) .dk-bulk,
+  :root:not([data-theme="light"]) .dk-cell{background:#0f1828;border-color:#263650}
+  :root:not([data-theme="light"]) .dk-bulk input,
+  :root:not([data-theme="light"]) .dk-cell input{background:#111b2a;border-color:#2a3954}
+  :root:not([data-theme="light"]) .dk-chips{background:#0d1625;border-color:#263650}
+  :root:not([data-theme="light"]) .dk-bulk input:focus,
+  :root:not([data-theme="light"]) .dk-cell input:focus{background:#18243a;
+    border-color:#64c6d3;box-shadow:0 0 0 3px rgba(100,198,211,.14)}
 
   /* ── CONNECT VIEW ────────────────────────────────────────────────────────── */
   #v-connect .info{background:var(--surface);border:1px solid var(--line);
@@ -2222,7 +2254,8 @@
      light theme, one-step-elevated surface in dark. Bubbles float on it. ── */
   .thread-canvas{border-radius:20px;padding:1rem 1rem 5.5rem;background:var(--thread-canvas);
     border:1px solid var(--thread-canvas-line);
-    box-shadow:0 18px 48px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.035)}
+    box-shadow:0 10px 28px rgba(0,0,0,.20),0 1px 2px rgba(0,0,0,.16),
+      inset 0 1px 0 rgba(255,255,255,.025)}
   :root[data-theme="light"] .thread-canvas{box-shadow:0 16px 42px rgba(30,41,59,.10)}
   /* thread view: the compose bar adds blocks; no inline "+" dividers between bubbles */
   .thread-on .adddiv{display:none}
@@ -2232,6 +2265,14 @@
     background:var(--thread-post);border:1px solid var(--thread-post-line);padding:.62rem .85rem}
   .thread-on .block.chat-bound{width:auto;max-width:100%;margin-left:0}
   @media(max-width:640px){ .thread-on .block{min-width:0;max-width:88%} }
+  /* the EMPTY starter block is a prompt, not a hole: centred dashed outline,
+     no dark bubble fill (the .be-ce data-ph placeholder copy stays) */
+  .thread-on .block:has(.be-ce:empty){width:min(100%,24rem);min-width:0;
+    margin:1.1rem auto;padding:.65rem .85rem;background:transparent;
+    border:1px dashed rgba(174,187,210,.24);border-radius:14px;box-shadow:none}
+  .thread-on .block:has(.be-ce:empty) .be-ce:empty::before{color:var(--mut)}
+  :root[data-theme="light"] .thread-on .block:has(.be-ce:empty){
+    border-color:rgba(91,107,128,.35)}
   /* block-type labels are Doc-mode chrome: in the thread keep the drag grip but
      drop the label; reveal on hover/focus (always faintly on touch screens) */
   .thread-on .htag{opacity:0;padding:2px;background:var(--thread-canvas);transition:opacity .12s}
@@ -2249,17 +2290,20 @@
   /* the Partner speaks smaller than post text, in its own colour (spec addendum 9) */
   .turn-assistant{max-width:68%;padding:.55rem .75rem;border-radius:12px 12px 12px 3px;
     font-size:.84rem;line-height:1.5;background:var(--surface-2,var(--bg-1));color:var(--ink)}
-  .turn-guidance{color:var(--partner-voice);background:var(--partner-wash);border-color:var(--partner-line)}
+  /* guidance is a quiet annotation — no card; only the speaker label carries violet */
+  .turn-guidance{color:var(--mut);background:transparent;border:0;border-radius:0;
+    padding:.3rem .75rem}
+  .turn-guidance .turn-speaker{color:var(--partner-voice)}
   .turn-speaker{display:block;margin-bottom:.22rem;color:inherit;
     font:700 .625rem var(--font-display);letter-spacing:.09em;text-transform:uppercase}
-  /* a suggestion presents candidate copy: ink text, Partner-accent frame + Accept */
-  .turn-insertable{color:var(--ink);background:var(--surface-2);border-color:var(--partner-line);
-    border-left:3px solid var(--partner-voice)}
+  /* a suggestion presents candidate copy: the ONLY carded violet-ruled treatment */
+  .turn-insertable{color:var(--ink);background:var(--thread-post);
+    border:1px solid var(--thread-post-line);border-left:2px solid var(--partner-voice)}
   .turn-insertable .turn-speaker{color:var(--partner-voice)}
   .turn-insertable .turn-acts button:first-child{color:var(--partner-voice);border-color:var(--partner-line)}
-  /* errors are amber, never the Partner's violet */
-  .turn-error{color:#f0a35b;background:rgba(240,163,91,.08);border-color:rgba(240,163,91,.48);
-    border-left:3px solid #f0a35b}
+  /* errors are muted amber, never the Partner's violet */
+  .turn-error{color:#d29a70;background:rgba(210,154,112,.06);border-color:rgba(210,154,112,.32);
+    border-left:2px solid #d29a70}
   :root[data-theme="light"] .turn-error{color:#93451f;background:rgba(192,96,47,.07);
     border-color:rgba(160,74,32,.42);border-left-color:#a04a20}
   .turn-error .turn-speaker{color:inherit}
