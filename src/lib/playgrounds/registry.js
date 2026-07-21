@@ -1,4 +1,14 @@
-/* Family registry. Add a family by importing it and listing it here. */
+/* Family registry. Add a family by importing it and listing it here.
+   NOTE (import cycle): family modules import shared helpers (esc) from ./index.js,
+   and index.js imports this registry — a cycle. Building the id→family map EAGERLY
+   at module-evaluation time threw "Cannot access '<family>' before initialization"
+   whenever a family module was the import ENTRY point (the entry evaluates LAST, so
+   its default binding was still in TDZ when this module's body ran). The bundled
+   Studio always enters via index.js — family bodies evaluate BEFORE this module's —
+   so the running app never hit it, but a direct import (tests, tooling, future
+   refactors) did. The list + map are therefore built LAZILY inside getFamilies():
+   by the time anyone can CALL it, every module in the cycle has finished evaluating,
+   and the map is identical to the old eager one. */
 import toggleAb from './toggle-ab.js';
 import functionExplorer from './function-explorer.js';
 import stepperTimeline from './stepper-timeline.js';
@@ -82,7 +92,7 @@ import stepExplainer from './step-explainer.js';
 import scoredQuiz from './scored-quiz.js';
 import sortableTable from './sortable-table.js';
 
-const all = [
+const all = () => [
   toggleAb, functionExplorer, stepperTimeline, scatterSim,
   tappableMeter, mixer, stopwatch, leverGeometry,
   sortablePriority, quizReveal, chartData, beforeAfter, hotspots,
@@ -101,4 +111,8 @@ const all = [
   imageAnnotator, stepExplainer, scoredQuiz, sortableTable,
 ];
 
-export const families = all.reduce((m, f) => { m[f.id] = f; return m; }, {});
+let _families = null;
+export function getFamilies() {
+  if (!_families) _families = all().reduce((m, f) => { m[f.id] = f; return m; }, {});
+  return _families;
+}

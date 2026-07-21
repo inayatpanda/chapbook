@@ -4,7 +4,8 @@
    handlers, no fetch/network, no localStorage), and all three must be registered. */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { families } from './registry.js';
+import { getFamilies } from './registry.js';
+const families = getFamilies();
 import { listFamilies, buildInstance } from './index.js';
 
 // A built instance's combined surface (html + css + js) must obey the playground rules.

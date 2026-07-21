@@ -18,12 +18,15 @@
  *              reduced (prefers-reduced-motion bool), $(sel)/$$(sel) scoped to root.
  *              Vanilla JS only; re-runs on client navigation (re-query each run).
  */
-import { families as registry } from './registry.js';
+// getFamilies() is called lazily (never at module-evaluation time): index.js sits in
+// an import cycle with the registry + every family module, and the deferred call is
+// what keeps a family module safe to import directly (see registry.js).
+import { getFamilies } from './registry.js';
 import { injectStdParams, frameParams, frameWrap } from './frame.js';
 import { applyAccent } from './accent.js';
 
 export function listFamilies() {
-  return Object.values(registry).map((f) => ({
+  return Object.values(getFamilies()).map((f) => ({
     id: f.id, name: f.name, category: f.category, description: f.description,
     paramsSchema: injectStdParams(f.paramsSchema, { stdParams: f.stdParams, omitStd: f.omitStd }),
     presets: (f.presets || []).map((p) => ({ name: p.name })),
@@ -31,7 +34,7 @@ export function listFamilies() {
 }
 
 export function getFamily(id) {
-  const f = registry[id];
+  const f = getFamilies()[id];
   if (!f) throw Object.assign(new Error(`Unknown playground family: ${id}`), { code: 'PG_FAMILY', status: 400 });
   return f;
 }

@@ -4,7 +4,8 @@
    content survives into the built surface. */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { families } from './registry.js';
+import { getFamilies } from './registry.js';
+const families = getFamilies();
 import { buildInstance, getFamily } from './index.js';
 
 const IDS = ['image-annotator', 'step-explainer', 'scored-quiz', 'sortable-table'];

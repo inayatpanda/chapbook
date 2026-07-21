@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { families } from './registry.js';
+import { execFileSync } from 'node:child_process';
+import { getFamilies } from './registry.js';
+const families = getFamilies();
 import { listFamilies, buildInstance, getFamily } from './index.js';
 
 // pick a family whose raw CSS hard-codes the cyan hex, for the accent assertion
@@ -58,4 +60,21 @@ test('buildInstance: built surface still obeys the playground rules', () => {
   assert.ok(!/\son\w+\s*=/.test(surface), 'no inline on* handlers');
   assert.ok(!/fetch\s*\(|XMLHttpRequest|localStorage|sessionStorage/.test(surface), 'no network/storage');
   assert.ok(!/\n\s*\n/.test(block.html), 'no blank lines in html');
+});
+
+// ── import-cycle regression (stress-harness port) ───────────────────────────
+// family module → index.js (for esc) → registry.js → family module is a cycle.
+// When a FAMILY file is the import ENTRY point it evaluates LAST, so an EAGERLY
+// built registry map hit its default binding while still in TDZ: a direct
+// `import './scratch-reveal.js'` threw "Cannot access 'scratchReveal' before
+// initialization". The bundled Studio always enters via index.js (families
+// evaluate before the registry body) so the app never hit it — but direct
+// imports and future refactors must not explode. Needs a FRESH process (the
+// test-runner's module cache would mask the ordering), hence the subprocess.
+test('scratch-reveal imports standalone without a TDZ throw (import-cycle regression)', () => {
+  const url = new URL('./scratch-reveal.js', import.meta.url).href;
+  const out = execFileSync(process.execPath,
+    ['--input-type=module', '-e', `await import(${JSON.stringify(url)}); console.log('CYCLE_OK');`],
+    { encoding: 'utf8' });
+  assert.match(out, /CYCLE_OK/);
 });
