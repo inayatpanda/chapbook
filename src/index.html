@@ -335,6 +335,13 @@
   @media (min-width:900px){
     .cam-fab{bottom:calc(1.4rem + env(safe-area-inset-bottom))}
   }
+  @media (max-width:899px){
+    /* The editor's compose bar has its own camera on phones (spec 9e), so the FAB adds
+       nothing there — and it floated over the compose-bar suggestion chips. Stand down. */
+    body.editor-open .cam-fab{display:none !important}
+    /* Review/share: let the "Link to the full post" helper scroll clear of the FAB */
+    #v-review{padding-bottom:calc(150px + env(safe-area-inset-bottom))}
+  }
   .cam-scrim{position:fixed;inset:0;z-index:240;background:rgba(2,4,10,.66);
     backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
   .cam-sheet{position:fixed;z-index:241;left:50%;bottom:0;transform:translateX(-50%);
@@ -1075,10 +1082,12 @@
   .ai-result.busy{color:var(--violet)}
 
   /* ── TOAST ───────────────────────────────────────────────────────────────── */
+  /* long messages wrap inside the viewport instead of clipping both edges on phones */
   #toast{position:fixed;bottom:calc(90px + env(safe-area-inset-bottom) + .8rem);
     left:50%;transform:translateX(-50%) translateY(12px);
-    background:var(--surface);border:1px solid var(--line);border-radius:999px;
-    padding:.5em 1.2em;font-size:.85rem;color:var(--ink);white-space:nowrap;
+    background:var(--surface);border:1px solid var(--line);border-radius:22px;
+    padding:.5em 1.2em;font-size:.85rem;color:var(--ink);
+    max-width:calc(100vw - 24px);width:max-content;white-space:normal;text-align:center;
     opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:999}
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
@@ -2685,6 +2694,12 @@
     #v-editor .editor-bar{display:block;padding:.55rem .75rem .45rem}
     .editor-bar-main{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;
       align-items:center;gap:.45rem}
+    /* 390px: "+N words this session" overlapped the word-count readout and squeezed the
+       save status. The session delta is a nice-to-have — it stands down on phones, and
+       the save status ellipsizes inside its cell instead of colliding with neighbours. */
+    .editor-bar-main #sessionWords{display:none !important}
+    .editor-bar-main #editorStatus{min-width:0;overflow:hidden}
+    .editor-bar-main #editorStatusText{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .editor-bar-tools{display:flex;gap:.4rem;margin-top:.45rem;overflow-x:auto;
       flex-wrap:nowrap;scrollbar-width:none;overscroll-behavior-inline:contain}
     .editor-bar-tools::-webkit-scrollbar{display:none}
