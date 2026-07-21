@@ -6535,11 +6535,20 @@ async function forgetThisDevice(){
 }
 window.forgetThisDevice=forgetThisDevice;
 
+const GOBLIN_NO_KEY_MSG='Connect an AI provider in Settings → Keys to unleash the goblin.';
 async function runGoblin(){
   if(_goblinBusy) return;
   const topic=($('goblinTopic').value||'').trim();
   const body=$('goblinBody'), foot=$('goblinFoot');
   const goBtn=$('goblinGo'), reBtn=$('goblinReroll');
+  // Pre-check for a missing AI key (same detection the Partner uses) instead of firing
+  // a doomed call whose provider 401 gets mislabeled "your GitHub token or AI key looks
+  // wrong" — with no key configured there is nothing to be wrong about.
+  if(!_aiKeyStored()){
+    body.innerHTML=`<p class="goblin-empty">${esc(GOBLIN_NO_KEY_MSG)}</p>`;
+    foot.hidden=true;
+    return;
+  }
   _goblinBusy=true; setBusy(goBtn,true); setBusy(reBtn,true);
   body.innerHTML='<p class="goblin-empty">🧌 The goblin is rummaging for chaos…</p>';
   try{
@@ -6550,7 +6559,10 @@ async function runGoblin(){
     renderGoblinIdeas(ideas);
     foot.hidden=false;
   }catch(e){
-    body.innerHTML=`<p class="goblin-empty" style="color:var(--pink)">${esc(e.message||'The goblin tripped over — try again.')}</p>`;
+    // Belt-and-braces: a no-key failure that slipped past the pre-check (e.g. key wiped
+    // mid-session) still gets the clean routing message, not the 401 mislabel.
+    const gmsg=isNoKeyErr(e) ? GOBLIN_NO_KEY_MSG : (e.message||'The goblin tripped over — try again.');
+    body.innerHTML=`<p class="goblin-empty" style="color:var(--pink)">${esc(gmsg)}</p>`;
     foot.hidden=true;
   }finally{ _goblinBusy=false; setBusy(goBtn,false); setBusy(reBtn,false); }
 }
@@ -18997,6 +19009,22 @@ function imageWorkerReady(){
   return !!(r2 && typeof r2.image === 'function' && r2.isImageWorker && r2.isImageWorker());
 }
 
+/* An image-generation failure that really means "this key/provider can't make images":
+   the seam's typed AI_CAP, OR the provider 404ing the image model (e.g. a Gemini key
+   without Imagen access answers "models/imagen-3.0-generate-002 is not found ... for
+   predict", which classifyError then mislabels as a GitHub not-found). Detected on the
+   classified error's code/status plus the raw text kept in .detail. */
+function isImageCapErr(e){
+  if(!e) return false;
+  if(String(e.code||'')==='AI_CAP') return true;
+  const txt = String(e.detail||'')+' '+String(e.message||e);
+  if(/cannot generate images|image generation|imagen/i.test(txt)) return true;
+  // a 404 from the image endpoint = the model/capability isn't available on this key
+  if(e.status===404 && /is not found|not supported|predict|images\/generations|model/i.test(txt)) return true;
+  return e.status===404;
+}
+const IMG_CAP_MSG = 'This AI key or provider does not support image generation. Add an image-capable provider in Settings → Keys, or a Cloudflare Worker for free images.';
+
 async function doGenImage(b, inp, runBtn, toggleBtn, msgEl){
   const prompt = (inp.value || '').trim();
   if(prompt.length < 3){ genImageMsg(msgEl, 'Give me a prompt to work with.', 'err'); return; }
@@ -19019,7 +19047,9 @@ async function doGenImage(b, inp, runBtn, toggleBtn, msgEl){
       genImageMsg(msgEl, "No image came back — try a different prompt.", 'err');
     }
   }catch(err){
-    genImageMsg(msgEl, String(err.message || err), 'err');
+    // A capability/model-not-available failure gets a friendly routing message (genImageMsg
+    // appends its Settings link for it) instead of the provider's raw 404/model string.
+    genImageMsg(msgEl, isImageCapErr(err) ? IMG_CAP_MSG : String(err.message || err), 'err');
   }finally{
     runBtn.disabled = false; runBtn.textContent = label;
   }
