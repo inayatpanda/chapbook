@@ -5149,6 +5149,10 @@ async function boot(){
     setTimeout(()=>{ try{ const T=window.__studioTour; if(T&&T.shouldAutoOpen()){ T.clearPending(); openFirstPostTour(); } }catch{} }, 1100);
     // H4 — warn (once, dismissible) if this browser can't persist local drafts.
     setTimeout(()=>{ try{ maybeWarnStorage(); }catch{} }, 400);
+    // Discard-orphan self-heal: clear a stranded /thread/__untitled__ sidecar whose
+    // blocks record is gone (a discard whose thread DELETE failed). Once per boot,
+    // non-blocking, silent either way — sweepOrphanUntitledThread guards composing.
+    setTimeout(()=>{ try{ sweepOrphanUntitledThread(); }catch{} }, 900);
   }catch(e){
     // H4 — a blocked IndexedDB (Safari private mode / ITP eviction) makes api('/drafts')
     // reject, which used to SILENTLY bounce a fully-configured buyer to onboarding. Detect
@@ -12409,6 +12413,34 @@ async function discardUntitledDraft(){
   refreshUntitledRecovery();
 }
 window.discardUntitledDraft = discardUntitledDraft;
+
+/* ── boot sweep: discard-orphan self-heal ─────────────────────────────────────
+   When discard's blocks DELETE lands but the thread DELETE fails, an orphaned
+   /thread/__untitled__ record survives with NO retry affordance - the recovery
+   card only checks the BLOCKS record, so nothing ever offers (or clears) the
+   stranded sidecar, and the next untitled post would inherit its conversation.
+   Self-heal once per boot: if the sidecar exists but the blocks record doesn't,
+   delete the sidecar. Silent on success AND failure (the next boot retries).
+   Guards: never while an untitled post is being composed (owned slot, or the
+   editor open on a titleless post), re-checked inside the queued unit - and the
+   whole sweep is ONE '__untitled__' queue-lane unit, so it can never interleave
+   with a jot-claim or autosave writing the slot. */
+function orphanSweepEligible(threadRec, blocksDraft, composing){ return !!threadRec && !blocksDraft && !composing; }
+function sweepOrphanUntitledThread(){
+  return _threadQ(PROVISIONAL_SLUG, async () => {
+    try{
+      const composing = () => _ownsProvisional || _threadId === PROVISIONAL_SLUG
+        || (_threadEditorOpen() && editorSection === 'write' && !currentSlug);
+      if(composing()) return;
+      let rec = null;
+      try{ rec = await api('/thread/' + encodeURIComponent(PROVISIONAL_SLUG)); }catch{ return; }   // unreadable store → not our call to make
+      if(!rec) return;
+      const blocksDraft = await provisionalDraftExists();
+      if(!orphanSweepEligible(rec, blocksDraft, composing())) return;
+      await api('/thread/' + encodeURIComponent(PROVISIONAL_SLUG), { method: 'DELETE' });
+    }catch(_){ /* silent - the next boot retries */ }
+  });
+}
 
 /* ── back button ───────────────────────────────────────────────────────────
    Context-aware: a new post (editorSection==='write') returns to the New-post

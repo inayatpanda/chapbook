@@ -241,3 +241,32 @@ test('threadReplyKept: editorOpen coerces truthy/falsy; tokens compare strictly'
   assert.equal(kept('7', 7, true), false);         // no type coercion may keep a reply
   assert.equal(kept(7, 7, true), true);            // and the strict path still keeps
 });
+
+// ---- discard-orphan self-heal (boot sweep) ---------------------------------
+// When discard's blocks DELETE lands but the thread DELETE fails, an orphaned
+// /thread/__untitled__ record survives with no retry affordance (the recovery card
+// only checks the BLOCKS record). A once-per-boot sweep deletes it. The DECISION is
+// pure - (threadRecord, blocksIsDraft, composingUntitled) → sweep/leave - extracted
+// from the shipped inline module like threadReplyKept above.
+function extractOrphanSweepEligible(){
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const m = html.match(/function orphanSweepEligible\([^)]*\)\{[^{}]*\}/);
+  assert.ok(m, 'orphanSweepEligible found in the inline module');
+  return new Function('return (' + m[0] + ')')();
+}
+
+test('orphanSweepEligible: sweeps ONLY an orphan - thread record present, blocks draft absent, not composing', () => {
+  const ok = extractOrphanSweepEligible();
+  const rec = { v: 1, mode: 'chat', turns: [] };
+  assert.equal(ok(rec, false, false), true);    // the orphan: sidecar with no blocks record → sweep
+  assert.equal(ok(rec, true, false), false);    // blocks draft present → a real recoverable draft, leave it
+  assert.equal(ok(null, false, false), false);  // no sidecar → nothing to sweep
+  assert.equal(ok(rec, false, true), false);    // an untitled post is being composed → never sweep under it
+  assert.equal(ok(rec, true, true), false);     // composing + draft → definitely leave
+});
+
+test('orphanSweepEligible: truthiness only - a GET-shaped record object counts, undefined/null never do', () => {
+  const ok = extractOrphanSweepEligible();
+  assert.equal(ok(undefined, false, false), false);
+  assert.equal(ok({ v: 1, mode: 'doc', turns: [], scratch: [] }, 0, 0), true);
+});
