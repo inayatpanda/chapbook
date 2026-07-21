@@ -42,11 +42,20 @@ export function parse(md) {
   return { data, body: m[2] };
 }
 
+// Neutralise line breaks in a scalar BEFORE it is written: a raw \n inside a value would
+// end its frontmatter line early and let the remainder parse as a SECOND key — arbitrary
+// frontmatter injection from any user-controlled scalar (e.g. a title of
+// 'Normal title\npublishAt: 2099-…' scheduling the post). Newlines are never meaningful
+// in these one-line fields, so collapse any \r\n / \n / \r run to a single space; parse()
+// then reads back exactly one intended value. Applied to EVERY scalar the serialiser
+// emits: q()-quoted values, and the raw (unquoted) date/publishAt lines.
+const oneLine = (s) => String(s).replace(/[\r\n]+/g, ' ');
+
 // Quote a value as a YAML double-quoted scalar. Escape the backslash FIRST (it is YAML's
 // escape char), THEN the double-quote — order matters, else the `\` we add for `"` would be
 // doubled. Without the backslash escape, a value like `C:\Users` or a regex emits invalid
 // YAML and fails the buyer's whole Astro build. parse() reverses both escapes.
-const q = (s) => '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+const q = (s) => '"' + oneLine(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
 
 // Every frontmatter key serialise() writes explicitly below. Anything ELSE present in
 // `data` is an unknown/custom field (e.g. hand-added in the repo) that must survive the
@@ -64,7 +73,7 @@ export function serialise({ data, body }) {
   // Optional featured / OG share image (root-relative or absolute URL). Only
   // written when set — absent means the build's generated /og/<slug>.png is used.
   if (data.image) lines.push(`image: ${q(data.image)}`);
-  if (data.date != null) lines.push(`date: ${data.date}`);
+  if (data.date != null) lines.push(`date: ${oneLine(data.date)}`);
   if (data.tags != null) lines.push(`tags: [${data.tags.map(q).join(', ')}]`);
   // Structured references (manual citations). Single-line JSON so the line-based
   // parser round-trips it losslessly; only the {id,text} shape is kept.
@@ -110,7 +119,7 @@ export function serialise({ data, body }) {
   if (data.draft === true) lines.push('draft: true');
   // Scheduled publishing: an ISO date/time at which the GitHub Action flips draft→false.
   // Always paired with draft:true so the post stays hidden until the Action runs.
-  if (data.publishAt) lines.push(`publishAt: ${data.publishAt}`);
+  if (data.publishAt) lines.push(`publishAt: ${oneLine(data.publishAt)}`);
   return `---\n${lines.join('\n')}\n---\n\n${String(body).replace(/^\n+/, '')}`;
 }
 

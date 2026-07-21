@@ -91,6 +91,61 @@ test('a hyphenated unknown key (og-image) round-trips through parse → serialis
   assert.equal(parse(out).data['og-image'], '/x.png');
 });
 
+// ── newline injection: no scalar may break out of its frontmatter line ──
+// Independent adversarial finding: a title of 'Normal title\npublishAt: …' used to
+// serialise the raw newline into the quoted scalar, producing a SECOND frontmatter
+// line that parse() then honoured — arbitrary key injection from ANY user-controlled
+// scalar (title/description/series/unknown passthrough). q() now collapses \r\n/\n/\r
+// runs to a single space, so every scalar stays on one line and parse() reads back
+// one intended value with no injected key.
+
+// The frontmatter block between the two --- fences, as individual lines.
+function fmLines(md) {
+  return /^---\n([\s\S]*?)\n---\n/.exec(md)[1].split('\n');
+}
+
+test('a title containing a newline cannot inject a second frontmatter key', () => {
+  const md = serialise({ data: { title: 'Normal title\npublishAt: 2099-01-01T00:00:00Z' }, body: 'body' });
+  assert.equal(fmLines(md).length, 1, `one key must emit exactly one line:\n${md}`);
+  const round = parse(md);
+  assert.equal(round.data.publishAt, undefined, `injected publishAt survived:\n${md}`);
+  assert.equal(round.data.title, 'Normal title publishAt: 2099-01-01T00:00:00Z');
+});
+
+test('a description containing a newline cannot inject a second frontmatter key', () => {
+  const md = serialise({ data: { title: 'T', description: 'ok\ndraft: false\npublishAt: 2099-01-01T00:00:00Z' }, body: 'body' });
+  assert.equal(fmLines(md).length, 2, `two keys must emit exactly two lines:\n${md}`);
+  const round = parse(md);
+  assert.equal(round.data.publishAt, undefined);
+  assert.equal(round.data.draft, undefined);
+  assert.equal(round.data.description, 'ok draft: false publishAt: 2099-01-01T00:00:00Z');
+});
+
+test('an unknown passthrough field containing a newline cannot inject a key', () => {
+  const md = serialise({ data: { title: 'T', customField: 'x\ninjected: true' }, body: 'body' });
+  assert.equal(fmLines(md).length, 2, `two keys must emit exactly two lines:\n${md}`);
+  const round = parse(md);
+  assert.equal(round.data.injected, undefined, `injected key survived:\n${md}`);
+  assert.equal(round.data.customField, 'x injected: true');
+});
+
+test('newlines in the raw-emitted date/publishAt scalars are neutralised too', () => {
+  const md = serialise({ data: {
+    title: 'T', date: '2026-01-01\ninjected: true', draft: true, publishAt: '2099-01-01T00:00:00Z\nevil: yes',
+  }, body: 'body' });
+  const round = parse(md);
+  assert.equal(round.data.injected, undefined, md);
+  assert.equal(round.data.evil, undefined, md);
+});
+
+test('CRLF and lone CR line breaks collapse to a single space (series + tags items)', () => {
+  const md = serialise({ data: { title: 'a\r\nb\rc', series: 's\r\ninjected: true', tags: ['t\nx'] }, body: 'body' });
+  const round = parse(md);
+  assert.equal(round.data.injected, undefined, md);
+  assert.equal(round.data.title, 'a b c');
+  assert.deepEqual(round.data.tags, ['t x']);
+});
+
 test('a doc with only known fields serialises byte-identically (no passthrough noise)', () => {
   const data = { title: 'T', description: 'D', date: '2026-07-01', tags: ['a'], accent: '#2dd4bf', draft: true };
   assert.equal(
