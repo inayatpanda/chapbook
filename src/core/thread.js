@@ -11,7 +11,16 @@ let _c = 0;
 // a saved 'chat' is per-post memory and is always honoured exactly.
 export function createThread() { return { v: 1, mode: 'doc', turns: [], scratch: [] }; }
 
+// Guidance-first role×kind invariant (owner rule): only known roles/kinds may enter
+// the thread, and an aside (the AUTHOR speaking) is NEVER insertable — only the
+// assistant's explicitly-requested drafts are. acceptTurn gates on kind==='insertable',
+// so enforcing this here (and in parseThread's validTurn) means an aside can never BE
+// insertable and therefore can never be accepted into the post.
+const validRoleKind = (role, kind) =>
+  ROLES.has(role) && KINDS.has(kind) && !(role === 'aside' && kind === 'insertable');
+
 export function appendTurn(thread, { role, kind, text, blockRef = null }, now) {
+  if (!validRoleKind(role, kind)) return null;   // reject: no turn, no mutation
   const turn = { id: 't' + Number(now).toString(36) + '-' + (_c++), role, kind,
     text: String(text || ''), blockRef, ts: now, state: 'open' };
   thread.turns.push(turn);
@@ -54,7 +63,7 @@ export function removeScratch(thread, id) {
 export function serializeThread(thread) { return JSON.stringify(thread); }
 
 const validTurn = (t) => t && typeof t === 'object' && typeof t.id === 'string' &&
-  ROLES.has(t.role) && KINDS.has(t.kind) && typeof t.text === 'string' &&
+  validRoleKind(t.role, t.kind) && typeof t.text === 'string' &&
   (t.blockRef === null || typeof t.blockRef === 'string') &&
   typeof t.ts === 'number' && STATES.has(t.state);
 

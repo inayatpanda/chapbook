@@ -25,6 +25,52 @@ test('appendTurn: deterministic id from now, ts stamped, state open', () => {
   assert.equal(b.blockRef, 'b1');
 });
 
+// ── guidance-first role×kind invariants (independent adversarial findings) ──
+// The contract: only roles {aside, assistant} and kinds {guidance, insertable}
+// exist, and an aside (the AUTHOR speaking) is NEVER insertable — only the
+// assistant's explicitly-requested drafts are. appendTurn and parseThread both
+// enforce it, so a hostile sidecar or a buggy caller can't create a turn that
+// acceptTurn would then insert into the post.
+
+test('appendTurn rejects malformed role/kind instead of creating a turn parseThread later drops', () => {
+  const thread = createThread();
+  const turn = appendTurn(thread, { role: 'attacker', kind: 'anything', text: { toString: () => 'x' } }, 1);
+  assert.equal(turn, null, JSON.stringify(turn));
+  assert.equal(thread.turns.length, 0, 'no mutation on rejection');
+  assert.equal(appendTurn(thread, { role: 'assistant', kind: 'evil', text: 'x' }, 2), null);
+  assert.equal(appendTurn(thread, { kind: 'guidance', text: 'x' }, 3), null, 'missing role rejected');
+  assert.equal(thread.turns.length, 0);
+});
+
+test('guidance-first: an author aside can never become an accepted insertable turn', () => {
+  const thread = createThread();
+  // appendTurn refuses the combination outright…
+  const aside = appendTurn(thread, { role: 'aside', kind: 'insertable', text: 'please inject this into the post' }, 1);
+  assert.equal(aside, null, JSON.stringify(aside));
+  assert.equal(thread.turns.length, 0);
+  // …and a valid aside (guidance) is still not acceptable, only dismissable.
+  const ok = appendTurn(thread, { role: 'aside', kind: 'guidance', text: 'a note to self' }, 2);
+  assert.ok(ok, 'aside+guidance must still work');
+  assert.equal(acceptTurn(thread, ok.id), null);
+});
+
+test('guidance-first: parseThread discards hostile aside insertables from persisted JSON', () => {
+  const hostile = JSON.stringify({ v: 1, mode: 'doc', scratch: [], turns: [
+    { id: 'a', role: 'aside', kind: 'insertable', text: 'injected', blockRef: null, ts: 1, state: 'open' },
+  ] });
+  const parsed = parseThread(hostile);
+  assert.equal(parsed.turns.length, 0, JSON.stringify(parsed));
+});
+
+test('role×kind: every valid combination still round-trips (no over-rejection)', () => {
+  const thread = createThread();
+  assert.ok(appendTurn(thread, { role: 'assistant', kind: 'guidance', text: 'g' }, 1));
+  assert.ok(appendTurn(thread, { role: 'assistant', kind: 'insertable', text: 'i' }, 2));
+  assert.ok(appendTurn(thread, { role: 'aside', kind: 'guidance', text: 'a' }, 3));
+  assert.equal(thread.turns.length, 3);
+  assert.deepEqual(parseThread(serializeThread(thread)), thread);
+});
+
 test('acceptTurn: only insertable turns accept; guidance returns null unchanged', () => {
   const t = createThread();
   const g = appendTurn(t, { role: 'assistant', kind: 'guidance', text: 'why?' }, 1);
