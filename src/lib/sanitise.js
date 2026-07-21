@@ -67,16 +67,19 @@ export function regexStripFallback(html) {
   // structural one ('/', quotes, backtick) so surrounding syntax stays intact.
   const keepDelim = (m, d) => (/\s/.test(d) ? '' : d);
   s = s.replace(/([\s/"'`])on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, keepDelim);
-  // neutralise javascript: in href / xlink:href / src (drop the whole attribute) —
-  // same delimiter class
-  s = s.replace(/([\s/"'`])(?:xlink:)?(?:href|src)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]*)/gi, keepDelim);
-  // markup-capable data: URLs (data:image/svg+xml, data:text/html, …) in href/src can
-  // smuggle a whole scripted document in through a reference; keep ONLY the safe
-  // raster shapes (SAFE_IMAGE_DATA_URL: png/jpeg/gif/webp/avif), drop the rest.
-  s = s.replace(/([\s/"'`])(?:xlink:)?(?:href|src)\s*=\s*(?:"(\s*data:[^"]*)"|'(\s*data:[^']*)'|(data:[^\s>]*))/gi,
+  // href / xlink:href / src — one unified pass. Browsers strip ASCII whitespace and
+  // control chars from WITHIN a URL during parsing, so `da\nta:` and `java\tscript:`
+  // resolve to data:/javascript:. Normalise the value the same way BEFORE deciding, or
+  // an embedded newline/tab smuggles a scripted scheme past a literal match. Drop the
+  // attribute for javascript:/vbscript:, and for markup-capable data: URLs keep ONLY the
+  // safe raster shapes (SAFE_IMAGE_DATA_URL: png/jpeg/gif/webp/avif); keep everything else.
+  s = s.replace(/([\s/"'`])(?:xlink:)?(?:href|src)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi,
     (m, d, dq, sq, uq) => {
-      const v = ((dq !== undefined ? dq : sq !== undefined ? sq : uq) || '').trim();
-      return SAFE_IMAGE_DATA_URL.test(v) ? m : keepDelim(m, d);
+      const raw = (dq !== undefined ? dq : sq !== undefined ? sq : uq) || '';
+      const norm = raw.replace(/[\u0000-\u0020]+/g, '').toLowerCase();
+      if (/^(?:javascript|vbscript):/.test(norm)) return keepDelim(m, d);
+      if (/^data:/.test(norm)) return SAFE_IMAGE_DATA_URL.test(raw.trim()) ? m : keepDelim(m, d);
+      return m;
     });
   return s;
 }

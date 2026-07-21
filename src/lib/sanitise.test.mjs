@@ -140,3 +140,17 @@ test('fallback removes whole <svg>/<math> elements and stray foreign-content tag
 test('fallback neutralises xlink:href javascript: URLs (parity with href/src)', () => {
   assert.doesNotMatch(regexStripFallback('<thing xlink:href="javascript:alert(1)">x</thing>'), /javascript:/i);
 });
+
+
+// Regression: an attacker can embed ASCII whitespace/control chars inside a URL scheme
+// so browsers strip them during parsing; the fallback must normalise the same way before
+// matching. (Independent adversarial test, 2026-07-21.)
+test('regexStripFallback: whitespace/control chars inside a scheme cannot smuggle data:/javascript:', () => {
+  const NL = String.fromCharCode(10), TAB = String.fromCharCode(9), CR = String.fromCharCode(13);
+  const strip = (s) => s.replace(/[\u0000-\u0020]/g, '');
+  assert.ok(!/data:image\/svg/i.test(strip(regexStripFallback(`<a href="da${NL}ta:image/svg+xml;base64,PHN2Zz4=">x</a>`))));
+  assert.ok(!/javascript:/i.test(strip(regexStripFallback(`<a href="java${TAB}script:alert(1)">x</a>`))));
+  assert.ok(!/vbscript:/i.test(strip(regexStripFallback(`<img src="vb${CR}script:x">`))));
+  assert.match(regexStripFallback('<img src="data:image/png;base64,iVBORw0KGgo=">'), /data:image\/png/);
+  assert.match(regexStripFallback('<a href="https://example.com/x">x</a>'), /https:\/\/example\.com/);
+});

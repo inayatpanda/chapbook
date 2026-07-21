@@ -9024,10 +9024,14 @@ function sanitiseHtml(html){
   return s.replace(/<(script|iframe|object|embed|svg|math)\b[\s\S]*?<\/\1\s*>/gi,'')
           .replace(/<\/?(?:script|iframe|object|embed|svg|math|use)\b[^>]*>/gi,'')
           .replace(/([\s/"'`])on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi,keepDelim)
-          .replace(/([\s/"'`])(?:xlink:)?(?:href|src)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]*)/gi,keepDelim)
-          .replace(/([\s/"'`])(?:xlink:)?(?:href|src)\s*=\s*(?:"(\s*data:[^"]*)"|'(\s*data:[^']*)'|(data:[^\s>]*))/gi,
-            (m,d,dq,sq,uq)=>{ const v=((dq!==undefined?dq:sq!==undefined?sq:uq)||'').trim();
-              return /^data:image\/(?:png|jpe?g|gif|webp|avif);base64,/i.test(v)?m:keepDelim(m,d); });
+          .replace(/([\s/"'`])(?:xlink:)?(?:href|src)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi,
+            (m,d,dq,sq,uq)=>{ const raw=(dq!==undefined?dq:sq!==undefined?sq:uq)||'';
+              // browsers strip ASCII whitespace/control chars WITHIN a URL, so `da\nta:`
+              // resolves to data: — normalise the same way before matching the scheme.
+              const norm=raw.replace(/[\u0000-\u0020]+/g,'').toLowerCase();
+              if(/^(?:javascript|vbscript):/.test(norm)) return keepDelim(m,d);
+              if(/^data:/.test(norm)) return /^data:image\/(?:png|jpe?g|gif|webp|avif);base64,/i.test(raw.trim())?m:keepDelim(m,d);
+              return m; });
 }
 function edText(b, isSel){
   const wrap = document.createElement('div');
