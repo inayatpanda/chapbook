@@ -9657,22 +9657,35 @@ async function migrateThread(fromId, toId){
   // LANDS - never delete what wasn't copied. NOTE: migration never re-mints
   // _postToken - a reply completing mid-migration on the still-open post stays live.
   await _threadQ(fromId, async () => {
+    // The copy IS a full-state save: _threadWire serialises the ENTIRE in-memory
+    // thread at fire time, so a failed attempt needs no bespoke recovery - running
+    // it again rebuilds the whole record from memory.
+    const putFull = () => _threadQ(toId, () => {
+      const live = thread === _thread;
+      const seq = live ? _scratchSeq : 0;
+      return api('/thread/' + encodeURIComponent(toId), { method: 'PUT', body: _threadWire(thread) })
+        .then(r => { if(live && seq > _scratchSeqSaved) _scratchSeqSaved = seq; return r; });
+    });
     try{
-      await _threadQ(toId, () => {
-        const live = thread === _thread;
-        const seq = live ? _scratchSeq : 0;
-        return api('/thread/' + encodeURIComponent(toId), { method: 'PUT', body: _threadWire(thread) })
-          .then(r => { if(live && seq > _scratchSeqSaved) _scratchSeqSaved = seq; return r; });
-      });
+      await putFull();
     }catch(e){
-      // A FAILED copy is never silent: the old record is still the only durable copy,
-      // so the still-open post falls back to saving under the OLD id (the record that
-      // exists) and the failure surfaces through the standard machinery - quota-ish →
-      // storage-full banner, anything else → the honest retry toast.
-      if(thread === _thread && _threadId === toId) _setThreadId(fromId);
+      // A FAILED copy is never silent - and it never REVERTS: _threadId stays toId.
+      // (Reverting to fromId permanently stranded the sidecar: the blocks had already
+      // migrated and currentSlug stays reserved, so reserveSlug()/migrateThread never
+      // re-ran and every later save landed under '__untitled__' forever.) Surface the
+      // failure through the standard machinery (quota-ish → storage-full banner,
+      // anything else → the honest retry toast), then retry the full-state save once.
       _threadSaveFailed(e);
-      return;
+      try{ await putFull(); }
+      catch(e2){
+        // Still failing: keep the OLD record (never delete what wasn't copied) and
+        // surface again - memory holds the truth, and the next debounced save under
+        // toId rebuilds the record from it.
+        _threadSaveFailed(e2);
+        return;
+      }
     }
+    // the old record is deleted ONLY after a copy has LANDED
     await api('/thread/' + encodeURIComponent(fromId), { method: 'DELETE' }).catch(() => {});
   });
 }
@@ -9788,16 +9801,21 @@ async function askPartner(ask, { text = '', blockId = null, reAsk = false } = {}
       // save serialises at fire time, so a discarded reply must never ride a later
       // legitimate save. (This finally runs synchronously after the try's push -
       // no interleave window.) The author's own aside stays: typed user data
-      // belonging to that post. One honest toast, NEVER a stored write, never a
-      // touch on whatever is on screen now (chips only; visibility pinned by
-      // _askBusy).
+      // belonging to that post. One honest toast, NEVER a stored write, and never
+      // a touch on an UNRELATED on-screen thread (chips only; visibility pinned
+      // by _askBusy).
       dropPending();
       for(const turn of newTurns){
         if(turn.role === 'aside') continue;
         const ti = reqThread.turns.indexOf(turn);
         if(ti >= 0) reqThread.turns.splice(ti, 1);
       }
-      renderThreadChips();
+      // But when the object just scrubbed IS the live _thread (editor closed, then
+      // re-entered on the SAME post - the token went stale while the object stayed
+      // on screen), the typing bubble's DOM is still painted: full repaint so the
+      // DOM follows the model. renderTurns() refreshes the chips itself.
+      if(reqThread === _thread) renderTurns();
+      else renderThreadChips();
       _discardLateReply();
     }
   }
@@ -12360,20 +12378,34 @@ window.refreshUntitledRecovery = refreshUntitledRecovery;
 
 async function discardUntitledDraft(){
   if(!await helmConfirm({ title:'Discard the untitled draft?', text:'This can’t be undone.', okText:'Discard', danger:true })) return;
+  // SYNCHRONOUS prelude - no await between here and queueing the destroy unit: cancel
+  // any pending debounced save for the slot and null the durable id FIRST, so the
+  // timer can never fire mid-discard and enqueue a resurrecting PUT behind the
+  // DELETEs (_threadSaveNow no-ops on a null id). A timer that already FIRED sits
+  // ahead of the destroy unit on the lane, which is fine - the DELETEs run after it.
+  if(_threadId === PROVISIONAL_SLUG){
+    clearTimeout(_threadSaveT); _threadSaveT = 0;
+    _setThreadId(null);   // never re-mint the record from a stale in-memory thread
+  }
   // The destroy is ONE '__untitled__' queue-lane unit covering BOTH records: it can
   // never interleave with an in-flight write for the slot (a queued jot-claim or
   // autosave unit landing mid-discard could resurrect the record), and nothing can
   // land between the blocks delete and the thread delete - the slot's conversation
   // goes with its blocks, never orphaned into the next session's untitled post.
+  let ok = false;
   try{
     await _threadQ(PROVISIONAL_SLUG, async () => {
-      await api('/posts/'+PROVISIONAL_SLUG+'/blocks', { method:'DELETE' }).catch(()=>{});
-      await api('/thread/'+encodeURIComponent(PROVISIONAL_SLUG), { method:'DELETE' }).catch(()=>{});
+      const b = await api('/posts/'+PROVISIONAL_SLUG+'/blocks', { method:'DELETE' }).then(()=>true, ()=>false);
+      const t = await api('/thread/'+encodeURIComponent(PROVISIONAL_SLUG), { method:'DELETE' }).then(()=>true, ()=>false);
+      ok = b && t;
     });
   }catch{}
-  if(_threadId === PROVISIONAL_SLUG) _setThreadId(null);   // never re-mint the record from a stale in-memory thread
+  // Memory state clears either way: a failed DELETE leaves an orphaned record behind,
+  // which is harmless - nothing in memory points at it, and if the BLOCKS record
+  // survived the recovery card below re-shows for a retry. The toast, though, must
+  // be honest about the failure instead of claiming a discard that didn't land.
   _ownsProvisional = false;
-  toast('Untitled draft discarded');
+  toast(ok ? 'Untitled draft discarded' : 'Couldn’t discard the untitled draft — please try again.');
   refreshUntitledRecovery();
 }
 window.discardUntitledDraft = discardUntitledDraft;
