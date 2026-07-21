@@ -61,3 +61,31 @@ test('legacy value with an unescaped backslash still parses (back-compat)', () =
   const md = '---\ntitle: "C:\\Users"\n---\n\nbody\n';
   assert.equal(parse(md).data.title, 'C:\\Users');
 });
+
+// ── unknown/custom frontmatter fields survive a parse → serialise round-trip ──
+// setDraft/updatePost spread the parsed data and re-serialise; the old allowlist
+// silently DELETED any hand-added field from the post on every studio edit.
+
+test('an unknown string field round-trips through parse → serialise → parse', () => {
+  const md = '---\ntitle: "T"\ncustomField: "keep-me"\ndraft: true\n---\n\nbody\n';
+  const { data, body } = parse(md);
+  assert.equal(data.customField, 'keep-me');
+  const out = serialise({ data, body });
+  assert.match(out, /^customField: "keep-me"$/m);
+  assert.equal(parse(out).data.customField, 'keep-me');
+});
+
+test('an unknown boolean field round-trips and stays a boolean', () => {
+  const md = '---\ntitle: "T"\nfeatured: true\n---\n\nbody\n';
+  const out = serialise(parse(md));
+  assert.match(out, /^featured: true$/m);
+  assert.equal(parse(out).data.featured, true);
+});
+
+test('a doc with only known fields serialises byte-identically (no passthrough noise)', () => {
+  const data = { title: 'T', description: 'D', date: '2026-07-01', tags: ['a'], accent: '#2dd4bf', draft: true };
+  assert.equal(
+    serialise({ data, body: 'body\n' }),
+    '---\ntitle: "T"\ndescription: "D"\ndate: 2026-07-01\ntags: ["a"]\naccent: "#2dd4bf"\ndraft: true\n---\n\nbody\n'
+  );
+});

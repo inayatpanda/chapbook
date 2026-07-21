@@ -44,6 +44,15 @@ export function parse(md) {
 // YAML and fails the buyer's whole Astro build. parse() reverses both escapes.
 const q = (s) => '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
 
+// Every frontmatter key serialise() writes explicitly below. Anything ELSE present in
+// `data` is an unknown/custom field (e.g. hand-added in the repo) that must survive the
+// studio's read-modify-write cycles — updatePost/setDraft spread the parsed data, and
+// dropping the unknowns here silently deleted them from the post on every republish.
+const KNOWN_KEYS = new Set([
+  'title', 'description', 'image', 'date', 'tags', 'citations', 'series', 'seriesPart',
+  'accent', 'glyph', 'template', 'theme', 'draft', 'publishAt',
+]);
+
 export function serialise({ data, body }) {
   const lines = [];
   if (data.title != null) lines.push(`title: ${q(data.title)}`);
@@ -75,6 +84,17 @@ export function serialise({ data, body }) {
   // Legacy reading THEME — kept as a quiet fallback for older posts that never set
   // a template. Only written when explicitly non-dark.
   if (data.theme != null && data.theme !== 'dark') lines.push(`theme: ${q(data.theme)}`);
+  // Unknown/custom fields: written back verbatim so a round-trip (parse → edit known
+  // fields → serialise) is loss-less. parse() only yields \w+ keys with string/boolean
+  // values, so those are the shapes we can emit on one valid line; a non-\w+ key or a
+  // non-scalar value can't round-trip in this line-based format and is skipped. Known
+  // fields stay normalised by the explicit lines above. Emitted before draft/publishAt
+  // so the scheduling pair keeps its place at the end of the block.
+  for (const [k, v] of Object.entries(data)) {
+    if (KNOWN_KEYS.has(k) || v == null || !/^\w+$/.test(k)) continue;
+    if (typeof v === 'boolean' || typeof v === 'number') lines.push(`${k}: ${v}`);
+    else if (typeof v === 'string') lines.push(`${k}: ${q(v)}`);
+  }
   if (data.draft === true) lines.push('draft: true');
   // Scheduled publishing: an ISO date/time at which the GitHub Action flips draft→false.
   // Always paired with draft:true so the post stays hidden until the Action runs.

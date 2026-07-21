@@ -16,11 +16,38 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 // Single source of truth for slug generation lives in ./slug.js (unit-tested). Keep the
 // legacy `|| 'post'` fallback here so an all-symbol title still yields a usable slug.
 function slugify(title) { return slugPure(title) || 'post'; }
-function galleryFilename(im, i) {
-  if (im.file) return im.file;
+// Image extension for a NEW (base64-only) gallery upload, from its data-URL mime.
+function galleryExt(im) {
   const m = /^data:image\/(\w+);base64,/.exec(im.base64 || '');
-  const ext = m ? (m[1] === 'jpeg' ? 'jpg' : m[1]) : 'jpg';
-  return `gallery-${i + 1}.${ext}`;
+  return m ? (m[1] === 'jpeg' ? 'jpg' : m[1]) : 'jpg';
+}
+
+// Filenames for NEW gallery uploads must be unique across the WHOLE post, not per
+// block: every gallery's images share one _images/<slug>/ directory and one commitMany
+// tree, so two galleries that each restarted at gallery-1 emitted duplicate tree paths
+// (commit rejected, or one image silently superseding the other). `makeGalleryNamer`
+// returns a per-publish allocator: `taken` seeds with every file already referenced in
+// the doc (kept files are never renamed), and a post-wide slot counter numbers new
+// uploads — so a single all-new gallery still yields gallery-1, gallery-2, … exactly as
+// before, while a candidate that collides with a kept/allocated name bumps past it.
+function makeGalleryNamer(docBlocks) {
+  const taken = new Set();
+  for (const b of docBlocks) {
+    if (b && b.type === 'gallery' && Array.isArray(b.images)) {
+      for (const im of b.images) if (im && im.file) taken.add(String(im.file).toLowerCase());
+    }
+  }
+  let slot = 0;
+  return (im) => {
+    slot++;                                  // counts EVERY gallery image slot in doc order
+    if (im.file) return im.file;             // already-committed image keeps its name
+    const ext = galleryExt(im);
+    let n = slot;
+    while (taken.has(`gallery-${n}.${ext}`)) n++;
+    const file = `gallery-${n}.${ext}`;
+    taken.add(file.toLowerCase());
+    return file;
+  };
 }
 
 export function makePosts(gh) {
@@ -148,6 +175,9 @@ export function makePosts(gh) {
       const newSlug = await uniqueSlug(slugify(`${cur.data.title || slug}-copy`));
       const rewrite = (s) => (s || '').split(`_images/${slug}/`).join(`_images/${newSlug}/`).split(`images/posts/${slug}/`).join(`images/posts/${newSlug}/`);
       const data = { ...cur.data, title: `${cur.data.title || slug} (copy)`, date: todayISO(), draft: true };
+      // A duplicate is a PLAIN draft: drop any inherited schedule, else duplicating a
+      // scheduled post silently creates a second post that goes live on the same date.
+      delete data.publishAt;
       const changes = [{ path: postPath(newSlug), content: serialise({ data, body: rewrite(cur.body) }) }];
       const side = await gh.getFile(blocksPath(slug));
       if (side) changes.push({ path: blocksPath(newSlug), content: rewrite(side.content) });
@@ -164,6 +194,7 @@ export function makePosts(gh) {
     async publishBlocks(slug, doc, meta) {
       blocks.validateDoc(doc);
       const imageChanges = [];
+      const galleryName = makeGalleryNamer(doc.blocks); // post-wide unique names for new gallery uploads
       const storedBlocks = doc.blocks.map((b, bi) => {
         // Reference mode: an image reused from elsewhere in the repo carries a `url` and no
         // base64 — never re-extract or re-commit its bytes; keep the url reference as-is.
@@ -171,7 +202,7 @@ export function makePosts(gh) {
         if (b.type === 'image' && b.base64) { imageChanges.push({ path: `${publicImgDir(slug)}/${b.file}`, base64: b.base64 }); const { base64, src, url, ...ref } = b; return ref; }
         if (b.type === 'image') { const { src, ...ref } = b; return ref; }
         if (b.type === 'gallery' && Array.isArray(b.images)) {
-          const images = b.images.map((im, i) => { const file = galleryFilename(im || {}, i); if (im && im.base64) imageChanges.push({ path: `${imgDir(slug)}/${file}`, base64: im.base64 }); return { file, alt: (im && im.alt) || '' }; });
+          const images = b.images.map((im) => { const file = galleryName(im || {}); if (im && im.base64) imageChanges.push({ path: `${imgDir(slug)}/${file}`, base64: im.base64 }); return { file, alt: (im && im.alt) || '' }; });
           return { ...b, images };
         }
         // Figure base image (M2): an author-time `base.base64` data URL is otherwise committed
@@ -214,6 +245,10 @@ export function makePosts(gh) {
         accent: meta.accent || '#2dd4bf',
         ...(meta.image ? { image: meta.image } : {}),
         ...(meta.glyph ? { glyph: meta.glyph } : {}),
+        // Reading template: the editor always sends one (default 'observatory'); carry it
+        // through and let serialise() omit the default — previously the allowlist dropped
+        // it entirely, so a chosen template was silently lost on every publish.
+        ...(meta.template ? { template: String(meta.template) } : {}),
         ...(meta.theme && meta.theme !== 'dark' ? { theme: meta.theme } : {}),
         ...(citations.length ? { citations } : {}),
         // A scheduled post is committed as a hidden draft carrying publishAt; the site's

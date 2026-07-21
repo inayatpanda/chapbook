@@ -6775,11 +6775,15 @@ function updateBulkUI(){
   const cb=$('postSelectAllCb');
   if(cb){ const vis=_postSelect.visible; const all=vis.length>0 && vis.every(s=>_postSelect.sel.has(s));
     cb.checked=all; cb.indeterminate=!all && n>0; }
-  // mixed-status hints on the batch republish/takedown buttons
+  // mixed-status hints on the batch republish/takedown buttons. Scheduled posts
+  // (draft && publishAt — same definition as the list filter) are NOT republishable in
+  // bulk (they have a future date and go live on it), so they don't count towards the
+  // Republish hint; they still count for Take down only if live (they never are).
   const sel=_selPosts();
-  const drafts=sel.filter(p=>p.draft).length, live=sel.length-drafts;
+  const republishable=sel.filter(p=>p.draft && !p.publishAt).length;
+  const live=sel.filter(p=>!p.draft).length;
   const pub=$('bulkPublishBtn'), td=$('bulkTakedownBtn');
-  if(pub) pub.textContent = drafts? `Republish (${drafts})` : 'Republish';
+  if(pub) pub.textContent = republishable? `Republish (${republishable})` : 'Republish';
   if(td) td.textContent = live? `Take down (${live})` : 'Take down';
 }
 function bulkProg(text){ const el=$('postBulkProg'); if(!el) return; if(text==null){ el.hidden=true; el.innerHTML=''; } else { el.hidden=false; el.innerHTML=text; } }
@@ -6841,14 +6845,25 @@ async function applyBulkRetag(){
    already in the target state so the count stays honest). */
 async function bulkSetDraft(makeDraft){
   const verb=makeDraft?'Take down':'Republish';
-  const targets=_selPosts().filter(p=>!!p.draft!==makeDraft);
-  if(!targets.length){ toast(makeDraft?'Nothing live to take down':'Nothing to republish'); return; }
-  if(!await helmConfirm({ title:`${verb} ${targets.length} post${targets.length===1?'':'s'}?`, text:makeDraft?'They come off the live site.':'They go live in ~2 minutes.', okText:verb, danger:makeDraft })) return;
+  let targets=_selPosts().filter(p=>!!p.draft!==makeDraft);
+  // Bulk Republish must SKIP scheduled posts (draft && publishAt — the list's own
+  // definition): POST /republish writes draft:false while KEEPING publishAt, which
+  // would put a scheduled post live NOW, bypassing its future date. They go live on
+  // their date via the site Action; use "Cancel schedule" first to publish one early.
+  let skippedScheduled=0;
+  if(!makeDraft){
+    skippedScheduled=targets.filter(p=>p.draft && p.publishAt).length;
+    targets=targets.filter(p=>!(p.draft && p.publishAt));
+  }
+  const schNote=skippedScheduled?` ${skippedScheduled} scheduled post${skippedScheduled===1?' is':'s are'} skipped — they go live on their date.`:'';
+  if(!targets.length){ toast(makeDraft?'Nothing live to take down':(skippedScheduled?`Nothing to republish —${schNote}`:'Nothing to republish')); return; }
+  if(!await helmConfirm({ title:`${verb} ${targets.length} post${targets.length===1?'':'s'}?`, text:(makeDraft?'They come off the live site.':'They go live in ~2 minutes.')+schNote, okText:verb, danger:makeDraft })) return;
   // run only over the targets (not the whole selection)
   const saved=new Set(_postSelect.sel); _postSelect.sel=new Set(targets.map(p=>p.slug));
   await runBulk(verb, async (p)=>{ await api(`/posts/${p.slug}/${makeDraft?'takedown':'republish'}`,{method:'POST'}); });
   // runBulk reloaded + reselected failures; merge back any selection we narrowed away
   for(const s of saved) if(_posts.some(p=>p.slug===s)) _postSelect.sel.add(s);
+  if(skippedScheduled) toast(`${verb} done.${schNote}`);
   updateBulkUI(); renderPosts();
 }
 
