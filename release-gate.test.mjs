@@ -88,7 +88,7 @@ test('samePathModuloTrailingSlash: a redirect to a different path fails', () => 
 });
 
 // Contract test against the REAL built artifact (skips cleanly if dist/ absent).
-test('parsers match the current dist/sw.js contract (v6 + /app shell)', (t) => {
+test('parsers match the current dist/sw.js contract (v7 + /app shell)', (t) => {
   if (!existsSync('dist/sw.js')) { t.skip('dist/sw.js not built — run `npm run build`'); return; }
   const sw = readFileSync('dist/sw.js', 'utf8');
   assert.equal(readCacheName(sw), 'chapbook-v7', 'dist cache should be chapbook-v7 after the /app migration');
