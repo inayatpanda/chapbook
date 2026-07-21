@@ -50,7 +50,7 @@ test('renderLegalPage produces a full standalone document', () => {
 test('built sw.js targets /app shell and CACHE v6', (t) => {
   if (!existsSync('dist/sw.js')) return t.skip('dist not built — run `node build.mjs` first');
   const sw = readFileSync('dist/sw.js', 'utf8');
-  assert.match(sw, /const CACHE\s*=\s*'chapbook-v6'/);
+  assert.match(sw, /const CACHE\s*=\s*'chapbook-v7'/);
   const shell = sw.match(/const SHELL\s*=\s*\[([\s\S]*?)\]/)[1];
   assert.ok(shell.includes("'/app'") && shell.includes("'/app/index.html'"));
   assert.ok(!/['"]\/index\.html['"]/.test(shell), "must not precache the marketing '/index.html' as app shell");
