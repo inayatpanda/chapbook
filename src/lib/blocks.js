@@ -198,7 +198,11 @@ export function serialiseBlock(block, ctx = {}) {
     case 'quote': {
       const body = inlineHtmlToMd(block.html != null ? block.html : block.text).replace(/\n/g, '\n> ');
       if (!body.trim()) return '';   // untouched guide quote — same rule as heading
-      return `> ${body}${block.cite ? `\n> — ${block.cite}` : ''}`;
+      // escHtml the citation: it is plain text from the cite input, never HTML, and the
+      // published .md renders with rehype-raw (NO sanitiser) — an unescaped cite like
+      // "<img/src=x/onerror=…>" would execute in every reader's browser (stored XSS).
+      // Mirrors renderPreviewHtml's escHtml(b.cite) so publish matches the preview.
+      return `> ${body}${block.cite ? `\n> — ${escHtml(block.cite)}` : ''}`;
     }
     case 'divider': return '---';
     case 'image': return imageFigure(block, ctx.slug || 'post');

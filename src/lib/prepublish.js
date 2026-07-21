@@ -58,7 +58,14 @@ function rawHtmlUnsafe(content) {
   const s = String(content || '');
   if (/<script\b/i.test(s)) return 'a <script> tag';
   if (/<(?:iframe|object|embed)\b/i.test(s)) return 'an <iframe>, <object> or <embed> element';
-  if (/\son\w+\s*=/i.test(s)) return 'an inline event handler (on…=)';
+  // Event-handler attributes. NOTE: this is the WARN-GATE that blocks publishing — the
+  // product's stated safety contract for raw blocks (the published blog renders raw HTML
+  // with NO sanitiser), so a miss here is stored XSS. Browsers accept ANY attribute
+  // delimiter before the name, not just whitespace: `<img/src=x/onerror=…>` is a live
+  // handler, so match on…= after whitespace, `/`, a quote or a backtick — or at the very
+  // start of the block. The word-boundary `on\w+\s*=` shape is kept so attributes that
+  // merely CONTAIN "on" (class="beacon", data-son="x", contenteditable=…) never trip.
+  if (/(?:^|[\s/"'`])on\w+\s*=/i.test(s)) return 'an inline event handler (on…=)';
   if (/javascript:/i.test(s)) return 'a javascript: URL';
   return null;
 }

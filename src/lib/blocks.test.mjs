@@ -216,6 +216,21 @@ test('serialise gallery alt is NOT html-escaped (markdown context, no double-enc
   assert.ok(!/&amp;/.test(out), 'gallery alt must not be pre-escaped');
 });
 
+// ── quote cite: plain text, must be HTML-escaped at serialise (stored-XSS fix) ──
+// The cite input stores raw text; the published .md renders with rehype-raw (no
+// sanitiser), so an unescaped cite is a second stored-XSS route (audit finding 11).
+
+test('serialise quote cite is HTML-escaped (no stored XSS via the citation)', () => {
+  const out = serialiseBlock({ id: 'q', type: 'quote', html: 'Wise words', cite: '<img/src=x/onerror=alert(1)>' });
+  assert.ok(!/<img/.test(out), 'raw <img> must not survive into the cite');
+  assert.equal(out, '> Wise words\n> — &lt;img/src=x/onerror=alert(1)&gt;');
+});
+
+test('serialise quote with a normal cite is byte-identical to before the escape fix', () => {
+  const out = serialiseBlock({ id: 'q', type: 'quote', html: 'Look it up', cite: 'Smith 2020' });
+  assert.equal(out, '> Look it up\n> — Smith 2020');
+});
+
 test('validateDoc rejects a figure whose base.file traverses', () => {
   assert.throws(() => validateDoc({ blocks: [{ id: 'f', type: 'figure', svg: '<svg></svg>', base: { file: '../../secret' } }] }), /figure image filename/i);
 });
