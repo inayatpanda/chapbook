@@ -10323,8 +10323,15 @@ let _lookBusy = false;
 async function runLookOver(){
   if(_lookBusy || !_threadMode) return;
   _lookBusy = true;
+  // Post-scoped like every other async completion here (askPartner/doAiDraft):
+  // capture the session token at entry - the check awaits a remote post listing,
+  // so by completion another post may be open. A stale result is DROPPED silently
+  // (no toast: it is local, free, and nothing typed is lost) instead of being
+  // appended and saved into whatever post is now on screen.
+  const reqToken = _postToken;
   try{
     const res = await runPrepublishCheck();
+    if(!threadReplyKept(reqToken, _postToken, _threadEditorOpen())) return;
     const errs = (res && res.errors) || [], warns = (res && res.warnings) || [];
     const ambers = ((res && res.polish) || []).filter(p => p && p.level === 'amber');
     const n = (k, one) => k + ' ' + one + (k === 1 ? '' : 's');
@@ -10340,12 +10347,17 @@ async function runLookOver(){
     for(const p of ambers) lines.push('• ' + p.group + (p.items && p.items[0] ? ': ' + p.items[0] : ''));
     const mkLocal = (text) => ({ id: 'l' + Date.now().toString(36) + '-' + _thread.turns.length,
       role: 'assistant', kind: 'guidance', text, blockRef: null, ts: Date.now(), state: 'open', local: true });
+    // Replace-on-rerun: a repeat tap gives ONE fresh report, not a stack. The
+    // local:true marker is exclusively the look-over's, so dropping local guidance
+    // turns removes exactly the previous report (and nothing a model ever said).
+    _thread.turns = _thread.turns.filter(x => !(x && x.local === true && x.kind === 'guidance'));
     const first = mkLocal(summary);
     _thread.turns.push(first);
     if(lines.length) _thread.turns.push(mkLocal(lines.slice(0, 12).join('\n')));
     saveThread(); renderTurns(); _threadScrollTo(first.id);
   }catch(e){
-    showError(e, { title: 'Check failed' });
+    // a stale failure has no audience either - only surface errors to the asking post
+    if(threadReplyKept(reqToken, _postToken, _threadEditorOpen())) showError(e, { title: 'Check failed' });
   }finally{
     _lookBusy = false;
   }
@@ -12570,7 +12582,19 @@ function sweepOrphanUntitledThread(){
       let rec = null;
       try{ rec = await api('/thread/' + encodeURIComponent(PROVISIONAL_SLUG)); }catch{ return; }   // unreadable store → not our call to make
       if(!rec) return;
-      const blocksDraft = await provisionalDraftExists();
+      // Prove orphanhood with a DIRECT blocks read - NOT provisionalDraftExists(),
+      // which converts every failure into `false`: a transient blocks-store failure
+      // would then delete a LEGITIMATE sidecar. The route signals a provably absent
+      // record as a 404 throw; only that counts as absence. Any other failure means
+      // the store was unreadable → abort the whole sweep (the next boot retries).
+      let blocksDraft;
+      try{
+        const r = await api('/posts/'+PROVISIONAL_SLUG+'/blocks');
+        blocksDraft = !!(r && r.source === 'draft');
+      }catch(e){
+        if(e && e.status === 404) blocksDraft = false;   // the store ANSWERED: record provably absent
+        else return;                                     // unreadable → cannot prove orphanhood → abort
+      }
       if(!orphanSweepEligible(rec, blocksDraft, composing())) return;
       await api('/thread/' + encodeURIComponent(PROVISIONAL_SLUG), { method: 'DELETE' });
     }catch(_){ /* silent - the next boot retries */ }
