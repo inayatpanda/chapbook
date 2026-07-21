@@ -6,8 +6,9 @@
 // repo under src/content/blog/_images/<slug>/. The Phase-1 Darkroom then displays them.
 //
 // EXIF-on-resize trap: resize.js re-encodes through a canvas, which STRIPS EXIF — so we read
-// DateTimeOriginal/Make/Model/GPS from the ORIGINAL File first, and persist them in the
-// sidecar (the blog reads date/camera/gps from meta.json, not the resized image).
+// DateTimeOriginal/Make/Model from the ORIGINAL File first, and persist them in the
+// sidecar (the blog reads date/camera from meta.json, not the resized image). GPS is
+// neither read nor persisted (privacy — see EXIF_PICK below).
 //
 // No secrets at rest: the GitHub token is held in the browser (BYOK). Nothing leaves the
 // browser until the user clicks Commit; the pre-commit summary states exactly what will go.
@@ -27,7 +28,11 @@ import { normaliseExif, buildEntry, parseExistingMeta, mergeMeta, safeImageName,
 
 const IMG_DIR = (slug) => `src/content/blog/_images/${slug}`;
 const META_PATH = (slug) => `${IMG_DIR(slug)}/meta.json`;
-const EXIF_PICK = ['DateTimeOriginal', 'Make', 'Model', 'GPSLatitude', 'GPSLongitude'];
+// PRIVACY: GPS tags are deliberately NOT read. The sidecar builder (buildEntry) never
+// writes gps to the committed meta.json — the repo (and its history) is often public and
+// the UI only discloses date & camera — so not picking the tags at all keeps coordinates
+// out of browser memory too. Only date + camera are read, exactly as the UI states.
+const EXIF_PICK = ['DateTimeOriginal', 'Make', 'Model'];
 
 // Size guards (I4) — the resized JPEGs are normally ~1–2 MB, but a huge PNG screenshot can
 // re-encode large. Skip anything implausibly big per image, and cap the whole batch, to stay

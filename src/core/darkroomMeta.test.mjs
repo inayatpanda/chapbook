@@ -114,12 +114,15 @@ test('buildEntry sets only the provided fields and trims/dedupes tags', () => {
     album: 'On call',
     date: '2024-08-01T10:30:00.000Z',
     camera: 'Fujifilm X-T5',
-    gps: [51.5, -0.12],
   });
 });
-test('buildEntry drops a malformed gps and keeps the rest', () => {
-  const e = buildEntry({ exif: { camera: 'Sony', gps: [51.5] }, caption: 'x' });
+// PRIVACY: GPS coordinates must NEVER reach the committed meta.json — the repo (and its
+// history) is often public and the UI only discloses date & camera. Even a well-formed
+// gps pair in the normalised EXIF is stripped by buildEntry.
+test('buildEntry strips GPS — a valid gps pair never reaches the committed entry', () => {
+  const e = buildEntry({ exif: { camera: 'Sony', gps: [51.5, -0.12] }, caption: 'x' });
   assert.deepEqual(e, { caption: 'x', camera: 'Sony' });
+  assert.ok(!('gps' in e), 'no gps key in the sidecar entry');
 });
 
 // --- parseExistingMeta: null / empty / malformed all degrade to {} ---
@@ -169,4 +172,16 @@ test('buildMergedMeta merges a fresh batch onto existing content', () => {
 test('buildMergedMeta starting from no meta.json (null content)', () => {
   const merged = buildMergedMeta(null, [{ filename: 'x.jpg', caption: 'Hi' }]);
   assert.deepEqual(merged, { 'x.jpg': { caption: 'Hi' } });
+});
+test('the committed meta.json output contains no GPS lat/long (privacy, end-to-end)', () => {
+  // Exactly what commit() serialises: buildMergedMeta over photos whose EXIF carried GPS.
+  const merged = buildMergedMeta(null, [
+    { filename: 'a.jpg', exif: { date: '2024-08-01T00:00:00.000Z', camera: 'Fujifilm X-T5', gps: [51.5074, -0.1278] }, caption: 'Home' },
+    { filename: 'b.jpg', exif: { gps: [48.8566, 2.3522] } },
+  ]);
+  const json = JSON.stringify(merged, null, 2);
+  assert.ok(!/gps/i.test(json), 'no gps key in the committed meta.json');
+  assert.ok(!json.includes('51.5074') && !json.includes('2.3522'), 'no coordinate values leak');
+  assert.equal(merged['a.jpg'].camera, 'Fujifilm X-T5', 'camera still persisted as the UI states');
+  assert.equal(merged['a.jpg'].date, '2024-08-01T00:00:00.000Z', 'date still persisted as the UI states');
 });

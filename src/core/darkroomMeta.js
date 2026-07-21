@@ -7,11 +7,13 @@
 // Why this exists: `public/studio/resize.js` re-encodes through a canvas, which STRIPS
 // EXIF. So the committed (resized) image has no EXIF for the blog's build-time reader to
 // find. The uploader therefore reads EXIF from the ORIGINAL file (before resize) and we
-// persist date/camera/gps into the sidecar here. The blog's darkroom assembler then prefers
+// persist date/camera into the sidecar here. The blog's darkroom assembler then prefers
 // the sidecar (see inayatpanda-site/src/lib/darkroom.mjs → cameraFor/pickDate).
+// GPS is deliberately NEVER persisted (privacy — see buildEntry).
 //
-// The produced entry shape MUST match the blog-side `SidecarEntry` typedef exactly:
-//   { caption?:string, tags?:string[], album?:string, date?:string(ISO), camera?:string, gps?:[lat,lng] }
+// The produced entry shape MUST match the blog-side `SidecarEntry` typedef (a subset is
+// fine — every field is optional there):
+//   { caption?:string, tags?:string[], album?:string, date?:string(ISO), camera?:string }
 // Empty/blank fields are OMITTED so a Phase-1 meta.json (caption/tags/album only) stays
 // byte-compatible and additive.
 //
@@ -189,7 +191,8 @@ const cleanTags = (tags) =>
  * @param {string}   [input.caption]
  * @param {string[]} [input.tags]
  * @param {string}   [input.album]
- * @returns {{caption?:string, tags?:string[], album?:string, date?:string, camera?:string, gps?:[number,number]}}
+ * @returns {{caption?:string, tags?:string[], album?:string, date?:string, camera?:string}}
+ *          NOTE: never includes gps — location is stripped for privacy (see below).
  */
 export function buildEntry({ exif = {}, caption = '', tags = [], album = '' } = {}) {
   const entry = {};
@@ -204,11 +207,14 @@ export function buildEntry({ exif = {}, caption = '', tags = [], album = '' } = 
   if (date) entry.date = date;
   const camera = cleanStr(exif.camera);
   if (camera) entry.camera = camera;
-  if (Array.isArray(exif.gps) && exif.gps.length === 2 &&
-      typeof exif.gps[0] === 'number' && Number.isFinite(exif.gps[0]) &&
-      typeof exif.gps[1] === 'number' && Number.isFinite(exif.gps[1])) {
-    entry.gps = [exif.gps[0], exif.gps[1]];
-  }
+  // PRIVACY: GPS coordinates are deliberately NOT written to the committed entry.
+  // meta.json is committed to the (often public) blog repo and its full history, and the
+  // Darkroom UI only discloses that EXIF date & camera are read — persisting a phone
+  // photo's exact lat/long would leak the author's home/workplace with no consent step.
+  // Nothing in this repo consumes a sidecar `gps` field (grep-verified: only the
+  // uploader/normaliser touch it); the blog-side assembler simply sees no gps key, same
+  // as any photo without GPS EXIF. normaliseExif still returns { gps } for the in-memory
+  // shape, but it stops here — never in the committed sidecar.
   return entry;
 }
 
