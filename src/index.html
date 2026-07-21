@@ -15674,7 +15674,10 @@ function openCropEditor(file, { format = 'jpeg' } = {}){
     // Build the preview <img> + crop box overlay
     stage.innerHTML = '';
     const img = document.createElement('img');
-    img.src = file && file.__previewUrl ? file.__previewUrl : URL.createObjectURL(file);
+    // Only create (and later revoke) a blob URL of our OWN — a caller-supplied
+    // __previewUrl is owned elsewhere and must not be revoked here.
+    const ownBlobUrl = (file && file.__previewUrl) ? null : URL.createObjectURL(file);
+    img.src = (file && file.__previewUrl) || ownBlobUrl;
     const box = document.createElement('div');
     box.className = 'crop-box';
     ['nw','ne','sw','se'].forEach(c => { const h = document.createElement('div'); h.className = 'crop-h ' + c; h.dataset.h = c; box.appendChild(h); });
@@ -15682,7 +15685,7 @@ function openCropEditor(file, { format = 'jpeg' } = {}){
     stage.appendChild(box);
 
     // crop rect in DISPLAYED pixels (relative to the img element). Default = full image.
-    _crop = { src, sw, sh, file, format, resolve, img, box, rect: null, aspect: 'free' };
+    _crop = { src, sw, sh, file, format, resolve, img, box, rect: null, aspect: 'free', ownBlobUrl };
 
     const layout = () => {
       // displayed image rect within the stage
@@ -15775,7 +15778,13 @@ function cropClamp(r){
 function closeCropEditor(){
   $('cropScrim').classList.remove('open');
   $('cropSheet').classList.remove('open');
-  if(_crop){ _crop.src && _crop.src.close && _crop.src.close(); _crop = null; }
+  if(_crop){
+    _crop.src && _crop.src.close && _crop.src.close();
+    // Revoke the preview blob URL this session created — without this every crop
+    // session retained its blob-backed image memory until page teardown.
+    if(_crop.ownBlobUrl){ try{ URL.revokeObjectURL(_crop.ownBlobUrl); }catch{} }
+    _crop = null;
+  }
 }
 
 $('cropAspect').addEventListener('click', e => {
