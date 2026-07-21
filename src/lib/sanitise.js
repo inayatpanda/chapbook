@@ -54,9 +54,14 @@ export function regexStripFallback(html) {
   // stray / self-closing / unclosed openers of the same tags
   s = s.replace(/<\/?(?:script|iframe|object|embed)\b[^>]*>/gi, '');
   // inline event-handler attributes:  onerror="…"  onclick='…'  onload=foo
-  s = s.replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
-  // neutralise javascript: in href / src (drop the whole attribute)
-  s = s.replace(/\s(?:href|src)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]*)/gi, '');
+  // Browsers accept ANY attribute delimiter before the name — whitespace, '/',
+  // either quote, or a backtick — so <img/src=x/onerror=…> is live. Match the
+  // full delimiter class; drop a whitespace delimiter with the attribute, keep a
+  // structural one ('/', quotes, backtick) so surrounding syntax stays intact.
+  const keepDelim = (m, d) => (/\s/.test(d) ? '' : d);
+  s = s.replace(/([\s/"'`])on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, keepDelim);
+  // neutralise javascript: in href / src (drop the whole attribute) — same delimiter class
+  s = s.replace(/([\s/"'`])(?:href|src)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]*)/gi, keepDelim);
   return s;
 }
 

@@ -66,6 +66,16 @@ test('scratch-reveal: builds, hides reveal text behind a canvas, self-contained'
   assert.ok(/pg-scr-reveal/.test(inst.css) && /reduced/.test(inst.js), 'scratch: reduced-motion fallback path');
 });
 
+test('scratch-reveal: revealHtml strips delimiter-bypass handlers, keeps safe markup', () => {
+  const inst = buildInstance('scratch-reveal', {
+    coverLabel: 'S',
+    revealHtml: '<b>safe</b><img/src=x/onerror=alert(1)><script>bad()</script>',
+  });
+  assert.ok(inst.html.includes('<b>safe</b>'), 'scratch: safe formatting kept');
+  assert.ok(!/onerror/i.test(inst.html), 'scratch: slash-delimited handler stripped');
+  assert.ok(!/<script/i.test(inst.html) && !/bad\(\)/.test(inst.html), 'scratch: script stripped');
+});
+
 test('swipe-carousel: builds, renders slides + dots, self-contained', () => {
   const inst = buildInstance('swipe-carousel', {
     title: 'Tips', loop: true,

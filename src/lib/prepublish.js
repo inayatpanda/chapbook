@@ -209,7 +209,9 @@ function figureSvgRisk(svg) {
   // SMIL: <animate>/<set>/<animateTransform>/<animateMotion> can rewrite an
   // ancestor href to javascript: at runtime (sanitise() strips these — C2).
   if (/<(?:animate|set|animateTransform|animateMotion)\b/i.test(s)) return 'a SMIL animation element (animate/set/…)';
-  if (/\son[a-z-]+\s*=/i.test(s)) return 'an inline event handler (on…=)';
+  // Same delimiter class as rawHtmlUnsafe(): browsers accept '/', quotes and
+  // backticks before an attribute name, so <rect/onclick=…> is a live handler.
+  if (/(?:^|[\s/"'`])on\w+\s*=/i.test(s)) return 'an inline event handler (on…=)';
   // External href / xlink:href (http:, https: or protocol-relative //).
   if (/(?:xlink:)?href\s*=\s*["']?\s*(?:https?:|\/\/)/i.test(s)) return 'an external link (href)';
   // A data: href that is NOT a safe raster (e.g. data:image/svg+xml, data:text/html).

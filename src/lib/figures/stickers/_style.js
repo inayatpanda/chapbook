@@ -213,7 +213,7 @@ export function assertClean(id, out) {
   if (/\swidth=|\sheight=/.test(head)) {
     throw new Error(`sticker "${id}": root <svg> must not set pixel width/height`);
   }
-  if (/<script|<foreignObject|\son\w+\s*=|href|url\s*\(|xlink|<animate|<set\b/i.test(out)) {
+  if (/<script|<foreignObject|[\s/"'`]on\w+\s*=|href|url\s*\(|xlink|<animate|<set\b/i.test(out)) {
     throw new Error(`sticker "${id}": svg contains an unsafe construct (script/href/url/xlink/SMIL/on*)`);
   }
   if (sanitise(out) !== out) {

@@ -85,3 +85,17 @@ test('regexStripFallback keeps legitimate list/code markup', () => {
   const html = '<ul><li>one</li><li>two</li></ul>';
   assert.equal(regexStripFallback(html), html);
 });
+
+// Browsers accept ANY attribute delimiter — whitespace, '/', quotes, backtick —
+// so `<img/src=x/onerror=…>` is a live handler. The fallback must match the full
+// delimiter class (the same fix as prepublish.js / figures/svg.js).
+test('regexStripFallback strips slash/quote-delimited on* handlers (delimiter bypass)', () => {
+  assert.doesNotMatch(regexStripFallback('<img/src=x/onerror=alert(1)>'), /onerror/i);
+  assert.doesNotMatch(regexStripFallback('<div title="a"onclick="x()">hi</div>'), /onclick/i);
+  assert.doesNotMatch(regexStripFallback('<img src=x`onload=y()>'), /onload/i);
+});
+
+test('regexStripFallback neutralises slash-delimited javascript: href/src too', () => {
+  assert.doesNotMatch(regexStripFallback('<a/href="javascript:alert(1)">x</a>'), /javascript:/i);
+  assert.doesNotMatch(regexStripFallback('<img/src=javascript:alert(1)>'), /javascript:/i);
+});

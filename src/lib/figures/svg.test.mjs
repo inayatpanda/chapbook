@@ -289,3 +289,50 @@ test('sanitise strips SMIL open/close pairs and any-case (C2)', () => {
   assert.ok(!/<\/?animate\b/i.test(clean), 'no animate open/close (any case)');
   assert.ok(!/<\/?set\b/i.test(clean), 'no set open/close');
 });
+
+// ---- sanitise C3: attribute-delimiter bypass (slash / quote / backtick) ---
+// Browsers accept ANY attribute delimiter before a name, not just whitespace:
+// <svg/onload=…> is a live handler. The stripper must match on…= after \s, '/',
+// either quote, or a backtick — the same class prepublish.js's warn-gate uses.
+test('sanitise strips slash-delimited on…= handlers (C3: <svg/onload=…>)', () => {
+  const clean = sanitise('<svg/onload=alert(1)><rect/onclick=x()/></svg>');
+  assert.ok(!/onload/i.test(clean), 'no slash-delimited onload');
+  assert.ok(!/onclick/i.test(clean), 'no slash-delimited onclick');
+  assert.ok(!/alert\(1\)/.test(clean) && !/x\(\)/.test(clean), 'handler bodies gone');
+});
+
+test('sanitise strips whitespace-delimited unquoted on…= too (C3)', () => {
+  const clean = sanitise('<svg onload=alert(1)><g\tonfocus=q()></g></svg>');
+  assert.ok(!/onload/i.test(clean) && !/onfocus/i.test(clean));
+  assert.ok(!/alert\(1\)/.test(clean) && !/q\(\)/.test(clean));
+});
+
+test('sanitise strips quote/backtick-delimited on…= handlers (C3)', () => {
+  const dirty = '<svg>' +
+    '<g fill="red"onmouseover=y()>' +
+    "<g fill='red'onfocusin=z()>" +
+    '<circle r=1`onload=w()/>' +
+    '</svg>';
+  const clean = sanitise(dirty);
+  assert.ok(!/onmouseover/i.test(clean), 'no "-delimited handler');
+  assert.ok(!/onfocusin/i.test(clean), "no '-delimited handler");
+  assert.ok(!/onload/i.test(clean), 'no `-delimited handler');
+  assert.ok(clean.includes('fill="red"'), 'preceding attribute survives intact');
+});
+
+test('sanitise strips slash-delimited javascript: hrefs; whitespace form too (C3)', () => {
+  const dirty = '<svg>' +
+    '<a/href="javascript:alert(1)">x</a>' +
+    '<a xlink:href="javascript:alert(2)">y</a>' +
+    '<use/href="#ok"/>' +
+    '</svg>';
+  const clean = sanitise(dirty);
+  assert.ok(!/javascript:/i.test(clean), 'no javascript: URL survives any delimiter');
+  assert.ok(clean.includes('href="#ok"'), 'slash-delimited SAFE anchor href kept');
+});
+
+test('sanitise leaves a legitimate figure SVG byte-identical (C3)', () => {
+  const svg = '<svg viewBox="0 0 10 10"><path d="M0 0 L10 10" fill="#333"/>' +
+    '<text font-family="var(--font-display)" x="1" y="9">ok</text></svg>';
+  assert.equal(sanitise(svg), svg);
+});

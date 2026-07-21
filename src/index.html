@@ -8989,10 +8989,14 @@ $('quoteLibPanel')?.addEventListener('click', e => { if(e.target === $('quoteLib
 function sanitiseHtml(html){
   const s = String(html == null ? '' : html);
   if(window.__studioSanitise){ try{ return String(window.__studioSanitise(s)); }catch{} }
+  // on…=/javascript: after ANY attribute delimiter (whitespace, '/', quotes, backtick) —
+  // browsers accept them all (<img/src=x/onerror=…> is live). Keep a structural delimiter,
+  // drop a whitespace one. Mirrors lib/sanitise.js regexStripFallback.
+  const keepDelim=(m,d)=>(/\s/.test(d)?'':d);
   return s.replace(/<(script|iframe|object|embed)\b[\s\S]*?<\/\1\s*>/gi,'')
           .replace(/<\/?(?:script|iframe|object|embed|svg|math)\b[^>]*>/gi,'')
-          .replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi,'')
-          .replace(/\s(?:href|src)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]*)/gi,'');
+          .replace(/([\s/"'`])on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi,keepDelim)
+          .replace(/([\s/"'`])(?:href|src)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]*)/gi,keepDelim);
 }
 function edText(b, isSel){
   const wrap = document.createElement('div');

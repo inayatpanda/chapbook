@@ -52,7 +52,7 @@ t('catalogue: every sticker has id/name/genre/viewBox + a single well-formed svg
 t('catalogue: every sticker svg passes sanitise() UNCHANGED (no script/href/url/external refs)', () => {
   for (const s of listStickers()) {
     // self-contained: no unsafe constructs present at all
-    assert.ok(!/<script|<foreignObject|\son\w+\s*=|href|url\s*\(|xlink/i.test(s.svg), `${s.id} svg contains an unsafe construct`);
+    assert.ok(!/<script|<foreignObject|[\s/"'`]on\w+\s*=|href|url\s*\(|xlink/i.test(s.svg), `${s.id} svg contains an unsafe construct`);
     // and sanitise() is a no-op (already clean)
     assert.equal(sanitise(s.svg), s.svg, `${s.id} svg should be unchanged by sanitise()`);
   }

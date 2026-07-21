@@ -45,6 +45,26 @@ test('raw gate: <button class="button"> and contenteditable are NOT flagged', ()
   assert.equal(unsafeErrors('<button class="button" contenteditable="true">go</button>').length, 0);
 });
 
+// ── figure gate: figureSvgRisk must catch the same delimiter class as the raw
+// gate — <rect/onclick=…> is a live handler exactly like <img/src=x/onerror=…>.
+const figDoc = (svg) => ({ version: 1, blocks: [{ id: 'f1', type: 'figure', svg, alt: 'a figure' }] });
+const figUnsafeErrors = (svg) =>
+  checkDoc({ doc: figDoc(svg), meta }).errors.filter((e) => /unsafe/i.test(e.message));
+
+test('figure gate: slash-delimited handler <rect/onclick=…> is flagged (bypass fix)', () => {
+  const errs = figUnsafeErrors('<svg viewBox="0 0 1 1"><rect/onclick=alert(1)/></svg>');
+  assert.equal(errs.length, 1, 'the attribute-boundary bypass must be caught');
+  assert.match(errs[0].message, /event handler/i);
+});
+
+test('figure gate: whitespace-delimited handler is still flagged', () => {
+  assert.equal(figUnsafeErrors('<svg viewBox="0 0 1 1"><rect onclick="x()"/></svg>').length, 1);
+});
+
+test('figure gate: a clean themed figure is NOT flagged', () => {
+  assert.equal(figUnsafeErrors('<svg viewBox="0 0 1 1"><path d="M0 0" fill="var(--ink)"/></svg>').length, 0);
+});
+
 test('raw gate: <script> and javascript: URLs still error (regression pins)', () => {
   assert.equal(unsafeErrors('<script>x()</script>').length, 1);
   assert.equal(unsafeErrors('<a href="javascript:alert(1)">x</a>').length, 1);

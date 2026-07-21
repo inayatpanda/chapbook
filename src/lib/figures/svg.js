@@ -301,27 +301,33 @@ export function sanitise(svg) {
   s = s.replace(new RegExp(`<\\/?${SMIL}\\b[^>]*>`, 'gi'), '');
 
   // 3) Remove on* event-handler attributes (double, single, or unquoted),
-  //    tolerating whitespace around '='. Run repeatedly until stable.
-  const onAttr = /\son[a-z-]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi;
+  //    tolerating whitespace around '='. Browsers accept ANY attribute delimiter
+  //    before the name — whitespace, '/', either quote, or a backtick — so
+  //    <svg/onload=…> is a live handler (same class prepublish.js's warn-gate
+  //    matches). The delimiter is captured and kept so surrounding syntax stays
+  //    intact; only the on…= attribute goes. Run repeatedly until stable.
+  const onAttr = /([\s/"'`])on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi;
   let prev;
-  do { prev = s; s = s.replace(onAttr, ''); } while (s !== prev);
+  do { prev = s; s = s.replace(onAttr, '$1'); } while (s !== prev);
 
   // 4) Sanitise href / xlink:href: drop attribute entirely unless value is a
   //    '#'-anchor OR a SAFE raster data URL (png/jpeg/gif/webp/avif). A bare
   //    'data:' is NO LONGER enough — data:image/svg+xml (SVG-in-<use> XSS) and
   //    data:text/html are stripped like any external ref. Handles xlink: prefix,
   //    both quote styles, and whitespace around '='.
+  //    Like on…= above, the attribute can follow ANY delimiter (<a/href=…>), so
+  //    match the full delimiter class and keep the captured delimiter on strip.
   const keepHref = (v) => v.startsWith('#') || SAFE_IMAGE_DATA_URL.test(v);
-  const hrefAttr = /\s(?:xlink:)?href\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
-  s = s.replace(hrefAttr, (m, dq, sq) => {
+  const hrefAttr = /([\s/"'`])(?:xlink:)?href\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
+  s = s.replace(hrefAttr, (m, d, dq, sq) => {
     const v = ((dq !== undefined ? dq : sq) || '').trim();
-    return keepHref(v) ? m : '';
+    return keepHref(v) ? m : d;
   });
   // Unquoted href values: keep only #… or a safe raster data: URL, else strip.
-  const hrefUnquoted = /\s(?:xlink:)?href\s*=\s*([^\s">]+)/gi;
-  s = s.replace(hrefUnquoted, (m, val) => {
+  const hrefUnquoted = /([\s/"'`])(?:xlink:)?href\s*=\s*([^\s">]+)/gi;
+  s = s.replace(hrefUnquoted, (m, d, val) => {
     const v = (val || '').trim();
-    return keepHref(v) ? m : '';
+    return keepHref(v) ? m : d;
   });
 
   // 5) Sanitise <style> contents to the allow-list.

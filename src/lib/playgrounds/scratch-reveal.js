@@ -11,13 +11,18 @@ import { esc } from './index.js';
 // not carry executable content to the live blog. Strip scripts / event handlers /
 // frames / dangerous-scheme links while keeping safe formatting (strong, em, a, …).
 function stripUnsafe(html) {
-  return String(html)
+  let s = String(html)
     .replace(/<\s*script[\s\S]*?<\s*\/\s*script\s*>/gi, '')
     .replace(/<\s*script\b[^>]*\/?\s*>/gi, '')
     .replace(/<\s*(iframe|object|embed|foreignObject)\b[\s\S]*?<\s*\/\s*\1\s*>/gi, '')
-    .replace(/<\s*(iframe|object|embed)\b[^>]*\/?\s*>/gi, '')
-    .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-    .replace(/(href|src)\s*=\s*("\s*(?:javascript|data|vbscript):[^"]*"|'\s*(?:javascript|data|vbscript):[^']*'|\s*(?:javascript|data|vbscript):[^\s>]*)/gi, '');
+    .replace(/<\s*(iframe|object|embed)\b[^>]*\/?\s*>/gi, '');
+  // on…= after ANY attribute delimiter (whitespace, '/', quotes, backtick) — browsers
+  // accept them all, so <img/src=x/onerror=…> is live. Keep a structural delimiter,
+  // drop a whitespace one; loop until stable (removal can reveal a new match).
+  const onAttr = /([\s/"'`])on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi;
+  let prev;
+  do { prev = s; s = s.replace(onAttr, (m, d) => (/\s/.test(d) ? '' : d)); } while (s !== prev);
+  return s.replace(/(href|src)\s*=\s*("\s*(?:javascript|data|vbscript):[^"]*"|'\s*(?:javascript|data|vbscript):[^']*'|\s*(?:javascript|data|vbscript):[^\s>]*)/gi, '');
 }
 
 export default {
