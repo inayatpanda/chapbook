@@ -1,11 +1,13 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "enables the default permissions",
+  "description": "Minimal permissions for the main Chapbook window, deliberately narrowed from core:default. The app registers no custom Tauri commands and the UI is the remote web app (which gets no IPC access), so only the core app/window/event essentials the shell itself uses are granted. Add specific core:* permissions here if a future feature needs them; do not restore the broad core:default.",
   "windows": [
     "main"
   ],
   "permissions": [
-    "core:default"
+    "core:app:default",
+    "core:event:default",
+    "core:window:default"
   ]
 }

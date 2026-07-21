@@ -11482,9 +11482,15 @@ function edVideo(b, isSel){
 /* ── playground block ───────────────────────────────────────────────────────
    Model: { html, js }. Two monospace textareas (HTML + JS) update the model on
    input WITHOUT a re-render (focus preserved). A "Preview" toggle renders the
-   playground inside a sandboxed iframe (allow-scripts only — no same-origin /
-   network) via srcdoc, so the owner sees the JS actually run before publishing.
-   The preview is built on toggle / Refresh — not live on every keystroke. */
+   playground inside a sandboxed iframe (allow-scripts only, so no same-origin
+   access; a CSP <meta> in the srcdoc blocks ALL network — playgrounds are
+   self-contained by contract) via srcdoc, so the owner sees the JS actually run
+   before publishing. Built on toggle / Refresh — not live on every keystroke. */
+/* CSP for every playground preview srcdoc (block editor + template library +
+   library grid). sandbox="allow-scripts" gives an opaque origin (no parent /
+   localStorage access) but does NOT stop outbound fetch/img/beacon; this meta
+   does. Inline script/style still run; data:/blob: media allowed (no network). */
+const PG_PREVIEW_CSP = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'unsafe-inline\'; style-src \'unsafe-inline\'; img-src data: blob:; media-src data: blob:; font-src data:">';
 /* Reusable placement chooser (standard/wide/left/right) — used by image,
    playground and the template-library picker. Sets target.placement, runs the
    given onChange (e.g. markDirty), and keeps the tile selection in sync.
@@ -11753,7 +11759,12 @@ function edPlayground(b, isSel){
     // hand-authored blocks have no b.css so this is a no-op for them.
     const blockCss = typeof b.css === 'string' ? b.css : '';
     const idAttr = b.domId ? ` id="${b.domId}"` : '';
-    return `<!doctype html><html><head><meta charset="utf-8"><style>${css}</style>`
+    // CSP meta FIRST in <head>: sandbox="allow-scripts" alone still permits outbound
+    // fetch/img/beacon from the opaque origin. Playgrounds are self-contained by
+    // contract (no fetch/network — enforced by the family tests), so the preview
+    // enforces it too: default-src 'none' blocks all network; inline script/style
+    // still run; data:/blob: images stay allowed (locally generated, no network).
+    return `<!doctype html><html><head>${PG_PREVIEW_CSP}<meta charset="utf-8"><style>${css}</style>`
          + (blockCss ? `<style>${blockCss}</style>` : '')
          + `</head><body>`
          + `<div class="playground"${idAttr}>${b.html || ''}</div>`
@@ -11765,7 +11776,7 @@ function edPlayground(b, isSel){
     holder.innerHTML = '';
     const frame = document.createElement('iframe');
     frame.className = 'be-pg-frame';
-    frame.setAttribute('sandbox', 'allow-scripts'); // scripts run; no same-origin/network — safe
+    frame.setAttribute('sandbox', 'allow-scripts'); // opaque origin; srcdoc CSP meta blocks network
     frame.title = 'Playground preview';
     frame.srcdoc = buildSrcdoc();
     holder.appendChild(frame);
@@ -14950,7 +14961,8 @@ function tplLibSrcdoc(block){
     .playground svg{max-width:100%}
     .playground label{color:#9fb3c8}
     .playground label b{color:#fff}`;
-  return `<!doctype html><html><head><meta charset="utf-8"><style>${baseCss}</style>`
+  // PG_PREVIEW_CSP first: sandbox alone still permits outbound network requests.
+  return `<!doctype html><html><head>${PG_PREVIEW_CSP}<meta charset="utf-8"><style>${baseCss}</style>`
        + (block.css ? `<style>${block.css}</style>` : '')
        + `</head><body>`
        + `<div class="playground" id="${block.domId || ''}">${block.html || ''}</div>`
@@ -14962,7 +14974,7 @@ function renderTplLibPreviewFrame(block){
   host.innerHTML = '';
   const frame = document.createElement('iframe');
   frame.className = 'tpllib-frame';
-  frame.setAttribute('sandbox', 'allow-scripts');   // scripts run; no same-origin / network
+  frame.setAttribute('sandbox', 'allow-scripts');   // opaque origin; srcdoc CSP meta blocks network
   frame.title = 'Interactive preview';
   frame.srcdoc = tplLibSrcdoc(block);
   host.appendChild(frame);
