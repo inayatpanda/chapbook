@@ -47,10 +47,12 @@ test('renderLegalPage produces a full standalone document', () => {
 // ---- integration assertions: these read dist/, so they only run after `node build.mjs`.
 // They skip gracefully when the site has not been built yet, so `node --test` on a fresh
 // checkout still passes; the build step below re-runs them for real.
-test('built sw.js targets /app shell and CACHE v8', (t) => {
+test('built sw.js targets /app shell and a content-hashed CACHE name', (t) => {
   if (!existsSync('dist/sw.js')) return t.skip('dist not built — run `node build.mjs` first');
   const sw = readFileSync('dist/sw.js', 'utf8');
-  assert.match(sw, /const CACHE\s*=\s*'chapbook-v8'/);
+  // build.mjs stamps chapbook-<8 hex> (a hash of the built shell assets) so any
+  // shell change auto-invalidates old precaches — no hand-bumped version pin.
+  assert.match(sw, /const CACHE\s*=\s*'chapbook-[0-9a-f]{8}'/);
   const shell = sw.match(/const SHELL\s*=\s*\[([\s\S]*?)\]/)[1];
   assert.ok(shell.includes("'/app'") && shell.includes("'/app/index.html'"));
   assert.ok(!/['"]\/index\.html['"]/.test(shell), "must not precache the marketing '/index.html' as app shell");

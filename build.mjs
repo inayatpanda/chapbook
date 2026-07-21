@@ -10,6 +10,7 @@ import { PUBLIC_KEY as LICENCE_PUBLIC_KEY } from './src/lib/licence-pubkey.js';
 import { assertInlineModulesParse } from './checkInlineModule.mjs';
 import { extractStripeUrl, extractLegalBlock, LEGAL_TITLES, renderLegalPage, injectMarketing } from './src/marketing/build-marketing.mjs';
 import { buildInstance } from './src/lib/playgrounds/index.js';
+import { cacheNameFor, readShellPaths, shellDistFile, withCacheName } from './scripts/sw-cache-name.mjs';
 
 const SRC = 'src';
 const DIST = 'dist';
@@ -200,9 +201,11 @@ for (const kind of ['privacy', 'terms', 'refunds']) {
 console.log('legal pages: privacy/terms/refunds extracted from index.html ✓');
 
 // --- copy every other emitted file verbatim ---
-// Source paths are already root-relative, so manifest.json + sw.js are plain copies
+// Source paths are already root-relative, so manifest.json is a plain copy
 // (no more /studio/ → / rewriting). index.html is written above with config injected.
-for (const f of ['manifest.json', 'sw.js', 'studio.js', 'darkroom-upload.js', 'preview.css', 'resize.js', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icons-manifest.json', 'icons-sprite.svg']) {
+// sw.js is NOT copied here — it is stamped with a content-hashed CACHE name at the
+// end of the build, once every SHELL asset (incl. fonts) exists in dist/.
+for (const f of ['manifest.json', 'studio.js', 'darkroom-upload.js', 'preview.css', 'resize.js', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icons-manifest.json', 'icons-sprite.svg']) {
   copyFileSync(`${SRC}/${f}`, `${DIST}/${f}`);
 }
 
@@ -261,6 +264,25 @@ catch (e) { console.log('media: none staged yet (parallel pipeline) — pages re
 mkdirSync(`${DIST}/fonts`, { recursive: true });
 for (const f of readdirSync(`${SRC}/fonts`)) copyFileSync(`${SRC}/fonts/${f}`, `${DIST}/fonts/${f}`);
 console.log('fonts:', readdirSync(`${SRC}/fonts`).filter((f) => f.endsWith('.woff2')).length, 'woff2 self-hosted → dist/fonts/');
+
+// --- sw.js: stamp a content-hashed CACHE name (chapbook-<8 hex>) ---
+// The precache version used to be a hand-bumped literal; a forgotten bump meant an
+// installed worker served the STALE shell on network failure. Instead, hash the
+// emitted bytes of every SHELL asset (parsed from sw.js itself so the lists can
+// never drift) and derive the cache name from them: any shell change → new name →
+// old precaches dropped by the activate handler. Deterministic: identical builds
+// produce identical names. A SHELL path missing from dist/ fails the build here —
+// the same guarantee addAll's atomic install gives at runtime, but caught earlier.
+{
+  const swSrc = readFileSync(`${SRC}/sw.js`, 'utf8');
+  const shellEntries = readShellPaths(swSrc).map((p) => ({
+    path: p,
+    bytes: readFileSync(`${DIST}${shellDistFile(p)}`),
+  }));
+  const cacheName = cacheNameFor(shellEntries);
+  writeFileSync(`${DIST}/sw.js`, withCacheName(swSrc, cacheName));
+  console.log(`sw.js: CACHE stamped '${cacheName}' (content hash of ${shellEntries.length} shell assets)`);
+}
 
 // The product lives at chapbook.rqai.co.uk ONLY — Netlify serves the *.netlify.app name
 // too but never redirects it by itself, so enforce the canonical host here. (Netlify

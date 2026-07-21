@@ -88,10 +88,13 @@ test('samePathModuloTrailingSlash: a redirect to a different path fails', () => 
 });
 
 // Contract test against the REAL built artifact (skips cleanly if dist/ absent).
-test('parsers match the current dist/sw.js contract (v8 + /app shell)', (t) => {
+test('parsers match the current dist/sw.js contract (hashed CACHE + /app shell)', (t) => {
   if (!existsSync('dist/sw.js')) { t.skip('dist/sw.js not built — run `npm run build`'); return; }
   const sw = readFileSync('dist/sw.js', 'utf8');
-  assert.equal(readCacheName(sw), 'chapbook-v8', 'dist cache should be chapbook-v8 after the /app migration');
+  // build.mjs derives the CACHE name from a content hash of the shell assets
+  // (scripts/sw-cache-name.mjs) — assert the SCHEME, not a hand-bumped literal.
+  assert.match(readCacheName(sw), /^chapbook-[0-9a-f]{8}$/,
+    'dist cache should be the content-hashed chapbook-<8 hex> name');
   const shell = readShell(sw);
   assert.ok(shell.includes('/app') && shell.includes('/app/index.html'), 'shell must precache the /app doc');
   assert.ok(!shell.includes('/') && !shell.includes('/index.html'),
