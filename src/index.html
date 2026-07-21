@@ -671,7 +671,8 @@
   .pm-bulkmodal .btn[disabled]{opacity:.5;cursor:not-allowed}
 
   /* Pre-publish check overlay */
-  .pp-overlay{position:fixed;inset:0;z-index:300;background:rgba(2,4,8,.55);
+  .pp-overlay{position:fixed;inset:0;z-index:300;background:var(--surface-scrim);
+    backdrop-filter:blur(2px);
     display:flex;align-items:center;justify-content:center;padding:1rem}
   .pp-overlay[hidden]{display:none}  /* class rule beats the UA [hidden] default — restore it */
   .pp-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;
@@ -712,7 +713,6 @@
 
   /* ── EDITOR PASS (whole-draft AI critique; suggestions only) ───────────────── */
   .ep-card{max-width:560px}
-  .ep-card .pp-head strong{color:var(--editor)}
   .ep-body{display:flex;flex-direction:column;gap:.7rem;padding-bottom:1rem}
   .ep-loading,.ep-empty{color:var(--mut);text-align:center;padding:1.6rem 0;font-size:.92rem;line-height:1.5}
   .ep-empty b{color:var(--ink)}
@@ -1434,9 +1434,8 @@
   .be-quote-browse:hover{border-color:var(--acc);color:var(--ink)}
   .be-quote-browse span{color:var(--acc);font-size:.9em}
 
-  /* ── Quote Library panel (pp-overlay) ─────────────────────────────────────── */
-  .ql-card{max-width:680px}
-  .ql-body{display:flex;flex-direction:column;gap:.7rem;padding:.7rem 1.1rem .2rem}
+  /* ── Quote Library panel (pp-overlay host, sheet-styled card) ─────────────── */
+  .ql-body{display:flex;flex-direction:column;gap:.7rem;padding:.7rem 1.1rem .2rem;flex:0 0 auto}
   .ql-search{width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;
     color:var(--ink);padding:.6em .8em;font:inherit;font-size:.92rem;outline:none}
   .ql-search:focus{border-color:var(--acc)}
@@ -1455,7 +1454,7 @@
     color:var(--ink);padding:.5em .7em;font:inherit;font-size:.85rem;outline:none;max-width:100%}
   .ql-author-sel:focus{border-color:var(--acc)}
   .ql-count{font:600 .72rem var(--font-display);color:var(--faint)}
-  .ql-results{list-style:none;margin:0;padding:0;overflow-y:auto;max-height:46vh;
+  .ql-results{list-style:none;margin:0;padding:0;overflow-y:auto;
     border-top:1px solid var(--line)}
   .ql-item{display:block;width:100%;text-align:left;background:transparent;border:0;
     border-bottom:1px solid var(--line);padding:.7rem .2rem;cursor:pointer;color:var(--ink);
@@ -1516,8 +1515,8 @@
   .be-gal-alt-btn:disabled{opacity:.45;cursor:default}
 
   /* ── crop & resize editor (bottom-sheet over the picker layer) ───────────── */
-  #cropSheet{max-height:92vh;overflow:auto;z-index:240}
-  #cropScrim{z-index:239;background:rgba(4,6,12,.55)}
+  #cropSheet{z-index:240}
+  #cropScrim{z-index:239}
   .crop-stage{position:relative;width:100%;background:#04060c;border:1px solid var(--line);
     border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;
     touch-action:none;user-select:none;-webkit-user-select:none}
@@ -1540,7 +1539,7 @@
   .crop-actions .btn{flex:1}
 
   /* ── media library (Library tab + editor picker) ────────────────────────── */
-  #mediaSheet{max-height:88vh;overflow:auto;z-index:240}
+  #mediaSheet{z-index:240}
   #mediaScrim{z-index:239}
   .media-search{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:9px;
     color:var(--ink);padding:.55em .75em;font:inherit;font-size:.9rem;outline:none;margin-bottom:.6rem}
@@ -1700,7 +1699,7 @@
   /* ── BLOCK PICKER (bottom-sheet) ─────────────────────────────────────────── */
 
   .picker-scrim{
-    position:fixed;inset:0;background:rgba(20,30,50,.32);
+    position:fixed;inset:0;background:var(--surface-scrim);backdrop-filter:blur(2px);
     z-index:200;opacity:0;transition:opacity .2s;pointer-events:none}
   .picker-scrim.open{opacity:1;pointer-events:auto}
 
@@ -1726,9 +1725,11 @@
     .picker-sheet.pop .picker-grab{display:none}
   }
 
+  /* Drag pill: touch affordance only — desktop pointers get no fake handle. */
   .picker-grab{
-    width:38px;height:4px;border-radius:3px;
-    background:var(--line);margin:4px auto 14px}
+    display:none;width:36px;height:4px;border-radius:999px;
+    background:var(--line-2);margin:8px auto}
+  @media (pointer:coarse){ .picker-grab{display:block} }
 
   .picker-sheet h3{
     font-size:.75rem;color:var(--faint);font-weight:600;
@@ -1758,9 +1759,6 @@
     margin-top:.6rem;background:transparent;border:1px dashed rgba(123,216,106,.5);
     color:var(--goblin);font-weight:650}
   .goblin-btn:hover{border-color:var(--goblin);background:rgba(123,216,106,.08)}
-  .goblin-sheet{max-height:86vh;overflow:auto;-webkit-overflow-scrolling:touch;
-    border-top:2px solid rgba(123,216,106,.4)}
-  .goblin-h3{color:var(--goblin) !important;display:flex;align-items:center;gap:.45rem}
   .goblin-face{display:inline-block;font-size:1.15rem;transform-origin:60% 80%;
     animation:goblin-wobble 2.4s ease-in-out infinite}
   .goblin-sub{font-size:.82rem;color:var(--mut);line-height:1.45;margin:-.4rem 2px .8rem}
@@ -1807,13 +1805,14 @@
   .sm-item:hover .ic,.sm-item.cur .ic{color:var(--acc)}
 
   /* Cmd-K command palette — centered modal */
-  #cmdkScrim{position:fixed;inset:0;z-index:400;background:rgba(2,4,8,.55);
+  #cmdkScrim{position:fixed;inset:0;z-index:400;background:var(--surface-scrim);
+    backdrop-filter:blur(2px);
     display:flex;align-items:flex-start;justify-content:center;
     padding:max(8vh,2.5rem) 1rem 1rem}
   #cmdkScrim[hidden]{display:none}
   #cmdk{width:min(560px,100%);max-height:72vh;display:flex;flex-direction:column;
-    background:var(--surface);border:1px solid var(--line);border-radius:16px;
-    box-shadow:0 24px 70px rgba(0,0,0,.5);overflow:hidden}
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--surface-radius);
+    box-shadow:var(--surface-shadow);overflow:hidden}
   #cmdkInput{width:100%;border:0;border-bottom:1px solid var(--line);background:transparent;
     color:var(--ink);font:500 1.05rem system-ui;padding:.95rem 1.1rem;outline:none}
   #cmdkInput::placeholder{color:var(--faint)}
@@ -1866,7 +1865,6 @@
   body.focus-mode #focusExitBtn{display:inline-flex !important}
 
   /* ── template picker cards (new-post only) ──────────────────────────────── */
-  #tplSheet{max-height:80vh;overflow:auto}
   .tpl-list{display:flex;flex-direction:column;gap:8px;max-width:620px;margin:0 auto}
   .tpl-loading{font-size:.84rem;color:var(--faint);margin:.4rem 2px;line-height:1.4}
   .tpl-card{
@@ -1885,7 +1883,6 @@
     --cbtp-font:var(--font-display)}
 
   /* ── interactive template library picker ───────────────────────────────── */
-  #tplLibSheet{max-height:86vh;overflow:auto}
   .tpllib-families{max-width:620px;margin:0 auto}
   .tpllib-cat{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;
     color:var(--acc);margin:.9rem 2px .5rem}
@@ -2533,8 +2530,7 @@
   .series-hint{flex-basis:100%;font-size:.74rem;color:var(--faint);margin-top:.15rem;line-height:1.4}
 
   /* ── live preview sheet ─────────────────────────────────────────────────── */
-  .preview-sheet{max-height:88vh;overflow:auto}
-  .pv-iframe{display:block;width:100%;height:74vh;border:0;border-radius:12px;background:#04060c}
+  .pv-iframe{display:block;width:100%;height:70vh;border:0;border-radius:12px;background:#04060c}
   /* inline-AI toolbar (appears on a text selection in the editor) */
   .inline-ai-bar{position:absolute;z-index:9999;display:none;gap:.12rem;align-items:center;
     background:var(--surface);border:1px solid var(--line-strong);border-radius:11px;padding:.3rem;
@@ -2551,8 +2547,6 @@
   .glyph-prev .gp-none{font-size:.58rem;color:var(--faint);text-align:center;line-height:1.1;padding:2px}
   .glyph-pick-btns{display:flex;flex-direction:column;gap:.35rem}
   .glyph-pick-btns .chip{font-size:.74rem;padding:.32em .7em}
-  .glyph-sheet{max-height:86vh;display:flex;flex-direction:column}
-  .gp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
   #glyphSearch{width:100%;background:var(--bg);border:1px solid var(--line-strong);border-radius:11px;color:var(--ink);padding:.6em .9em;font:inherit;margin-bottom:.5rem}
   #glyphSearch:focus{outline:none;border-color:var(--acc)}
   .gp-mode{display:flex;gap:.4rem;margin-bottom:.6rem}
@@ -2566,7 +2560,6 @@
   .gp-tile svg{width:26px;height:26px}
   .gp-tile .nm{font-size:.55rem;color:var(--faint);text-align:center;line-height:1.15;word-break:break-word}
   .gp-more{text-align:center;margin-top:.8rem}
-  .preview-sheet .pv-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem}
   .preview-sheet .pv-note{font-size:.74rem;color:var(--faint);margin:0 0 .8rem 2px;line-height:1.4}
   .preview-body{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:1rem 1.1rem;
     color:var(--ink);line-height:1.6;font-size:.95rem}
@@ -2580,10 +2573,6 @@
   .preview-body img{max-width:100%;border-radius:10px;margin:.4rem 0}
   .preview-body pre{white-space:pre-wrap;word-break:break-word;font:inherit;font-size:.82rem;
     color:var(--mut);margin:0}
-  .preview-close{background:transparent;border:1px solid var(--line);color:var(--mut);border-radius:8px;
-    padding:.35em .8em;font:600 .8rem system-ui;cursor:pointer}
-  .preview-close:hover{border-color:var(--acc);color:var(--acc)}
-
   /* secondary "structure notes" button beside #addBlockBtn */
   #editorActions{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center}
   #structureBtn,#importMdBtn{
@@ -2879,13 +2868,8 @@
   .tpl-hint span{color:var(--acc);font-weight:600}
 
   /* ── MOBILE POST-SETTINGS SHEET (slide-up) ─────────────────────────────────
-     Reuses the .picker-scrim / .picker-sheet pattern. */
-  .mset-sheet{max-height:88vh;display:flex;flex-direction:column}
-  .mset-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
-  .mset-head h3{margin:0}
-  .mset-done{background:var(--grad-pub);color:#04121a;font-weight:700;font-size:.78rem;
-    padding:.4em .9em;border-radius:999px;border:0;cursor:pointer}
-  .mset-scroll{overflow:auto;-webkit-overflow-scrolling:touch;padding-bottom:.4rem}
+     Reuses the .picker-scrim / .picker-sheet pattern; unified surface shell. */
+  .mset-scroll{overflow:auto;-webkit-overflow-scrolling:touch}
   .mset-sec{font:700 .74rem 'Space Grotesk',system-ui;letter-spacing:.08em;text-transform:uppercase;
     color:var(--acc);margin:1rem 0 .6rem;padding-top:.6rem;border-top:1px solid var(--line)}
   .mset-sec:first-child{margin-top:0;padding-top:0;border-top:0}
@@ -2987,17 +2971,14 @@
   /* In-Settings variant sits left-aligned under the data card. */
   .legal-foot.in-app{justify-content:flex-start;margin-top:1.1rem}
 
-  /* Legal modal — reuses .picker-scrim/.picker-sheet; a scrollable prose sheet like preview. */
-  .legal-sheet{max-height:86vh;display:flex;flex-direction:column}
+  /* Legal modal — unified surface sheet on touch; a centred prose modal on desktop. */
   @media (min-width:900px) and (pointer:fine){
     .legal-sheet{left:50%;right:auto;bottom:auto;top:50%;transform:translate(-50%,-46%);
       width:min(680px,92vw);border-radius:16px;border:1px solid var(--line);box-shadow:var(--shadow);
       opacity:0;transition:opacity .16s,transform .16s;pointer-events:none}
     .legal-sheet.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%)}
   }
-  .legal-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin:0 0 .3rem}
-  .legal-head h3{margin:0;font:700 1.15rem var(--font-display);color:var(--ink);text-transform:none;letter-spacing:0}
-  .legal-body{overflow-y:auto;padding:.2rem .1rem 1rem;color:var(--ink)}
+  .legal-body{overflow-y:auto;color:var(--ink)}
   .legal-body h4{font:700 .98rem var(--font-display);margin:1.1rem 0 .35rem}
   .legal-body p,.legal-body li{font-size:.9rem;line-height:1.62;color:var(--mut)}
   .legal-body ul{margin:.3rem 0 .3rem;padding-left:1.15rem}
@@ -3028,6 +3009,78 @@
   /* Destructive Settings action (Forget this device). */
   .btn.danger{border-color:#c0433a;color:#e06a60}
   .btn.danger:hover,.btn.danger:focus-visible{background:rgba(192,67,58,.1);border-color:#e06a60}
+
+  /* ═══ UNIFIED SURFACE SYSTEM ═════════════════════════════════════════════════
+     One visual system for every popup: a bottom SHEET (choosers/browsers/
+     workspaces) or a centred MODAL (bounded decisions/review/reading). Existing
+     mechanisms are kept — .picker-sheet/.picker-scrim slide + .open class,
+     .pp-overlay + [hidden], #cmdkScrim — these classes are ALIASED onto that
+     markup (e.g. `pp-body surface-body`) so feature CSS keeps working.
+     Header + footer never scroll; ONLY .surface-body scrolls. Semantic theme
+     tokens only, so light and dark both follow. */
+  :root{
+    --surface-radius:16px;
+    --surface-scrim:color-mix(in srgb,var(--bg) 72%,transparent);
+    --surface-shadow:0 24px 72px rgb(0 0 0 / .38);
+    --surface-pad-x:20px;
+    --surface-pad-y:16px;
+  }
+  .surface-head{min-height:56px;padding:0 var(--surface-pad-x);display:flex;align-items:center;
+    gap:12px;border-bottom:1px solid var(--line);flex:0 0 auto}
+  .surface-head .surface-title{margin:0;flex:1;font:650 1rem/1.25 var(--font-display);
+    letter-spacing:0;text-transform:none;color:var(--ink)}
+  .surface-close{width:36px;height:36px;display:grid;place-items:center;border:0;border-radius:8px;
+    color:var(--mut);background:transparent;cursor:pointer;flex:0 0 auto;font-size:1.05rem;
+    line-height:1;padding:0}
+  .surface-close:hover,.surface-close:focus-visible{color:var(--ink);background:var(--surface-2)}
+  .surface--sheet{width:min(1200px,calc(100vw - 32px));max-width:none;margin-inline:auto;
+    max-height:min(82dvh,760px);display:flex;flex-direction:column;overflow:hidden;
+    border:1px solid var(--line);border-bottom:0;
+    border-radius:var(--surface-radius) var(--surface-radius) 0 0;
+    background:var(--surface);box-shadow:var(--surface-shadow)}
+  .surface--modal{width:min(520px,calc(100vw - 32px));max-width:none;
+    max-height:min(80dvh,720px);display:flex;flex-direction:column;overflow:hidden;
+    border:1px solid var(--line);border-radius:var(--surface-radius);
+    background:var(--surface);box-shadow:var(--surface-shadow)}
+  /* converted picker-sheets drop the sheet-level padding; head/body/foot carry it */
+  .picker-sheet.surface{padding:0}
+  .surface-body{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;
+    padding:var(--surface-pad-y) var(--surface-pad-x);-webkit-overflow-scrolling:touch}
+  .surface--sheet .surface-body{padding-bottom:calc(var(--surface-pad-y) + env(safe-area-inset-bottom))}
+  .surface-foot{display:flex;gap:12px;
+    padding:12px var(--surface-pad-x) calc(12px + env(safe-area-inset-bottom));
+    border-top:1px solid var(--line);flex:0 0 auto}
+  .surface-foot .btn{min-height:48px;margin:0;flex:1 1 0;width:auto}
+  .surface-foot .btn:not(.ghost){background:var(--grad-pub);color:#04121a;border:0}
+  @media (max-width:899px),(pointer:coarse){
+    .surface--sheet{width:100%;max-height:88dvh;border-width:1px 0 0}
+    .surface--modal{width:calc(100vw - 24px);max-height:88dvh}
+  }
+  /* modal entrance — an animation (not a transition) so it plays from display:none;
+     sheets keep their existing slide-up transition */
+  @keyframes surface-in{from{opacity:0;transform:translateY(8px) scale(.98)}}
+  .pp-overlay:not([hidden]) .surface--modal,
+  #cmdkScrim:not([hidden]) #cmdk{animation:surface-in 160ms cubic-bezier(.2,.8,.2,1)}
+  @media (prefers-reduced-motion:reduce){
+    .pp-overlay:not([hidden]) .surface--modal,
+    #cmdkScrim:not([hidden]) #cmdk{animation:none}
+  }
+  /* sheet-styled overlay host (Quote library: pp-overlay JS, sheet look) */
+  .surface-host--sheet{align-items:flex-end;padding:0}
+  /* command palette footer hint — the palette is the one X-less surface */
+  .surface-esc-hint{flex:0 0 auto;display:flex;justify-content:flex-end;align-items:center;gap:.45em;
+    padding:.5rem .9rem;border-top:1px solid var(--line);color:var(--faint);
+    font:600 .72rem var(--font-display)}
+  .surface-esc-hint kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;
+    padding:.1em .45em;background:var(--surface-2);color:var(--mut);font:600 .72rem var(--font-display)}
+  /* keyboard focus is always visible inside a surface */
+  .surface :where(a,button,input,select,textarea,[tabindex]):focus-visible{
+    outline:2px solid var(--acc);outline-offset:2px}
+  /* legal keeps its centred desktop prose width; the shared system supplies the rest */
+  @media (min-width:900px) and (pointer:fine){
+    .legal-sheet.surface--sheet{width:min(680px,92vw);border-radius:var(--surface-radius);
+      border-bottom:1px solid var(--line)}
+  }
 </style>
 <!-- Baked-in licence verify key (hex Ed25519 public key). Patched by `npm run licence:init`
      and carried through to the hosted build. Empty until init runs → gate stays open
@@ -3928,19 +3981,19 @@
   <!-- Schedule for later (overlay) — commits a hidden draft + publishAt; the site's
        GitHub Action flips it live on the date. Nothing local needs to be running. -->
   <div id="schedulePanel" class="pp-overlay" hidden>
-    <div class="pp-card">
-      <div class="pp-head"><strong>Schedule this post</strong><button class="pp-x" id="schClose" aria-label="Close">✕</button></div>
-      <div class="pp-body">
+    <section class="pp-card surface surface--modal" role="dialog" aria-modal="true" aria-labelledby="schTitle">
+      <header class="pp-head surface-head"><h2 class="surface-title" id="schTitle">Schedule this post</h2><button class="pp-x surface-close" id="schClose" type="button" aria-label="Close">✕</button></header>
+      <div class="pp-body surface-body">
         <p class="sub">Pick when it goes live. It's committed as a hidden draft now and published automatically on the date — your computer does not need to be on. Nothing is visible until then.</p>
-        <label for="schWhen" style="display:block;font:600 .7rem 'Space Grotesk',system-ui;letter-spacing:.06em;text-transform:uppercase;color:#aebbd2;margin:.8rem 0 .3rem">Go live at</label>
-        <input id="schWhen" type="datetime-local" style="width:100%;background:#080c16;border:1px solid rgba(140,160,200,.2);border-radius:10px;color:#f4f7fd;padding:.6em .7em;font:inherit">
+        <label for="schWhen" style="display:block;font:600 .7rem 'Space Grotesk',system-ui;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:.8rem 0 .3rem">Go live at</label>
+        <input id="schWhen" type="datetime-local" style="width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;color:var(--ink);padding:.6em .7em;font:inherit">
         <p class="sub" id="schHint" style="margin:.5rem 0 0"></p>
       </div>
-      <div class="pp-foot">
+      <footer class="pp-foot surface-foot">
         <button class="btn ghost" id="schCancel">Cancel</button>
         <button class="btn" id="schConfirm">Schedule</button>
-      </div>
-    </div>
+      </footer>
+    </section>
   </div>
   <!-- Pre-publish check results (overlay) -->
   <!-- 💬 Chat mode: the WhatsApp-style compose bar (fixed to the bottom while the
@@ -3989,14 +4042,13 @@
   <!-- Editor pass — whole-draft AI critique in the locked voice (overlay).
        Suggestions ONLY: nothing here is auto-applied or auto-published. -->
   <div id="editorPassPanel" class="pp-overlay" hidden>
-    <div class="pp-card ep-card">
-      <div class="pp-head"><strong>✦ Editor pass</strong><button class="pp-x" id="epClose" aria-label="Close">✕</button></div>
-      <div id="epBody" class="pp-body ep-body"></div>
-      <div class="pp-foot">
+    <section class="pp-card ep-card surface surface--modal" role="dialog" aria-modal="true" aria-labelledby="epTitle">
+      <header class="pp-head surface-head"><h2 class="surface-title" id="epTitle">Editor pass</h2><button class="pp-x surface-close" id="epClose" type="button" aria-label="Close">✕</button></header>
+      <div id="epBody" class="pp-body ep-body surface-body"></div>
+      <footer class="pp-foot surface-foot">
         <button class="btn ghost" id="epRerun" type="button">↻ Run again</button>
-        <button class="btn ghost" id="epCancel" type="button">Close</button>
-      </div>
-    </div>
+      </footer>
+    </section>
   </div>
   <!-- Share & SEO preview (overlay) -->
   <div id="sharePreviewPanel" class="pp-overlay" hidden>
@@ -4046,14 +4098,13 @@
   </div>
   <!-- Version history (overlay) — local snapshots; Restore loads doc+meta back -->
   <div id="historyPanel" class="pp-overlay" hidden>
-    <div class="pp-card">
-      <div class="pp-head"><strong id="histTitle">Version history</strong><button class="pp-x" id="histClose" aria-label="Close">✕</button></div>
-      <div id="histBody" class="pp-body hist-body"></div>
-      <div class="pp-foot">
-        <button class="btn ghost" id="histCancel">Close</button>
+    <section class="pp-card surface surface--modal" role="dialog" aria-modal="true" aria-labelledby="histTitle">
+      <header class="pp-head surface-head"><h2 class="surface-title" id="histTitle">Version history</h2><button class="pp-x surface-close" id="histClose" type="button" aria-label="Close">✕</button></header>
+      <div id="histBody" class="pp-body hist-body surface-body"></div>
+      <footer class="pp-foot surface-foot">
         <button class="btn" id="histSnapshot">＋ Save snapshot</button>
-      </div>
-    </div>
+      </footer>
+    </section>
   </div>
   <!-- References manager (overlay) — manual citations; numbered automatically by first use -->
   <div id="refsPanel" class="pp-overlay" hidden>
@@ -4086,9 +4137,9 @@
   </div>
   <!-- Quote Library (overlay) — browse a curated, categorised set of public-domain quotes and
        insert one into the active Quote block. "Write your own" stays in the block itself. -->
-  <div id="quoteLibPanel" class="pp-overlay" hidden>
-    <div class="pp-card ql-card">
-      <div class="pp-head"><strong>Quote library</strong><button class="pp-x" id="qlClose" aria-label="Close">✕</button></div>
+  <div id="quoteLibPanel" class="pp-overlay surface-host--sheet" hidden>
+    <section class="pp-card ql-card surface surface--sheet" role="dialog" aria-modal="true" aria-labelledby="qlTitle">
+      <header class="pp-head surface-head"><h2 class="surface-title" id="qlTitle">Quote library</h2><button class="pp-x surface-close" id="qlClose" type="button" aria-label="Close">✕</button></header>
       <div class="ql-body">
         <input id="qlSearch" class="ql-search" type="text" inputmode="search" autocomplete="off"
                placeholder="Search quotes or authors — e.g. courage, Twain, time">
@@ -4108,24 +4159,23 @@
         </div>
         <div class="ql-count" id="qlCount"></div>
       </div>
-      <ul class="ql-results" id="qlResults"></ul>
-      <div class="pp-foot">
+      <ul class="ql-results surface-body" id="qlResults"></ul>
+      <footer class="pp-foot surface-foot">
         <button class="btn ghost" id="qlReset">Clear filters</button>
-        <button class="btn ghost" id="qlDone">Close</button>
-      </div>
-    </div>
+      </footer>
+    </section>
   </div>
   <!-- Mobile post settings — a slide-up bottom-sheet (reuses the picker-scrim /
        picker-sheet pattern), opened by the "Post settings" button on narrow screens.
        Grouped Topic & series / Look / Publishing, mirroring the desktop rail. -->
   <div class="picker-scrim" id="mSettingsScrim"></div>
-  <div class="picker-sheet mset-sheet" id="mobileSettingsPanel">
+  <div class="picker-sheet mset-sheet surface surface--sheet" id="mobileSettingsPanel" role="dialog" aria-modal="true" aria-labelledby="msetTitle">
     <div class="picker-grab"></div>
-    <div class="mset-head">
-      <h3>Post settings</h3>
-      <button class="mset-done" id="mSettingsDone" type="button">Done</button>
-    </div>
-    <div class="mset-scroll">
+    <header class="surface-head">
+      <h2 class="surface-title" id="msetTitle">Post settings</h2>
+      <button class="surface-close" id="mSettingsClose" type="button" aria-label="Close">✕</button>
+    </header>
+    <div class="mset-scroll surface-body">
       <div class="mset-sec">Topic &amp; series</div>
       <div class="mset-label">Topic</div>
       <div id="mTopicChips" style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.8rem"></div>
@@ -4331,9 +4381,10 @@
 
 <!-- Cmd-K command palette -->
 <div id="cmdkScrim" hidden>
-  <div id="cmdk" role="dialog" aria-modal="true" aria-label="Command palette">
+  <div id="cmdk" class="surface surface--modal" role="dialog" aria-modal="true" aria-label="Command palette">
     <input id="cmdkInput" type="text" placeholder="Search posts and actions…" autocomplete="off" autocapitalize="off" spellcheck="false" role="combobox" aria-expanded="true" aria-controls="cmdkList" aria-autocomplete="list" />
     <ul id="cmdkList" role="listbox" aria-label="Results"></ul>
+    <div class="surface-esc-hint" aria-hidden="true"><kbd>Esc</kbd> Close</div>
   </div>
 </div>
 
@@ -4387,9 +4438,13 @@
 
 <!-- ===== BLOCK PICKER (bottom-sheet) ===== -->
 <div class="picker-scrim" id="pickerScrim"></div>
-<div class="picker-sheet" id="pickerSheet">
+<div class="picker-sheet surface surface--sheet" id="pickerSheet" role="dialog" aria-modal="true" aria-labelledby="pickerTitle">
   <div class="picker-grab"></div>
-  <h3>Add a block</h3>
+  <header class="surface-head">
+    <h2 class="surface-title" id="pickerTitle">Add a block</h2>
+    <button class="surface-close" id="pickerClose" type="button" aria-label="Close">✕</button>
+  </header>
+  <div class="surface-body">
   <div class="picker-grid" id="pickerGrid">
     <button class="ptile" data-type="text"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-align-left"/></svg><span class="nm">Text</span></button>
     <button class="ptile" data-type="heading"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-heading"/></svg><span class="nm">Heading</span></button>
@@ -4404,45 +4459,59 @@
     <button class="ptile" id="figTile" data-type="__figure"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-chart-dots"/></svg><span class="nm">Figure</span></button>
     <button class="ptile" data-type="divider"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-separator"/></svg><span class="nm">Divider</span></button>
   </div>
+  </div><!-- /.surface-body -->
 </div>
 
 <!-- ===== CROP & RESIZE EDITOR (bottom-sheet) ===== -->
 <div class="picker-scrim" id="cropScrim"></div>
-<div class="picker-sheet" id="cropSheet">
+<div class="picker-sheet surface surface--sheet" id="cropSheet" role="dialog" aria-modal="true" aria-labelledby="cropTitle">
   <div class="picker-grab"></div>
-  <h3>Crop &amp; resize</h3>
-  <div class="crop-stage" id="cropStage"></div>
-  <div class="crop-aspect" id="cropAspect">
-    <button data-ar="free" class="on">Free</button>
-    <button data-ar="1">1:1</button>
-    <button data-ar="1.7778">16:9</button>
-    <button data-ar="0.5625">9:16</button>
-    <button data-ar="1.5">3:2</button>
-    <button data-ar="1.3333">4:3</button>
-    <button data-ar="__reset">Reset</button>
+  <header class="surface-head">
+    <h2 class="surface-title" id="cropTitle">Crop &amp; resize</h2>
+    <button class="surface-close" id="cropClose" type="button" aria-label="Close">✕</button>
+  </header>
+  <div class="surface-body">
+    <div class="crop-stage" id="cropStage"></div>
+    <div class="crop-aspect" id="cropAspect">
+      <button data-ar="free" class="on">Free</button>
+      <button data-ar="1">1:1</button>
+      <button data-ar="1.7778">16:9</button>
+      <button data-ar="0.5625">9:16</button>
+      <button data-ar="1.5">3:2</button>
+      <button data-ar="1.3333">4:3</button>
+      <button data-ar="__reset">Reset</button>
+    </div>
+    <div class="crop-meta" id="cropMeta"></div>
   </div>
-  <div class="crop-meta" id="cropMeta"></div>
-  <div class="crop-actions">
-    <button class="btn ghost" id="cropCancel" type="button">Cancel</button>
+  <footer class="crop-actions surface-foot">
     <button class="btn" id="cropApply" type="button">Use image</button>
-  </div>
+  </footer>
 </div>
 
 <!-- ===== MEDIA LIBRARY (bottom-sheet) — reuse committed images ===== -->
 <div class="picker-scrim" id="mediaScrim"></div>
-<div class="picker-sheet" id="mediaSheet">
+<div class="picker-sheet surface surface--sheet" id="mediaSheet" role="dialog" aria-modal="true" aria-labelledby="mediaTitle">
   <div class="picker-grab"></div>
-  <h3 id="mediaTitle">✦ Reuse an image</h3>
-  <input class="media-search" id="mediaSearch" type="search" placeholder="Search by post slug or filename…" autocomplete="off" />
-  <div id="mediaBody"><p class="media-loading">Loading images…</p></div>
+  <header class="surface-head">
+    <h2 class="surface-title" id="mediaTitle">Reuse an image</h2>
+    <button class="surface-close" id="mediaClose" type="button" aria-label="Close">✕</button>
+  </header>
+  <div class="surface-body">
+    <input class="media-search" id="mediaSearch" type="search" placeholder="Search by post slug or filename…" autocomplete="off" />
+    <div id="mediaBody"><p class="media-loading">Loading images…</p></div>
+  </div>
 </div>
 
 <!-- ===== GOBLIN MODE (bottom-sheet) — chaotic idea-hurler ===== -->
 <div class="picker-scrim" id="goblinScrim"></div>
-<div class="picker-sheet goblin-sheet" id="goblinSheet">
+<div class="picker-sheet goblin-sheet surface surface--sheet" id="goblinSheet" role="dialog" aria-modal="true" aria-labelledby="goblinTitle">
   <div class="picker-grab"></div>
-  <h3 class="goblin-h3"><span class="goblin-face" aria-hidden="true">🧌</span> Goblin mode</h3>
-  <p class="goblin-sub">Sparks to beat the blank page — wild metaphors, contrarian takes, absurd framings. These are provocations to write <em>from</em>, not finished copy. Nothing is published.</p>
+  <header class="surface-head">
+    <h2 class="surface-title" id="goblinTitle">Goblin mode</h2>
+    <button class="surface-close" id="goblinClose" type="button" aria-label="Close">✕</button>
+  </header>
+  <div class="surface-body">
+  <p class="goblin-sub"><span class="goblin-face" aria-hidden="true">🧌</span> Sparks to beat the blank page — wild metaphors, contrarian takes, absurd framings. These are provocations to write <em>from</em>, not finished copy. Nothing is published.</p>
   <div class="goblin-topic-row">
     <input class="ai-input" id="goblinTopic" type="text" placeholder="A topic to riff on (optional) — or leave blank to go fully feral" autocomplete="off" />
     <button class="btn goblin-go" id="goblinGo" type="button" onclick="runGoblin()">Unleash the goblin</button>
@@ -4453,25 +4522,35 @@
   <div class="goblin-foot" id="goblinFoot" hidden>
     <button class="btn ghost goblin-reroll" id="goblinReroll" type="button" onclick="runGoblin()">🎲 Re-roll — more chaos</button>
   </div>
+  </div><!-- /.surface-body -->
 </div>
 
 <!-- ===== TEMPLATE PICKER (bottom-sheet) — new post only ===== -->
 <div class="picker-scrim" id="tplScrim"></div>
-<div class="picker-sheet" id="tplSheet">
+<div class="picker-sheet surface surface--sheet" id="tplSheet" role="dialog" aria-modal="true" aria-labelledby="tplTitle">
   <div class="picker-grab"></div>
-  <h3>Start a new post</h3>
-  <div class="tpl-list" id="tplList">
-    <p class="tpl-loading" id="tplLoading">Loading templates…</p>
+  <header class="surface-head">
+    <h2 class="surface-title" id="tplTitle">Start a new post</h2>
+    <button class="surface-close" id="tplClose" type="button" aria-label="Close">✕</button>
+  </header>
+  <div class="surface-body">
+    <div class="tpl-list" id="tplList">
+      <p class="tpl-loading" id="tplLoading">Loading templates…</p>
+    </div>
   </div>
 </div>
 
 <!-- ===== INTERACTIVE TEMPLATE LIBRARY (bottom-sheet) ===== -->
 <div class="picker-scrim" id="tplLibScrim"></div>
-<div class="picker-sheet" id="tplLibSheet">
+<div class="picker-sheet surface surface--sheet" id="tplLibSheet" role="dialog" aria-modal="true" aria-labelledby="tplLibTitle">
   <div class="picker-grab"></div>
+  <header class="surface-head">
+    <h2 class="surface-title" id="tplLibTitle">Insert interactive</h2>
+    <button class="surface-close" id="tplLibClose" type="button" aria-label="Close">✕</button>
+  </header>
+  <div class="surface-body">
   <!-- STEP 1: family browser -->
   <div id="tplLibBrowse">
-    <h3>✦ Insert interactive</h3>
     <!-- AI describe → build -->
     <div class="tpllib-suggest">
       <p class="tpllib-suggest-lbl">✨ Describe an interactive</p>
@@ -4520,6 +4599,7 @@
       <button class="btn ghost" id="tplLibCancelBtn" type="button">Cancel</button>
     </div>
   </div>
+  </div><!-- /.surface-body -->
 </div>
 
 <!-- ===== FIGURE LIBRARY (bottom-sheet) — parametric SVG line-art ===== -->
@@ -4528,11 +4608,17 @@
      (POST /figures/build) → Insert as a `figure` block. Templates mode only; the
      describe/voice/photo/tweak/sketch hooks land in later tasks (clean ids left). -->
 <div class="picker-scrim" id="figScrim"></div>
-<div class="picker-sheet" id="figSheet">
+<div class="picker-sheet surface surface--sheet" id="figSheet" role="dialog" aria-modal="true" aria-labelledby="figSheetTitle">
   <div class="picker-grab"></div>
+  <!-- Persistent header: title stays visible + reachable close, while the body
+       below scrolls — this is what un-traps the sheet on small screens. -->
+  <header class="surface-head">
+    <h2 class="surface-title" id="figSheetTitle">Insert figure</h2>
+    <button class="surface-close" id="figClose" type="button" aria-label="Close">✕</button>
+  </header>
+  <div class="surface-body">
   <!-- STEP 1: family browser, grouped by category -->
   <div id="figBrowse">
-    <h3>◆ Insert figure</h3>
     <!-- AI entry points: Describe (invent) / Voice (dictation) / Photo (vectorise) -->
     <div class="fig-entry" id="figEntry">
       <div class="fig-entry-tiles">
@@ -4797,6 +4883,7 @@
       <button class="btn ghost" id="figCancelBtn" type="button">Cancel</button>
     </div>
   </div>
+  </div><!-- /.surface-body -->
 </div>
 
 <!-- ===== AI DRAFT-ASSIST (bottom-sheet) ===== -->
@@ -4863,48 +4950,57 @@
 
 <!-- ===== IMPORT MARKDOWN (bottom-sheet) — offline, no AI ===== -->
 <div class="picker-scrim" id="mdImportScrim"></div>
-<div class="picker-sheet" id="mdImportSheet">
+<div class="picker-sheet surface surface--sheet" id="mdImportSheet" role="dialog" aria-modal="true" aria-labelledby="mdImportTitle">
   <div class="picker-grab"></div>
-  <div class="ai-sheet">
-    <h3>⬇ Import Markdown</h3>
-    <div class="ai-row">
-      <textarea class="ai-input" id="mdImportInput" placeholder="Paste Markdown — headings, paragraphs, lists, quotes, code and tables become blocks. Works offline (no AI)."></textarea>
-    </div>
-    <div class="ai-actions">
-      <button class="btn" id="mdImportRun">Import as blocks</button>
-      <span class="ai-feedback" id="mdImportMsg"></span>
+  <header class="surface-head">
+    <h2 class="surface-title" id="mdImportTitle">Import Markdown</h2>
+    <button class="surface-close" id="mdImportClose" type="button" aria-label="Close">✕</button>
+  </header>
+  <div class="surface-body">
+    <div class="ai-sheet">
+      <div class="ai-row">
+        <textarea class="ai-input" id="mdImportInput" placeholder="Paste Markdown — headings, paragraphs, lists, quotes, code and tables become blocks. Works offline (no AI)."></textarea>
+      </div>
+      <div class="ai-actions">
+        <button class="btn" id="mdImportRun">Import as blocks</button>
+        <span class="ai-feedback" id="mdImportMsg"></span>
+      </div>
     </div>
   </div>
 </div>
 
 <!-- ===== LIVE PREVIEW (bottom-sheet) ===== -->
 <div class="picker-scrim" id="previewScrim"></div>
-<div class="picker-sheet preview-sheet" id="previewSheet">
+<div class="picker-sheet preview-sheet surface surface--sheet" id="previewSheet" role="dialog" aria-modal="true" aria-labelledby="pvTitle">
   <div class="picker-grab"></div>
-  <div class="pv-head">
-    <h3 style="margin:0">✦ Live preview</h3>
-    <button class="preview-close" id="previewCloseBtn" type="button">Close</button>
+  <header class="surface-head">
+    <h2 class="surface-title" id="pvTitle">Live preview</h2>
+    <button class="surface-close" id="previewCloseBtn" type="button" aria-label="Close">✕</button>
+  </header>
+  <div class="surface-body">
+    <p class="pv-note">Approximate preview of how this renders on the live site — final styling is applied at build time.</p>
+    <div class="preview-body" id="previewBody"></div>
   </div>
-  <p class="pv-note">Approximate preview of how this renders on the live site — final styling is applied at build time.</p>
-  <div class="preview-body" id="previewBody"></div>
 </div>
 
 <!-- ===== GLYPH ICON PICKER (bottom-sheet) ===== -->
 <div class="picker-scrim" id="glyphScrim"></div>
-<div class="picker-sheet glyph-sheet" id="glyphSheet">
+<div class="picker-sheet glyph-sheet surface surface--sheet" id="glyphSheet" role="dialog" aria-modal="true" aria-labelledby="glyphTitle">
   <div class="picker-grab"></div>
-  <div class="gp-head">
-    <h3 style="margin:0">Choose a glyph icon</h3>
-    <button class="iconBtn" id="glyphCloseBtn" title="Close">✕</button>
+  <header class="surface-head">
+    <h2 class="surface-title" id="glyphTitle">Choose a glyph icon</h2>
+    <button class="surface-close" id="glyphCloseBtn" type="button" aria-label="Close">✕</button>
+  </header>
+  <div class="surface-body">
+    <input id="glyphSearch" type="search" placeholder="Search — castle, rocket, cpu, tree, leaf…" autocomplete="off" />
+    <div id="glyphMode" class="gp-mode">
+      <button class="chip on" type="button" data-mode="2d">2D flat</button>
+      <button class="chip" type="button" data-mode="3d">3D wireframe</button>
+    </div>
+    <div id="glyphCount" class="gp-count">Loading…</div>
+    <div id="glyphGrid" class="gp-grid"></div>
+    <div class="gp-more"><button class="btn ghost" id="glyphMoreBtn" hidden>Show more</button></div>
   </div>
-  <input id="glyphSearch" type="search" placeholder="Search — castle, rocket, cpu, tree, leaf…" autocomplete="off" />
-  <div id="glyphMode" class="gp-mode">
-    <button class="chip on" type="button" data-mode="2d">2D flat</button>
-    <button class="chip" type="button" data-mode="3d">3D wireframe</button>
-  </div>
-  <div id="glyphCount" class="gp-count">Loading…</div>
-  <div id="glyphGrid" class="gp-grid"></div>
-  <div class="gp-more"><button class="btn ghost" id="glyphMoreBtn" hidden>Show more</button></div>
 </div>
 
 <!-- ===== QUICK-CAPTURE CAMERA ===============================================
@@ -4938,13 +5034,13 @@
      Settings, so it lives OUTSIDE #app (position:fixed → DOM location doesn't matter).
      Content is first-party + trusted (no user input) so innerHTML is safe here. -->
 <div class="picker-scrim" id="legalScrim"></div>
-<div class="picker-sheet legal-sheet" id="legalSheet" role="dialog" aria-modal="true" aria-labelledby="legalTitle" aria-hidden="true">
+<div class="picker-sheet legal-sheet surface surface--sheet" id="legalSheet" role="dialog" aria-modal="true" aria-labelledby="legalTitle" aria-hidden="true">
   <div class="picker-grab"></div>
-  <div class="legal-head">
-    <h3 id="legalTitle">Privacy</h3>
-    <button class="preview-close" id="legalCloseBtn" type="button">Close</button>
-  </div>
-  <div class="legal-body" id="legalBody"></div>
+  <header class="surface-head">
+    <h2 class="surface-title" id="legalTitle">Privacy</h2>
+    <button class="surface-close" id="legalCloseBtn" type="button" aria-label="Close">✕</button>
+  </header>
+  <div class="legal-body surface-body" id="legalBody"></div>
 </div>
 
 <!-- Legal content sources (hidden; cloned into the modal on demand). -->
@@ -9000,7 +9096,6 @@ $('qlReset')?.addEventListener('click', () => {
   qlRenderResults();
 });
 $('qlClose')?.addEventListener('click', closeQuoteLibrary);
-$('qlDone')?.addEventListener('click', closeQuoteLibrary);
 $('quoteLibPanel')?.addEventListener('click', e => { if(e.target === $('quoteLibPanel')) closeQuoteLibrary(); });
 
 // B5: sanitise HTML before it is assigned to an innerHTML sink in the composer origin.
@@ -12597,7 +12692,7 @@ function closeMobileSettings(){
 }
 if(settingsToggleBtn) settingsToggleBtn.addEventListener('click', openMobileSettings);
 if(mScrim) mScrim.addEventListener('click', closeMobileSettings);
-$('mSettingsDone')?.addEventListener('click', closeMobileSettings);
+$('mSettingsClose')?.addEventListener('click', closeMobileSettings);
 
 /* ── toolbar dropdown menus (View ▾ / AI ▾ / Checks ▾) ───────────────────────
    Native <details> menus. Each item keeps its own id (so its existing handler
@@ -13244,7 +13339,6 @@ window.runEditorPass=runEditorPass;
 $('editorPassBtn')?.addEventListener('click', runEditorPass);
 $('epRerun')?.addEventListener('click', runEditorPass);
 $('epClose')?.addEventListener('click', closeEditorPass);
-$('epCancel')?.addEventListener('click', closeEditorPass);
 $('editorPassPanel')?.addEventListener('click', e=>{ if(e.target===$('editorPassPanel')) closeEditorPass(); });
 
 function publishMeta(){
@@ -13480,7 +13574,6 @@ async function restoreVersion(v){
 const _historyBtn = $('historyBtn');
 if(_historyBtn) _historyBtn.addEventListener('click', openHistory);
 $('histClose')?.addEventListener('click', closeHistory);
-$('histCancel')?.addEventListener('click', closeHistory);
 $('histSnapshot')?.addEventListener('click', async (e)=>{
   setBusy(e.currentTarget, true);
   const label = ((await helmPrompt({ title: 'Label this snapshot', placeholder: 'optional', okText: 'Snapshot' })) || '').trim();
@@ -13516,6 +13609,8 @@ document.addEventListener('keydown', (e)=>{
     if(!$('errOverlay')?.hidden){ closeError(); return; }
     if(!$('quoteLibPanel')?.hidden){ closeQuoteLibrary(); return; }
     if(!$('historyPanel')?.hidden){ closeHistory(); return; }
+    if(!$('schedulePanel')?.hidden){ closeSchedule(); return; }
+    if(!$('editorPassPanel')?.hidden){ closeEditorPass(); return; }
   }
 });
 
@@ -14190,7 +14285,7 @@ async function openTplLibForEdit(block){
   $('tplLibBuild').style.display = 'block';
   $('tplLibScrim').classList.add('open');
   $('tplLibSheet').classList.add('open');
-  $('tplLibSheet').scrollTop = 0;
+  ($('tplLibSheet').querySelector('.surface-body') || $('tplLibSheet')).scrollTop = 0;
   try{
     // need the family schema; load the families list if not cached
     if(!_tplLibFamilies){
@@ -14302,7 +14397,7 @@ async function chooseTplLibFamily(id, presetName){
   $('tplLibBuild').style.display = 'block';
   $('tplLibFamName').textContent = fam.name || fam.id;
   $('tplLibFamDesc').textContent = fam.description || '';
-  $('tplLibSheet').scrollTop = 0;
+  ($('tplLibSheet').querySelector('.surface-body') || $('tplLibSheet')).scrollTop = 0;
   renderTplLibPresets(fam);
   // load the requested preset, else the first, else blank from schema defaults
   const pick = presetName || (fam.presets && fam.presets.length ? fam.presets[0].name : null);
@@ -14323,7 +14418,7 @@ function openTplLibSuggested(familyId, params){
   $('tplLibBuild').style.display = 'block';
   $('tplLibFamName').textContent = fam.name || fam.id;
   $('tplLibFamDesc').textContent = fam.description || '';
-  $('tplLibSheet').scrollTop = 0;
+  ($('tplLibSheet').querySelector('.surface-body') || $('tplLibSheet')).scrollTop = 0;
   renderTplLibPresets(fam);
   // backfill the suggested params with schema defaults so every key is present
   _tplLibParams = deepMerge(schemaDefault(fam.paramsSchema), structuredClone(params || {}));
@@ -14403,7 +14498,7 @@ function openTplLibInvented(r){
   _tplLibBuilt = { domId: _tplLibDomId, html: block.html || '', css: block.css || '', js: block.js || '' };
   $('tplLibBrowse').style.display = 'none';
   $('tplLibBuild').style.display = 'block';
-  $('tplLibSheet').scrollTop = 0;
+  ($('tplLibSheet').querySelector('.surface-body') || $('tplLibSheet')).scrollTop = 0;
   $('tplLibFamName').textContent = '✨ ' + (block.title || 'Custom interactive');
   setTplLibInventMode(true);
   $('tplLibInventNote').textContent = r.notes || 'Review it below, then approve to insert. You can edit it like any playground afterwards.';
@@ -15062,7 +15157,7 @@ $('tplLibBackBtn').addEventListener('click', () => {
   setTplLibInventMode(false);
   $('tplLibBuild').style.display = 'none';
   $('tplLibBrowse').style.display = 'block';
-  $('tplLibSheet').scrollTop = 0;
+  ($('tplLibSheet').querySelector('.surface-body') || $('tplLibSheet')).scrollTop = 0;
 });
 $('tplLibCancelBtn').addEventListener('click', closeTplLib);
 $('tplLibInsertBtn').addEventListener('click', insertTplLibBlock);
@@ -15181,7 +15276,7 @@ async function openFigLibForEdit(block){
   $('figBuild').style.display = 'block';
   $('figScrim').classList.add('open');
   $('figSheet').classList.add('open');
-  $('figSheet').scrollTop = 0;
+  ($('figSheet').querySelector('.surface-body') || $('figSheet')).scrollTop = 0;
   $('figCaption').value = block.caption || '';
   $('figAlt').value = block.alt || '';
   try{
@@ -15271,7 +15366,7 @@ async function chooseFigFamily(id, presetName){
   $('figBuild').style.display = 'block';
   $('figFamName').textContent = fam.name || fam.id;
   $('figFamDesc').textContent = fam.description || '';
-  $('figSheet').scrollTop = 0;
+  ($('figSheet').querySelector('.surface-body') || $('figSheet')).scrollTop = 0;
   // default animation: motion families animate by default; static families draw.
   _figAnimate = isMotionFamily(fam) ? 'motion' : 'draw';
   renderFigPresets(fam);
@@ -15458,7 +15553,7 @@ $('figScrim').addEventListener('click', closeFigLib);
 $('figBackBtn').addEventListener('click', () => {
   $('figBuild').style.display = 'none';
   $('figBrowse').style.display = 'block';
-  $('figSheet').scrollTop = 0;
+  ($('figSheet').querySelector('.surface-body') || $('figSheet')).scrollTop = 0;
   resetFigEntry();
 });
 $('figCancelBtn').addEventListener('click', closeFigLib);
@@ -15523,7 +15618,7 @@ function openFigSuggested(block, notes){
   $('figRegenBtn').hidden = false;
   $('figBrowse').style.display = 'none';
   $('figBuild').style.display = 'block';
-  $('figSheet').scrollTop = 0;
+  ($('figSheet').querySelector('.surface-body') || $('figSheet')).scrollTop = 0;
   // "Slap onto an image" is offered for bespoke svg figures (stickers especially).
   showFigOnImage(true);
   renderFigPreviewFrame(_figBuilt.svg, _figBase);
@@ -15905,7 +16000,7 @@ $('cropAspect').addEventListener('click', e => {
   drawBox();
 });
 
-$('cropCancel').addEventListener('click', () => { const r = _crop && _crop.resolve; closeCropEditor(); r && r(null); });
+$('cropClose').addEventListener('click', () => { const r = _crop && _crop.resolve; closeCropEditor(); r && r(null); });
 $('cropScrim').addEventListener('click', () => { const r = _crop && _crop.resolve; closeCropEditor(); r && r(null); });
 
 $('cropApply').addEventListener('click', async () => {
@@ -16047,13 +16142,13 @@ async function openMediaPicker(ctx){
   // single-sheet guard
   [closePicker, closeCropEditor, closeTplLib, closeFigLib].forEach(fn => { try{ fn && fn(); }catch{} });
   _mediaCtx = ctx || {};
-  $('mediaTitle').textContent = '✦ Reuse an image';
+  $('mediaTitle').textContent = 'Reuse an image';
   $('mediaSearch').value = '';
   const body = $('mediaBody');
   body.innerHTML = '<p class="media-loading">Loading images…</p>';
   $('mediaScrim').classList.add('open');
   $('mediaSheet').classList.add('open');
-  $('mediaSheet').scrollTop = 0;
+  ($('mediaSheet').querySelector('.surface-body') || $('mediaSheet')).scrollTop = 0;
   try{
     const groups = await fetchMediaGroups();
     renderMediaGroups(body, groups, { onPick: mediaInsertReference });
@@ -19761,6 +19856,62 @@ document.addEventListener('keydown', (e) => {
   [closePicker, closeAiDraft, closeStructure, closePreviewSheet, closeTplLib, closeFigLib, closeSharePreview,
    closeGoblin, closeTemplatePicker, closeOutlineSheet, closeMobileSettings, closeCropEditor, closeMediaPicker,
    closeMdImport, closeGlyphPicker].forEach(fn => { try { if (typeof fn === 'function') fn(); } catch {} });
+});
+
+/* ── UNIFIED SURFACE SYSTEM: header ✕ wiring + focus management ─────────────
+   Each converted sheet's header ✕ routes to that popup's EXISTING close
+   function — no popup logic is changed. (Crop's ✕ keeps its cancel-resolve
+   binding above; modals' ✕ buttons keep their original ids/bindings.) */
+[['pickerClose', closePicker], ['mediaClose', closeMediaPicker], ['goblinClose', closeGoblin],
+ ['tplClose', closeTemplatePicker], ['tplLibClose', closeTplLib], ['figClose', closeFigLib],
+ ['mdImportClose', closeMdImport]].forEach(([id, fn]) => { $(id)?.addEventListener('click', () => fn()); });
+
+/* Focus: remember the invoker when a surface opens, move focus inside it, and
+   hand focus back on close. Piggybacks on the SAME toggles every open/close
+   path already uses (.picker-sheet .open class · .pp-overlay [hidden]), so no
+   per-popup wiring is needed and popups that place their own focus still win. */
+const _sfFocusable = 'button:not([disabled]):not([hidden]), [href], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+const _sfInvoker = new WeakMap();
+function _sfEnter(el){
+  _sfInvoker.set(el, document.activeElement);
+  setTimeout(() => { try{
+    if (el.contains(document.activeElement)) return;   // the popup's own open() already placed focus
+    el.querySelector(_sfFocusable)?.focus();
+  }catch{} }, 0);
+}
+function _sfLeave(el){
+  const inv = _sfInvoker.get(el); _sfInvoker.delete(el);
+  try{
+    if (inv && inv.focus && inv.isConnected && (el.contains(document.activeElement) || document.activeElement === document.body)) inv.focus();
+  }catch{}
+}
+(function(){
+  const watch = (el, isOpen) => {
+    let was = isOpen(el);
+    new MutationObserver(() => {
+      const is = isOpen(el);
+      if (is !== was){ was = is; (is ? _sfEnter : _sfLeave)(el); }
+    }).observe(el, { attributes: true, attributeFilter: ['class', 'hidden'] });
+  };
+  document.querySelectorAll('.picker-sheet').forEach(el => watch(el, e => e.classList.contains('open')));
+  document.querySelectorAll('.pp-overlay').forEach(el => watch(el, e => !e.hidden));
+})();
+
+/* Focus trap: Tab cycles inside the top open surface (sheet, modal or palette). */
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Tab') return;
+  const cmdkOpen = !$('cmdkScrim')?.hidden && $('cmdk');
+  const layers = [
+    cmdkOpen,
+    ...[...document.querySelectorAll('.pp-overlay:not([hidden])')].map(o => o.querySelector('.pp-card')).reverse(),
+    ...[...document.querySelectorAll('.picker-sheet.open')].reverse(),
+  ].filter(Boolean);
+  const top = layers[0]; if (!top) return;
+  const f = [...top.querySelectorAll(_sfFocusable)].filter(el => el.offsetWidth || el.offsetHeight || el === document.activeElement);
+  if (!f.length) return;
+  const first = f[0], last = f[f.length - 1], a = document.activeElement;
+  if (e.shiftKey){ if (a === first || !top.contains(a)){ e.preventDefault(); last.focus(); } }
+  else if (a === last || !top.contains(a)){ e.preventDefault(); first.focus(); }
 });
 
 /* ── closed sheets must be closed to assistive tech too ─────────────────────
