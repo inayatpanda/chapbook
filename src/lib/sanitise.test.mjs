@@ -99,3 +99,44 @@ test('regexStripFallback neutralises slash-delimited javascript: href/src too', 
   assert.doesNotMatch(regexStripFallback('<a/href="javascript:alert(1)">x</a>'), /javascript:/i);
   assert.doesNotMatch(regexStripFallback('<img/src=javascript:alert(1)>'), /javascript:/i);
 });
+
+// ── fallback: SVG data-URL execution surface (independent adversarial finding) ──
+// DOMPurify FORBID_TAGS removes <svg>/<math> wholesale in the browser, but the node
+// fallback used to leave `<svg><use href="data:image/svg+xml;base64,…<script>…">`
+// untouched — a scripted SVG document smuggled in through a reference. The fallback
+// now mirrors the DOMPurify policy: svg/math removed wholesale (regex cannot safely
+// police the foreign-content parse context), stray svg/math/use tags dropped, and
+// markup-capable data: URLs stripped from href/xlink:href/src (safe rasters kept).
+
+// base64 of '<svg><script>alert(1)</script></svg>' — the exact independent payload.
+const SVG_SCRIPT_B64 = 'PHN2Zz48c2NyaXB0PmFsZXJ0KDEpPC9zY3JpcHQ+PC9zdmc+';
+
+test('fallback removes the <use href="data:image/svg+xml;base64,…"> execution surface', () => {
+  const payload = `<svg><use href="data:image/svg+xml;base64,${SVG_SCRIPT_B64}"></use></svg>`;
+  for (const out of [regexStripFallback(payload), sanitiseHtml(payload)]) {
+    assert.doesNotMatch(out, /<\s*(?:svg|use)\b/i, out);
+    assert.doesNotMatch(out, /data:image\/svg\+xml/i, out);
+  }
+});
+
+test('fallback strips markup-capable data: URLs from href/xlink:href/src, keeps safe rasters', () => {
+  const out = regexStripFallback(
+    '<a href="data:text/html,<script>alert(1)</script>">x</a>'
+    + '<img src="data:image/png;base64,AAAA" alt="ok">'
+    + '<img/src=data:image/svg+xml;base64,AAAA>'
+    + '<thing xlink:href="data:image/svg+xml,<svg onload=x>">y</thing>');
+  assert.doesNotMatch(out, /data:text\/html/i, out);
+  assert.doesNotMatch(out, /data:image\/svg\+xml/i, out);
+  assert.match(out, /<img src="data:image\/png;base64,AAAA" alt="ok">/, 'safe raster data URL must survive');
+});
+
+test('fallback removes whole <svg>/<math> elements and stray foreign-content tags', () => {
+  const out = regexStripFallback('before<svg viewBox="0 0 1 1"><rect/onclick=x /></svg>mid<math><mi>a</mi></math>after</svg>');
+  assert.doesNotMatch(out, /<\s*(?:svg|math|use)\b/i, out);
+  assert.doesNotMatch(out, /onclick/i, out);
+  assert.match(out, /before/); assert.match(out, /mid/); assert.match(out, /after/);
+});
+
+test('fallback neutralises xlink:href javascript: URLs (parity with href/src)', () => {
+  assert.doesNotMatch(regexStripFallback('<thing xlink:href="javascript:alert(1)">x</thing>'), /javascript:/i);
+});

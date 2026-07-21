@@ -213,8 +213,8 @@ export function assertClean(id, out) {
   if (/\swidth=|\sheight=/.test(head)) {
     throw new Error(`sticker "${id}": root <svg> must not set pixel width/height`);
   }
-  if (/<script|<foreignObject|[\s/"'`]on\w+\s*=|href|url\s*\(|xlink|<animate|<set\b/i.test(out)) {
-    throw new Error(`sticker "${id}": svg contains an unsafe construct (script/href/url/xlink/SMIL/on*)`);
+  if (/<script|<foreignObject|[\s/"'`]on\w+\s*=|href|[\s/"'`]src\s*=|url\s*\(|xlink|<animate|<set\b/i.test(out)) {
+    throw new Error(`sticker "${id}": svg contains an unsafe construct (script/href/src/url/xlink/SMIL/on*)`);
   }
   if (sanitise(out) !== out) {
     throw new Error(`sticker "${id}": svg is altered by sanitise() — it is not self-contained/clean`);

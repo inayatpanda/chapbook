@@ -212,14 +212,23 @@ function figureSvgRisk(svg) {
   // Same delimiter class as rawHtmlUnsafe(): browsers accept '/', quotes and
   // backticks before an attribute name, so <rect/onclick=…> is a live handler.
   if (/(?:^|[\s/"'`])on\w+\s*=/i.test(s)) return 'an inline event handler (on…=)';
-  // External href / xlink:href (http:, https: or protocol-relative //).
-  if (/(?:xlink:)?href\s*=\s*["']?\s*(?:https?:|\/\/)/i.test(s)) return 'an external link (href)';
-  // A data: href that is NOT a safe raster (e.g. data:image/svg+xml, data:text/html).
-  // sanitise() strips these (C1), so prepublish must flag them too.
-  const dataHref = /(?:xlink:)?href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s">]+))/gi;
+  // External href / xlink:href / src (http:, https: or protocol-relative //).
+  if (/(?:(?:xlink:)?href|src)\s*=\s*["']?\s*(?:https?:|\/\/)/i.test(s)) return 'an external link (href)';
+  // Scheme checks on every href / xlink:href / src value (either quote style, or
+  // unquoted). The value is NORMALISED first — all whitespace/control chars stripped —
+  // because browsers ignore leading whitespace and embedded tab/newline in a URL
+  // scheme: href=" \tjavascript:…" and href="java\nscript:…" are both live. The gate
+  // must be at least as strict as the serialiser's sanitiser (figures/svg.js), which
+  // drops any href/src that is not a #anchor or a safe raster data URL.
+  const attrUrl = /(?:(?:xlink:)?href|src)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s">]+))/gi;
   let m;
-  while ((m = dataHref.exec(s))) {
-    const v = ((m[1] !== undefined ? m[1] : m[2] !== undefined ? m[2] : m[3]) || '').trim();
+  while ((m = attrUrl.exec(s))) {
+    const raw = ((m[1] !== undefined ? m[1] : m[2] !== undefined ? m[2] : m[3]) || '');
+    const v = raw.replace(/[\u0000-\u0020]+/g, '');
+    // javascript:/vbscript: are executable URL schemes (any delimiter, any padding).
+    if (/^(?:javascript|vbscript):/i.test(v)) return 'a javascript: link (href/src)';
+    // A data: URL that is NOT a safe raster (e.g. data:image/svg+xml, data:text/html).
+    // sanitise() strips these (C1), so prepublish must flag them too.
     if (/^data:/i.test(v) && !SAFE_IMAGE_DATA_URL.test(v)) return 'an unsafe data: link (href)';
   }
   return null;

@@ -69,3 +69,31 @@ test('raw gate: <script> and javascript: URLs still error (regression pins)', ()
   assert.equal(unsafeErrors('<script>x()</script>').length, 1);
   assert.equal(unsafeErrors('<a href="javascript:alert(1)">x</a>').length, 1);
 });
+
+// ── figure gate: javascript:/vbscript: URLs in href/src, with the value normalised
+// (leading whitespace + control chars stripped) BEFORE the scheme check — browsers
+// ignore leading whitespace and embedded tab/newline in a URL scheme, so
+// href=" \tjavascript:…" is live. The gate must match the serialiser's sanitiser
+// (figures/svg.js strips these), not be looser than it. Independent adversarial
+// finding: the exact payload below used to pass with errors: [].
+
+test('figure gate: leading-whitespace/tab javascript: href is flagged (gate bypass fix)', () => {
+  const errs = figUnsafeErrors('<svg><a href=" \tjavascript:alert(1)">x</a></svg>');
+  assert.equal(errs.length, 1, 'the whitespace-prefixed javascript: href must be caught');
+  assert.match(errs[0].message, /javascript/i);
+});
+
+test('figure gate: newline-prefixed and scheme-splitting javascript: hrefs are flagged', () => {
+  assert.equal(figUnsafeErrors('<svg><a href="\njavascript:alert(1)">x</a></svg>').length, 1);
+  assert.equal(figUnsafeErrors('<svg><a href="java\tscript:alert(1)">x</a></svg>').length, 1);
+});
+
+test('figure gate: plain javascript: href and src= variants are flagged', () => {
+  assert.equal(figUnsafeErrors('<svg><a href="javascript:alert(1)">x</a></svg>').length, 1);
+  assert.equal(figUnsafeErrors('<svg><image src="javascript:alert(1)"/></svg>').length, 1);
+  assert.equal(figUnsafeErrors("<svg><a href='vbscript:msgbox(1)'>x</a></svg>").length, 1);
+});
+
+test('figure gate: normal hrefs still pass (anchor + safe raster data URL)', () => {
+  assert.equal(figUnsafeErrors('<svg><use href="#shape"/><image href="data:image/png;base64,AAAA"/></svg>').length, 0);
+});

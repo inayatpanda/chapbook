@@ -11,6 +11,7 @@ const tA = async (name, fn) => { try { await fn(); pass++; console.log('  ok  ' 
 const { listStickers, STICKER_GENRES } = await import('./stickers.js');
 const { sanitise } = await import('./svg.js');
 const studio = await import('../studio.js');
+const _style = await import('./stickers/_style.js');
 const { makeRouter } = await import('../../router.js');
 const stickers = await import('./stickers.js');
 
@@ -56,6 +57,18 @@ t('catalogue: every sticker svg passes sanitise() UNCHANGED (no script/href/url/
     // and sanitise() is a no-op (already clean)
     assert.equal(sanitise(s.svg), s.svg, `${s.id} svg should be unchanged by sanitise()`);
   }
+});
+
+t('assertClean: rejects a src= attribute (javascript: URL policy, defence-in-depth)', () => {
+  const { assertClean } = _style;
+  assert.throws(
+    () => assertClean('bad', '<svg viewBox="0 0 10 10"><image src="javascript:alert(1)"/></svg>'),
+    /unsafe construct/, 'src="javascript:…" must be rejected');
+  assert.throws(
+    () => assertClean('bad2', '<svg viewBox="0 0 10 10"><image src="/x.png"/></svg>'),
+    /unsafe construct/, 'any src= is outside the sticker contract');
+  // a clean sticker still passes
+  assertClean('ok', listStickers()[0].svg);
 });
 
 await tA('engine: generateSticker returns a sanitised figure block (strips injected <script>)', async () => {

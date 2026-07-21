@@ -310,21 +310,23 @@ export function sanitise(svg) {
   let prev;
   do { prev = s; s = s.replace(onAttr, '$1'); } while (s !== prev);
 
-  // 4) Sanitise href / xlink:href: drop attribute entirely unless value is a
+  // 4) Sanitise href / xlink:href / src: drop attribute entirely unless value is a
   //    '#'-anchor OR a SAFE raster data URL (png/jpeg/gif/webp/avif). A bare
   //    'data:' is NO LONGER enough — data:image/svg+xml (SVG-in-<use> XSS) and
   //    data:text/html are stripped like any external ref. Handles xlink: prefix,
-  //    both quote styles, and whitespace around '='.
+  //    both quote styles, and whitespace around '='. src= has no executable SVG
+  //    sink today, but the js-url policy covers it too (defence-in-depth): no
+  //    figure family emits src, so over-stripping costs nothing.
   //    Like on…= above, the attribute can follow ANY delimiter (<a/href=…>), so
   //    match the full delimiter class and keep the captured delimiter on strip.
   const keepHref = (v) => v.startsWith('#') || SAFE_IMAGE_DATA_URL.test(v);
-  const hrefAttr = /([\s/"'`])(?:xlink:)?href\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
+  const hrefAttr = /([\s/"'`])(?:(?:xlink:)?href|src)\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
   s = s.replace(hrefAttr, (m, d, dq, sq) => {
     const v = ((dq !== undefined ? dq : sq) || '').trim();
     return keepHref(v) ? m : d;
   });
-  // Unquoted href values: keep only #… or a safe raster data: URL, else strip.
-  const hrefUnquoted = /([\s/"'`])(?:xlink:)?href\s*=\s*([^\s">]+)/gi;
+  // Unquoted href/src values: keep only #… or a safe raster data: URL, else strip.
+  const hrefUnquoted = /([\s/"'`])(?:(?:xlink:)?href|src)\s*=\s*([^\s">]+)/gi;
   s = s.replace(hrefUnquoted, (m, d, val) => {
     const v = (val || '').trim();
     return keepHref(v) ? m : d;

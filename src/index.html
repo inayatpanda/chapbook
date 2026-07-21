@@ -9010,12 +9010,18 @@ function sanitiseHtml(html){
   if(window.__studioSanitise){ try{ return String(window.__studioSanitise(s)); }catch{} }
   // on…=/javascript: after ANY attribute delimiter (whitespace, '/', quotes, backtick) —
   // browsers accept them all (<img/src=x/onerror=…> is live). Keep a structural delimiter,
-  // drop a whitespace one. Mirrors lib/sanitise.js regexStripFallback.
+  // drop a whitespace one. Mirrors lib/sanitise.js regexStripFallback: svg/math go
+  // wholesale (regex can't police foreign content), stray svg/math/use tags too, and
+  // markup-capable data: URLs (data:image/svg+xml, data:text/html) are stripped from
+  // href/xlink:href/src — safe raster data URLs (png/jpeg/gif/webp/avif) survive.
   const keepDelim=(m,d)=>(/\s/.test(d)?'':d);
-  return s.replace(/<(script|iframe|object|embed)\b[\s\S]*?<\/\1\s*>/gi,'')
-          .replace(/<\/?(?:script|iframe|object|embed|svg|math)\b[^>]*>/gi,'')
+  return s.replace(/<(script|iframe|object|embed|svg|math)\b[\s\S]*?<\/\1\s*>/gi,'')
+          .replace(/<\/?(?:script|iframe|object|embed|svg|math|use)\b[^>]*>/gi,'')
           .replace(/([\s/"'`])on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi,keepDelim)
-          .replace(/([\s/"'`])(?:href|src)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]*)/gi,keepDelim);
+          .replace(/([\s/"'`])(?:xlink:)?(?:href|src)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]*)/gi,keepDelim)
+          .replace(/([\s/"'`])(?:xlink:)?(?:href|src)\s*=\s*(?:"(\s*data:[^"]*)"|'(\s*data:[^']*)'|(data:[^\s>]*))/gi,
+            (m,d,dq,sq,uq)=>{ const v=((dq!==undefined?dq:sq!==undefined?sq:uq)||'').trim();
+              return /^data:image\/(?:png|jpe?g|gif|webp|avif);base64,/i.test(v)?m:keepDelim(m,d); });
 }
 function edText(b, isSel){
   const wrap = document.createElement('div');

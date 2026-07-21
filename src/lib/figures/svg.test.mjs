@@ -331,6 +331,28 @@ test('sanitise strips slash-delimited javascript: hrefs; whitespace form too (C3
   assert.ok(clean.includes('href="#ok"'), 'slash-delimited SAFE anchor href kept');
 });
 
+// ---- sanitise: src= URLs (defence-in-depth policy alignment) --------------
+// No figure family emits src= and SVG itself has no executable src sink today,
+// but the stated js-url policy covers src as well as href — so src gets the
+// same allow-list (#anchor or safe raster data URL; everything else stripped).
+test('sanitise strips javascript:/external src= like href (quoted + unquoted)', () => {
+  const dirty = '<svg>' +
+    '<image src="javascript:alert(1)"/>' +
+    '<image/src=javascript:alert(2)>' +
+    '<image src="https://evil.test/x.png"/>' +
+    '<image src="data:image/png;base64,AAAA"/>' +
+    '</svg>';
+  const clean = sanitise(dirty);
+  assert.ok(!/javascript:/i.test(clean), 'no javascript: src survives any delimiter');
+  assert.ok(!/evil\.test/.test(clean), 'external src removed');
+  assert.ok(clean.includes('src="data:image/png;base64,AAAA"'), 'safe raster data src kept');
+});
+
+test('sanitise strips whitespace-prefixed javascript: src/href values', () => {
+  const clean = sanitise('<svg><a href=" \tjavascript:alert(1)">x</a><image src=" javascript:alert(2)"/></svg>');
+  assert.ok(!/javascript:/i.test(clean));
+});
+
 test('sanitise leaves a legitimate figure SVG byte-identical (C3)', () => {
   const svg = '<svg viewBox="0 0 10 10"><path d="M0 0 L10 10" fill="#333"/>' +
     '<text font-family="var(--font-display)" x="1" y="9">ok</text></svg>';

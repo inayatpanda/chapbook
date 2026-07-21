@@ -16,14 +16,16 @@
 //     We detect that and fall back to `regexStripFallback` (the original regex strip)
 //     so server/test contexts DEGRADE SAFELY instead of crashing. This fallback is a
 //     defence-in-depth backstop, not the primary barrier — the primary barrier is
-//     DOMPurify in the browser. Because the fallback is the old regex, the two audit
-//     vectors above are NOT fully neutralised by the fallback alone; that is why the
-//     unit tests assert the POLICY (PURIFY_CONFIG) and a live-browser runtime assertion
-//     is deferred to the release gate (Task 14).
+//     DOMPurify in the browser. The fallback has since been hardened to mirror the
+//     policy where regex can (delimiter-class on*= handlers, svg/math wholesale,
+//     javascript:/markup-capable data: URLs), but the unit tests still assert the
+//     POLICY (PURIFY_CONFIG) and a live-browser runtime assertion is deferred to the
+//     release gate (Task 14).
 //
 // Importing this module is safe under node: `import DOMPurify from 'dompurify'` yields
 // the factory function without throwing; only calling `.sanitize` without a window fails.
 import DOMPurify from 'dompurify';
+import { SAFE_IMAGE_DATA_URL } from './figures/svg.js';
 
 // DOMPurify policy (the authoritative allow-list the browser enforces at publish time).
 //   • USE_PROFILES.html — keeps legitimate formatting (p, a[href], strong/em, ul/ol/li,
@@ -43,16 +45,21 @@ export const PURIFY_CONFIG = {
   ALLOW_UNKNOWN_PROTOCOLS: false,
 };
 
-// The ORIGINAL regex strip, preserved verbatim so nothing is lost. Used ONLY as the
-// node/test fallback when DOMPurify has no window (see DUAL CONTEXT above). It removes
-// <script>/<iframe>/<object>/<embed>, whitespace-delimited on*= handlers, and neutralises
-// javascript: in href/src. It is intentionally NOT the primary barrier.
+// The node/test fallback when DOMPurify has no window (see DUAL CONTEXT above). It removes
+// <script>/<iframe>/<object>/<embed> AND <svg>/<math> wholesale, whitespace-delimited on*=
+// handlers, javascript: URLs in href/xlink:href/src, and markup-capable data: URLs.
+// It is intentionally NOT the primary barrier.
 export function regexStripFallback(html) {
   let s = String(html || '');
-  // whole elements (with or without a close tag) for the dangerous trio + script
-  s = s.replace(/<(script|iframe|object|embed)\b[\s\S]*?<\/\1\s*>/gi, '');
-  // stray / self-closing / unclosed openers of the same tags
-  s = s.replace(/<\/?(?:script|iframe|object|embed)\b[^>]*>/gi, '');
+  // whole elements (with or without a close tag) for the dangerous trio + script.
+  // svg/math too: DOMPurify FORBID_TAGS drops them wholesale in the browser, and a
+  // regex cannot safely police the foreign-content parse context (e.g. a <use> whose
+  // href pulls in a scripted data:image/svg+xml document), so the fallback mirrors
+  // the wholesale removal.
+  s = s.replace(/<(script|iframe|object|embed|svg|math)\b[\s\S]*?<\/\1\s*>/gi, '');
+  // stray / self-closing / unclosed openers of the same tags (+ <use>, the SVG
+  // reference element, which has no business surviving outside an <svg>)
+  s = s.replace(/<\/?(?:script|iframe|object|embed|svg|math|use)\b[^>]*>/gi, '');
   // inline event-handler attributes:  onerror="…"  onclick='…'  onload=foo
   // Browsers accept ANY attribute delimiter before the name — whitespace, '/',
   // either quote, or a backtick — so <img/src=x/onerror=…> is live. Match the
@@ -60,8 +67,17 @@ export function regexStripFallback(html) {
   // structural one ('/', quotes, backtick) so surrounding syntax stays intact.
   const keepDelim = (m, d) => (/\s/.test(d) ? '' : d);
   s = s.replace(/([\s/"'`])on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, keepDelim);
-  // neutralise javascript: in href / src (drop the whole attribute) — same delimiter class
-  s = s.replace(/([\s/"'`])(?:href|src)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]*)/gi, keepDelim);
+  // neutralise javascript: in href / xlink:href / src (drop the whole attribute) —
+  // same delimiter class
+  s = s.replace(/([\s/"'`])(?:xlink:)?(?:href|src)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]*)/gi, keepDelim);
+  // markup-capable data: URLs (data:image/svg+xml, data:text/html, …) in href/src can
+  // smuggle a whole scripted document in through a reference; keep ONLY the safe
+  // raster shapes (SAFE_IMAGE_DATA_URL: png/jpeg/gif/webp/avif), drop the rest.
+  s = s.replace(/([\s/"'`])(?:xlink:)?(?:href|src)\s*=\s*(?:"(\s*data:[^"]*)"|'(\s*data:[^']*)'|(data:[^\s>]*))/gi,
+    (m, d, dq, sq, uq) => {
+      const v = ((dq !== undefined ? dq : sq !== undefined ? sq : uq) || '').trim();
+      return SAFE_IMAGE_DATA_URL.test(v) ? m : keepDelim(m, d);
+    });
   return s;
 }
 
