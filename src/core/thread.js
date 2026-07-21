@@ -83,12 +83,21 @@ const FIELD_NOTES = {
   text: ' The author is in a body paragraph: respond with encouragement, a conversational reaction, or one small suggestion. Never rewrite their text; rewriting only happens when they explicitly ask to tighten or continue.',
 };
 
-export function buildAskPrompt({ ask, text = '', field = null, block = null, title = '', prevBlock = null, nextBlock = null, profile = null }) {
+// The reply format for the title workshop: three options the chips can re-parse.
+const TITLE_FORMAT = 'Reply with exactly three options, one per line - no numbering, no bullets, no quotes, nothing else.';
+
+export function buildAskPrompt({ ask, text = '', field = null, block = null, title = '', prevBlock = null, nextBlock = null, profile = null, recentReactions = null }) {
   const wantsInsertable = INSERTABLE_ASKS.has(ask);
   const voice = profile && profile.voice ? `\nAuthor voice notes: ${String(profile.voice).slice(0, 500)}` : '';
+  // Reaction steering (spec §9 parked bundle): a compact liked/disliked digest of the
+  // author's thumb reactions, computed by the caller (summarizeReactions). Tone only -
+  // it steers taste, never agency, and never changes which asks are insertable.
+  const steer = recentReactions
+    ? `\nThe author reacted to some of your earlier guidance - lean toward what the author liked and away from what they disliked:\n${String(recentReactions).slice(0, 1200)}`
+    : '';
   const system = wantsInsertable
-    ? `You help an author write a blog post. Reply ONLY with the requested text, ready to drop into the post. No preamble, no quotes around it.${voice}`
-    : `You are a writing guide inside the author's composer. Respond with a short question, nudge, or piece of feedback that moves their thinking forward.${FIELD_NOTES[field] || ''} Do not write or draft post text for them; guide, do not ghostwrite.${voice}`;
+    ? `You help an author write a blog post. Reply ONLY with the requested text, ready to drop into the post. No preamble, no quotes around it.${voice}${steer}`
+    : `You are a writing guide inside the author's composer. Respond with a short question, nudge, or piece of feedback that moves their thinking forward.${FIELD_NOTES[field] || ''} Do not write or draft post text for them; guide, do not ghostwrite.${voice}${steer}`;
   const ctx = [];
   if (title) ctx.push(`Post title: ${title}`);
   if (prevBlock) ctx.push(`Previous block: ${blockText(prevBlock)}`);
@@ -99,11 +108,47 @@ export function buildAskPrompt({ ask, text = '', field = null, block = null, tit
     reply: `The author asks about the focus block: ${text || '(no message - give your reaction to the block)'}`,
     tighten: 'Tighten the focus block: same meaning, fewer words, keep the author voice.',
     continue: 'Continue the post from the focus block with one natural next paragraph.',
-    // A post that already has a title gets ONE short variation of it - an offer the
-    // author can take or leave, never an imposition; a titleless post gets a fresh one.
+    // Title workshop: a post that already has a title gets THREE short variations of
+    // it - offers the author can take or leave, never an imposition; a titleless post
+    // gets three fresh candidates. One AI call either way; the chips re-parse the lines.
     title: title
-      ? 'Offer ONE short variation of the current title - an alternative the author can take or leave. Reply with the title text only.'
-      : 'Suggest one strong title for this post. Reply with the title text only.',
+      ? `Offer THREE short variations of the current title - alternatives the author can take or leave. ${TITLE_FORMAT}`
+      : `Suggest three strong titles for this post - offers the author can take or leave. ${TITLE_FORMAT}`,
   };
   return { system, user: ctx.concat([asks[ask] || asks.aside]).join('\n\n'), wantsInsertable };
+}
+
+// ---- title workshop (spec §9 parked bundle) --------------------------------
+// Re-parse a title-ask reply into tappable options. Tolerant of a model that
+// ignores the format contract: numbering/bullets are stripped, wrapping quotes
+// dropped, empties and (case-insensitive) duplicates skipped, capped at three.
+export function parseTitleOptions(text) {
+  const out = [], seen = new Set();
+  for (const line of String(text == null ? '' : text).split(/\r?\n/)) {
+    const t = line.trim()
+      .replace(/^(?:[-*•]|\d+[.)])\s+/, '')                       // list prefixes
+      .replace(/^["'“‘]+|["'”’]+$/g, '')      // wrapping quotes (straight + smart)
+      .trim();
+    if (!t) continue;
+    const key = t.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(t);
+    if (out.length === 3) break;
+  }
+  return out;
+}
+
+// ---- reaction thumbs → ask steering (spec §9 parked bundle) ----------------
+// A compact digest of the author's 👍/👎 on the Partner's guidance: the last ten
+// reacted guidance turns, each clipped to 80 chars. Asides, insertables and error
+// bubbles never steer. Null when nothing was reacted (callers omit the field).
+export function summarizeReactions(turns) {
+  const reacted = (Array.isArray(turns) ? turns : []).filter((t) => t && t.role === 'assistant'
+    && t.kind === 'guidance' && !t.error && (t.reaction === 'up' || t.reaction === 'down'));
+  if (!reacted.length) return null;
+  return reacted.slice(-10).map((t) => {
+    const s = String(t.text || '').replace(/\s+/g, ' ').trim();
+    return `The author ${t.reaction === 'up' ? 'liked' : 'disliked'}: "${s.slice(0, 80)}${s.length > 80 ? '…' : ''}"`;
+  }).join('\n');
 }

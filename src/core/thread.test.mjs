@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createThread, appendTurn, acceptTurn, dismissTurn, turnsFor, serializeThread, parseThread, buildAskPrompt, addScratch, removeScratch } from './thread.js';
+import { createThread, appendTurn, acceptTurn, dismissTurn, turnsFor, serializeThread, parseThread, buildAskPrompt, addScratch, removeScratch, parseTitleOptions, summarizeReactions } from './thread.js';
 
 test('createThread: v1, chat mode, empty turns + empty scratch', () => {
   assert.deepEqual(createThread(), { v: 1, mode: 'chat', turns: [], scratch: [] });
@@ -99,19 +99,54 @@ test('buildAskPrompt: block + neighbours + title flow into the user prompt', () 
 
 // ---- field-aware asks (spec addendum 9) -----------------------------------
 
-test('buildAskPrompt: title ask with a current title asks for ONE variation, offered not imposed', () => {
+// Title workshop (spec §9 parked bundle, now shipped): the explicit title ask returns
+// THREE variations in ONE AI call - the prompt is the contract (exactly three, one per
+// line, no numbering/quotes) and parseTitleOptions re-parses them at render time.
+test('buildAskPrompt: title ask with a current title asks for THREE variations, offered not imposed', () => {
   const p = buildAskPrompt({ ask: 'title', field: 'title', title: 'My Post' });
   assert.equal(p.wantsInsertable, true);
-  assert.match(p.user, /one|ONE/);
+  assert.match(p.user, /three|THREE/i);
   assert.match(p.user, /variation|alternative/i);
   assert.match(p.user, /take or leave|may use or ignore/i);   // offered, never imposed
   assert.match(p.user, /My Post/);                            // the current title is the seed
 });
 
-test('buildAskPrompt: title ask with NO title yet falls back to suggesting a fresh title', () => {
+test('buildAskPrompt: title ask with NO title yet asks for three fresh titles', () => {
   const p = buildAskPrompt({ ask: 'title', field: 'title', title: '' });
   assert.equal(p.wantsInsertable, true);
-  assert.match(p.user, /Suggest one strong title/);
+  assert.match(p.user, /three strong title/i);
+});
+
+test('buildAskPrompt: BOTH title branches demand one per line, no numbering, no quotes', () => {
+  for (const title of ['My Post', '']) {
+    const p = buildAskPrompt({ ask: 'title', field: 'title', title });
+    assert.match(p.user, /one per line/i);
+    assert.match(p.user, /no numbering/i);
+    assert.match(p.user, /no quotes/i);
+  }
+});
+
+test('parseTitleOptions: splits lines, trims, drops empties, caps at three', () => {
+  assert.deepEqual(parseTitleOptions('First title\n\n  Second title \nThird title\nFourth title'),
+    ['First title', 'Second title', 'Third title']);
+  assert.deepEqual(parseTitleOptions('Only one'), ['Only one']);
+  assert.deepEqual(parseTitleOptions(''), []);
+  assert.deepEqual(parseTitleOptions(null), []);
+  assert.deepEqual(parseTitleOptions('   \n \n'), []);
+});
+
+test('parseTitleOptions: tolerant of numbered/bulleted lines - prefixes stripped', () => {
+  assert.deepEqual(parseTitleOptions('1. Alpha\n2) Beta\n- Gamma'), ['Alpha', 'Beta', 'Gamma']);
+  assert.deepEqual(parseTitleOptions('* Alpha\n• Beta\n3. Gamma'), ['Alpha', 'Beta', 'Gamma']);
+});
+
+test('parseTitleOptions: strips wrapping quotes and de-dupes (case-insensitive)', () => {
+  assert.deepEqual(parseTitleOptions('"Quoted Title"\n“Smart Quoted”\nQuoted title'),
+    ['Quoted Title', 'Smart Quoted']);
+});
+
+test('parseTitleOptions: windows newlines tolerated', () => {
+  assert.deepEqual(parseTitleOptions('A\r\nB\r\nC'), ['A', 'B', 'C']);
 });
 
 test('buildAskPrompt: heading field shades guidance toward a variation/sharpening suggestion', () => {
@@ -149,6 +184,72 @@ test('buildAskPrompt: insertable asks keep the write-only system prompt (no guid
   const p = buildAskPrompt({ ask: 'tighten', field: 'heading', block: { type: 'heading', text: 'H' } });
   assert.match(p.system, /Reply ONLY with the requested text/);
   assert.doesNotMatch(p.system, /sharpen/i);
+});
+
+// ---- reaction thumbs feeding ask context (spec §9 parked bundle) ------------
+
+test('parseThread: reaction and tk extra fields survive the round-trip (the PUT path re-parses)', () => {
+  const raw = JSON.stringify({ v: 1, mode: 'chat', turns: [
+    { id: 't1', role: 'assistant', kind: 'guidance', text: 'why that angle?', blockRef: null,
+      ts: 1, state: 'open', reaction: 'up', tk: 42 },
+    { id: 't2', role: 'assistant', kind: 'guidance', text: 'meh', blockRef: null,
+      ts: 2, state: 'open', reaction: 'down' },
+  ]});
+  const t = parseThread(raw);
+  assert.equal(t.turns.length, 2);
+  assert.equal(t.turns[0].reaction, 'up');
+  assert.equal(t.turns[0].tk, 42);
+  assert.equal(t.turns[1].reaction, 'down');
+  assert.deepEqual(parseThread(serializeThread(t)), t);
+});
+
+test('summarizeReactions: compact liked/disliked lines from reacted guidance turns only', () => {
+  const turns = [
+    { role: 'assistant', kind: 'guidance', text: 'Try opening with the storm.', state: 'open', reaction: 'up' },
+    { role: 'assistant', kind: 'guidance', text: 'Cut the second paragraph?', state: 'open', reaction: 'down' },
+    { role: 'assistant', kind: 'guidance', text: 'unreacted guidance', state: 'open' },
+    { role: 'assistant', kind: 'insertable', text: 'a draft', state: 'open', reaction: 'up' },   // insertable never steers
+    { role: 'aside', kind: 'guidance', text: 'my own note', state: 'open', reaction: 'up' },     // the author's aside never steers
+    { role: 'assistant', kind: 'guidance', text: 'an error bubble', state: 'open', reaction: 'up', error: true },
+  ];
+  const s = summarizeReactions(turns);
+  assert.match(s, /liked: "Try opening with the storm\."/);
+  assert.match(s, /disliked: "Cut the second paragraph\?"/);
+  assert.doesNotMatch(s, /unreacted|a draft|my own note|error bubble/);
+});
+
+test('summarizeReactions: caps at the last 10 reacted turns, truncates each to 80 chars with …', () => {
+  const turns = [];
+  for (let i = 0; i < 14; i++) turns.push({ role: 'assistant', kind: 'guidance',
+    text: 'guidance number ' + i + ' ' + 'x'.repeat(100), state: 'open', reaction: i % 2 ? 'up' : 'down' });
+  const s = summarizeReactions(turns);
+  const lines = s.split('\n');
+  assert.equal(lines.length, 10);                       // last ~10 only
+  assert.doesNotMatch(s, /guidance number 3 /);         // older reactions age out
+  assert.match(s, /guidance number 13 /);               // newest kept
+  for (const l of lines){ assert.ok(l.length < 120, 'compact line: ' + l.length); assert.match(l, /…"$/); }
+});
+
+test('summarizeReactions: null when nothing was reacted (and on junk input)', () => {
+  assert.equal(summarizeReactions([]), null);
+  assert.equal(summarizeReactions([{ role: 'assistant', kind: 'guidance', text: 'x', state: 'open' }]), null);
+  assert.equal(summarizeReactions(null), null);
+});
+
+test('buildAskPrompt: recentReactions folds a steering line into the system prompt (guidance AND insertable)', () => {
+  const steer = 'The author liked: "Try opening with the storm."';
+  for (const ask of ['reply', 'tighten']) {
+    const p = buildAskPrompt({ ask, text: 'x', block: { type: 'text', text: 'para' }, recentReactions: steer });
+    assert.match(p.system, /lean toward what (the author|they) liked/i);
+    assert.match(p.system, /Try opening with the storm/);
+  }
+});
+
+test('buildAskPrompt: no steering line when recentReactions is absent/empty', () => {
+  for (const rr of [undefined, null, '']) {
+    const p = buildAskPrompt({ ask: 'reply', text: 'x', recentReactions: rr });
+    assert.doesNotMatch(p.system, /lean toward/i);
+  }
 });
 
 // ---- rough-draft scratch (spec addendum 9: Rough draft rail) ---------------

@@ -10,6 +10,7 @@ import * as draftsIo from './lib/draftsIo.js';
 import * as appReset from './lib/appReset.js';
 import { makePosts } from './core/posts.js';
 import * as partner from './core/partner.js';
+import { parseTitleOptions, summarizeReactions } from './core/thread.js';
 import { makeRouter } from './router.js';
 import * as studio from './lib/studio.js';
 import * as playgrounds from './lib/playgrounds/index.js';
@@ -461,5 +462,6 @@ if (typeof window !== 'undefined') {
   window.__studioDrafts = draftsIo;        // H4: pure draft export/import serialiser (serialiseDrafts / parseDraftsFile / DRAFT_STORES)
   window.__studioReset = appReset;         // M9: pure "Forget this device" enumerator (chapbookKeys / CHAPBOOK_IDB_NAME)
   window.__studioThemes = themeCatalogue;   // baked blog-theme registry + live-catalogue fetch + the shared picker renderer (Settings → Site mounts it)
+  window.__studioThread = { parseTitleOptions, summarizeReactions }; // pure title-workshop parser + reaction-steering digest (the inline module can't import core/)
   refresh();
 }

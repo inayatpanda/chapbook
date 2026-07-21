@@ -151,7 +151,8 @@ test('thread turn: guidance ask returns insertable:false and calls the ai seam o
   const ai = { async generateText({ system, prompt }) { calls.push({ system, user: prompt }); return { text: 'why that angle?' }; } };
   const { api } = makeRouter({ ai });
   const res = await api('/thread/turn', { method: 'POST', body: JSON.stringify({ ask: 'reply', text: 'good?', block: { type: 'text', text: 'para' }, title: 'T' }) });
-  assert.deepEqual(res, { text: 'why that angle?', insertable: false });
+  assert.equal(res.text, 'why that angle?');
+  assert.equal(res.insertable, false);
   assert.equal(calls.length, 1);
   assert.match(calls[0].system, /guide/i);
 });
@@ -159,5 +160,31 @@ test('thread turn: guidance ask returns insertable:false and calls the ai seam o
 test('thread turn: tighten returns insertable:true', async () => {
   const { api } = makeRouter({ ai: { async generateText() { return { text: 'tighter.' }; } } });
   const res = await api('/thread/turn', { method: 'POST', body: JSON.stringify({ ask: 'tighten', block: { type: 'text', text: 'wordy' } }) });
-  assert.deepEqual(res, { text: 'tighter.', insertable: true });
+  assert.equal(res.text, 'tighter.');
+  assert.equal(res.insertable, true);
+});
+
+// Token-cost annotation (spec §9 parked bundle): the UI shows "~N tk" per AI turn,
+// estimated as ceil((promptChars + replyChars)/4). Only the router sees the assembled
+// system+user prompt, so it reports promptChars alongside the reply.
+test('thread turn: response carries promptChars = assembled system+user prompt length', async () => {
+  const calls = [];
+  const ai = { async generateText({ system, prompt }) { calls.push({ system, user: prompt }); return { text: 'why?' }; } };
+  const { api } = makeRouter({ ai });
+  const res = await api('/thread/turn', { method: 'POST', body: JSON.stringify({ ask: 'reply', text: 'good?', block: { type: 'text', text: 'para' }, title: 'T' }) });
+  assert.equal(typeof res.promptChars, 'number');
+  assert.equal(res.promptChars, calls[0].system.length + calls[0].user.length);
+  assert.ok(res.promptChars > 0);
+});
+
+// Reaction steering rides the SAME turn call: the body's recentReactions digest lands
+// in the system prompt (buildAskPrompt), so a reacted-to Partner steers the next ask.
+test('thread turn: recentReactions in the body reaches the system prompt', async () => {
+  const calls = [];
+  const ai = { async generateText({ system, prompt }) { calls.push({ system, user: prompt }); return { text: 'noted' }; } };
+  const { api } = makeRouter({ ai });
+  await api('/thread/turn', { method: 'POST', body: JSON.stringify({ ask: 'reply', text: 'more?',
+    recentReactions: 'The author liked: "open with the storm"' }) });
+  assert.match(calls[0].system, /lean toward what the author liked/i);
+  assert.match(calls[0].system, /open with the storm/);
 });

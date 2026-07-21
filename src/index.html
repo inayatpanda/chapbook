@@ -2247,10 +2247,30 @@
     .turn-assistant{max-width:82%;font-size:.875rem}
     .turn-aside{max-width:80%;font-size:.8125rem}
   }
-  .turn-acts{display:flex;gap:.4rem;margin-top:.45rem;white-space:normal}
+  .turn-acts{display:flex;gap:.4rem;margin-top:.45rem;white-space:normal;align-items:center}
   .turn-acts button{font-size:.78rem;padding:.25rem .6rem;border-radius:999px;
     border:1px solid var(--line);background:rgba(140,160,200,.08);color:var(--ink);cursor:pointer}
   .turn-acts button:hover{border-color:var(--acc)}
+  /* token-cost hint: tiny + muted inside the speaker line; the ~ says approximate.
+     The speaker line is uppercase display type - the hint opts back out of both. */
+  .turn-tk{float:right;margin-left:.6rem;font:500 .625rem var(--font-body);
+    letter-spacing:0;text-transform:none;color:var(--faint)}
+  /* title workshop: three variations as tappable chips INSIDE the suggestion bubble
+     (theme vars carry light + dark) */
+  .turn-titles-lead{display:block;font-size:.8rem;color:var(--mut)}
+  .turn-titles{display:flex;flex-direction:column;align-items:flex-start;gap:.35rem;
+    margin-top:.45rem;white-space:normal}
+  .turn-titles button{text-align:left;max-width:100%;border:1px solid var(--partner-line);
+    background:var(--partner-wash);color:var(--ink);border-radius:10px;padding:.45rem .65rem;
+    font:inherit;font-size:.85rem;line-height:1.35;cursor:pointer}
+  .turn-titles button:hover,.turn-titles button:focus-visible{border-color:var(--partner-voice);outline:none}
+  /* reaction thumbs: quiet by default, filled once chosen (aria-pressed) */
+  .turn-acts button.turn-thumb{border-color:transparent;background:transparent;
+    padding:.1rem .3rem;font-size:.82rem;line-height:1;opacity:.45}
+  .turn-acts button.turn-thumb:hover{opacity:.85;border-color:transparent}
+  .turn-acts button.turn-thumb[aria-pressed="true"]{opacity:1;
+    background:var(--partner-wash);border-color:var(--partner-line)}
+  .turn-acts button.turn-thumb:focus-visible{outline:2px solid var(--partner-voice);outline-offset:1px}
   .thread-typing{opacity:.7;font-style:italic}
   /* typing indicator: three Partner-coloured dots; prefers-reduced-motion swaps the
      animation for the static "Partner is thinking…" text (spec addendum 9g) */
@@ -5151,7 +5171,7 @@ async function boot(){
     setTimeout(()=>{ try{ maybeWarnStorage(); }catch{} }, 400);
     // Discard-orphan self-heal: clear a stranded /thread/__untitled__ sidecar whose
     // blocks record is gone (a discard whose thread DELETE failed). Once per boot,
-    // non-blocking, silent either way — sweepOrphanUntitledThread guards composing.
+    // non-blocking, silent either way; sweepOrphanUntitledThread guards composing.
     setTimeout(()=>{ try{ sweepOrphanUntitledThread(); }catch{} }, 900);
   }catch(e){
     // H4 — a blocked IndexedDB (Safari private mode / ITP eviction) makes api('/drafts')
@@ -9737,11 +9757,17 @@ async function askPartner(ask, { text = '', blockId = null, reAsk = false } = {}
   const field = ask === 'title' ? 'title'
     : i >= 0 ? (blocks[i].type === 'heading' ? 'heading' : blocks[i].type === 'text' ? 'text' : blocks[i].type)
     : null;
+  // reaction steering (spec §9 parked bundle): a compact digest of the author's 👍/👎
+  // on past guidance rides the payload - the system prompt leans toward what they liked.
+  // Pure digest from core/thread.js (summarizeReactions); undefined drops out of the JSON.
+  const steer = (window.__studioThread && window.__studioThread.summarizeReactions)
+    ? window.__studioThread.summarizeReactions(reqThread.turns) : null;
   const payload = { ask, text, field,
     title: (meta && meta.title) || ($('editorTitle') && $('editorTitle').value) || '',
     block: i >= 0 ? _threadBlockForPrompt(blocks[i]) : null,
     prevBlock: i > 0 ? _threadBlockForPrompt(blocks[i - 1]) : null,
-    nextBlock: i >= 0 ? _threadBlockForPrompt(blocks[i + 1] || null) : null };
+    nextBlock: i >= 0 ? _threadBlockForPrompt(blocks[i + 1] || null) : null,
+    recentReactions: steer || undefined };
   // the author's spoken turn renders as an italic aside bubble (asks that carry a
   // message) - but a Retry re-asks an already-spoken message, so it never re-bubbles
   const newTurns = [];   // the request's own turns, for routing on completion
@@ -9764,6 +9790,11 @@ async function askPartner(ask, { text = '', blockId = null, reAsk = false } = {}
     const doneTurn = { id: doneId, role: 'assistant',
       kind: r && r.insertable ? 'insertable' : 'guidance', text: String((r && r.text) || ''),
       blockRef: blockId, ts: Date.now(), state: 'open', retry: { ask, text, blockId } };
+    // token-cost hint (spec §9 parked bundle): ~chars/4, both sides of the exchange.
+    // Approximate BY DESIGN (the ~ says so); only real AI turns carry it - error and
+    // local turns never do (JSON.stringify drops the undefined).
+    if(r && typeof r.promptChars === 'number' && r.promptChars > 0)
+      doneTurn.tk = Math.ceil((r.promptChars + doneTurn.text.length) / 4);
     reqThread.turns.push(doneTurn);
     newTurns.push(doneTurn);
   } catch (e) {
@@ -9848,6 +9879,15 @@ function _mkTurnEl(t){
     const speaker = document.createElement('span');
     speaker.className = 'turn-speaker';
     speaker.textContent = t.kind === 'insertable' ? 'Partner suggestion' : 'Partner';
+    // token-cost hint (spec §9 parked bundle): tiny, muted, approximate by design.
+    // Only AI-generated turns carry t.tk - error and local (pre-publish) turns never do.
+    if(typeof t.tk === 'number' && t.tk > 0 && !t.error && !t.local){
+      const tk = document.createElement('span');
+      tk.className = 'turn-tk';
+      tk.textContent = '~' + t.tk + ' tk';
+      tk.title = 'Approximate tokens this exchange used (prompt + reply)';
+      speaker.appendChild(tk);
+    }
     el.appendChild(speaker);
   }
   if(t.typing){
@@ -9866,18 +9906,58 @@ function _mkTurnEl(t){
     el.appendChild(tx);
     return el;
   }
-  el.appendChild(document.createTextNode(t.text));   // textContent path - AI text is never HTML
+  // Title workshop (spec §9 parked bundle): a title-ask reply carries THREE options -
+  // re-parsed from the raw stored text at every render (no schema change), each one a
+  // tappable chip. One option or a parser-less build falls back to the classic
+  // text + Accept rendering.
+  const parseOpts = (window.__studioThread && window.__studioThread.parseTitleOptions) || null;
+  const titleOpts = (parseOpts && t.kind === 'insertable' && t.state === 'open' && !t.error
+    && t.retry && t.retry.ask === 'title') ? parseOpts(t.text) : [];
+  const isWorkshop = titleOpts.length >= 2;
+  if(isWorkshop){
+    const lead = document.createElement('span');
+    lead.className = 'turn-titles-lead';
+    lead.textContent = 'Tap a title to use it:';
+    el.appendChild(lead);
+    const opts = document.createElement('div'); opts.className = 'turn-titles';
+    for(const opt of titleOpts){
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = opt;
+      b.addEventListener('click', ev => { ev.stopPropagation(); acceptThreadTurn(t, opt); });
+      opts.appendChild(b);
+    }
+    el.appendChild(opts);
+  } else {
+    el.appendChild(document.createTextNode(t.text));   // textContent path - AI text is never HTML
+  }
   if(t.role !== 'assistant') return el;
   const acts = document.createElement('div'); acts.className = 'turn-acts';
   const btn = (label, fn) => {
     const b = document.createElement('button'); b.type = 'button'; b.textContent = label;
     b.addEventListener('click', ev => { ev.stopPropagation(); fn(); }); acts.appendChild(b);
+    return b;
   };
-  if(t.kind === 'insertable' && t.state === 'open') btn('Accept', () => acceptThreadTurn(t));
+  // the workshop's chips ARE the accept - no separate Accept button for it
+  if(t.kind === 'insertable' && t.state === 'open' && !isWorkshop) btn('Accept', () => acceptThreadTurn(t));
   // no-key errors route to the fix (Settings → Keys) - a Retry without a key only fails again
   if(t.error && t.noKey) btn('Open settings', () => { go('settings'); loadSettings(); });
   else if(t.error || (t.kind === 'insertable' && t.state === 'open')) btn('Retry', () => retryThreadTurn(t));
   if(t.state === 'open') btn('Dismiss', () => dismissThreadTurn(t));
+  // reaction thumbs (spec §9 parked bundle): quiet 👍/👎 on real guidance turns - the
+  // reaction persists on the turn and steers later asks (summarizeReactions). Local
+  // (pre-publish) and error turns take no reactions: they never reach the model.
+  if(t.kind === 'guidance' && !t.error && !t.local && t.state === 'open'){
+    const thumb = (mark, val, label) => {
+      const b = btn(mark, () => {
+        if(t.reaction === val) delete t.reaction; else t.reaction = val;   // tap again to clear
+        saveThread(); renderTurns();
+      });
+      b.className = 'turn-thumb';
+      b.setAttribute('aria-label', label);
+      b.setAttribute('aria-pressed', t.reaction === val ? 'true' : 'false');
+    };
+    thumb('👍', 'up', 'This guidance helped');
+    thumb('👎', 'down', 'This guidance missed');
+  }
   if(acts.children.length) el.appendChild(acts);
   return el;
 }
@@ -9937,10 +10017,12 @@ function renderTurns(){
 }
 window.__threadRenderTurns = renderTurns;
 
-function acceptThreadTurn(t){
+/* chosenText: the title workshop passes the TAPPED option; every other accept takes
+   the turn's own text. Same path either way - title set + input dispatch + accepted. */
+function acceptThreadTurn(t, chosenText){
   if(t.kind !== 'insertable' || t.state !== 'open') return;
   const ask = (t.retry && t.retry.ask) || '';
-  const clean = String(t.text || '').trim();
+  const clean = String(chosenText != null ? chosenText : (t.text || '')).trim();
   if(ask === 'title'){
     const inp = $('editorTitle');
     if(inp){
@@ -10201,8 +10283,15 @@ function renderThreadChips(){
   const want = _threadMode && blocks.length > 0 && !_askBusy;
   if(want && !_chipsIdle && !_chipIdleT) _chipIdleArm();   // start the quiet clock
   host.hidden = !(want && _chipsIdle);
-  if(host.hidden || host.dataset.built) return;
-  host.dataset.built = '1';
+  // pre-publish-as-conversation (spec §9 parked bundle): when the post LOOKS done
+  // (title present, four+ blocks) one extra chip offers the free local check. The
+  // built-key carries the condition so the chip row rebuilds when readiness flips.
+  const lookReady = !!(((meta && meta.title) || ($('editorTitle') && $('editorTitle').value) || '').trim())
+    && blocks.length >= 4;
+  const builtKey = lookReady ? '1+look' : '1';
+  if(host.hidden || host.dataset.built === builtKey) return;
+  host.dataset.built = builtKey;
+  host.innerHTML = '';
   const chip = (label, ask) => {
     const b = document.createElement('button'); b.type = 'button'; b.textContent = label;
     b.addEventListener('click', () => {
@@ -10214,6 +10303,52 @@ function renderThreadChips(){
   chip('Continue this thought', 'continue');
   chip('Tighten', 'tighten');
   chip('Suggest a title', 'title');
+  if(lookReady){
+    const b = document.createElement('button'); b.type = 'button';
+    b.textContent = 'Look it over?';
+    b.title = 'A free local read-through · no AI call';
+    b.addEventListener('click', () => runLookOver());
+    host.appendChild(b);
+  }
+}
+
+/* ── pre-publish as conversation (spec §9 parked bundle) ──────────────────────
+   The EXISTING local pre-publish engine (runPrepublishCheck → the client router's
+   prepublish.checkDoc - synchronous rules, NO AI call, free) posted into the thread
+   as guidance: one summary turn, plus one compact details turn when there is
+   anything to show. Explicit-tap only, like every Partner feature. The turns are
+   marked local:true - no token hint, no reaction thumbs, nothing ever sent to a
+   model. */
+let _lookBusy = false;
+async function runLookOver(){
+  if(_lookBusy || !_threadMode) return;
+  _lookBusy = true;
+  try{
+    const res = await runPrepublishCheck();
+    const errs = (res && res.errors) || [], warns = (res && res.warnings) || [];
+    const ambers = ((res && res.polish) || []).filter(p => p && p.level === 'amber');
+    const n = (k, one) => k + ' ' + one + (k === 1 ? '' : 's');
+    const summary = (!errs.length && !warns.length && !ambers.length)
+      ? 'I looked it over (free, local check): this reads ready to publish. Polish score ' + res.score + '/100.'
+      : 'I looked it over (free, local check): ' + (errs.length ? n(errs.length, 'blocker') : 'no blockers')
+        + ', ' + n(warns.length, 'warning')
+        + (ambers.length ? ', ' + n(ambers.length, 'polish note') : '')
+        + '. Polish score ' + res.score + '/100.';
+    const lines = [];
+    for(const e of errs) lines.push('✕ ' + e.message);
+    for(const w of warns) lines.push('△ ' + w.message);
+    for(const p of ambers) lines.push('• ' + p.group + (p.items && p.items[0] ? ': ' + p.items[0] : ''));
+    const mkLocal = (text) => ({ id: 'l' + Date.now().toString(36) + '-' + _thread.turns.length,
+      role: 'assistant', kind: 'guidance', text, blockRef: null, ts: Date.now(), state: 'open', local: true });
+    const first = mkLocal(summary);
+    _thread.turns.push(first);
+    if(lines.length) _thread.turns.push(mkLocal(lines.slice(0, 12).join('\n')));
+    saveThread(); renderTurns(); _threadScrollTo(first.id);
+  }catch(e){
+    showError(e, { title: 'Check failed' });
+  }finally{
+    _lookBusy = false;
+  }
 }
 
 // typing anywhere (bar or block) hides the chips and re-arms the 4s idle reveal
@@ -12441,6 +12576,7 @@ function sweepOrphanUntitledThread(){
     }catch(_){ /* silent - the next boot retries */ }
   });
 }
+window.__sweepOrphanUntitledThread = sweepOrphanUntitledThread;   // exposed for tests, like __threadRenderTurns
 
 /* ── back button ───────────────────────────────────────────────────────────
    Context-aware: a new post (editorSection==='write') returns to the New-post

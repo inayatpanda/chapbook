@@ -265,7 +265,9 @@ export function makeRouter(deps) {
     if (a === 'thread' && b === 'turn' && method === 'POST') {
       const { system, user, wantsInsertable } = buildAskPrompt(body || {});
       const { text } = await ai.generateText({ system, prompt: user, maxTokens: 900 });
-      return { text, insertable: wantsInsertable };
+      // promptChars: only this route sees the assembled prompt, so it reports the size
+      // for the UI's "~N tk" cost hint (estimate: ceil((promptChars+replyChars)/4)).
+      return { text, insertable: wantsInsertable, promptChars: system.length + user.length };
     }
     if (a === 'thread' && b && method === 'GET') {
       const raw = await storage.get('threads', b);
