@@ -6656,7 +6656,11 @@ function makePostRow(p){
   row.querySelector('.pm-selcb')?.addEventListener('change',toggleSel);
   row.querySelector('[data-act="edit"]').addEventListener('click',()=>{ if(_postSelect.mode){ toggleSel(); return; } openBlockEditor(p.slug); });
   row.querySelector('[data-act="share"]')?.addEventListener('click',()=>shareFromPost(p));
-  row.querySelector('[data-act="reschedule"]')?.addEventListener('click',async()=>{ if(_postSelect.mode){ toggleSel(); return; } await openBlockEditor(p.slug); openSchedule(); });
+  // Reschedule opens the scheduler ONLY when the post's doc actually loaded: openBlockEditor
+  // resets doc to blocks:[] before fetching, so opening the scheduler after a failed load
+  // would let doSchedule commit an EMPTY doc over the post (openBlockEditor already showed
+  // the load error + retry, so no extra toast here).
+  row.querySelector('[data-act="reschedule"]')?.addEventListener('click',async()=>{ if(_postSelect.mode){ toggleSel(); return; } if(await openBlockEditor(p.slug)) openSchedule(); });
   row.querySelector('[data-act="unschedule"]')?.addEventListener('click',()=>unschedulePost(p));
   row.querySelector('[data-act="toggle"]')?.addEventListener('click',()=>togglePost(p));
   row.querySelector('[data-act="dup"]').addEventListener('click',()=>dupPost(p));
@@ -12241,9 +12245,14 @@ async function openBlockEditor(slug){
       const pubT = r.publishedAt ? (Date.parse(r.publishedAt) || 0) : 0;
       if(!pubT || draftT > pubT){ offerDraftRecovery(slug, r.draftSavedAt); }
     }
+    return true;   // the post's doc/meta loaded — safe for callers to act on the editor state
   }catch(e){
     setSaveState('error','Couldn’t load');
     showError(e, { title:'Couldn’t open the post', onRetry:()=>openBlockEditor(slug) });
+    // DATA-LOSS GUARD: doc was reset to blocks:[] above and the real doc never loaded.
+    // Signal failure so callers (e.g. the reschedule action) never commit the empty doc
+    // over the post. The editor stays open showing the load error + retry.
+    return false;
   }
 }
 window.openBlockEditor = openBlockEditor;
@@ -13331,7 +13340,11 @@ async function restoreVersion(v){
   _restoringVersion = true;
   try{
     if(!await helmConfirm({ title:'Restore “'+(v.label||'Snapshot')+'” from '+relTime(v.ts)+'?', text:'Your current state is snapshotted first, so this is undoable.', okText:'Restore' })) return;
-    await snapshotCurrent('Before restore', { silent:true });
+    // The confirm above PROMISES a snapshot-first undo. snapshotCurrent returns null when the
+    // safety snapshot could not be saved (storage full/unavailable) — restoring anyway would
+    // silently replace the current doc with no way back, so abort with an honest message.
+    const snap = await snapshotCurrent('Before restore', { silent:true });
+    if(!snap){ toast('Restore cancelled — couldn’t save the safety snapshot of your current state, so nothing was changed.'); return; }
     doc = (v.doc && v.doc.blocks) ? structuredClone(v.doc) : { version:1, blocks:[] };
     meta = metaFromData(currentSlug, v.meta || {});
     selectedId = null;
