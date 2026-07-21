@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chapbookKeys, CHAPBOOK_LS_PREFIXES, CHAPBOOK_IDB_NAME, deleteDatabaseAndWait } from './appReset.js';
+import { chapbookKeys, CHAPBOOK_LS_PREFIXES, CHAPBOOK_IDB_NAME, deleteDatabaseAndWait, resetOutcomePlan } from './appReset.js';
 
 // The full set of localStorage keys Chapbook is known to write (grepped from src/). If a
 // new key is added under a NEW prefix, this test should fail until the prefix list covers
@@ -90,6 +90,28 @@ test('deleteDatabaseAndWait resolves "timeout" when nothing ever fires', async (
 test('deleteDatabaseAndWait resolves "error" when deleteDatabase itself throws', async () => {
   const throwing = { deleteDatabase() { throw new Error('nope'); } };
   assert.equal(await deleteDatabaseAndWait(throwing, 'db'), 'error');
+});
+
+// ── resetOutcomePlan: the ORDER contract for "Forget this device" ───────────
+// The inline reset used to clear localStorage secrets BEFORE the IDB delete, so a
+// 'blocked' delete produced an inconsistent partial wipe: secrets gone, drafts
+// alive, retry broken. The IDB delete now runs FIRST and this table decides what
+// follows: blocked wipes NOTHING (retry is clean); deleted wipes everything;
+// timeout/error clear the secrets anyway (the security half of "forget") but warn
+// that some local content may remain.
+
+test('resetOutcomePlan: blocked keeps everything (no secret clear, no reload)', () => {
+  assert.deepEqual(resetOutcomePlan('blocked'), { clearSecrets: false, reload: false, warnPartial: false });
+});
+
+test('resetOutcomePlan: deleted is the clean full wipe', () => {
+  assert.deepEqual(resetOutcomePlan('deleted'), { clearSecrets: true, reload: true, warnPartial: false });
+});
+
+test('resetOutcomePlan: timeout/error/unknown clear secrets but warn of a partial wipe', () => {
+  for (const outcome of ['timeout', 'error', undefined, 'banana']) {
+    assert.deepEqual(resetOutcomePlan(outcome), { clearSecrets: true, reload: true, warnPartial: true }, String(outcome));
+  }
 });
 
 test('deleteDatabaseAndWait settles once: a late second event cannot re-resolve', async () => {

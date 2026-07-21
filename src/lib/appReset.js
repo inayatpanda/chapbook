@@ -48,6 +48,26 @@ export function chapbookKeys(allKeys) {
 //   'error'   — the delete failed (or deleteDatabase itself threw).
 //   'timeout' — no event within timeoutMs; the caller may proceed as a fallback.
 // Never rejects. `idb` is injectable (window.indexedDB in the app; a fake in tests).
+// Decision table for the inline "Forget this device" flow AFTER deleteDatabaseAndWait
+// settles. ORDER MATTERS in the caller: the IDB delete runs FIRST and localStorage is
+// only touched according to this plan — the old flow cleared the secrets up front, so a
+// 'blocked' delete left an INCONSISTENT partial wipe (secrets gone, drafts alive) and
+// the retry no longer started from a clean state.
+//   'blocked'          → wipe NOTHING: another tab holds the DB open; tell the user to
+//                        close other Chapbook tabs and retry — untouched state retries
+//                        cleanly.
+//   'deleted'          → the clean path: clear the secrets, reload to the gate.
+//   'timeout'/'error'  → the delete is unconfirmed. TRADE-OFF: "forget this device" is
+//     (and unknowns)     first a SECURITY action, so clearing the token/keys/licence
+//                        wins over a perfectly consistent wipe — clear them, warn that
+//                        some local content may remain, and still reload (a stuck
+//                        delete must not trap the user on a shared machine).
+export function resetOutcomePlan(outcome) {
+  if (outcome === 'blocked') return { clearSecrets: false, reload: false, warnPartial: false };
+  if (outcome === 'deleted') return { clearSecrets: true, reload: true, warnPartial: false };
+  return { clearSecrets: true, reload: true, warnPartial: true };
+}
+
 export function deleteDatabaseAndWait(idb, name, { timeoutMs = 4000 } = {}) {
   return new Promise((resolve) => {
     let settled = false;

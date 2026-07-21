@@ -6405,29 +6405,35 @@ $('draftsImportInput') && $('draftsImportInput').addEventListener('change',funct
 async function forgetThisDevice(){
   if(!await helmConfirm({ title:'Sign out and forget this device?', text:'This wipes EVERYTHING Chapbook has stored in this browser:\n• your GitHub token, AI keys and R2 keys\n• your licence\n• all local drafts, sessions, snapshots and ideas\n\nAnything already published to your GitHub repo or R2 bucket is safe. This cannot be undone — export your drafts first if you want to keep them.\n\nContinue?', okText:'Sign out', danger:true })) return;
   const R=window.__studioReset;
-  // 1. localStorage — every Chapbook namespace (config keys, licence, metric once-flags, …).
-  try{
-    const keys = R ? R.chapbookKeys(Object.keys(localStorage)) : [];
-    for(const k of keys){ try{ localStorage.removeItem(k); }catch{} }
-  }catch{}
-  // 2. IndexedDB — drafts, blockdrafts, partner sessions, shapes, versions, ideas.
-  //    AWAITED (with a short timeout fallback): reloading while the delete is still
-  //    pending or blocked would leave drafts/threads alive after "reset". When another
-  //    Chapbook tab blocks the delete, warn and DON'T reload into a half-wiped state.
+  // 1. IndexedDB FIRST — drafts, blockdrafts, partner sessions, shapes, versions, ideas.
+  //    AWAITED, because the outcome decides everything that follows (the decision table
+  //    lives in appReset.resetOutcomePlan). Clearing localStorage BEFORE the delete
+  //    settled was the old bug: a 'blocked' delete (another tab holding the DB) left an
+  //    inconsistent partial wipe — secrets gone, drafts alive — and the retry no longer
+  //    started clean. Now a blocked delete wipes NOTHING.
   let wiped='deleted';
   try{
     const dbName=(R&&R.CHAPBOOK_IDB_NAME)||'helm-studio';
     if(R && R.deleteDatabaseAndWait) wiped=await R.deleteDatabaseAndWait(indexedDB, dbName);
     else{ try{ indexedDB.deleteDatabase(dbName); }catch{} }
   }catch{ wiped='error'; }
-  if(wiped==='blocked'){
-    msg('draftsMsg','Sign-out could not finish: another Chapbook tab is holding your local data open. Close every other Chapbook tab or window, then try again.','err');
+  const plan=(R&&R.resetOutcomePlan)?R.resetOutcomePlan(wiped):{clearSecrets:true,reload:true,warnPartial:wiped!=='deleted'};
+  if(!plan.clearSecrets){
+    msg('draftsMsg','Sign-out could not finish: another Chapbook tab is holding your local data open. Nothing was wiped. Close every other Chapbook tab or window, then try again.','err');
     return;
   }
+  // 2. localStorage — every Chapbook namespace (token, AI/R2 keys, licence, once-flags).
+  //    On 'timeout'/'error' the delete is UNCONFIRMED, but this is the security half of
+  //    "forget this device": clearing the secrets wins over a perfectly consistent wipe
+  //    (trade-off documented in appReset.resetOutcomePlan), so they go regardless.
+  try{
+    const keys = R ? R.chapbookKeys(Object.keys(localStorage)) : [];
+    for(const k of keys){ try{ localStorage.removeItem(k); }catch{} }
+  }catch{}
+  if(plan.warnPartial){ try{ console.warn('Chapbook reset: the local database delete did not confirm ('+wiped+'). Keys and licence were cleared, but some local drafts may remain in this browser.'); }catch{} }
   // 3. Back to the activation gate — a clean reload re-runs the licence check.
-  //    ('deleted' is the clean path; 'timeout'/'error' still reload — secrets are
-  //    already cleared above and a stuck delete must not trap the user here.)
-  try{ location.reload(); }catch{}
+  //    ('timeout'/'error' still reload: a stuck delete must not trap the user here.)
+  if(plan.reload!==false){ try{ location.reload(); }catch{} }
 }
 window.forgetThisDevice=forgetThisDevice;
 
@@ -11489,13 +11495,21 @@ function edVideo(b, isSel){
    Model: { html, js }. Two monospace textareas (HTML + JS) update the model on
    input WITHOUT a re-render (focus preserved). A "Preview" toggle renders the
    playground inside a sandboxed iframe (allow-scripts only, so no same-origin
-   access; a CSP <meta> in the srcdoc blocks ALL network — playgrounds are
-   self-contained by contract) via srcdoc, so the owner sees the JS actually run
-   before publishing. Built on toggle / Refresh — not live on every keystroke. */
+   access; a CSP <meta> in the srcdoc blocks external resource loads — playgrounds
+   are self-contained by contract) via srcdoc, so the owner sees the JS actually
+   run before publishing. Built on toggle / Refresh — not live on every keystroke. */
 /* CSP for every playground preview srcdoc (block editor + template library +
    library grid). sandbox="allow-scripts" gives an opaque origin (no parent /
    localStorage access) but does NOT stop outbound fetch/img/beacon; this meta
-   does. Inline script/style still run; data:/blob: media allowed (no network). */
+   does. Inline script/style still run; data:/blob: media allowed.
+   HONESTY NOTE (accepted limitation): CSP fetch directives govern resource LOADS,
+   not navigation, and `navigate-to` never gained browser support — so a playground
+   can still navigate its own sandboxed iframe to an external URL (the sandbox only
+   blocks top-navigation/popups/forms). That channel can't be closed without
+   removing allow-scripts, which would break playgrounds entirely. Accepted because
+   the preview runs the AUTHOR'S OWN code in an opaque origin holding no secrets;
+   copy about previews must therefore say "cannot load external resources", never
+   claim "no network at all". */
 const PG_PREVIEW_CSP = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'unsafe-inline\'; style-src \'unsafe-inline\'; img-src data: blob:; media-src data: blob:; font-src data:">';
 /* Reusable placement chooser (standard/wide/left/right) — used by image,
    playground and the template-library picker. Sets target.placement, runs the
@@ -11729,7 +11743,9 @@ function edPlayground(b, isSel){
 
   const note = document.createElement('div');
   note.className = 'be-pg-note';
-  note.textContent = 'Preview — approximate; the site applies the full styling on publish.';
+  // Accurate scope claim: the srcdoc CSP stops external resource LOADS (fetch/img/
+  // media), not every conceivable network signal - so say exactly that, and no more.
+  note.textContent = 'Preview is approximate; the site applies full styling on publish. Previews cannot load external resources.';
 
   const holder = document.createElement('div');
   holder.className = 'be-pg-preview';
@@ -11767,9 +11783,10 @@ function edPlayground(b, isSel){
     const idAttr = b.domId ? ` id="${b.domId}"` : '';
     // CSP meta FIRST in <head>: sandbox="allow-scripts" alone still permits outbound
     // fetch/img/beacon from the opaque origin. Playgrounds are self-contained by
-    // contract (no fetch/network — enforced by the family tests), so the preview
-    // enforces it too: default-src 'none' blocks all network; inline script/style
-    // still run; data:/blob: images stay allowed (locally generated, no network).
+    // contract (no fetch — enforced by the family tests), so the preview enforces it
+    // too: default-src 'none' blocks external resource loads; inline script/style
+    // still run; data:/blob: images stay allowed (locally generated). Self-navigation
+    // is NOT blocked — see the honesty note on PG_PREVIEW_CSP.
     return `<!doctype html><html><head>${PG_PREVIEW_CSP}<meta charset="utf-8"><style>${css}</style>`
          + (blockCss ? `<style>${blockCss}</style>` : '')
          + `</head><body>`
