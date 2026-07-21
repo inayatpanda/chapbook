@@ -9028,7 +9028,7 @@ function sanitiseHtml(html){
             (m,d,dq,sq,uq)=>{ const raw=(dq!==undefined?dq:sq!==undefined?sq:uq)||'';
               // browsers strip ASCII whitespace/control chars WITHIN a URL, so `da\nta:`
               // resolves to data: — normalise the same way before matching the scheme.
-              const norm=raw.replace(/[\u0000-\u0020]+/g,'').toLowerCase();
+              const norm=raw.replace(/&#x([0-9a-f]+);?/gi,(_m,h)=>{try{return String.fromCodePoint(parseInt(h,16));}catch{return '';}}).replace(/&#(\d+);?/g,(_m,n)=>{try{return String.fromCodePoint(parseInt(n,10));}catch{return '';}}).replace(/&colon;/gi,':').replace(/&(?:tab|newline|nbsp);/gi,' ').replace(/[\u0000-\u0020]+/g,'').toLowerCase();
               if(/^(?:javascript|vbscript):/.test(norm)) return keepDelim(m,d);
               if(/^data:/.test(norm)) return /^data:image\/(?:png|jpe?g|gif|webp|avif);base64,/i.test(raw.trim())?m:keepDelim(m,d);
               return m; });

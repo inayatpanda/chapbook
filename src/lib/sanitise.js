@@ -76,12 +76,25 @@ export function regexStripFallback(html) {
   s = s.replace(/([\s/"'`])(?:xlink:)?(?:href|src)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi,
     (m, d, dq, sq, uq) => {
       const raw = (dq !== undefined ? dq : sq !== undefined ? sq : uq) || '';
-      const norm = raw.replace(/[\u0000-\u0020]+/g, '').toLowerCase();
+      const norm = normaliseUrl(raw);
       if (/^(?:javascript|vbscript):/.test(norm)) return keepDelim(m, d);
       if (/^data:/.test(norm)) return SAFE_IMAGE_DATA_URL.test(raw.trim()) ? m : keepDelim(m, d);
       return m;
     });
   return s;
+}
+
+// Reproduce the two normalisations a browser applies to an attribute-VALUE URL before it
+// resolves the scheme: (1) decode HTML character references (numeric &#NN; / &#xNN; and the
+// scheme-relevant named refs), (2) strip ASCII whitespace + control chars. Lower-cased so the
+// scheme test is case-insensitive. Used only by the regex fallback above.
+export function normaliseUrl(raw) {
+  return String(raw || '')
+    .replace(/&#x([0-9a-f]+);?/gi, (_m, h) => { try { return String.fromCodePoint(parseInt(h, 16)); } catch { return ''; } })
+    .replace(/&#(\d+);?/g, (_m, n) => { try { return String.fromCodePoint(parseInt(n, 10)); } catch { return ''; } })
+    .replace(/&colon;/gi, ':').replace(/&(?:tab|newline|nbsp);/gi, ' ')
+    .replace(/[\u0000-\u0020]+/g, '')
+    .toLowerCase();
 }
 
 // True only when DOMPurify is bound to a live DOM (browser / jsdom-backed context).

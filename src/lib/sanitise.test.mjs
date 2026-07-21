@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { PURIFY_CONFIG, sanitiseHtml, regexStripFallback } from './sanitise.js';
+import { PURIFY_CONFIG, sanitiseHtml, regexStripFallback, normaliseUrl } from './sanitise.js';
 
 // ── Why these tests assert the POLICY, not a live sanitize() ─────────────────────
 // DOMPurify needs a DOM `window`. Under `node --test` there is no window, so
@@ -153,4 +153,18 @@ test('regexStripFallback: whitespace/control chars inside a scheme cannot smuggl
   assert.ok(!/vbscript:/i.test(strip(regexStripFallback(`<img src="vb${CR}script:x">`))));
   assert.match(regexStripFallback('<img src="data:image/png;base64,iVBORw0KGgo=">'), /data:image\/png/);
   assert.match(regexStripFallback('<a href="https://example.com/x">x</a>'), /https:\/\/example\.com/);
+});
+
+
+// Regression: HTML entity-encoded schemes (jav&#x61;script:, da&#x74;a:) decode in the
+// browser after the sanitizer runs; normaliseUrl must decode character references before
+// the scheme check. (Independent adversarial confirm, 2026-07-21.)
+test('regexStripFallback + normaliseUrl: entity-encoded schemes are decoded then blocked', () => {
+  assert.equal(normaliseUrl('jav&#x61;script:x'), 'javascript:x');
+  assert.equal(normaliseUrl('da&#x74;a:text/html'), 'data:text/html');
+  assert.equal(normaliseUrl('javascript&colon;x'), 'javascript:x');
+  assert.ok(!/href\s*=\s*"jav&#x61;script/i.test(regexStripFallback('<a href="jav&#x61;script:alert(1)">x</a>')));
+  assert.ok(!/href\s*=\s*"da&#x74;a:text/i.test(regexStripFallback('<a href="da&#x74;a:text/html;base64,PGh0bWw+">x</a>')));
+  assert.match(regexStripFallback('<img src="data:image/png;base64,iVBORw0KGgo=">'), /data:image\/png/);
+  assert.match(regexStripFallback('<a href="page.html">x</a>'), /href="page\.html"/);
 });
