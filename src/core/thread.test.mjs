@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createThread, appendTurn, acceptTurn, dismissTurn, turnsFor, serializeThread, parseThread, buildAskPrompt, addScratch, removeScratch, parseTitleOptions, summarizeReactions } from './thread.js';
+import { createThread, appendTurn, acceptTurn, dismissTurn, turnsFor, serializeThread, parseThread, buildAskPrompt, addScratch, removeScratch, parseTitleOptions, summarizeReactions, MAX_TURN_TEXT_CHARS } from './thread.js';
 
 test('createThread: v1, doc mode (Chat is opt-in), empty turns + empty scratch', () => {
   assert.deepEqual(createThread(), { v: 1, mode: 'doc', turns: [], scratch: [] });
@@ -424,4 +424,49 @@ test('orphanSweepEligible: truthiness only - a GET-shaped record object counts, 
   const ok = extractOrphanSweepEligible();
   assert.equal(ok(undefined, false, false), false);
   assert.equal(ok({ v: 1, mode: 'doc', turns: [], scratch: [] }, 0, 0), true);
+});
+
+// ── per-turn text size cap (stress-harness port) ────────────────────────────
+// parseThread accepted a 52MB turn text from the device-local sidecar (only the
+// drafts import was capped), so a hostile/corrupt localStorage payload could pin
+// tens of MB in memory and be re-serialised forever. Turns are now capped at
+// MAX_TURN_TEXT_CHARS (256 * 1024 chars — vastly beyond any real turn; prompts
+// clip block text to 2,000 chars): parseThread DROPS an over-cap turn like any
+// other malformed shape, and appendTurn truncates so in-app writes stay valid.
+
+test('parseThread: a 1MB turn text is dropped; sibling valid turns survive', () => {
+  const big = 'x'.repeat(1024 * 1024);
+  const json = JSON.stringify({ v: 1, turns: [
+    { id: 'huge', role: 'assistant', kind: 'guidance', text: big, blockRef: null, ts: 1, state: 'open' },
+    { id: 'ok', role: 'assistant', kind: 'guidance', text: 'fine', blockRef: null, ts: 2, state: 'open' },
+  ], scratch: [] });
+  const parsed = parseThread(json);
+  assert.equal(parsed.turns.length, 1, 'the oversized turn must not be retained');
+  assert.equal(parsed.turns[0].id, 'ok');
+});
+
+test('parseThread: a turn at exactly the cap is kept (boundary)', () => {
+  const atCap = 'y'.repeat(MAX_TURN_TEXT_CHARS);
+  const json = JSON.stringify({ v: 1, turns: [
+    { id: 'cap', role: 'assistant', kind: 'guidance', text: atCap, blockRef: null, ts: 1, state: 'open' },
+  ], scratch: [] });
+  const parsed = parseThread(json);
+  assert.equal(parsed.turns.length, 1);
+  assert.equal(parsed.turns[0].text.length, MAX_TURN_TEXT_CHARS);
+});
+
+test('appendTurn: over-cap text is truncated to the cap and round-trips', () => {
+  const t = createThread();
+  const turn = appendTurn(t, { role: 'assistant', kind: 'guidance', text: 'z'.repeat(MAX_TURN_TEXT_CHARS + 5) }, 1);
+  assert.ok(turn, 'the turn is still created');
+  assert.equal(turn.text.length, MAX_TURN_TEXT_CHARS, 'text truncated to the cap');
+  assert.deepEqual(parseThread(serializeThread(t)), t, 'a truncated turn round-trips intact');
+});
+
+test('turn cap: normal-length turns are untouched and round-trip exactly (regression pin)', () => {
+  const t = createThread();
+  appendTurn(t, { role: 'assistant', kind: 'guidance', text: 'a perfectly ordinary reply' }, 1);
+  appendTurn(t, { role: 'aside', kind: 'guidance', text: 'note to self', blockRef: 'b1' }, 2);
+  assert.equal(t.turns[0].text, 'a perfectly ordinary reply');
+  assert.deepEqual(parseThread(serializeThread(t)), t);
 });

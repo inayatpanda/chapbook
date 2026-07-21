@@ -7,6 +7,14 @@ const KINDS = new Set(['guidance', 'insertable']);
 const STATES = new Set(['open', 'accepted', 'dismissed']);
 let _c = 0;
 
+// Per-turn text cap (chars). 256K chars is roughly 50,000 words — far beyond any real
+// turn (prompt assembly clips block text to 2,000 chars), but it stops a hostile or
+// corrupt sidecar from pinning tens of MB in memory: the stress harness fed parseThread
+// a valid 52MB single-turn JSON and the full text was retained and re-serialised on
+// every save. parseThread DROPS an over-cap turn (it fails validation like any other
+// malformed shape); appendTurn truncates so in-app writes always stay valid.
+export const MAX_TURN_TEXT_CHARS = 256 * 1024;
+
 // Doc is the default mode everywhere (owner decision 2026-07-21: Chat is opt-in);
 // a saved 'chat' is per-post memory and is always honoured exactly.
 export function createThread() { return { v: 1, mode: 'doc', turns: [], scratch: [] }; }
@@ -22,7 +30,7 @@ const validRoleKind = (role, kind) =>
 export function appendTurn(thread, { role, kind, text, blockRef = null }, now) {
   if (!validRoleKind(role, kind)) return null;   // reject: no turn, no mutation
   const turn = { id: 't' + Number(now).toString(36) + '-' + (_c++), role, kind,
-    text: String(text || ''), blockRef, ts: now, state: 'open' };
+    text: String(text || '').slice(0, MAX_TURN_TEXT_CHARS), blockRef, ts: now, state: 'open' };
   thread.turns.push(turn);
   return turn;
 }
@@ -64,6 +72,7 @@ export function serializeThread(thread) { return JSON.stringify(thread); }
 
 const validTurn = (t) => t && typeof t === 'object' && typeof t.id === 'string' &&
   validRoleKind(t.role, t.kind) && typeof t.text === 'string' &&
+  t.text.length <= MAX_TURN_TEXT_CHARS &&   // size cap — see MAX_TURN_TEXT_CHARS
   (t.blockRef === null || typeof t.blockRef === 'string') &&
   typeof t.ts === 'number' && STATES.has(t.state);
 

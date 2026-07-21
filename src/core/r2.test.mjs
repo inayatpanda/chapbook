@@ -414,3 +414,25 @@ test('checkPublicReadable: empty url → unknown', async () => {
   const r = await checkPublicReadable({ url: '', fetchImpl: async () => okRes(200) });
   assert.equal(r.readable, null);
 });
+
+// ── entropy widening (stress-harness port) ──────────────────────────────────
+// The old stamp was 4 base36 chars of Math.random — a 100,000-upload same-millisecond
+// burst produced ~2,900 birthday collisions (each one a silent overwrite via the
+// unconditional PUT). The stamp is now 8 chars: 4 random + a 4-char monotonic
+// per-call counter (mod 36^4 = 1,679,616), so any same-millisecond burst under
+// ~1.68M calls is GUARANTEED all-unique — no probabilistic flake in this test.
+test('r2Key: 100,000 same-name same-millisecond calls yield all-unique keys (stress port)', () => {
+  const keys = new Set();
+  for (let i = 0; i < 100_000; i++) keys.add(r2Key('../Same Name.MP4', 123456789));
+  assert.equal(keys.size, 100_000,
+    `r2Key collision under a same-millisecond burst: expected 100000 unique keys, actual ${keys.size}`);
+});
+
+test('r2Key: default stamp keeps the single-token shape and titleFromKey round-trip', () => {
+  const k = r2Key('Beach Trip.mp4', 1700000000000);
+  // still ONE dash-terminated stamp token: videos/<ts36><rand8>-<safeName>
+  assert.match(k, /^videos\/[0-9a-z]+-beach-trip\.mp4$/);
+  assert.equal(titleFromKey(k), 'beach trip');
+  // two default-stamp draws in the same millisecond always differ (counter ticks)
+  assert.notEqual(r2Key('clip.mp4', 1700000000000), r2Key('clip.mp4', 1700000000000));
+});

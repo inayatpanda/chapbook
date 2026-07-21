@@ -56,12 +56,19 @@ export function safeName(name) {
   return ext ? `${stem}.${ext}` : stem;
 }
 
-// 4 chars of base36 randomness from Math.random — the collision guard. padStart covers the
-// rare tiny draw where toString(36) yields fewer than 4 fractional digits.
-const randSuffix = () => Math.random().toString(36).slice(2, 6).padStart(4, '0');
+// 8 chars of base36 uniqueness — the collision guard: 4 random chars (cross-restart
+// entropy) + a 4-char monotonic per-call counter (mod 36^4 = 1,679,616). Random alone at
+// 4 chars hit the birthday bound — a 100k same-millisecond burst produced ~2,900
+// colliding keys (stress-harness find), each a silent overwrite; the counter makes any
+// same-millisecond burst under ~1.68M calls GUARANTEED unique, and the random half keeps
+// keys unguessable across process restarts (where the counter resets). padStart covers
+// the rare tiny draw where toString(36) yields fewer than 4 fractional digits.
+let _seq = 0;
+const randSuffix = () => Math.random().toString(36).slice(2, 6).padStart(4, '0')
+  + (_seq = (_seq + 1) % 1679616).toString(36).padStart(4, '0');
 
 // key = videos/<ts36><rand>-<safeName>. The ts36 prefix keeps uploads roughly sortable
-// without reading the bucket first (no list/dedupe round-trip on the BYOK path). The 4-char
+// without reading the bucket first (no list/dedupe round-trip on the BYOK path). The 8-char
 // base36 <rand> tacked onto that prefix stops two same-named uploads in the SAME millisecond
 // from producing an identical key — otherwise the unconditional PUT would silently overwrite
 // the earlier clip. ts36+rand stay ONE dash-terminated stamp token so titleFromKey (which
