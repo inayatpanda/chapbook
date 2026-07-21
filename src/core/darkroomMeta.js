@@ -237,10 +237,23 @@ export function parseExistingMeta(content) {
   }
 }
 
+// PRIVACY (carry-forward): buildEntry never writes gps into a NEW entry, but a LEGACY
+// meta.json — written before the GPS strip shipped — can still hold coordinates, and the
+// merge used to copy those existing entries forward verbatim on every re-commit. Strip
+// gps from every entry that passes through the merge, so ANY touch of the sidecar scrubs
+// historic location data instead of perpetuating it. Non-objects (corrupt sidecar values)
+// and gps-free entries pass through unchanged (same reference — no needless copies).
+function stripGps(entry) {
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry) || !('gps' in entry)) return entry;
+  const { gps, ...rest } = entry;
+  return rest;
+}
+
 /**
  * Merge a batch of new per-filename entries onto the existing meta map, returning a NEW
  * object (inputs are not mutated). A new entry for a filename REPLACES that filename's old
- * entry (re-upload overwrites); every OTHER filename's entry is preserved untouched. Empty
+ * entry (re-upload overwrites); every OTHER filename's entry is preserved untouched —
+ * except a legacy `gps` field, which is stripped on the way through (see stripGps). Empty
  * `{}` additions are skipped so we never write a bare empty object over a real one.
  *
  * @param {Record<string, object>} existing  parsed existing meta (see parseExistingMeta)
@@ -248,9 +261,15 @@ export function parseExistingMeta(content) {
  * @returns {Record<string, object>}  the merged map, ready for JSON.stringify(_, null, 2)
  */
 export function mergeMeta(existing, additions) {
-  const out = { ...(existing && typeof existing === 'object' ? existing : {}) };
-  for (const [name, entry] of Object.entries(additions || {})) {
+  const out = {};
+  for (const [name, entry] of Object.entries(existing && typeof existing === 'object' ? existing : {})) {
+    out[name] = stripGps(entry);
+  }
+  for (const [name, rawEntry] of Object.entries(additions || {})) {
     if (!name) continue;
+    // strip BEFORE the emptiness check: a (hypothetical) gps-only addition degrades to
+    // an empty one and must not clobber a real existing entry with {}.
+    const entry = stripGps(rawEntry);
     if (entry && typeof entry === 'object' && Object.keys(entry).length) out[name] = entry;
     else if (!(name in out)) out[name] = {}; // keep a placeholder only if nothing was there
   }

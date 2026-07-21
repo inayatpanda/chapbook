@@ -7,7 +7,11 @@ export function parse(md) {
   if (!m) return { data: {}, body: md };
   const data = {};
   for (const line of m[1].split('\n')) {
-    const mm = /^(\w+):\s*(.*)$/.exec(line);
+    // Top-level scalar keys only: a word-char start then word chars/hyphens, so both
+    // `customField` and `og-image` parse. Indented (nested) lines never match the ^
+    // anchor and `- item` list lines can't start a key — see the serialise() note on
+    // the line-based format's known limitation for complex YAML.
+    const mm = /^(\w[\w-]*):\s*(.*)$/.exec(line);
     if (!mm) continue;
     const key = mm[1];
     const val = mm[2].trim();
@@ -85,13 +89,21 @@ export function serialise({ data, body }) {
   // a template. Only written when explicitly non-dark.
   if (data.theme != null && data.theme !== 'dark') lines.push(`theme: ${q(data.theme)}`);
   // Unknown/custom fields: written back verbatim so a round-trip (parse → edit known
-  // fields → serialise) is loss-less. parse() only yields \w+ keys with string/boolean
-  // values, so those are the shapes we can emit on one valid line; a non-\w+ key or a
-  // non-scalar value can't round-trip in this line-based format and is skipped. Known
-  // fields stay normalised by the explicit lines above. Emitted before draft/publishAt
-  // so the scheduling pair keeps its place at the end of the block.
+  // fields → serialise) is loss-less. parse() only yields top-level scalar keys (word
+  // chars/hyphens, so `og-image` survives alongside `customField`) with string/boolean
+  // values — the shapes we can emit on one valid line. Known fields stay normalised by
+  // the explicit lines above. Emitted before draft/publishAt so the scheduling pair
+  // keeps its place at the end of the block.
+  //
+  // KNOWN LIMITATION (accepted, out of scope here): this line-based format preserves
+  // ONLY single-line scalar unknowns. Complex/nested/multiline unknown YAML (indented
+  // maps, block lists, folded scalars) is NOT modelled and does not survive the
+  // read-modify-write cycle. Separately, a FULL editor re-publish (publishBlocks)
+  // rebuilds the frontmatter from the editor's own meta, so fields the editor doesn't
+  // model don't survive that path either — only the setDraft/updatePost round-trip
+  // carries unknowns forward.
   for (const [k, v] of Object.entries(data)) {
-    if (KNOWN_KEYS.has(k) || v == null || !/^\w+$/.test(k)) continue;
+    if (KNOWN_KEYS.has(k) || v == null || !/^\w[\w-]*$/.test(k)) continue;
     if (typeof v === 'boolean' || typeof v === 'number') lines.push(`${k}: ${v}`);
     else if (typeof v === 'string') lines.push(`${k}: ${q(v)}`);
   }

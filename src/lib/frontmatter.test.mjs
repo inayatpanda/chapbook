@@ -82,6 +82,15 @@ test('an unknown boolean field round-trips and stays a boolean', () => {
   assert.equal(parse(out).data.featured, true);
 });
 
+test('a hyphenated unknown key (og-image) round-trips through parse → serialise → parse', () => {
+  const md = '---\ntitle: "T"\nog-image: /x.png\n---\n\nbody\n';
+  const { data, body } = parse(md);
+  assert.equal(data['og-image'], '/x.png');
+  const out = serialise({ data, body });
+  assert.match(out, /^og-image: "\/x\.png"$/m);
+  assert.equal(parse(out).data['og-image'], '/x.png');
+});
+
 test('a doc with only known fields serialises byte-identically (no passthrough noise)', () => {
   const data = { title: 'T', description: 'D', date: '2026-07-01', tags: ['a'], accent: '#2dd4bf', draft: true };
   assert.equal(

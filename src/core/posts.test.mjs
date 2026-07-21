@@ -96,6 +96,27 @@ test('publishBlocks: a new upload never steals the name of a KEPT gallery file',
   assert.match(side, /gallery-3\.jpg/, 'new file referenced under its bumped name');
 });
 
+test('publishBlocks: an uppercase-MIME upload cannot mint a case-only near-duplicate', async () => {
+  const { gh, calls } = fakeGh();
+  const posts = makePosts(gh);
+  // MIME subtypes are case-insensitive, so data:image/JPEG is a valid upload — but the
+  // namer used to preserve the extension case, minting gallery-N.JPEG alongside kept
+  // .jpeg files: a case-only sibling that is the SAME file on a case-insensitive
+  // checkout (macOS). The derived extension must be lowercased (JPEG → jpg).
+  const doc = { version: 1, blocks: [
+    { id: 'g1', type: 'gallery', images: [
+      { file: 'gallery-1.jpeg', alt: 'kept' },
+      { base64: 'data:image/JPEG;base64,/9j/4AAQSkZJRgABAQAAAQ==', alt: 'new' },
+    ] },
+  ] };
+  await posts.publishBlocks('case', doc, { title: 'T', tags: [] });
+  const imgPaths = calls.commitMany.changes
+    .filter((c) => c.path.startsWith('src/content/blog/_images/case/'))
+    .map((c) => c.path);
+  assert.deepEqual(imgPaths, ['src/content/blog/_images/case/gallery-2.jpg'],
+    'the new upload gets a lowercased, distinct name (never gallery-2.JPEG)');
+});
+
 // ── reading template: survives publish ────────────────────────────────────────
 
 test('publishBlocks carries a chosen reading template into the frontmatter', async () => {
@@ -136,4 +157,22 @@ test('updatePost preserves a custom frontmatter field while patching tags', asyn
   const md = calls.putFile.content;
   assert.match(md, /^tags: \["new-tag"\]$/m, 'the patch applied');
   assert.match(md, /^customField: "keep-me"$/m, 'the custom field survives the edit');
+});
+
+test('updatePost preserves a HYPHENATED custom field (og-image)', async () => {
+  const src = '---\ntitle: "Keeper"\ndate: 2026-07-01\ntags: []\nog-image: /x.png\n---\n\nBody.\n';
+  const { gh, calls } = fakeGh({ 'src/content/blog/keeper.md': src });
+  const posts = makePosts(gh);
+  await posts.updatePost('keeper', { tags: ['t'] });
+  assert.match(calls.putFile.content, /^og-image: "\/x\.png"$/m, 'og-image survives the edit');
+});
+
+test('takedownPost (setDraft) preserves a HYPHENATED custom field (og-image)', async () => {
+  const src = '---\ntitle: "Keeper"\ndate: 2026-07-01\ntags: []\nog-image: /x.png\n---\n\nBody.\n';
+  const { gh, calls } = fakeGh({ 'src/content/blog/keeper.md': src });
+  const posts = makePosts(gh);
+  await posts.takedownPost('keeper');
+  const md = calls.putFile.content;
+  assert.match(md, /^og-image: "\/x\.png"$/m, 'og-image survives take-down');
+  assert.match(md, /^draft: true$/m);
 });

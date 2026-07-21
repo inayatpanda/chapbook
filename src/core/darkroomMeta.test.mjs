@@ -155,6 +155,18 @@ test('mergeMeta does not overwrite a real entry with an empty {} addition', () =
   assert.deepEqual(merged['new.jpg'], {}); // placeholder kept (nothing was there)
 });
 
+test('mergeMeta strips legacy GPS from carried-forward existing entries (privacy scrub)', () => {
+  // A meta.json written BEFORE the GPS strip can still hold coordinates; the merge must
+  // not copy them forward — any re-commit of the sidecar scrubs historic location data.
+  const existing = { 'legacy.jpg': { caption: 'Home', gps: [51.5074, -0.1278] }, 'clean.jpg': { caption: 'C' } };
+  const merged = mergeMeta(existing, { 'new.jpg': { caption: 'N' } });
+  assert.deepEqual(merged['legacy.jpg'], { caption: 'Home' }, 'gps gone, everything else kept');
+  assert.deepEqual(merged['clean.jpg'], { caption: 'C' });
+  assert.deepEqual(merged['new.jpg'], { caption: 'N' });
+  // inputs not mutated — the strip copies, never deletes in place
+  assert.deepEqual(existing['legacy.jpg'], { caption: 'Home', gps: [51.5074, -0.1278] });
+});
+
 // --- buildMergedMeta: end-to-end glue used by the UI ---
 test('buildMergedMeta merges a fresh batch onto existing content', () => {
   const existing = JSON.stringify({ 'old.jpg': { caption: 'Old' } });
@@ -173,6 +185,15 @@ test('buildMergedMeta starting from no meta.json (null content)', () => {
   const merged = buildMergedMeta(null, [{ filename: 'x.jpg', caption: 'Hi' }]);
   assert.deepEqual(merged, { 'x.jpg': { caption: 'Hi' } });
 });
+test('buildMergedMeta scrubs legacy GPS out of an existing meta.json end-to-end', () => {
+  const existing = JSON.stringify({ 'old.jpg': { caption: 'Old', gps: [48.8566, 2.3522] } });
+  const merged = buildMergedMeta(existing, [{ filename: 'x.jpg', caption: 'Hi' }]);
+  const json = JSON.stringify(merged, null, 2);
+  assert.ok(!/gps/i.test(json), 'no gps key survives a re-commit of the sidecar');
+  assert.ok(!json.includes('48.8566') && !json.includes('2.3522'), 'no coordinate values leak');
+  assert.equal(merged['old.jpg'].caption, 'Old', 'the rest of the legacy entry is kept');
+});
+
 test('the committed meta.json output contains no GPS lat/long (privacy, end-to-end)', () => {
   // Exactly what commit() serialises: buildMergedMeta over photos whose EXIF carried GPS.
   const merged = buildMergedMeta(null, [

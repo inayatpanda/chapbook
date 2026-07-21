@@ -17,9 +17,16 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 // legacy `|| 'post'` fallback here so an all-symbol title still yields a usable slug.
 function slugify(title) { return slugPure(title) || 'post'; }
 // Image extension for a NEW (base64-only) gallery upload, from its data-URL mime.
+// MIME subtypes are case-insensitive (SAFE_IMAGE_DATA_URL accepts data:image/JPEG), so
+// the derived extension is LOWERCASED before use: makeGalleryNamer's `taken` set stores
+// lowercased names, and a preserved-case "gallery-1.JPEG" would slip past it as a
+// case-only sibling of a kept "gallery-1.jpeg" — the SAME file on a case-insensitive
+// checkout (macOS). jpeg/JPEG/JPG all normalise to jpg.
 function galleryExt(im) {
-  const m = /^data:image\/(\w+);base64,/.exec(im.base64 || '');
-  return m ? (m[1] === 'jpeg' ? 'jpg' : m[1]) : 'jpg';
+  const m = /^data:image\/(\w+);base64,/i.exec(im.base64 || '');
+  if (!m) return 'jpg';
+  const t = m[1].toLowerCase();
+  return t === 'jpeg' ? 'jpg' : t;
 }
 
 // Filenames for NEW gallery uploads must be unique across the WHOLE post, not per
