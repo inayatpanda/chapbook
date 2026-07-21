@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chapbookKeys, CHAPBOOK_LS_PREFIXES, CHAPBOOK_IDB_NAME } from './appReset.js';
+import { chapbookKeys, CHAPBOOK_LS_PREFIXES, CHAPBOOK_IDB_NAME, deleteDatabaseAndWait } from './appReset.js';
 
 // The full set of localStorage keys Chapbook is known to write (grepped from src/). If a
 // new key is added under a NEW prefix, this test should fail until the prefix list covers
@@ -54,4 +54,55 @@ test('every known Chapbook key is covered by exactly the declared prefixes', () 
 
 test('IDB name matches the storage seam database', () => {
   assert.equal(CHAPBOOK_IDB_NAME, 'helm-studio');
+});
+
+// ── deleteDatabaseAndWait: the awaited "Forget this device" IDB wipe ─────────
+// The inline reset used to fire deleteDatabase() and reload() immediately, so a
+// blocked or still-racing delete could leave drafts/threads alive after "reset".
+// This helper resolves 'deleted' | 'blocked' | 'error' | 'timeout' so the caller
+// can await the wipe (and warn instead of reloading when another tab blocks it).
+
+// A minimal fake of indexedDB.deleteDatabase whose request fires `event` async.
+const fakeIdb = (event) => ({
+  deleteDatabase() {
+    const req = {};
+    setTimeout(() => { if (typeof req[event] === 'function') req[event](); }, 0);
+    return req;
+  },
+});
+
+test('deleteDatabaseAndWait resolves "deleted" on success', async () => {
+  assert.equal(await deleteDatabaseAndWait(fakeIdb('onsuccess'), 'db'), 'deleted');
+});
+
+test('deleteDatabaseAndWait resolves "blocked" when another tab holds the DB', async () => {
+  assert.equal(await deleteDatabaseAndWait(fakeIdb('onblocked'), 'db'), 'blocked');
+});
+
+test('deleteDatabaseAndWait resolves "error" on a failed delete', async () => {
+  assert.equal(await deleteDatabaseAndWait(fakeIdb('onerror'), 'db'), 'error');
+});
+
+test('deleteDatabaseAndWait resolves "timeout" when nothing ever fires', async () => {
+  assert.equal(await deleteDatabaseAndWait(fakeIdb('never'), 'db', { timeoutMs: 20 }), 'timeout');
+});
+
+test('deleteDatabaseAndWait resolves "error" when deleteDatabase itself throws', async () => {
+  const throwing = { deleteDatabase() { throw new Error('nope'); } };
+  assert.equal(await deleteDatabaseAndWait(throwing, 'db'), 'error');
+});
+
+test('deleteDatabaseAndWait settles once: a late second event cannot re-resolve', async () => {
+  // onblocked fires first, then onsuccess later (the real sequence when the other
+  // tab closes) — the promise must have settled on 'blocked'.
+  const idb = {
+    deleteDatabase() {
+      const req = {};
+      setTimeout(() => { req.onblocked && req.onblocked(); }, 0);
+      setTimeout(() => { req.onsuccess && req.onsuccess(); }, 10);
+      return req;
+    },
+  };
+  assert.equal(await deleteDatabaseAndWait(idb, 'db'), 'blocked');
+  await new Promise((r) => setTimeout(r, 20)); // let the late event fire — nothing to assert but no crash
 });

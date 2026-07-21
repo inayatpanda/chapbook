@@ -6382,6 +6382,11 @@ async function importDraftsFile(file){
   const S=window.__studioStorage, D=window.__studioDrafts;
   if(!S || !D){ msg('draftsMsg','Draft tools aren’t ready yet — reload and try again.','err'); return; }
   if(!file) return;
+  // DoS cap: refuse an oversize file BEFORE reading it into memory (parseDraftsFile
+  // re-checks the string length, and also caps record count + per-record size).
+  if(D.MAX_IMPORT_BYTES && file.size > D.MAX_IMPORT_BYTES){
+    msg('draftsMsg','That file is too big to import. Export smaller batches and import them one at a time.','err'); return;
+  }
   let text=''; try{ text=await file.text(); }catch{ msg('draftsMsg','Could not read that file.','err'); return; }
   const r=D.parseDraftsFile(text);
   if(!r.ok){ msg('draftsMsg', r.error||'That file is not a Chapbook drafts export.','err'); return; }
@@ -6406,8 +6411,22 @@ async function forgetThisDevice(){
     for(const k of keys){ try{ localStorage.removeItem(k); }catch{} }
   }catch{}
   // 2. IndexedDB — drafts, blockdrafts, partner sessions, shapes, versions, ideas.
-  try{ indexedDB.deleteDatabase((R&&R.CHAPBOOK_IDB_NAME)||'helm-studio'); }catch{}
+  //    AWAITED (with a short timeout fallback): reloading while the delete is still
+  //    pending or blocked would leave drafts/threads alive after "reset". When another
+  //    Chapbook tab blocks the delete, warn and DON'T reload into a half-wiped state.
+  let wiped='deleted';
+  try{
+    const dbName=(R&&R.CHAPBOOK_IDB_NAME)||'helm-studio';
+    if(R && R.deleteDatabaseAndWait) wiped=await R.deleteDatabaseAndWait(indexedDB, dbName);
+    else{ try{ indexedDB.deleteDatabase(dbName); }catch{} }
+  }catch{ wiped='error'; }
+  if(wiped==='blocked'){
+    msg('draftsMsg','Sign-out could not finish: another Chapbook tab is holding your local data open. Close every other Chapbook tab or window, then try again.','err');
+    return;
+  }
   // 3. Back to the activation gate — a clean reload re-runs the licence check.
+  //    ('deleted' is the clean path; 'timeout'/'error' still reload — secrets are
+  //    already cleared above and a stuck delete must not trap the user here.)
   try{ location.reload(); }catch{}
 }
 window.forgetThisDevice=forgetThisDevice;

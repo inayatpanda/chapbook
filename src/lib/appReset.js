@@ -37,3 +37,33 @@ export function chapbookKeys(allKeys) {
     (k) => typeof k === 'string' && CHAPBOOK_LS_PREFIXES.some((p) => k.startsWith(p)),
   );
 }
+
+// Await an IndexedDB database delete instead of fire-and-forget. The inline reset used
+// to call deleteDatabase() and location.reload() back to back, so a blocked delete
+// (another Chapbook tab holding the DB open) or a still-racing one could leave drafts
+// and threads alive after "Forget this device". Resolves one of:
+//   'deleted' — the DB is gone; safe to reload.
+//   'blocked' — another open tab holds the DB; the caller should tell the user to
+//               close other Chapbook tabs and retry rather than reload half-wiped.
+//   'error'   — the delete failed (or deleteDatabase itself threw).
+//   'timeout' — no event within timeoutMs; the caller may proceed as a fallback.
+// Never rejects. `idb` is injectable (window.indexedDB in the app; a fake in tests).
+export function deleteDatabaseAndWait(idb, name, { timeoutMs = 4000 } = {}) {
+  return new Promise((resolve) => {
+    let settled = false;
+    let timer = null;
+    const settle = (outcome) => {
+      if (settled) return;
+      settled = true;
+      if (timer !== null) clearTimeout(timer);
+      resolve(outcome);
+    };
+    timer = setTimeout(() => settle('timeout'), timeoutMs);
+    let req;
+    try { req = idb.deleteDatabase(name); } catch { settle('error'); return; }
+    if (!req || typeof req !== 'object') { settle('error'); return; }
+    req.onsuccess = () => settle('deleted');
+    req.onerror = () => settle('error');
+    req.onblocked = () => settle('blocked');
+  });
+}

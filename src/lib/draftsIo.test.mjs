@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { serialiseDrafts, parseDraftsFile, DRAFT_STORES, DRAFTS_FORMAT, DRAFTS_VERSION } from './draftsIo.js';
+import {
+  serialiseDrafts, parseDraftsFile, DRAFT_STORES, DRAFTS_FORMAT, DRAFTS_VERSION,
+  MAX_IMPORT_BYTES, MAX_IMPORT_RECORDS, MAX_RECORD_BYTES,
+} from './draftsIo.js';
 
 const fixedNow = () => '2026-07-15T00:00:00.000Z';
 
@@ -65,4 +68,58 @@ test('parseDraftsFile rejects a wrong-format / unrelated file', () => {
   assert.equal(parseDraftsFile('null').ok, false);
   assert.equal(parseDraftsFile(JSON.stringify({ format: 'something-else', stores: {} })).ok, false);
   assert.equal(parseDraftsFile(JSON.stringify({ format: DRAFTS_FORMAT })).ok, false); // no stores
+});
+
+// ── DoS caps: a malicious/corrupt file must be rejected BEFORE JSON.parse can
+// exhaust memory or the import can flood IndexedDB. Limits are injectable for
+// tests; the exported defaults are what the Settings importer uses.
+test('caps: sane exported defaults (25 MB file, 5000 records, 2 MB per record)', () => {
+  assert.equal(MAX_IMPORT_BYTES, 25 * 1024 * 1024);
+  assert.equal(MAX_IMPORT_RECORDS, 5000);
+  assert.equal(MAX_RECORD_BYTES, 2 * 1024 * 1024);
+});
+
+test('caps: an oversize file string is rejected before parsing', () => {
+  const r = parseDraftsFile('x'.repeat(200), { maxBytes: 100 });
+  assert.equal(r.ok, false);
+  assert.match(r.error, /too big to import/i);
+});
+
+test('caps: too many total records across stores are rejected', () => {
+  const env = serialiseDrafts({
+    drafts: [{ id: 'a' }, { id: 'b' }],
+    ideas: [{ id: 'c' }, { id: 'd' }],
+  }, { now: fixedNow });
+  const r = parseDraftsFile(JSON.stringify(env), { maxRecords: 3 });
+  assert.equal(r.ok, false);
+  assert.match(r.error, /too many items/i);
+  assert.match(r.error, /3/, 'error names the limit');
+});
+
+test('caps: a single oversize record is rejected', () => {
+  const env = serialiseDrafts({ drafts: [{ id: 'a', body: 'y'.repeat(500) }] }, { now: fixedNow });
+  const r = parseDraftsFile(JSON.stringify(env), { maxRecordBytes: 100 });
+  assert.equal(r.ok, false);
+  assert.match(r.error, /too big to import/i);
+});
+
+test('caps: a normal export round-trips unchanged under the default limits', () => {
+  const src = { drafts: [{ id: 'd-1', body: 'hello' }], ideas: [{ id: 'i-1', text: 'x' }] };
+  const env = serialiseDrafts(src, { now: fixedNow });
+  const r = parseDraftsFile(JSON.stringify(env));
+  assert.equal(r.ok, true);
+  assert.equal(r.count, 2);
+  assert.deepEqual(r.stores.drafts, src.drafts);
+  assert.deepEqual(r.stores.ideas, src.ideas);
+});
+
+test('caps: error strings are friendly and carry no em-dash', () => {
+  const tooBig = parseDraftsFile('x'.repeat(200), { maxBytes: 100 });
+  const tooMany = parseDraftsFile(
+    JSON.stringify(serialiseDrafts({ drafts: [{ id: 'a' }, { id: 'b' }] }, { now: fixedNow })),
+    { maxRecords: 1 });
+  for (const r of [tooBig, tooMany]) {
+    assert.equal(r.ok, false);
+    assert.ok(!r.error.includes('—'), 'no em-dash in user-facing error');
+  }
 });
