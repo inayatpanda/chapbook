@@ -1095,13 +1095,33 @@
   @keyframes iih-in{from{opacity:0;transform:translateX(-50%) translateY(12px)}
     to{opacity:1;transform:translateX(-50%) translateY(0)}}
   @media (prefers-reduced-motion: reduce){#iosInstallHint.show{animation:none}}
-  #iosInstallHint .iih-icon{flex:0 0 auto;display:inline-flex;color:var(--acc);margin-top:1px}
-  #iosInstallHint .iih-text{flex:1 1 auto}
-  #iosInstallHint .iih-text b{font-weight:600;color:var(--ink)}
-  #iosInstallHint .iih-x{flex:0 0 auto;width:34px;height:34px;border:0;background:transparent;
+  #iosInstallHint .iih-icon,#threadHint .iih-icon{flex:0 0 auto;display:inline-flex;color:var(--acc);margin-top:1px}
+  #iosInstallHint .iih-text,#threadHint .iih-text{flex:1 1 auto}
+  #iosInstallHint .iih-text b,#threadHint .iih-text b{font-weight:600;color:var(--ink)}
+  #iosInstallHint .iih-x,#threadHint .iih-x{flex:0 0 auto;width:34px;height:34px;border:0;background:transparent;
     color:var(--mut);border-radius:9px;cursor:pointer;font-size:15px;line-height:1;
     display:flex;align-items:center;justify-content:center;padding:0;transition:color .15s}
-  #iosInstallHint .iih-x:hover{color:var(--ink)}
+  #iosInstallHint .iih-x:hover,#threadHint .iih-x:hover{color:var(--ink)}
+
+  /* ── one-time CHAT-MODE COACHMARK ──────────────────────────────────────────
+     Chat is opt-in (owner decision 2026-07-21): this small dismissible hint keeps
+     it discoverable. Same surface language as #iosInstallHint (shared .iih-*),
+     but anchored under the Chat/Doc toggle - JS sets left/top from the button's
+     rect (and --th-arrow for the caret) on show/resize/scroll. Theme-token only,
+     so it reads correctly in both themes. */
+  #threadHint{display:none;position:fixed;z-index:60;align-items:flex-start;gap:.55rem;
+    max-width:min(94vw,300px);background:var(--surface);border:1px solid var(--line-2);
+    border-radius:14px;box-shadow:var(--shadow),var(--glow);
+    padding:.6rem .55rem .6rem .8rem;color:var(--ink);font-size:.82rem;line-height:1.45}
+  #threadHint.show{display:flex;animation:th-in .22s ease-out}
+  @keyframes th-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+  @media (prefers-reduced-motion: reduce){#threadHint.show{animation:none}}
+  /* caret pointing up at the toggle */
+  #threadHint::before{content:"";position:absolute;top:-5px;left:var(--th-arrow,26px);
+    width:9px;height:9px;background:var(--surface);
+    border-left:1px solid var(--line-2);border-top:1px solid var(--line-2);
+    transform:rotate(45deg)}
+  #threadHint .iih-icon .tico{width:17px;height:17px}
 
   #login{margin-top:18vh}
 
@@ -2324,7 +2344,29 @@
   #v-editor.thread-mode #editorActions,
   #v-editor.thread-mode #importDropZone,
   #v-editor.thread-mode #importDocMsg{display:none}
-  #v-editor.thread-mode .thread-canvas{min-height:clamp(360px,58vh,680px);padding:1.25rem 1.25rem 2rem}
+  #v-editor.thread-mode .thread-canvas{min-height:clamp(360px,58vh,680px);padding:2.5rem 1.25rem 2rem}
+  /* chat-mode Preview: docked top-right ON the thread canvas, always visible (sticky
+     under the sticky editor bar), invoking the SAME live preview as the toolbar
+     button. Doc mode hides it entirely (the toolbar button covers Doc). The dock is
+     zero-height so the canvas below keeps its geometry; the button drops into the
+     canvas's (deepened) top padding. */
+  #threadPreviewDock{display:none}
+  #v-editor.thread-mode #threadPreviewDock{display:flex;justify-content:flex-end;
+    position:sticky;top:3.6rem;z-index:8;height:0;overflow:visible;padding:0 .6rem}
+  #threadPreviewBtn{display:inline-flex;align-items:center;gap:.4em;margin-top:.55rem;
+    border:1px solid var(--thread-canvas-line);border-radius:999px;cursor:pointer;
+    background:var(--thread-canvas);color:var(--mut);font:600 .78rem var(--font-display);
+    padding:.42em .9em;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+  :root[data-theme="light"] #threadPreviewBtn{box-shadow:0 4px 14px rgba(30,41,59,.12)}
+  #threadPreviewBtn:hover{border-color:var(--acc);color:var(--acc)}
+  #threadPreviewBtn:disabled{opacity:.5;cursor:default}
+  #threadPreviewBtn .tico{width:15px;height:15px}
+  @media(max-width:640px){
+    /* two-row phone header is taller; collapse to icon-only like the toolbar idiom */
+    #v-editor.thread-mode #threadPreviewDock{top:6.2rem}
+    #threadPreviewBtn .tpv-lbl{display:none}
+    #threadPreviewBtn{padding:.5em;min-width:34px;min-height:34px;justify-content:center}
+  }
 
   .tpllib-preview{max-width:620px;margin:0 auto}
   .tpllib-frame{width:100%;min-height:220px;border:1px solid var(--line);border-radius:11px;
@@ -4111,6 +4153,14 @@
         <input class="title-in" id="editorTitle" placeholder="Post title…" />
         <button id="titleAskBtn" type="button" title="Ask the Partner for a title variation" aria-label="Ask the Partner for a title variation">✦</button>
       </div>
+      <!-- Chat-mode Preview — docked top-right of the thread canvas (thread mode only,
+           CSS-gated). Invokes the SAME live preview as the toolbar button: blocks are
+           the source of truth, so the rendered page is identical from either mode.
+           Sticky, so it stays visible while a long thread scrolls; narrow screens
+           collapse it to icon-only (the title attribute still names it). -->
+      <div id="threadPreviewDock">
+        <button id="threadPreviewBtn" type="button" title="Preview the rendered page" aria-label="Preview the rendered page"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-eye"/></svg><span class="tpv-lbl">Preview</span></button>
+      </div>
       <div id="blockList"></div>
       <div id="editorActions">
         <button id="addBlockBtn">＋ Add block</button>
@@ -4251,6 +4301,17 @@
   </span>
   <span class="iih-text">Install Chapbook — tap <b>Share</b>, then <b>Add to Home&nbsp;Screen</b>.</span>
   <button type="button" class="iih-x" id="iosInstallHintClose" aria-label="Dismiss">✕</button>
+</div>
+
+<!-- One-time Chat-mode coachmark — Chat became opt-in (owner decision 2026-07-21), so
+     the FIRST editor open after this build anchors this small dismissible hint to the
+     Chat/Doc toggle to keep the mode discoverable. Using the toggle or ✕ sets
+     helm.thread.hint.v1 and it never shows again. Reuses the #iosInstallHint surface
+     language (.iih-* classes); JS positions it from the toggle's rect. -->
+<div id="threadHint" role="status" aria-live="polite">
+  <span class="iih-icon" aria-hidden="true"><svg class="tico" width="18" height="18" aria-hidden="true"><use href="/icons-sprite.svg#ti-message-circle"/></svg></span>
+  <span class="iih-text"><b>New:</b> write your post as a chat. Try it any time.</span>
+  <button type="button" class="iih-x" id="threadHintClose" aria-label="Dismiss">✕</button>
 </div>
 
 <!-- Friendly error dialog (global) — never shows a raw stack; offers Retry / copy details -->
@@ -5369,6 +5430,9 @@ function go(v){
   // docks there) - the tab bar hides via body.editor-open and returns on leave
   document.body.classList.toggle('editor-open', isEditor);
   if(typeof chatOnViewChange === 'function') chatOnViewChange(isEditor);
+  // one-time Chat coachmark: anchored to the toolbar toggle, so it lives and dies
+  // with the editor (leaving only HIDES it; only toggle use / ✕ dismisses forever)
+  if(isEditor) maybeShowThreadHint(); else hideThreadHint();
 
   if(!isEditor){
     document.querySelectorAll('#app .view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
@@ -9506,8 +9570,58 @@ function setThreadMode(on){
   saveThread();   // per-post mode memory (spec 4.1); no-op until a post opens (_threadId null)
 }
 window.setThreadMode = setThreadMode;
-$('threadToggleBtn')?.addEventListener('click', () => setThreadMode(!_threadMode));
+$('threadToggleBtn')?.addEventListener('click', () => { dismissThreadHint(); setThreadMode(!_threadMode); });
 _applyThreadMode(false);   // initialise the toggle label before any post opens
+
+/* ── one-time Chat-mode coachmark ─────────────────────────────────────────────
+   Chat is opt-in (owner decision 2026-07-21): Doc is the normal editor, so the
+   FIRST editor open after this build anchors a small dismissible hint to the
+   Chat/Doc toggle - "chat exists, try it any time". Using the toggle or the ✕
+   sets the flag and it NEVER shows again; merely leaving the editor only hides
+   it (still undiscovered → it may return next open). Storage failures count as
+   dismissed: better to never show than to nag on every open. */
+const THREAD_HINT_KEY = 'helm.thread.hint.v1';
+function _threadHintDismissed(){ try{ return localStorage.getItem(THREAD_HINT_KEY) === '1'; }catch(_){ return true; } }
+function _threadHintPlace(){
+  const h = $('threadHint'), btn = $('threadToggleBtn');
+  if(!h || !h.classList.contains('show')) return;
+  const r = btn ? btn.getBoundingClientRect() : null;
+  if(!r || !r.width){ hideThreadHint(); return; }   // toggle not rendered (focus mode etc.) → nothing to anchor to
+  // phones: the tools strip scrolls horizontally - an anchor scrolled out of view
+  // hides the hint (listeners stay armed, so scrolling it back re-reveals)
+  const off = r.right < 8 || r.left > window.innerWidth - 8;
+  h.style.visibility = off ? 'hidden' : '';
+  if(off) return;
+  const w = h.offsetWidth || 280;
+  const left = Math.max(8, Math.min(r.left + r.width/2 - w/2, window.innerWidth - w - 8));
+  h.style.left = left + 'px';
+  h.style.top = (r.bottom + 8) + 'px';
+  h.style.setProperty('--th-arrow', Math.max(14, Math.min(r.left + r.width/2 - left - 4, w - 22)) + 'px');
+}
+function hideThreadHint(){
+  const h = $('threadHint');
+  if(h) h.classList.remove('show');
+  window.removeEventListener('resize', _threadHintPlace);
+  window.removeEventListener('scroll', _threadHintPlace, true);
+}
+function dismissThreadHint(){
+  // stamp unconditionally: any toggle use means the feature is discovered,
+  // whether or not the coachmark happened to be on screen at that moment
+  try{ localStorage.setItem(THREAD_HINT_KEY, '1'); }catch(_){}
+  hideThreadHint();
+}
+function maybeShowThreadHint(){
+  if(_threadHintDismissed()) return;
+  const h = $('threadHint'); if(!h) return;
+  // discoverability is the whole point: make sure the toggle itself is on screen
+  // first (the phone toolbar strip scrolls; nearest = no-op when already visible)
+  try{ $('threadToggleBtn')?.scrollIntoView({ inline:'nearest', block:'nearest' }); }catch(_){}
+  h.classList.add('show');
+  requestAnimationFrame(_threadHintPlace);
+  window.addEventListener('resize', _threadHintPlace);
+  window.addEventListener('scroll', _threadHintPlace, true);   // capture: follows the phone toolbar strip's own scroll
+}
+$('threadHintClose')?.addEventListener('click', dismissThreadHint);
 
 /* ── the conversation layer: author asides + Partner turns over the thread.
    Turns live in _thread (the sidecar shape from core/thread.js), persisted per post
@@ -9515,7 +9629,7 @@ _applyThreadMode(false);   // initialise the toggle label before any post opens
    (spec 4.2): the ✦ Ask toggle, a bubble's Reply/Tighten/Continue, or a quick chip.
    Guidance-first: only tighten/continue/title replies are insertable (Accept);
    asides and replies guide - questions, nudges, feedback - never draft text. ── */
-let _thread = { v: 1, mode: 'chat', turns: [], scratch: [] };
+let _thread = { v: 1, mode: 'doc', turns: [], scratch: [] };
 // (_askMode/_askBlockId/_askBusy are declared above wireChat, beside _threadMode)
 // warm re-entry (spec addendum 9b): armed by loadThread when a saved sidecar comes back
 let _threadRecapOn = false, _threadRecapTs = 0;
@@ -9636,7 +9750,7 @@ async function loadThread(id){
   await _threadFlushPending();
   _scratchSeqSaved = _scratchSeq;   // _thread is being replaced - its scratch edits are no longer pending against the new object
   _setThreadId(id);
-  _thread = { v: 1, mode: 'chat', turns: [], scratch: [] };   // blank while the sidecar loads (a prior post's turns must never paint)
+  _thread = { v: 1, mode: 'doc', turns: [], scratch: [] };   // blank while the sidecar loads (a prior post's turns must never paint)
   const req = ++_threadReq;
   // a write for THIS post may still be queued (a claim or a migration copy) - read
   // after it lands so the GET can't return the pre-write record (stale-response
@@ -9659,10 +9773,12 @@ async function loadThread(id){
     _threadRecapTs = t.turns.reduce((m, x) => Math.max(m, x.ts || 0), 0);
     _applyThreadMode(t.mode === 'chat');
   } else {
-    // Absent sidecar (or offline) - defaults per spec 4.1: new-post entry Chat, existing
-    // post Doc. Applied WITHOUT scheduling a save, so a default never writes the store.
+    // Absent sidecar (or offline) - default is DOC for ALL entries, new and existing
+    // (owner decision 2026-07-21: Chat is opt-in - Blocks is the normal editor; a post
+    // toggled to Chat saves that choice and reopens in Chat via the branch above).
+    // Applied WITHOUT scheduling a save, so a default never writes the store.
     _threadRecapOn = false; _threadRecapTs = 0;
-    _applyThreadMode(editorSection === 'write');
+    _applyThreadMode(false);
   }
   renderTurns();
 }
@@ -12034,9 +12150,9 @@ async function startNewPost(seedDoc){
     _scratchSeqSaved = _scratchSeq;   // _thread is being replaced - its scratch edits are no longer pending
     _threadReq++;                  // cancel any in-flight sidecar load
     _setThreadId(null);
-    _thread = { v: 1, mode: 'chat', turns: [], scratch: [] };
+    _thread = { v: 1, mode: 'doc', turns: [], scratch: [] };
     _threadRecapOn = false; _threadRecapTs = 0;   // a fresh post is a start, not a re-entry
-    _applyThreadMode(true);        // new posts open in Chat (spec 4.1); nothing is scheduled or written
+    _applyThreadMode(false);       // new posts open in DOC - Chat is opt-in via the toggle (owner decision 2026-07-21); nothing is scheduled or written
   }
   renderBlocks();
   updateWordCount();   // editor-open: reflect the (empty) new post — hides the readout
@@ -19201,8 +19317,11 @@ $('glyphMode')?.addEventListener('click', e => {
 });
 
 async function doPreview(){
-  const btn = $('previewBtn');
-  if(btn){ btn.disabled = true; }
+  // two entry points, one preview: the toolbar button and the chat-mode canvas
+  // button both disable while a build is in flight (blocks are the source of
+  // truth, so the rendered page is identical whichever mode invoked it)
+  const btns = [$('previewBtn'), $('threadPreviewBtn')].filter(Boolean);
+  for(const b of btns) b.disabled = true;
   toast('Building preview…');
   try{
     const r = await api('/posts/'+(currentSlug||'draft')+'/preview', { method:'POST', body: JSON.stringify({ doc, citations: meta.citations || [] }) });
@@ -19212,7 +19331,7 @@ async function doPreview(){
   }catch(e){
     toast('Preview error: ' + (e.message || e));
   }finally{
-    if(btn){ btn.disabled = false; }
+    for(const b of btns) b.disabled = false;
   }
 }
 window.doPreview = doPreview;
@@ -19221,6 +19340,7 @@ $('previewScrim').addEventListener('click', closePreviewSheet);
 $('previewCloseBtn').addEventListener('click', closePreviewSheet);
 const _previewBtn = $('previewBtn');
 if(_previewBtn) _previewBtn.addEventListener('click', doPreview);
+$('threadPreviewBtn')?.addEventListener('click', doPreview);   // chat-mode canvas dock → same live preview
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SHARE & SEO PREVIEW — search/social card mocks, featured image, readability

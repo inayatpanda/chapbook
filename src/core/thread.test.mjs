@@ -2,8 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createThread, appendTurn, acceptTurn, dismissTurn, turnsFor, serializeThread, parseThread, buildAskPrompt, addScratch, removeScratch, parseTitleOptions, summarizeReactions } from './thread.js';
 
-test('createThread: v1, chat mode, empty turns + empty scratch', () => {
-  assert.deepEqual(createThread(), { v: 1, mode: 'chat', turns: [], scratch: [] });
+test('createThread: v1, doc mode (Chat is opt-in), empty turns + empty scratch', () => {
+  assert.deepEqual(createThread(), { v: 1, mode: 'doc', turns: [], scratch: [] });
+});
+
+// Owner decision 2026-07-21: Doc is the default everywhere; a saved 'chat' is
+// per-post memory and must survive the round-trip exactly (mode honoured, not defaulted).
+test('parseThread: saved chat mode is honoured; absent/junk mode falls to doc', () => {
+  assert.equal(parseThread(JSON.stringify({ v: 1, mode: 'chat', turns: [] })).mode, 'chat');
+  assert.equal(parseThread(JSON.stringify({ v: 1, turns: [] })).mode, 'doc');
+  assert.equal(parseThread(JSON.stringify({ v: 1, mode: 'banana', turns: [] })).mode, 'doc');
 });
 
 test('appendTurn: deterministic id from now, ts stamped, state open', () => {

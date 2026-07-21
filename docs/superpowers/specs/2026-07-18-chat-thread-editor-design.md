@@ -8,8 +8,9 @@ Authors: owner + Claude (Fable 5) · Cross-checker: Codex gpt-5.6-sol
 Make writing a blog post in Chapbook Studio feel like a conversation. The block editor gains a
 **Chat mode** in which the post renders as one scrolling message thread inside an elevated
 "canvas" container: each block is a sent bubble, the existing compose bar is the chat input, and
-the AI Partner participates as a guide. Chat is the default for new posts; the current editor
-remains one tap away as **Doc mode**.
+the AI Partner participates as a guide. Doc mode (the current editor) is the default for every
+post; Chat is opt-in, one tap away via the toolbar toggle (owner decision 2026-07-21, §10 -
+supersedes the original chat-default wording below).
 
 The editor already runs a permanent chat-mode composer (`_chatOn`, compose bar with
 send/dictate/add-block, per-block `.chat-acts` rows), so this is an evolution of the existing
@@ -48,8 +49,11 @@ architecture, not a rewrite.
   existing per-block `.chat-acts` row (move/delete) carries over as the bubble's action row,
   plus the placement chips where the block type has them.
 - The toolbar gains a **Chat / Doc** toggle. Doc mode is the current editor, byte-for-byte
-  untouched. New posts open in Chat; existing posts remember their last mode (stored per post in
-  the thread sidecar; absent sidecar = Doc for existing posts, Chat for new).
+  untouched. Chat is opt-in (owner decision 2026-07-21): all posts open in Doc mode; Chat via
+  the toggle, remembered per post (stored in the thread sidecar; absent sidecar = Doc for
+  everything, new and existing). A one-time discoverability hint anchors to the toggle on the
+  first editor open; in Chat mode a Preview button docks on the canvas (top-right) and invokes
+  the live preview. (Amended per §10; originally new posts opened in Chat.)
 
 ### 4.2 Talking to the AI (only when addressed)
 
@@ -114,7 +118,8 @@ the workshop; the post is the shelf.
 
 ## 8. Rollout & risks
 
-- Chat default for new posts; Doc for existing posts until switched; per-post memory.
+- Chat is opt-in (owner decision 2026-07-21): all posts open in Doc mode; Chat via the toggle,
+  remembered per post; one-time discoverability hint; canvas Preview button in chat mode.
 - Escape hatch: the toggle. If a block type renders poorly as a bubble, Doc mode is always
   intact.
 - Implementation: Fable 5 writes; Codex gpt-5.6-sol reviews each milestone's diff (owner's
@@ -165,3 +170,19 @@ draft entry points on narrow layouts.
   remains visible (focus mode strips the other chrome but keeps the scratchpad); narrow
   layouts: the sheet toggle stays reachable. Rationale: focus mode is precisely when stray
   thoughts need a place to land without breaking the writing flow.
+
+## 10. Addendum (owner decision 2026-07-21): Chat is opt-in
+
+Chat is opt-in - it has a learning curve, and Blocks (Doc) mode is the normal editor for
+everyone. Supersedes the chat-default wording in §1, §4.1 and §8:
+
+- All posts, new and existing, open in Doc mode (loadThread's absent-sidecar default and
+  startNewPost's fresh branch are both Doc). A saved sidecar's mode is still honoured
+  exactly - per-post memory means a post toggled to Chat reopens in Chat.
+- Discoverability: the first editor open after this build shows a small dismissible
+  coachmark anchored to the Chat/Doc toggle ("New: write your post as a chat. Try it any
+  time."). Toggle use or the ✕ sets localStorage `helm.thread.hint.v1` and it never shows
+  again; leaving the editor merely hides it.
+- Chat mode gains a clearly-labeled Preview button docked top-right on the thread canvas
+  (icon-only on narrow screens), invoking the existing live preview - the real rendered
+  page, identical to the toolbar button (blocks stay the source of truth).

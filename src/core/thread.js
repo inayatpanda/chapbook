@@ -7,7 +7,9 @@ const KINDS = new Set(['guidance', 'insertable']);
 const STATES = new Set(['open', 'accepted', 'dismissed']);
 let _c = 0;
 
-export function createThread() { return { v: 1, mode: 'chat', turns: [], scratch: [] }; }
+// Doc is the default mode everywhere (owner decision 2026-07-21: Chat is opt-in);
+// a saved 'chat' is per-post memory and is always honoured exactly.
+export function createThread() { return { v: 1, mode: 'doc', turns: [], scratch: [] }; }
 
 export function appendTurn(thread, { role, kind, text, blockRef = null }, now) {
   const turn = { id: 't' + Number(now).toString(36) + '-' + (_c++), role, kind,
@@ -63,7 +65,7 @@ export function parseThread(json) {
   let raw;
   try { raw = JSON.parse(json); } catch { return createThread(); }
   if (!raw || typeof raw !== 'object' || raw.v !== 1) return createThread();
-  return { v: 1, mode: raw.mode === 'doc' ? 'doc' : 'chat',
+  return { v: 1, mode: raw.mode === 'chat' ? 'chat' : 'doc',   // saved modes honoured exactly; anything else falls to the Doc default
     turns: Array.isArray(raw.turns) ? raw.turns.filter(validTurn) : [],
     scratch: Array.isArray(raw.scratch) ? raw.scratch.filter(validJot) : [] };
 }
