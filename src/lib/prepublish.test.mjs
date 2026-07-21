@@ -97,3 +97,64 @@ test('figure gate: plain javascript: href and src= variants are flagged', () => 
 test('figure gate: normal hrefs still pass (anchor + safe raster data URL)', () => {
   assert.equal(figUnsafeErrors('<svg><use href="#shape"/><image href="data:image/png;base64,AAAA"/></svg>').length, 0);
 });
+
+// ── raw gate: entity/whitespace-normalised scheme checks (stress-harness port) ──
+// A browser decodes HTML character references and strips ASCII whitespace/control
+// chars from an attribute URL BEFORE resolving its scheme, so `java&#x0a;script:`,
+// `jav&#x61;script:` and `java\tscript:` are all LIVE javascript: URLs that a
+// literal /javascript:/ match misses. Raw blocks publish VERBATIM (no serialise-time
+// sanitiser), so a miss here is stored XSS. The independent stress harness found the
+// exact payload below returned errors: [].
+
+test('raw gate: entity-encoded-newline javascript: href is flagged (stress bypass port)', () => {
+  // exact stress-harness input
+  const errs = unsafeErrors('<a href="java&#x0a;script:alert(1337)">click</a>');
+  assert.equal(errs.length, 1, 'browser entity-decodes &#x0a; to a newline, then strips it → javascript:');
+  assert.match(errs[0].message, /javascript/i);
+});
+
+test('raw gate: entity-encoded scheme letters and &colon; are flagged', () => {
+  assert.equal(unsafeErrors('<a href="jav&#x61;script:x">x</a>').length, 1); // &#x61; = a
+  assert.equal(unsafeErrors('<a href="&#106;&#97;vascript:alert(1)">x</a>').length, 1); // decimal refs
+  assert.equal(unsafeErrors('<a href="javascript&colon;alert(1)">x</a>').length, 1); // named &colon;
+});
+
+test('raw gate: embedded-tab and leading-whitespace javascript: hrefs are flagged', () => {
+  assert.equal(unsafeErrors('<a href="java\tscript:x">x</a>').length, 1);
+  assert.equal(unsafeErrors('<a href="java\nscript:x">x</a>').length, 1);
+  assert.equal(unsafeErrors('<a href=" \tjavascript:x">x</a>').length, 1);
+});
+
+test('raw gate: vbscript: and markup-capable data: URLs are flagged', () => {
+  assert.equal(unsafeErrors('<a href="vbscript:msgbox(1)">x</a>').length, 1);
+  assert.equal(unsafeErrors('<a href="data:text/html,<script>alert(1)</script>">x</a>').length, 1);
+  assert.equal(unsafeErrors('<a href="data&colon;text/html,<script>alert(1)</script>">x</a>').length, 1);
+  assert.equal(unsafeErrors('<iframe src="data:text/html;base64,AAAA"></iframe>').length, 1);
+});
+
+test('raw gate: benign raw HTML is NOT flagged (no false positives from normalisation)', () => {
+  assert.equal(unsafeErrors('<div class="beacon">hello</div>').length, 0);
+  assert.equal(unsafeErrors('<a href="https://x.com">x</a>').length, 0);
+  assert.equal(unsafeErrors('<a href="#anchor">jump</a>').length, 0);
+  assert.equal(unsafeErrors('<img src="data:image/png;base64,iVBORw0KGgo=" alt="ok">').length, 0);
+  assert.equal(unsafeErrors('<a href="/blog/my-post">internal</a>').length, 0);
+});
+
+test('raw gate: checkDoc surfaces the stress payload as a publish-blocking error', () => {
+  // Port of the stress harness test verbatim: the public entry point must error.
+  const result = checkDoc({
+    doc: { blocks: [{ type: 'raw', content: '<a href="java&#x0a;script:alert(1337)">click</a>' }] },
+    meta: { title: 'raw gate', tags: ['x'] },
+  });
+  assert.ok(result.errors.length > 0, `expected an error; actual errors=${JSON.stringify(result.errors)}`);
+  assert.equal(result.ok, false);
+});
+
+// ── figure gate: the SAME entity gap existed in figureSvgRisk's href/src checks ──
+
+test('figure gate: entity-encoded javascript:/data: hrefs are flagged (entity bypass fix)', () => {
+  assert.equal(figUnsafeErrors('<svg><a href="jav&#x61;script:alert(1)">x</a></svg>').length, 1);
+  assert.equal(figUnsafeErrors('<svg><a href="java&#x0a;script:alert(1)">x</a></svg>').length, 1);
+  assert.equal(figUnsafeErrors('<svg><a xlink:href="javascript&colon;alert(1)">x</a></svg>').length, 1);
+  assert.equal(figUnsafeErrors('<svg><a href="data&colon;text/html,<script>x</script>">x</a></svg>').length, 1);
+});

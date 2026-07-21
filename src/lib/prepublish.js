@@ -49,6 +49,31 @@ function rawHtmlRisks(content) {
   return out;
 }
 
+// Reproduce the normalisations a browser applies to an attribute-value URL BEFORE it
+// resolves the scheme (mirrors sanitise.js normaliseUrl): (1) decode HTML character
+// references — numeric &#NN;/&#xNN; plus the scheme-relevant named refs — then
+// (2) strip ASCII whitespace + control chars. Lower-cased so scheme tests are
+// case-insensitive. Without this, `java&#x0a;script:` and `java\tscript:` sail past a
+// literal /javascript:/ match yet run in the visitor's browser (stress-harness find).
+function decodeRefsAndStrip(raw) {
+  return String(raw || '')
+    .replace(/&#x([0-9a-f]+);?/gi, (_m, h) => { try { return String.fromCodePoint(parseInt(h, 16)); } catch { return ''; } })
+    .replace(/&#(\d+);?/g, (_m, n) => { try { return String.fromCodePoint(parseInt(n, 10)); } catch { return ''; } })
+    .replace(/&colon;/gi, ':').replace(/&(?:tab|newline|nbsp);/gi, ' ')
+    .replace(/[\u0000-\u0020]+/g, '')
+    .toLowerCase();
+}
+
+// Every href / xlink:href / src attribute VALUE in a fragment (either quote style, or
+// unquoted). Shared by rawHtmlUnsafe and figureSvgRisk so both gates normalise values
+// the same way before their scheme checks.
+const ATTR_URL_RE = /(?:(?:xlink:)?href|src)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s">]+))/gi;
+function* attrUrlValues(s) {
+  ATTR_URL_RE.lastIndex = 0;
+  let m;
+  while ((m = ATTR_URL_RE.exec(s))) yield (m[1] !== undefined ? m[1] : m[2] !== undefined ? m[2] : m[3]) || '';
+}
+
 // Detect executable / unsafe HTML in a raw block. The Studio publishes raw blocks
 // verbatim to the live blog, which renders raw HTML with NO server-side sanitiser, so
 // any of these = stored XSS (C1). Mirrors figureSvgRisk(): string/regex passes only,
@@ -66,7 +91,21 @@ function rawHtmlUnsafe(content) {
   // start of the block. The word-boundary `on\w+\s*=` shape is kept so attributes that
   // merely CONTAIN "on" (class="beacon", data-son="x", contenteditable=…) never trip.
   if (/(?:^|[\s/"'`])on\w+\s*=/i.test(s)) return 'an inline event handler (on…=)';
-  if (/javascript:/i.test(s)) return 'a javascript: URL';
+  // Scheme checks run on a browser-NORMALISED copy of the whole block (entities decoded,
+  // whitespace/control chars stripped) — the strictest option: it catches the schemes in
+  // attributes with any delimiter/quoting AND bare in text. Subsumes the old literal
+  // /javascript:/ test (a literal match survives normalisation unchanged).
+  const norm = decodeRefsAndStrip(s);
+  if (/javascript:/.test(norm)) return 'a javascript: URL';
+  if (/vbscript:/.test(norm)) return 'a vbscript: URL';
+  // data: URLs in href/src — a markup-capable data: document (data:text/html,
+  // data:image/svg+xml…) executes script in the visitor's browser. Extract each value
+  // from the RAW string (attribute syntax intact), normalise it like a browser, then
+  // allow only the safe raster shapes (same policy as figureSvgRisk / figures/svg.js).
+  for (const raw of attrUrlValues(s)) {
+    const v = decodeRefsAndStrip(raw);
+    if (/^data:/.test(v) && !SAFE_IMAGE_DATA_URL.test(v)) return 'an unsafe data: URL (href/src)';
+  }
   return null;
 }
 
@@ -215,21 +254,19 @@ function figureSvgRisk(svg) {
   // External href / xlink:href / src (http:, https: or protocol-relative //).
   if (/(?:(?:xlink:)?href|src)\s*=\s*["']?\s*(?:https?:|\/\/)/i.test(s)) return 'an external link (href)';
   // Scheme checks on every href / xlink:href / src value (either quote style, or
-  // unquoted). The value is NORMALISED first — all whitespace/control chars stripped —
-  // because browsers ignore leading whitespace and embedded tab/newline in a URL
-  // scheme: href=" \tjavascript:…" and href="java\nscript:…" are both live. The gate
-  // must be at least as strict as the serialiser's sanitiser (figures/svg.js), which
-  // drops any href/src that is not a #anchor or a safe raster data URL.
-  const attrUrl = /(?:(?:xlink:)?href|src)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s">]+))/gi;
-  let m;
-  while ((m = attrUrl.exec(s))) {
-    const raw = ((m[1] !== undefined ? m[1] : m[2] !== undefined ? m[2] : m[3]) || '');
-    const v = raw.replace(/[\u0000-\u0020]+/g, '');
+  // unquoted). The value is NORMALISED first — HTML character references decoded, THEN
+  // all whitespace/control chars stripped (decodeRefsAndStrip) — because browsers apply
+  // exactly those steps before resolving a URL scheme: href=" \tjavascript:…",
+  // href="java\nscript:…" AND href="jav&#x61;script:…" are all live. The gate must be
+  // at least as strict as the serialiser's sanitiser (figures/svg.js), which drops any
+  // href/src that is not a #anchor or a safe raster data URL.
+  for (const raw of attrUrlValues(s)) {
+    const v = decodeRefsAndStrip(raw);
     // javascript:/vbscript: are executable URL schemes (any delimiter, any padding).
-    if (/^(?:javascript|vbscript):/i.test(v)) return 'a javascript: link (href/src)';
+    if (/^(?:javascript|vbscript):/.test(v)) return 'a javascript: link (href/src)';
     // A data: URL that is NOT a safe raster (e.g. data:image/svg+xml, data:text/html).
     // sanitise() strips these (C1), so prepublish must flag them too.
-    if (/^data:/i.test(v) && !SAFE_IMAGE_DATA_URL.test(v)) return 'an unsafe data: link (href)';
+    if (/^data:/.test(v) && !SAFE_IMAGE_DATA_URL.test(v)) return 'an unsafe data: link (href)';
   }
   return null;
 }
