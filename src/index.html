@@ -2236,8 +2236,9 @@
   .chat-bar .cbtn:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
   #chatSendBtn{border-color:transparent;color:#04060c;background:var(--grad-pub);font-weight:700}
   #chatMic.on{border-color:#fb7185;color:#fb7185;animation:chatpulse 1.2s infinite}
+  #chatMic.busy{border-color:#818cf8;color:#818cf8;animation:chatpulse 1.2s infinite}
   @keyframes chatpulse{50%{box-shadow:0 0 0 6px rgba(251,113,133,.15)}}
-  @media (prefers-reduced-motion: reduce){#chatMic.on{animation:none}}
+  @media (prefers-reduced-motion: reduce){#chatMic.on,#chatMic.busy{animation:none}}
   .chat-strip[hidden]{display:none}   /* author display:flex would otherwise defeat [hidden] */
   .chat-strip{display:flex;align-items:center;gap:.5rem;max-width:760px;margin:0 auto .4rem;
     border-left:3px solid var(--acc);background:rgba(45,212,191,.08);border-radius:8px;
@@ -5193,6 +5194,7 @@
 <script type="module">
 import { resizeToBase64, decodeImage, encodeSource, MAX_EDGE } from '/resize.js';
 import { initDarkroom } from '/darkroom-upload.js';
+import { STT_PROVIDERS, STT_ENGINE_KEY, STT_MAX_RECORD_MS, resolveSttProvider, sttNext, appendDictation, whisperSupported as sttWhisperSupported, createWhisperProvider as sttCreateWhisperProvider } from '/stt.js';
 
 const $=id=>document.getElementById(id);
 /* ── one icon language: Tabler sprite refs (icons-sprite.svg, ids ti-<name>) ──
@@ -9610,19 +9612,37 @@ function chatOpenSheet(){
 }
 function chatCloseSheet(){ $('chatSheet').hidden = true; }
 
-/* ── voice → text (where the browser supports it) ── */
+/* ── voice → text: on-device Whisper by default, browser cloud engine as opt-in ──
+   Two providers behind one mic button (core/stt.js carries the pure logic + copy):
+     • whisper (DEFAULT, private): record-then-transcribe — MediaRecorder captures the
+       clip, /stt.js decodes it to 16 kHz mono and a Web Worker runs the self-hosted
+       whisper-tiny.en q8 pipeline. Nothing leaves the browser. First use downloads
+       the model (~30 MB, one-time; SW-cached after).
+     • webspeech (OPT-IN ONLY, disclosed): the continuous Web Speech engine below —
+       the browser may route audio to a cloud speech service, so it is never silently
+       selected. Long-press (or right-click) the mic to switch engines. */
 function chatInitMic(){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const btn = $('chatMic');
-  if(!SR || !btn) return;
+  if(!btn) return;
+  const engines = { whisper: sttWhisperSupported(), webspeech: !!SR };
+  const engineId = () => {
+    let stored = null;
+    try{ stored = localStorage.getItem(STT_ENGINE_KEY); }catch(_){}
+    return resolveSttProvider(stored, engines);
+  };
+  // Hide the mic only when NOTHING could ever dictate. If whisper is unsupported but
+  // webspeech exists without an opt-in yet, the button stays visible and a tap opens
+  // the explicit opt-in flow (the cloud engine is still never silently selected).
+  if(!engineId() && !engines.webspeech) return;
   btn.hidden = false;
-  /* Continuous dictation: tap to start, speak through pauses, tap to stop. `continuous`
-     rides short silences; a real engine timeout fires onend, which auto-restarts while
-     `active` so a pause never ends the session. Interim results paint live; finalised
-     phrases accumulate into `committed`; `base` preserves whatever was already typed.
-     PRIVACY: this native engine may send audio to the browser's speech provider
-     (Chrome routes to Google) — it is the disclosed opt-in path; the planned on-device
-     engine is the private default. */
+  const setLbl = (t) => { btn.setAttribute('aria-label', t); btn.title = t; };
+
+  /* ── webspeech engine (opt-in): continuous — tap to start, speak through pauses,
+     tap to stop. `continuous` rides short silences; a real engine timeout fires
+     onend, which auto-restarts while `active` so a pause never ends the session.
+     Interim results paint live; finalised phrases accumulate into `committed`;
+     `base` preserves whatever was already typed. ── */
   let rec = null, active = false, base = '', committed = '', painting = false, retry = 0, restartT = 0;
   const paint = (interim) => {
     const el = $('chatInput'); if(!el) return;
@@ -9633,14 +9653,13 @@ function chatInitMic(){
     painting = false;
   };
   const finish = () => { active = false; clearTimeout(restartT); restartT = 0; retry = 0; rec = null; btn.classList.remove('on'); };
-  const stopMic = () => {
+  const wsStop = () => {
     if(!active && !rec) return;
     active = false; clearTimeout(restartT); restartT = 0;
     const inst = rec; rec = null;              // invalidate any late result/end callbacks
     btn.classList.remove('on'); paint('');     // drop uncommitted interim; keep finals
     try{ inst && inst.stop(); }catch(_){}
   };
-  _chatStopMic = stopMic;                       // let a view-change stop a live session
   const queueRestart = () => {
     if(++retry > 5){ finish(); toast('Dictation stopped after repeated failures. Check your mic or connection, then try again.'); return; }
     const delay = Math.min(250 * (2 ** (retry - 1)), 4000);
@@ -9677,14 +9696,158 @@ function chatInitMic(){
     };
     try{ inst.start(); }catch(_){ if(rec === inst) finish(); }
   };
-  btn.addEventListener('click', () => {
-    if(active){ stopMic(); return; }
+  const wsTap = () => {
+    if(active){ wsStop(); return; }
     const el = $('chatInput'); base = el ? el.value : ''; committed = ''; retry = 0;
     active = true; btn.classList.add('on'); start();
-  });
-  // concurrent typing during dictation ends the session so keystrokes aren't clobbered by a paint
+  };
+  // concurrent typing during WEBSPEECH dictation ends the session so keystrokes aren't
+  // clobbered by an interim paint. (The whisper path needs no such guard: it paints
+  // nothing until the end, then appends to the input's CURRENT value.)
   const ci = $('chatInput');
-  if(ci) ci.addEventListener('input', () => { if(active && !painting) stopMic(); });
+  if(ci) ci.addEventListener('input', () => { if(active && !painting) wsStop(); });
+
+  /* ── whisper engine (default): record-then-transcribe on the mic state machine
+     idle → preparing(one-time model download, with progress) → recording →
+     transcribing → idle, error as the failure sink (sttNext in core/stt.js).
+     Tap semantics per state: idle=start · preparing=cancel · recording=stop
+     (also auto-stopped at the 5-minute cap) · transcribing=ignored.
+     whSession invalidates everything in flight (cancel, view change), so a late
+     result or permission grant can never act on a finished session. ── */
+  const whisper = sttCreateWhisperProvider();
+  let whState = 'idle', whSession = 0, whPrepared = false;
+  let whStream = null, whRec = null, whChunks = [], whCapT = 0;
+  const whApply = () => {
+    btn.classList.toggle('on', whState === 'recording');
+    btn.classList.toggle('busy', whState === 'preparing' || whState === 'transcribing');
+    setLbl(whState === 'recording' ? 'Stop dictation'
+      : whState === 'preparing' ? 'Preparing dictation…'
+      : whState === 'transcribing' ? 'Transcribing…' : 'Dictate');
+  };
+  const whGo = (ev) => { const n = sttNext(whState, ev); if(n){ whState = n; whApply(); } return !!n; };
+  const whDropStream = () => {
+    if(whStream){ try{ whStream.getTracks().forEach(t => t.stop()); }catch(_){} whStream = null; }
+  };
+  const whFail = (msg) => { whGo('fail'); toast(msg); whGo('reset'); };
+  const whCancel = () => {                       // discard everything, back to idle
+    whSession++;
+    clearTimeout(whCapT); whCapT = 0;
+    const r = whRec; whRec = null; whChunks = [];
+    try{ if(r && r.state !== 'inactive') r.stop(); }catch(_){}
+    whDropStream();
+    if(whState !== 'idle' && !whGo('cancel')){ whState = 'idle'; whApply(); }
+  };
+  const whStopRecording = () => {                // tap while recording, or the 5-min cap
+    if(whState !== 'recording') return;
+    clearTimeout(whCapT); whCapT = 0;
+    if(!whRec){ whCancel(); return; }            // mic permission still pending — treat as cancel
+    whGo('stop');                                // → transcribing; onstop hands over to whTranscribe
+    try{ whRec.stop(); }catch(_){ whRec = null; whDropStream(); whFail('Recording failed — try again.'); }
+  };
+  const whTranscribe = async (session) => {
+    whDropStream();
+    const blob = new Blob(whChunks, { type: (whChunks[0] && whChunks[0].type) || 'audio/webm' });
+    whChunks = [];
+    if(!blob.size){ whGo('cancel'); return; }    // nothing captured (instant double-tap)
+    try{
+      const text = await whisper.transcribe(blob);
+      if(whSession !== session) return;          // cancelled/superseded — drop the result
+      if(text){
+        const el = $('chatInput');
+        if(el){ el.value = appendDictation(el.value, text); chatAutosize(); chatSyncInput(); }
+      } else { toast('No speech was detected.'); }
+      whGo('done');
+    }catch(e){
+      if(whSession !== session) return;
+      whFail(String(e && e.message || 'Transcription failed on this device. Try again.'));
+    }
+  };
+  const whStartRecorder = async (session) => {
+    let stream;
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    }catch(e){
+      if(whSession !== session) return;          // cancelled while the permission prompt was up
+      whFail(e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')
+        ? 'Microphone access is blocked. Allow it in your browser settings to dictate.'
+        : 'No microphone was found for dictation.');
+      return;
+    }
+    if(whSession !== session){ try{ stream.getTracks().forEach(t => t.stop()); }catch(_){} return; }
+    whStream = stream; whChunks = [];
+    try{ whRec = new MediaRecorder(stream); }catch(_){ whDropStream(); whFail('Recording is not supported in this browser.'); return; }
+    whRec.ondataavailable = (e) => { if(e.data && e.data.size) whChunks.push(e.data); };
+    whRec.onstop = () => { whRec = null; if(whSession === session && whState === 'transcribing') whTranscribe(session); };
+    whRec.start();
+    // the whole clip is decoded in memory before transcription — cap the session
+    whCapT = setTimeout(() => {
+      if(whSession === session && whState === 'recording'){
+        toast('Dictation reached the 5-minute limit — transcribing.');
+        whStopRecording();
+      }
+    }, STT_MAX_RECORD_MS);
+  };
+  const whTap = async () => {
+    if(whState === 'recording'){ whStopRecording(); return; }
+    if(whState === 'preparing'){ whCancel(); return; }
+    if(whState !== 'idle') return;               // transcribing: taps are ignored
+    const session = ++whSession;
+    if(!whPrepared){
+      whGo('prepare');
+      toast('Preparing dictation — one-time ~30 MB download…');
+      try{
+        await whisper.preload({ onProgress: (p) => {
+          if(whSession === session && whState === 'preparing' && p.pct) setLbl('Preparing dictation — ' + p.pct + '%');
+        } });
+      }catch(e){
+        if(whSession !== session || whState !== 'preparing') return;   // cancelled meanwhile
+        whFail(String(e && e.message || 'The dictation model could not be loaded. Check your connection and try again.'));
+        return;
+      }
+      if(whSession !== session || whState !== 'preparing') return;     // cancelled meanwhile
+      whPrepared = true;
+      whGo('ready');                             // → recording
+    } else {
+      whGo('record');
+    }
+    await whStartRecorder(session);
+  };
+
+  /* ── engine opt-in: long-press (or right-click) the mic to switch engines.
+     The cloud engine is NEVER auto-selected — switching to it requires this
+     explicit, disclosure-carrying confirm (the round-2 agreement). ── */
+  const stopAll = () => { wsStop(); whCancel(); };
+  _chatStopMic = stopAll;                        // view-change stops any live session
+  const chooseEngine = async () => {
+    stopAll();
+    if(engineId() === 'webspeech'){
+      try{ localStorage.setItem(STT_ENGINE_KEY, 'whisper'); }catch(_){}
+      toast('Dictation: on-device engine selected. Audio stays on this device.');
+      return;
+    }
+    if(!engines.webspeech){ toast('This browser has no cloud dictation engine — on-device stays active.'); return; }
+    const ok = await helmConfirm({
+      title: 'Use the browser’s cloud dictation?',
+      text: STT_PROVIDERS.webspeech.disclosure + ' On-device dictation is the private default; long-press the mic to switch back.',
+      okText: 'Use cloud dictation',
+    });
+    if(!ok) return;
+    try{ localStorage.setItem(STT_ENGINE_KEY, 'webspeech'); }catch(_){}
+    toast('Dictation: browser cloud engine selected.');
+  };
+  let lpT = 0, lpFired = false;
+  btn.addEventListener('pointerdown', () => { lpFired = false; clearTimeout(lpT); lpT = setTimeout(() => { lpFired = true; chooseEngine(); }, 600); });
+  btn.addEventListener('pointerup', () => clearTimeout(lpT));
+  btn.addEventListener('pointerleave', () => clearTimeout(lpT));
+  btn.addEventListener('contextmenu', (e) => { e.preventDefault(); if(!lpFired) chooseEngine(); });
+
+  btn.addEventListener('click', () => {
+    if(lpFired){ lpFired = false; return; }      // the long-press already consumed this gesture
+    const id = engineId();
+    if(id === 'webspeech') wsTap();
+    else if(id === 'whisper') whTap();
+    else chooseEngine();                         // whisper unsupported, cloud not yet opted in
+  });
 }
 
 /* ── keyboard-riding (iOS): keep the bar above the on-screen keyboard ── */
