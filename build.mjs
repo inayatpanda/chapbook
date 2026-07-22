@@ -96,6 +96,23 @@ await build({
 });
 console.log('bundled', `${SRC}/darkroom-upload.js`);
 
+// STT (dictation) engine + its worker — separate browser-ESM bundles, same pattern as
+// darkroom-upload. The pure core (core/stt.js) is bundled IN; transformers.js + the ONNX
+// WASM runtime + the whisper model are NOT bundled — scripts/stage-stt.mjs stages them
+// same-origin into dist/app/vendor/stt/ + dist/app/models/ and the worker dynamically
+// imports /app/vendor/stt/transformers.min.js at runtime (hence the external below).
+await build({
+  entryPoints: ['src/stt.src.js'], bundle: true, format: 'esm',
+  outfile: `${SRC}/stt.js`, platform: 'browser', target: 'es2022', legalComments: 'none',
+});
+console.log('bundled', `${SRC}/stt.js`);
+await build({
+  entryPoints: ['src/stt-worker.src.js'], bundle: true, format: 'esm',
+  outfile: `${SRC}/stt-worker.js`, platform: 'browser', target: 'es2022', legalComments: 'none',
+  external: ['/app/vendor/stt/*'],
+});
+console.log('bundled', `${SRC}/stt-worker.js`);
+
 rmSync(DIST, { recursive: true, force: true });
 mkdirSync(DIST, { recursive: true });
 
@@ -205,7 +222,7 @@ console.log('legal pages: privacy/terms/refunds extracted from index.html ✓');
 // (no more /studio/ → / rewriting). index.html is written above with config injected.
 // sw.js is NOT copied here — it is stamped with a content-hashed CACHE name at the
 // end of the build, once every SHELL asset (incl. fonts) exists in dist/.
-for (const f of ['manifest.json', 'studio.js', 'darkroom-upload.js', 'preview.css', 'resize.js', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icons-manifest.json', 'icons-sprite.svg']) {
+for (const f of ['manifest.json', 'studio.js', 'darkroom-upload.js', 'stt.js', 'stt-worker.js', 'preview.css', 'resize.js', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icons-manifest.json', 'icons-sprite.svg']) {
   copyFileSync(`${SRC}/${f}`, `${DIST}/${f}`);
 }
 
