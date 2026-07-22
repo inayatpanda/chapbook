@@ -20916,14 +20916,27 @@ function _b64urlToBytes(s){
 }
 function _hexToBytes(h){ const out=new Uint8Array(h.length/2); for(let i=0;i<out.length;i++) out[i]=parseInt(h.slice(i*2,i*2+2),16); return out; }
 
-/* Shared Ed25519 verify (WebCrypto): does `sigBytes` sign the UTF-8 bytes of `msgStr`
-   under the baked-in LIC_PUBKEY? Used by both the licence-key check and the revocation
-   -list check. Any failure (bad key/sig, unsupported curve) → false. */
+/* Shared Ed25519 verify: does `sigBytes` sign the UTF-8 bytes of `msgStr` under the
+   baked-in LIC_PUBKEY? Used by both the licence-key check and the revocation-list check.
+   Primary path: WebCrypto Ed25519 (fast, native). But WebCrypto only gained Ed25519 in
+   Safari/iOS 17 — on iOS 16 / older Mac Safari importKey THROWS, which used to return
+   false for every key and break activation entirely. So when the native path throws we
+   fall back to the bundled pure verifier (src/lib/ed25519Verify.js, RFC 8032, exposed as
+   window.__studioEd25519 by app.js — the inline module can't import lib/). A genuine
+   false from crypto.subtle.verify (tampered sig on a modern browser) does NOT reach the
+   fallback — only an unsupported/failed algorithm does. Any failure in both → false. */
 async function _ed25519Verify(msgStr,sigBytes){
+  const msg=new TextEncoder().encode(msgStr);
   try{
     const key=await crypto.subtle.importKey('raw',_hexToBytes(LIC_PUBKEY),{name:'Ed25519'},false,['verify']);
-    return await crypto.subtle.verify({name:'Ed25519'},key,sigBytes,new TextEncoder().encode(msgStr));
-  }catch{ return false; }
+    return await crypto.subtle.verify({name:'Ed25519'},key,sigBytes,msg);
+  }catch{
+    try{
+      const f=(typeof window!=='undefined'&&window.__studioEd25519)||null;
+      if(f&&typeof f.verify==='function') return !!(await f.verify(sigBytes,msg,_hexToBytes(LIC_PUBKEY)));
+    }catch{}
+    return false;
+  }
 }
 
 /* ── Licence revocation — Helm boundary touchpoint 2 (best-effort, FAILS OPEN) ──

@@ -28,6 +28,7 @@ import * as shareIntents from './core/shareIntents.js';
 import * as postList from './core/postList.js';
 import * as connection from './core/connection.js';
 import * as themeCatalogue from './core/themeCatalogue.js';
+import { ed25519Verify } from './lib/ed25519Verify.js';
 
 // Minimal HTML escaper for the few spots where user text (a chosen blog name) is written
 // into the onboarding overlay's innerHTML — that overlay's origin holds the buyer's
@@ -463,5 +464,10 @@ if (typeof window !== 'undefined') {
   window.__studioReset = appReset;         // M9: pure "Forget this device" enumerator (chapbookKeys / CHAPBOOK_IDB_NAME)
   window.__studioThemes = themeCatalogue;   // baked blog-theme registry + live-catalogue fetch + the shared picker renderer (Settings → Site mounts it)
   window.__studioThread = { parseTitleOptions, summarizeReactions }; // pure title-workshop parser + reaction-steering digest (the inline module can't import core/)
+  // Licence-gate fallback: pure RFC 8032 Ed25519 verify for browsers whose WebCrypto lacks
+  // the Ed25519 algorithm (Safari/iOS < 17 — importKey throws there and activation broke).
+  // The inline gate (_ed25519Verify) keeps crypto.subtle as the fast primary path and only
+  // reaches for this when that throws. Unit-tested in src/lib/ed25519Verify.test.mjs.
+  window.__studioEd25519 = { verify: ed25519Verify };
   refresh();
 }
