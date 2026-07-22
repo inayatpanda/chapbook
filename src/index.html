@@ -67,8 +67,12 @@
   }
   :root[data-theme="light"] {
     --bg:#eef1f6; --bg-1:#e7ecf4; --surface:#ffffff; --surface-2:#f3f6fb;
-    --ink:#1b2433; --mut:#5b6b80; --faint:#8a97a8;
-    --line:#e4e9f0; --line-2:#d3dbe7; --acc:#0ea5a3;
+    /* WCAG AA (a11y audit): --faint and --acc colour TEXT in light (bottom-nav labels,
+       header subtitle, install/getting-started links) — the old #8a97a8 / #0ea5a3 sat at
+       ~2.6:1 on the light field. These clear 4.5:1 on --bg, --bg-1 AND --surface.
+       Dark theme is untouched (its values already pass on the near-black field). */
+    --ink:#1b2433; --mut:#5b6b80; --faint:#5f6b7c;
+    --line:#e4e9f0; --line-2:#d3dbe7; --acc:#0b7371;
     --thread-canvas:#fbfaf7; --thread-canvas-line:#e4e1db;
     --thread-post:#e7edf6; --thread-post-line:#d1dae7;
     --partner-voice:#574fd6; --partner-wash:rgba(87,79,214,.07); --partner-line:rgba(87,79,214,.24);
@@ -2228,6 +2232,8 @@
   .chat-bar .cbtn{flex:0 0 auto;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);
     background:rgba(140,160,200,.06);color:var(--ink);font-size:1.05rem;cursor:pointer;
     display:flex;align-items:center;justify-content:center;padding:0}
+  /* a11y: the shared focus ring — these buttons were the one cluster still on the UA default */
+  .chat-bar .cbtn:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
   #chatSendBtn{border-color:transparent;color:#04060c;background:var(--grad-pub);font-weight:700}
   #chatMic.on{border-color:#fb7185;color:#fb7185;animation:chatpulse 1.2s infinite}
   @keyframes chatpulse{50%{box-shadow:0 0 0 6px rgba(251,113,133,.15)}}
@@ -4022,7 +4028,7 @@
     <div id="threadChips" role="group" aria-label="Partner shortcuts" hidden></div>
     <div class="chat-row">
       <button class="cbtn" id="chatPlus" type="button" title="Add — image, interactive, figure…" aria-label="Add a block"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-plus"/></svg></button>
-      <textarea id="chatInput" rows="1" placeholder="Write a message…" autocomplete="off"></textarea>
+      <textarea id="chatInput" rows="1" placeholder="Write a message…" autocomplete="off" aria-label="Message"></textarea>
       <button class="cbtn" id="chatAskToggle" type="button" title="Ask the Partner" aria-label="Ask the Partner instead of writing into the post">✦</button>
       <button class="cbtn" id="chatCam" type="button" title="Add a photo" aria-label="Add a photo to the post"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-camera"/></svg></button>
       <input id="chatCamInput" type="file" accept="image/*" capture="environment" multiple hidden />
@@ -4266,7 +4272,7 @@
     <!-- CENTRE: document canvas -->
     <div id="editorInner">
       <div class="title-row">
-        <input class="title-in" id="editorTitle" placeholder="Post title…" />
+        <input class="title-in" id="editorTitle" placeholder="Post title…" aria-label="Post title" />
         <button id="titleAskBtn" type="button" title="Ask the Partner for a title variation" aria-label="Ask the Partner for a title variation">✦</button>
       </div>
       <!-- Chat-mode Preview — docked top-right of the thread canvas (thread mode only,
@@ -4398,7 +4404,10 @@
 <div id="cmdkScrim" hidden>
   <div id="cmdk" class="surface surface--modal" role="dialog" aria-modal="true" aria-label="Command palette">
     <input id="cmdkInput" type="text" placeholder="Search posts and actions…" autocomplete="off" autocapitalize="off" spellcheck="false" role="combobox" aria-expanded="true" aria-controls="cmdkList" aria-autocomplete="list" />
-    <ul id="cmdkList" role="listbox" aria-label="Results"></ul>
+    <!-- a11y: a <div> listbox, NOT a <ul> — role="option" items must be DIRECT children
+         of the listbox in the accessibility tree (axe aria-required-parent), and <li>
+         wrappers broke that relationship. Options are rendered straight into this node. -->
+    <div id="cmdkList" role="listbox" aria-label="Results"></div>
     <div class="surface-esc-hint" aria-hidden="true"><kbd>Esc</kbd> Close</div>
   </div>
 </div>
@@ -4406,7 +4415,9 @@
 <!-- Always-visible word-count + read-time (shown in focus mode) -->
 <div id="focusMeter" aria-live="polite" hidden><span id="focusWords">0 words</span><span class="fm-x">·</span><span id="focusRead">1 min</span></div>
 
-<div id="toast"></div>
+<!-- a11y: a polite live region so screen readers hear status messages. Polite (not
+     assertive) on purpose — the app routes both info and error toasts through here. -->
+<div id="toast" role="status" aria-live="polite"></div>
 
 <!-- iOS "Add to Home Screen" hint — revealed ONLY on iOS/iPadOS Safari that isn't
      already installed and hasn't dismissed it (gated in the PWA-install script). iOS
@@ -14144,7 +14155,17 @@ function closeCmdk(){
   $('cmdkScrim').hidden = true;
   const lf = _cmdk.lastFocus;
   _cmdk = null;
+  _syncCmdkActive();   // a11y: drop the stale aria-activedescendant with the palette closed
   try{ if(lf && lf.focus) lf.focus(); }catch{}
+}
+
+/* a11y: the combobox input tracks the highlighted option via aria-activedescendant —
+   DOM focus stays in the input (keyboard behaviour unchanged), the SR follows the id. */
+function _syncCmdkActive(){
+  const inp = $('cmdkInput');
+  if(!inp) return;
+  if(_cmdk && _cmdk.filtered.length) inp.setAttribute('aria-activedescendant', 'cmdk-opt-' + _cmdk.sel);
+  else inp.removeAttribute('aria-activedescendant');
 }
 
 function renderCmdk(query){
@@ -14153,14 +14174,18 @@ function renderCmdk(query){
   _cmdk.filtered = _cmdk.items.filter(it => !q || _fuzzy(it.label, q) || _fuzzy(it.key || '', q));
   if(_cmdk.sel >= _cmdk.filtered.length) _cmdk.sel = Math.max(0, _cmdk.filtered.length - 1);
   const list = $('cmdkList');
-  if(!_cmdk.filtered.length){ list.innerHTML = '<li class="ck-empty">No matches</li>'; return; }
+  if(!_cmdk.filtered.length){ list.innerHTML = '<div class="ck-empty">No matches</div>'; _syncCmdkActive(); return; }
+  // a11y: options are DIRECT children of the role="listbox" node (no <li> wrappers — they
+  // broke the listbox→option relationship; axe aria-required-parent). Group labels are
+  // decorative separators, kept out of the accessibility tree entirely.
   let html = '', lastGroup = null;
   _cmdk.filtered.forEach((it, i) => {
     const g = it.group || 'Actions';
-    if(g !== lastGroup){ html += `<li class="ck-grouplbl" aria-hidden="true">${esc(g)}</li>`; lastGroup = g; }
-    html += `<li><button type="button" class="ck-item${i === _cmdk.sel ? ' cur' : ''}" role="option" data-i="${i}" aria-selected="${i === _cmdk.sel}">${tico(it.ic||'point')}<span class="nm">${esc(it.label)}</span>${it.tag?`<span class="tag">${esc(it.tag)}</span>`:''}</button></li>`;
+    if(g !== lastGroup){ html += `<div class="ck-grouplbl" role="presentation" aria-hidden="true">${esc(g)}</div>`; lastGroup = g; }
+    html += `<button type="button" id="cmdk-opt-${i}" class="ck-item${i === _cmdk.sel ? ' cur' : ''}" role="option" data-i="${i}" aria-selected="${i === _cmdk.sel}">${tico(it.ic||'point')}<span class="nm">${esc(it.label)}</span>${it.tag?`<span class="tag">${esc(it.tag)}</span>`:''}</button>`;
   });
   list.innerHTML = html;
+  _syncCmdkActive();
   const cur = list.querySelector('.ck-item.cur');
   if(cur) cur.scrollIntoView({ block:'nearest' });
 }
@@ -14170,6 +14195,7 @@ function moveCmdkSel(dir){
   _cmdk.sel = (_cmdk.sel + dir + _cmdk.filtered.length) % _cmdk.filtered.length;
   const list = $('cmdkList');
   list.querySelectorAll('.ck-item').forEach((el, i) => { el.classList.toggle('cur', i === _cmdk.sel); el.setAttribute('aria-selected', i === _cmdk.sel); });
+  _syncCmdkActive();
   const cur = list.querySelector('.ck-item.cur');
   if(cur) cur.scrollIntoView({ block:'nearest' });
 }
