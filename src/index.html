@@ -9636,7 +9636,12 @@ function chatInitMic(){
   // the explicit opt-in flow (the cloud engine is still never silently selected).
   if(!engineId() && !engines.webspeech) return;
   btn.hidden = false;
-  const setLbl = (t) => { btn.setAttribute('aria-label', t); btn.title = t; };
+  // one a11y voice for BOTH engines: label + title + toggle state track every transition
+  const setMic = (t, pressed) => {
+    btn.setAttribute('aria-label', t); btn.title = t;
+    btn.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+  };
+  setMic('Dictate', false);
 
   /* ── webspeech engine (opt-in): continuous — tap to start, speak through pauses,
      tap to stop. `continuous` rides short silences; a real engine timeout fires
@@ -9652,12 +9657,13 @@ function chatInitMic(){
     chatAutosize(); chatSyncInput();
     painting = false;
   };
-  const finish = () => { active = false; clearTimeout(restartT); restartT = 0; retry = 0; rec = null; btn.classList.remove('on'); };
+  const finish = () => { active = false; clearTimeout(restartT); restartT = 0; retry = 0; rec = null; btn.classList.remove('on'); setMic('Dictate', false); };
   const wsStop = () => {
     if(!active && !rec) return;
     active = false; clearTimeout(restartT); restartT = 0;
     const inst = rec; rec = null;              // invalidate any late result/end callbacks
-    btn.classList.remove('on'); paint('');     // drop uncommitted interim; keep finals
+    btn.classList.remove('on'); setMic('Dictate', false);
+    paint('');                                 // drop uncommitted interim; keep finals
     try{ inst && inst.stop(); }catch(_){}
   };
   const queueRestart = () => {
@@ -9692,14 +9698,14 @@ function chatInitMic(){
       if(rec !== inst) return;                  // a superseded instance ending: ignore
       rec = null;
       if(active) queueRestart();
-      else { btn.classList.remove('on'); paint(''); }
+      else { btn.classList.remove('on'); setMic('Dictate', false); paint(''); }
     };
     try{ inst.start(); }catch(_){ if(rec === inst) finish(); }
   };
   const wsTap = () => {
     if(active){ wsStop(); return; }
     const el = $('chatInput'); base = el ? el.value : ''; committed = ''; retry = 0;
-    active = true; btn.classList.add('on'); start();
+    active = true; btn.classList.add('on'); setMic('Stop dictation', true); start();
   };
   // concurrent typing during WEBSPEECH dictation ends the session so keystrokes aren't
   // clobbered by an interim paint. (The whisper path needs no such guard: it paints
@@ -9720,9 +9726,10 @@ function chatInitMic(){
   const whApply = () => {
     btn.classList.toggle('on', whState === 'recording');
     btn.classList.toggle('busy', whState === 'preparing' || whState === 'transcribing');
-    setLbl(whState === 'recording' ? 'Stop dictation'
+    setMic(whState === 'recording' ? 'Stop dictation'
       : whState === 'preparing' ? 'Preparing dictation…'
-      : whState === 'transcribing' ? 'Transcribing…' : 'Dictate');
+      : whState === 'transcribing' ? 'Transcribing…' : 'Dictate',
+      whState === 'recording');
   };
   const whGo = (ev) => { const n = sttNext(whState, ev); if(n){ whState = n; whApply(); } return !!n; };
   const whDropStream = () => {
@@ -9735,6 +9742,12 @@ function chatInitMic(){
     const r = whRec; whRec = null; whChunks = [];
     try{ if(r && r.state !== 'inactive') r.stop(); }catch(_){}
     whDropStream();
+    // Cancelling a model download or an in-flight asr() needs a HARD stop: session
+    // invalidation only drops the old RESULT, but the worker would keep computing —
+    // and a fresh start could then run a second concurrent asr() on one pipeline.
+    // cancel() rejects pending work + terminates the worker; the model reloads from
+    // the SW cache on next use, so whPrepared must drop back to false.
+    if(whState === 'preparing' || whState === 'transcribing'){ whisper.cancel(); whPrepared = false; }
     if(whState !== 'idle' && !whGo('cancel')){ whState = 'idle'; whApply(); }
   };
   const whStopRecording = () => {                // tap while recording, or the 5-min cap
@@ -9742,7 +9755,7 @@ function chatInitMic(){
     clearTimeout(whCapT); whCapT = 0;
     if(!whRec){ whCancel(); return; }            // mic permission still pending — treat as cancel
     whGo('stop');                                // → transcribing; onstop hands over to whTranscribe
-    try{ whRec.stop(); }catch(_){ whRec = null; whDropStream(); whFail('Recording failed — try again.'); }
+    try{ whRec.stop(); }catch(_){ whRec = null; whDropStream(); whFail('Recording failed. Try again.'); }
   };
   const whTranscribe = async (session) => {
     whDropStream();
@@ -9778,7 +9791,10 @@ function chatInitMic(){
     try{ whRec = new MediaRecorder(stream); }catch(_){ whDropStream(); whFail('Recording is not supported in this browser.'); return; }
     whRec.ondataavailable = (e) => { if(e.data && e.data.size) whChunks.push(e.data); };
     whRec.onstop = () => { whRec = null; if(whSession === session && whState === 'transcribing') whTranscribe(session); };
-    whRec.start();
+    // start() can throw at runtime (device wedged/track ended) — without this guard
+    // the stream stays live, the state sticks in 'recording' and the tap's async
+    // promise rejects unhandled.
+    try{ whRec.start(); }catch(_){ whRec = null; whDropStream(); whFail('Recording failed. Try again.'); return; }
     // the whole clip is decoded in memory before transcription — cap the session
     whCapT = setTimeout(() => {
       if(whSession === session && whState === 'recording'){
@@ -9797,7 +9813,7 @@ function chatInitMic(){
       toast('Preparing dictation — one-time ~30 MB download…');
       try{
         await whisper.preload({ onProgress: (p) => {
-          if(whSession === session && whState === 'preparing' && p.pct) setLbl('Preparing dictation — ' + p.pct + '%');
+          if(whSession === session && whState === 'preparing' && p.pct) setMic('Preparing dictation — ' + p.pct + '%', false);
         } });
       }catch(e){
         if(whSession !== session || whState !== 'preparing') return;   // cancelled meanwhile

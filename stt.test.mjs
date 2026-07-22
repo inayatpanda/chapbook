@@ -14,7 +14,7 @@ import {
   STT_VENDOR_FILES, STT_MODELS, STT_MODEL_FILE_NAMES,
   STT_VENDOR_DEST, STT_MODELS_DEST,
 } from './scripts/stt-files.mjs';
-import { readShellPaths } from './scripts/sw-cache-name.mjs';
+import { readShellPaths, sttCacheNameFor, withSttCacheName, withCacheName, SW_STT_CACHE_RE } from './scripts/sw-cache-name.mjs';
 
 const SHA_RE = /^[0-9a-f]{64}$/;
 
@@ -101,6 +101,21 @@ test('stt-worker: the two REQUIRED inference settings are present', () => {
   assert.match(worker, /device: 'wasm'/);
 });
 
+test('stt-worker: fetch dedup shares BYTES, not teed streams (no retained clone branch)', () => {
+  assert.match(worker, /await r\.arrayBuffer\(\)/, 'each URL must be read once into shared bytes');
+  assert.match(worker, /new Response\(buf/, 'consumers get fresh Responses over the shared bytes');
+  assert.ok(!/_inflight[\s\S]{0,400}?\.clone\(\)/.test(worker),
+    'sharing a Response via clone() would tee the stream and retain an unread 30 MB branch');
+});
+
+test('stt.src.js: provider carries a hard cancel (terminate + respawn)', () => {
+  const src = readFileSync('src/stt.src.js', 'utf8');
+  assert.match(src, /cancel\(\) \{/);
+  assert.match(src, /worker\.terminate\(\)/, 'only termination can stop an in-flight asr()');
+  const html = readFileSync('src/index.html', 'utf8');
+  assert.match(html, /whisper\.cancel\(\)/, 'chatInitMic must hard-cancel preparing/transcribing sessions');
+});
+
 /* ── build + deploy wiring ── */
 
 test('build.mjs: bundles both stt entry points and ships them to dist root', () => {
@@ -148,10 +163,14 @@ test('tauri.conf.json: desktop CSP gains wasm-unsafe-eval too', () => {
 
 const sw = readFileSync('src/sw.js', 'utf8');
 
-test('sw.js: STT assets are NOT precached (SHELL stays lean)', () => {
+test('sw.js: model/runtime NOT precached, but the ENGINE bundles ARE', () => {
   const shell = readShellPaths(sw);
   assert.ok(!shell.some((p) => p.startsWith('/app/vendor/stt') || p.startsWith('/app/models')),
     'the 65 MB STT set must never enter the SHELL precache');
+  // /stt.js is a top-level import of the app's inline module — an offline reload
+  // fails before boot without it; a cached model can't run without its worker.
+  assert.ok(shell.includes('/stt.js'), 'offline boot needs /stt.js in SHELL');
+  assert.ok(shell.includes('/stt-worker.js'), 'offline dictation needs /stt-worker.js in SHELL');
 });
 
 test('sw.js: cache-first runtime rule covers both staged prefixes', () => {
@@ -171,9 +190,43 @@ test('grep-gate: skips the staged third-party STT trees (English vocab ≠ leake
   assert.ok(gate.includes("'.onnx', '.wasm'"), 'model/runtime binaries must not be text-scanned');
 });
 
-test('sw.js: cache-name stamping still targets the shell CACHE, not STT_CACHE', () => {
-  // withCacheName replaces the FIRST `const CACHE = '…'`; STT_CACHE must survive it.
-  const stamped = sw.replace(/const CACHE = '[^']+'/, "const CACHE = 'chapbook-12345678'");
-  assert.ok(stamped.includes("const STT_CACHE = 'chapbook-stt-v1'"));
-  assert.ok(stamped.includes("const CACHE = 'chapbook-12345678'"));
+test('sw.js: the two stampers are independent — each replaces only its own literal', () => {
+  const both = withCacheName(withSttCacheName(sw, 'chapbook-stt-aaaabbbb'), 'chapbook-12345678');
+  assert.ok(both.includes("const CACHE = 'chapbook-12345678'"));
+  assert.ok(both.includes("const STT_CACHE = 'chapbook-stt-aaaabbbb'"));
+  // neither PLACEHOLDER LITERAL survives a full stamp (comments may mention them)
+  assert.ok(!/const\s+CACHE\s*=\s*'chapbook-dev'/.test(both));
+  assert.ok(!/const\s+STT_CACHE\s*=\s*'chapbook-stt-dev'/.test(both));
+});
+
+/* ── STT cache name: derived from the PINNED manifest, so a pin bump invalidates ── */
+
+const allPinnedShas = () => [
+  ...STT_VENDOR_FILES.map((f) => f.sha256),
+  ...Object.values(STT_MODELS).flatMap((m) => Object.values(m.files).map((f) => f.sha256)),
+];
+
+test('sttCacheNameFor: chapbook-stt-<8 hex>, deterministic, order-insensitive', () => {
+  const shas = allPinnedShas();
+  const name = sttCacheNameFor(shas);
+  assert.match(name, SW_STT_CACHE_RE);
+  assert.equal(name, sttCacheNameFor([...shas].reverse()));
+  assert.throws(() => sttCacheNameFor([]), /no pinned shas/);
+});
+
+test('sttCacheNameFor: ANY pin bump (either model export, or the runtime) renames the cache', () => {
+  const shas = allPinnedShas();
+  const base = sttCacheNameFor(shas);
+  for (const i of [0, STT_VENDOR_FILES.length, shas.length - 1]) {
+    const mutated = [...shas];
+    mutated[i] = 'f'.repeat(64);
+    assert.notEqual(sttCacheNameFor(mutated), base, `pin ${i} bump must rename the STT cache`);
+  }
+});
+
+test('build.mjs: stamps the STT cache name from the pinned manifest', () => {
+  const build = readFileSync('build.mjs', 'utf8');
+  assert.match(build, /sttCacheNameFor/);
+  assert.match(build, /withSttCacheName/);
+  assert.match(build, /STT_VENDOR_FILES/, 'the stamp must derive from the pinned manifest');
 });

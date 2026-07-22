@@ -14,15 +14,18 @@
 const CACHE = 'chapbook-dev'; // build.mjs derives this from a content hash of the SHELL assets ('chapbook-dev' only outside a build)
 // On-device dictation (Whisper STT) assets — ~65 MB of model + WASM runtime — are
 // deliberately NOT in SHELL (precaching them would balloon every install). They are
-// fetched on first dictation use and then served cache-first from this SEPARATE,
-// stable cache: it survives shell updates (the activate handler keeps it), so the
-// one-time model download is never re-paid for an app update. The staged files are
-// version-pinned by scripts/stage-stt.mjs (per-file sha-256), so cached bytes can
-// only ever go stale if those pins are BUMPED — any future model/runtime pin bump
-// MUST bump this cache name too (v1 → v2) so cache-first refetches the new set.
-const STT_CACHE = 'chapbook-stt-v1';
+// fetched on first dictation use and then served cache-first from this SEPARATE
+// cache, which survives shell updates (the activate handler keeps it), so the
+// one-time model download is never re-paid for an app update. Like CACHE above,
+// the name below is a dev placeholder: build.mjs stamps chapbook-stt-<8 hex>
+// derived from the pinned sha-256 set in scripts/stt-files.mjs (sttCacheNameFor),
+// so any model/runtime PIN bump auto-invalidates the old bytes — no manual bump.
+// (The ENGINE bundles /stt.js + /stt-worker.js are small and ARE in SHELL: /stt.js
+// is a top-level import of the app's inline module — without it an offline reload
+// fails before boot — and a cached model is useless offline without its worker.)
+const STT_CACHE = 'chapbook-stt-dev'; // build.mjs stamps the pinned-manifest hash ('chapbook-stt-dev' only outside a build)
 const STT_PREFIXES = ['/app/vendor/stt/', '/app/models/'];
-const SHELL = ['/app', '/app/index.html', '/manifest.json', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/studio.js', '/darkroom-upload.js', '/resize.js', '/vendor/exifr.esm.js', '/preview.css', '/icons-sprite.svg',
+const SHELL = ['/app', '/app/index.html', '/manifest.json', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/studio.js', '/darkroom-upload.js', '/stt.js', '/stt-worker.js', '/resize.js', '/vendor/exifr.esm.js', '/preview.css', '/icons-sprite.svg',
   '/fonts/inter-400.woff2', '/fonts/inter-500.woff2', '/fonts/inter-600.woff2', '/fonts/inter-700.woff2', '/fonts/space-grotesk-500.woff2', '/fonts/space-grotesk-600.woff2', '/fonts/space-grotesk-700.woff2'];
 
 self.addEventListener('install', (e) => {

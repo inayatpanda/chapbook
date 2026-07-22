@@ -4,10 +4,14 @@
 //
 // Provider contract (implemented in stt.src.js / index.html):
 //   { id, label, disclosure, isAvailable(), preload({onProgress}),
-//     transcribe(audioBlob|Float32Array, {onProgress}) -> Promise<text> }
-// The webspeech provider is a LIVE engine (continuous recognition painting into the
-// input), so it carries kind:'live' and start/stop instead of transcribe — that is
-// the one deliberate extension to the batch contract.
+//     transcribe(audioBlob|Float32Array, {onProgress}) -> Promise<text>,
+//     cancel() }
+// cancel() rejects all pending work AND hard-stops the engine (the whisper provider
+// terminates its worker — an in-flight asr() cannot be interrupted any other way, and
+// letting it run risks a second concurrent asr() on the same pipeline after a fresh
+// start). The webspeech provider is a LIVE engine (continuous recognition painting
+// into the input), so it carries start/stop instead of transcribe — that is the one
+// deliberate extension to the batch contract.
 
 // Provider metadata — the single source for labels + privacy disclosure copy.
 // whisper is the DEFAULT: fully on-device, nothing leaves the browser.

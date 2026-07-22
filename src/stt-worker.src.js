@@ -38,16 +38,28 @@ let _asrLoading = null; // in-flight/settled pipeline init — cached after firs
 // transformers 4.2.0 requests shared model files once per consumer with NO in-flight
 // dedup (measured E2E: config.json 3×, each ~10-30 MB .onnx 2× → ~111 MB first-use
 // instead of 67.7 MB; the SW's cache-first rule can't help because the duplicates are
-// CONCURRENT misses). Dedupe same-origin STT fetches while the pipeline initialises;
-// the map is cleared once init settles (the weights live in WASM memory after that,
-// and a failed init must retry with real fetches).
-const _inflight = new Map();
+// CONCURRENT misses). Dedupe same-origin STT fetches while the pipeline initialises:
+// each URL is fetched ONCE and read fully into shared bytes; every consumer gets a
+// fresh Response over those bytes. (Sharing the Response + clone() instead would TEE
+// the stream and retain an unread 30 MB branch per file — the opposite of the goal.)
+// The map is cleared once init settles: the weights live in WASM memory after that,
+// and a failed init must retry with real fetches.
+const _inflight = new Map(); // url → Promise<{ buf, status, statusText, headers }>
 const _rawFetch = self.fetch.bind(self);
 self.fetch = (input, init) => {
   const url = typeof input === 'string' ? input : (input && input.url) || '';
   if (!url.includes(STT_MODEL_PATH) && !url.includes(STT_VENDOR_PATH)) return _rawFetch(input, init);
-  if (!_inflight.has(url)) _inflight.set(url, _rawFetch(input, init));
-  return _inflight.get(url).then((r) => r.clone());
+  if (!_inflight.has(url)) {
+    _inflight.set(url, _rawFetch(input, init).then(async (r) => ({
+      buf: await r.arrayBuffer(),
+      status: r.status, statusText: r.statusText, headers: r.headers,
+    })).catch((e) => {
+      _inflight.delete(url); // a network failure must not poison a retry
+      throw e;
+    }));
+  }
+  return _inflight.get(url).then(({ buf, status, statusText, headers }) =>
+    new Response(buf, { status, statusText, headers }));
 };
 
 async function loadPipeline(post) {

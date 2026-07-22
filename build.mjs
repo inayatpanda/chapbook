@@ -10,7 +10,8 @@ import { PUBLIC_KEY as LICENCE_PUBLIC_KEY } from './src/lib/licence-pubkey.js';
 import { assertInlineModulesParse } from './checkInlineModule.mjs';
 import { extractStripeUrl, extractLegalBlock, LEGAL_TITLES, renderLegalPage, injectMarketing } from './src/marketing/build-marketing.mjs';
 import { buildInstance } from './src/lib/playgrounds/index.js';
-import { cacheNameFor, readShellPaths, shellDistFile, withCacheName } from './scripts/sw-cache-name.mjs';
+import { cacheNameFor, readShellPaths, shellDistFile, withCacheName, sttCacheNameFor, withSttCacheName } from './scripts/sw-cache-name.mjs';
+import { STT_VENDOR_FILES, STT_MODELS } from './scripts/stt-files.mjs';
 
 const SRC = 'src';
 const DIST = 'dist';
@@ -291,7 +292,18 @@ console.log('fonts:', readdirSync(`${SRC}/fonts`).filter((f) => f.endsWith('.wof
 // produce identical names. A SHELL path missing from dist/ fails the build here —
 // the same guarantee addAll's atomic install gives at runtime, but caught earlier.
 {
-  const swSrc = readFileSync(`${SRC}/sw.js`, 'utf8');
+  let swSrc = readFileSync(`${SRC}/sw.js`, 'utf8');
+  // STT runtime cache: named from the PINNED sha-256 manifest (scripts/stt-files.mjs)
+  // — vendor + BOTH model exports, so ANY pin bump renames the cache and the activate
+  // sweep drops the stale model bytes. Stamped BEFORE the shell hash is computed:
+  // sw.js is not itself a SHELL asset, but this keeps the emitted file single-pass.
+  const sttShas = [
+    ...STT_VENDOR_FILES.map((f) => f.sha256),
+    ...Object.values(STT_MODELS).flatMap((m) => Object.values(m.files).map((f) => f.sha256)),
+  ];
+  const sttCacheName = sttCacheNameFor(sttShas);
+  swSrc = withSttCacheName(swSrc, sttCacheName);
+  console.log(`sw.js: STT_CACHE stamped '${sttCacheName}' (hash of ${sttShas.length} pinned shas)`);
   const shellEntries = readShellPaths(swSrc).map((p) => ({
     path: p,
     bytes: readFileSync(`${DIST}${shellDistFile(p)}`),

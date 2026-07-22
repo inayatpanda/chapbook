@@ -137,5 +137,17 @@ export function createWhisperProvider() {
       const r = await call({ type: 'transcribe', audio }, [audio.buffer], onProgress);
       return r.text || '';
     },
+    // Hard cancel: reject everything pending AND terminate the worker. postMessage
+    // can't interrupt an in-flight asr() — only termination can — and leaving it
+    // running risks a SECOND concurrent asr() on the same pipeline when the user
+    // starts again (ONNX session reentrancy is unproven). The next preload/
+    // transcribe spawns a fresh worker; the model reloads from the SW cache.
+    cancel() {
+      failAll('Dictation was cancelled.');
+      if (worker) {
+        try { worker.terminate(); } catch (_) { /* already gone */ }
+        worker = null;
+      }
+    },
   };
 }
