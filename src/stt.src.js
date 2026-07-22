@@ -77,6 +77,7 @@ export async function decodeTo16kMono(arrayBuffer) {
 export function createWhisperProvider() {
   let worker = null;
   let seq = 0;
+  let epoch = 0;             // bumped by cancel(); guards the pre-worker decode phase
   const pending = new Map(); // id → { resolve, reject, onProgress, files }
 
   const failAll = (message) => {
@@ -129,10 +130,18 @@ export function createWhisperProvider() {
     },
     // Blob (recorded audio) or ready Float32Array (16 kHz mono) → final text.
     async transcribe(input, { onProgress } = {}) {
+      // Capture the cancel epoch SYNCHRONOUSLY, before the first await. The Blob
+      // decode below runs on the main thread BEFORE any worker request is placed
+      // in `pending`, so a cancel() landing mid-decode has nothing to reject —
+      // without this guard the decode would finish and spawn a fresh worker/asr()
+      // AFTER the cancel, risking a second concurrent asr() once a new dictation
+      // starts. Re-checking the epoch after decode makes the cancel a hard stop.
+      const myEpoch = epoch;
       let audio = input;
       if (typeof Blob !== 'undefined' && input instanceof Blob) {
         audio = await decodeTo16kMono(await input.arrayBuffer());
       }
+      if (myEpoch !== epoch) throw new Error('Dictation was cancelled.');
       if (!(audio instanceof Float32Array)) throw new Error('transcribe: expected a Blob or Float32Array');
       const r = await call({ type: 'transcribe', audio }, [audio.buffer], onProgress);
       return r.text || '';
@@ -142,7 +151,10 @@ export function createWhisperProvider() {
     // running risks a SECOND concurrent asr() on the same pipeline when the user
     // starts again (ONNX session reentrancy is unproven). The next preload/
     // transcribe spawns a fresh worker; the model reloads from the SW cache.
+    // Bumping `epoch` also aborts any transcribe still in its pre-worker decode
+    // phase (see transcribe()), so decode can't spawn a worker after this returns.
     cancel() {
+      epoch++;
       failAll('Dictation was cancelled.');
       if (worker) {
         try { worker.terminate(); } catch (_) { /* already gone */ }

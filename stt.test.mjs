@@ -116,6 +116,23 @@ test('stt.src.js: provider carries a hard cancel (terminate + respawn)', () => {
   assert.match(html, /whisper\.cancel\(\)/, 'chatInitMic must hard-cancel preparing/transcribing sessions');
 });
 
+test('stt.src.js: cancel aborts the pre-worker decode phase (no post-cancel asr)', () => {
+  const src = readFileSync('src/stt.src.js', 'utf8');
+  // cancel() must bump the epoch so a transcribe still decoding cannot reach the worker.
+  assert.match(src, /cancel\(\) \{\s*\n\s*epoch\+\+;/,
+    'cancel() must bump epoch to invalidate an in-flight decode');
+  // transcribe() must snapshot the epoch BEFORE the decode await, re-check it AFTER
+  // decode, and only THEN dispatch to the worker. These markers are each unique.
+  const capture = src.indexOf('const myEpoch = epoch;');
+  const recheck = src.indexOf('if (myEpoch !== epoch)');
+  const dispatch = src.indexOf("call({ type: 'transcribe'");
+  assert.ok(capture >= 0, 'transcribe must capture the epoch synchronously');
+  assert.ok(recheck >= 0, 'transcribe must re-check the epoch after decode');
+  assert.ok(dispatch >= 0, 'transcribe must dispatch to the worker');
+  assert.ok(capture < recheck && recheck < dispatch,
+    'epoch must be captured, then re-checked, BEFORE the worker dispatch');
+});
+
 /* ── build + deploy wiring ── */
 
 test('build.mjs: bundles both stt entry points and ships them to dist root', () => {
