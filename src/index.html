@@ -1181,7 +1181,7 @@
 
   .block{
     position:relative;border-radius:10px;padding:9px 11px;
-    margin:4px 0;border:1.5px solid transparent;cursor:pointer;
+    margin:1px 0;border:1.5px solid transparent;cursor:pointer;
     transition:border-color .15s,background .15s}
   .block:hover{border-color:var(--line)}
   .block.sel{border-color:var(--acc);background:rgba(45,212,191,.07)}
@@ -1200,8 +1200,8 @@
     position:absolute;top:-9px;left:9px;z-index:2;
     display:inline-flex;align-items:center;gap:2px;
     font-size:9px;letter-spacing:.1em;text-transform:uppercase;
-    color:var(--acc);background:var(--surface);padding:1px 5px 1px 3px;
-    font-weight:600;border-radius:4px;
+    color:var(--acc);background:var(--surface-2);padding:1px 5px 1px 3px;
+    font-weight:700;border-radius:4px;border:1px solid var(--line-2);
     cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
   .htag:active{cursor:grabbing}
   .htag .tico{width:11px;height:11px;flex:none;opacity:.85}
@@ -1693,21 +1693,21 @@
 
   /* inter-block + divider */
   .adddiv{
-    display:flex;align-items:center;gap:8px;margin:6px 0;
-    opacity:0;transition:opacity .15s}
+    display:flex;align-items:center;gap:8px;margin:1px 0;
+    opacity:.28;transition:opacity .15s}
   .adddiv:hover{opacity:1}
-  #blockList:hover .adddiv{opacity:.35}
+  #blockList:hover .adddiv{opacity:.6}
   #blockList:hover .adddiv:hover{opacity:1}
   /* touch: no hover — keep the inserters quietly visible so blocks are always addable */
-  @media (pointer:coarse){ .adddiv{opacity:.45} }
-  .adddiv .ln{flex:1;height:1px;background:var(--line)}
+  @media (pointer:coarse){ .adddiv{opacity:.55} }
+  .adddiv .ln{flex:1;height:1px;background:var(--line-2)}
   .adddiv .plus{
-    width:30px;height:30px;border-radius:50%;font-size:1rem;
+    width:22px;height:22px;border-radius:50%;
     border:1px dashed var(--acc);color:var(--acc);
-    background:transparent;display:flex;align-items:center;
-    justify-content:center;font-size:14px;cursor:pointer;
+    background:var(--bg-1);display:flex;align-items:center;
+    justify-content:center;font-size:13px;cursor:pointer;
     flex-shrink:0;line-height:1;padding:0}
-  .adddiv .plus:hover{background:rgba(45,212,191,.12)}
+  .adddiv .plus:hover{background:color-mix(in srgb,var(--acc) 16%,var(--bg-1));border-style:solid}
 
   /* ── BLOCK PICKER (bottom-sheet) ─────────────────────────────────────────── */
 
@@ -9379,9 +9379,10 @@ function chatApplyMode(){
   requestAnimationFrame(chatPlaceBar);
 }
 /* go('editor') / leaving the editor call this — the bar only lives on the editor */
+let _chatStopMic = () => {};   // set by chatInitMic; stops a live dictation session
 function chatOnViewChange(isEditor){
   if(isEditor){ chatApplyMode(); }
-  else { $('chatBar').hidden = true; $('chatSheet').hidden = true; }
+  else { _chatStopMic(); $('chatBar').hidden = true; $('chatSheet').hidden = true; }
 }
 
 /* ── binding ── */
@@ -9615,20 +9616,75 @@ function chatInitMic(){
   const btn = $('chatMic');
   if(!SR || !btn) return;
   btn.hidden = false;
-  let rec = null;
-  btn.addEventListener('click', () => {
-    if(rec){ try{ rec.stop(); }catch(_){} return; }
-    rec = new SR();
-    rec.lang = 'en-GB'; rec.interimResults = false; rec.continuous = false;
-    btn.classList.add('on');
-    rec.onresult = (e) => {
-      const t = e.results[0] && e.results[0][0] ? e.results[0][0].transcript : '';
-      if(t){ const inp = $('chatInput'); inp.value = (inp.value ? inp.value + ' ' : '') + t; chatAutosize(); chatSyncInput(); }
+  /* Continuous dictation: tap to start, speak through pauses, tap to stop. `continuous`
+     rides short silences; a real engine timeout fires onend, which auto-restarts while
+     `active` so a pause never ends the session. Interim results paint live; finalised
+     phrases accumulate into `committed`; `base` preserves whatever was already typed.
+     PRIVACY: this native engine may send audio to the browser's speech provider
+     (Chrome routes to Google) — it is the disclosed opt-in path; the planned on-device
+     engine is the private default. */
+  let rec = null, active = false, base = '', committed = '', painting = false, retry = 0, restartT = 0;
+  const paint = (interim) => {
+    const el = $('chatInput'); if(!el) return;
+    const tail = [committed, interim].map(s => s.trim()).filter(Boolean).join(' ');
+    painting = true;
+    el.value = base + (base && tail && !/\s$/.test(base) ? ' ' : '') + tail;
+    chatAutosize(); chatSyncInput();
+    painting = false;
+  };
+  const finish = () => { active = false; clearTimeout(restartT); restartT = 0; retry = 0; rec = null; btn.classList.remove('on'); };
+  const stopMic = () => {
+    if(!active && !rec) return;
+    active = false; clearTimeout(restartT); restartT = 0;
+    const inst = rec; rec = null;              // invalidate any late result/end callbacks
+    btn.classList.remove('on'); paint('');     // drop uncommitted interim; keep finals
+    try{ inst && inst.stop(); }catch(_){}
+  };
+  _chatStopMic = stopMic;                       // let a view-change stop a live session
+  const queueRestart = () => {
+    if(++retry > 5){ finish(); toast('Dictation stopped after repeated failures. Check your mic or connection, then try again.'); return; }
+    const delay = Math.min(250 * (2 ** (retry - 1)), 4000);
+    restartT = setTimeout(() => { restartT = 0; if(active && !rec) start(); }, delay);
+  };
+  const start = () => {
+    const inst = new SR();                      // identity-checked so a stale instance can't act
+    rec = inst;
+    inst.lang = 'en-GB'; inst.interimResults = true; inst.continuous = true;
+    inst.onresult = (e) => {
+      if(rec !== inst || !active) return;
+      retry = 0;                                // real speech resets the failure streak
+      for(let i = e.resultIndex; i < e.results.length; i++){
+        if(e.results[i].isFinal){ const t = (e.results[i][0] ? e.results[i][0].transcript : '').trim(); if(t) committed += (committed ? ' ' : '') + t; }
+      }
+      let interim = '';                         // rebuild the whole interim tail (results before resultIndex are unchanged, not dropped)
+      for(let i = 0; i < e.results.length; i++){ if(!e.results[i].isFinal) interim += e.results[i][0] ? e.results[i][0].transcript : ''; }
+      paint(interim);
     };
-    rec.onend = () => { btn.classList.remove('on'); rec = null; };
-    rec.onerror = () => { btn.classList.remove('on'); rec = null; };
-    try{ rec.start(); }catch(_){ btn.classList.remove('on'); rec = null; }
+    inst.onerror = (e) => {
+      if(rec !== inst) return;
+      const err = e && e.error;
+      if(err === 'not-allowed' || err === 'service-not-allowed' || err === 'audio-capture'){
+        finish();
+        toast(err === 'audio-capture' ? 'No microphone was found for dictation.' : 'Microphone access is blocked. Allow it in your browser settings to dictate.');
+      }
+      /* no-speech / network / aborted fall through to onend, which restarts with backoff while active */
+    };
+    inst.onend = () => {
+      if(rec !== inst) return;                  // a superseded instance ending: ignore
+      rec = null;
+      if(active) queueRestart();
+      else { btn.classList.remove('on'); paint(''); }
+    };
+    try{ inst.start(); }catch(_){ if(rec === inst) finish(); }
+  };
+  btn.addEventListener('click', () => {
+    if(active){ stopMic(); return; }
+    const el = $('chatInput'); base = el ? el.value : ''; committed = ''; retry = 0;
+    active = true; btn.classList.add('on'); start();
   });
+  // concurrent typing during dictation ends the session so keystrokes aren't clobbered by a paint
+  const ci = $('chatInput');
+  if(ci) ci.addEventListener('input', () => { if(active && !painting) stopMic(); });
 }
 
 /* ── keyboard-riding (iOS): keep the bar above the on-screen keyboard ── */
