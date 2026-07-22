@@ -16,6 +16,10 @@
 # revocation list at /licences/revoked.json — the gate fetches it fails-open; without this
 # entry the revocation check is silently CSP-blocked.) 'unsafe-inline' is kept so the inline boot scripts still run
 # (a nonce/hash refinement can drop it later). HSTS forces HTTPS for a year. (H9)
+# 'wasm-unsafe-eval' lets the on-device dictation engine compile its self-hosted ONNX
+# WASM (/app/vendor/stt/ + /app/models/, staged by scripts/stage-stt.mjs — all
+# same-origin, so no new connect-src entry). Spike-verified minimum: WASM compiles
+# under exactly script-src 'self' 'wasm-unsafe-eval'; nothing weaker works.
 [[headers]]
   for = "/*"
   [headers.values]
@@ -23,7 +27,7 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "no-referrer"
     Strict-Transport-Security = "max-age=31536000; includeSubDomains"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com https://api.groq.com https://api.crossref.org https://github.com https://api.github.com https://*.workers.dev https://*.r2.dev https://inayatpanda.com; font-src 'self'; frame-src 'self' https://www.youtube-nocookie.com https://player.vimeo.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com https://api.groq.com https://api.crossref.org https://github.com https://api.github.com https://*.workers.dev https://*.r2.dev https://inayatpanda.com; font-src 'self'; frame-src 'self' https://www.youtube-nocookie.com https://player.vimeo.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
 
 # Scoped framing relaxation for the /themes live switcher (Task 6). The themed sample
 # post is the document the /themes page iframes to demo all 20 blog themes; it must be
