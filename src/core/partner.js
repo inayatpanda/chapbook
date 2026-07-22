@@ -44,10 +44,19 @@ export function assembleContext({ style, voicePosts = [], index = [], factGuard 
 
 // Async: gather live context from the repo via the posts core (2 most recent as voice pack).
 // `style` is the profile-composed house voice; `profile` drives the fact-guard line.
+// BEST-EFFORT (QA fix): repo context is a nice-to-have, not a prerequisite — a bad/expired
+// token or offline used to throw out of listPosts() here, hard-blocking the whole
+// conversational drafting flow behind a misleading "GitHub token or AI key looks wrong"
+// before the AI was ever called. Like the editor's voicePosts(), every repo read degrades:
+// an unreadable index → empty catalogue + no voice pack; an unreadable single post → the
+// voice pack just skips it. Drafting always proceeds.
 export async function gatherContext(posts, style, profile) {
-  const index = await posts.listPosts();
+  let index = [];
+  try { index = (await posts.listPosts()) || []; } catch { index = []; }
   const voicePosts = [];
-  for (const p of index.slice(0, 2)) { const full = await posts.getPost(p.slug); if (full) voicePosts.push({ title: full.data.title, body: full.body }); }
+  for (const p of index.slice(0, 2)) {
+    try { const full = await posts.getPost(p.slug); if (full) voicePosts.push({ title: full.data.title, body: full.body }); } catch { /* skip this exemplar */ }
+  }
   return assembleContext({ style, factGuard: factGuardLine(profile), voicePosts, index: index.map((p) => ({ title: p.title, tags: p.tags, date: p.date })) });
 }
 

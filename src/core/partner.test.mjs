@@ -58,3 +58,47 @@ test('the FIRST draft on an empty session still works (guard only protects exist
   assert.equal(r.doc.blocks.length, 1);
   assert.equal(s.versions.length, 1);
 });
+
+// --- Fix (QA, MEDIUM): the front door must survive a GitHub read failure / offline ------
+// gatherContext called posts.listPosts() with no try/catch, so a bad/expired token or
+// offline hard-blocked the whole conversational drafting flow (misreported as "GitHub
+// token or AI key looks wrong") and the AI was never called. Context is a NICE-TO-HAVE:
+// when the repo can't be read, drafting proceeds with no voice pack / no catalogue.
+import { gatherContext } from './partner.js';
+
+test('gatherContext resolves (not throws) when listPosts rejects — drafting proceeds', async () => {
+  const posts = {
+    listPosts: async () => { throw new Error('401 bad credentials'); },
+    getPost: async () => { throw new Error('should not be called'); },
+  };
+  const ctx = await gatherContext(posts, 'house style', null);
+  assert.equal(typeof ctx, 'string');
+  assert.match(ctx, /house style/);              // the style survives with no repo context
+  assert.doesNotMatch(ctx, /VOICE EXAMPLE/);     // no voice pack when the repo is unreadable
+});
+
+test('gatherContext tolerates a getPost failure mid-voice-pack (partial context, no throw)', async () => {
+  const posts = {
+    listPosts: async () => [
+      { slug: 'a', title: 'Post A', tags: ['t'] },
+      { slug: 'b', title: 'Post B', tags: [] },
+    ],
+    getPost: async (slug) => {
+      if (slug === 'a') throw new Error('network flake');
+      return { data: { title: 'Post B' }, body: 'body b' };
+    },
+  };
+  const ctx = await gatherContext(posts, 'house style', null);
+  assert.match(ctx, /VOICE EXAMPLE 1: "Post B"/);  // the readable post still contributes
+  assert.match(ctx, /Post A/);                     // the index (already fetched) is kept
+});
+
+test('gatherContext still builds the full context when the repo reads fine', async () => {
+  const posts = {
+    listPosts: async () => [{ slug: 'a', title: 'Post A', tags: ['t'], date: '2026-01-01' }],
+    getPost: async () => ({ data: { title: 'Post A' }, body: 'the body' }),
+  };
+  const ctx = await gatherContext(posts, 'house style', null);
+  assert.match(ctx, /VOICE EXAMPLE 1: "Post A"/);
+  assert.match(ctx, /"Post A" \[t\]/);
+});
