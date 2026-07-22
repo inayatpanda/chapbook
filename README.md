@@ -24,6 +24,7 @@ All commands are run from the repository root.
 | `npm test` | Runs the full test suite (`node --test`). |
 | `npm run deploy:draft` | Builds, then deploys a Netlify **draft** (preview) to site `d825cd70` — does not touch production. |
 | `npm run deploy:prod` | Builds, then promotes to production. **Owner-gated — do not run.** |
+| `npm run stage:stt` | Stages the on-device dictation runtime + Whisper model (~65 MB, version-pinned, sha-256 verified) into `dist/app/vendor/stt/` + `dist/app/models/`. Runs automatically in both deploy scripts; run it manually after `npm run build` when you want the mic's whisper path working against a locally served `dist/`. **Never committed** — everything lands under the gitignored `dist/`. Offline: `CHAPBOOK_STT_SRC=<previous dist/app> npm run stage:stt`. |
 
 The GitHub device-flow client id is supplied at deploy time via the
 `STUDIO_GH_CLIENT_ID` environment variable, e.g.
