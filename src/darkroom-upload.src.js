@@ -8,7 +8,7 @@
 // EXIF-on-resize trap: resize.js re-encodes through a canvas, which STRIPS EXIF — so we read
 // DateTimeOriginal/Make/Model from the ORIGINAL File first, and persist them in the
 // sidecar (the blog reads date/camera from meta.json, not the resized image). GPS is
-// neither read nor persisted (privacy — see EXIF_PICK below).
+// neither read nor persisted (privacy — see readExif below).
 //
 // No secrets at rest: the GitHub token is held in the browser (BYOK). Nothing leaves the
 // browser until the user clicks Commit; the pre-commit summary states exactly what will go.
@@ -28,11 +28,6 @@ import { normaliseExif, buildEntry, parseExistingMeta, mergeMeta, safeImageName,
 
 const IMG_DIR = (slug) => `src/content/blog/_images/${slug}`;
 const META_PATH = (slug) => `${IMG_DIR(slug)}/meta.json`;
-// PRIVACY: GPS tags are deliberately NOT read. The sidecar builder (buildEntry) never
-// writes gps to the committed meta.json — the repo (and its history) is often public and
-// the UI only discloses date & camera — so not picking the tags at all keeps coordinates
-// out of browser memory too. Only date + camera are read, exactly as the UI states.
-const EXIF_PICK = ['DateTimeOriginal', 'Make', 'Model'];
 
 // Size guards (I4) — the resized JPEGs are normally ~1–2 MB, but a huge PNG screenshot can
 // re-encode large. Skip anything implausibly big per image, and cap the whole batch, to stay
@@ -100,10 +95,19 @@ const esc = (s) => (D && D.esc ? D.esc(s) : String(s == null ? '' : s).replace(/
 const toast = (t) => { if (D && D.toast) D.toast(t); };
 
 // Read EXIF from the ORIGINAL file (never throws — a photo with no/locked EXIF just yields nulls).
-async function readExif(file) {
+//
+// NOTE the options: the vendored LITE exifr build does NOT support `pick` — passing it
+// throws "undefined is not iterable" for EVERY file, which the catch below used to swallow,
+// so date/camera were silently never read (QA regression, fixed + pinned by unit tests).
+// `{ gps: false }` IS supported and serves the privacy goal better than `pick` did: the GPS
+// block is never even parsed, so coordinates never enter browser memory. The staged shape
+// additionally hard-nulls `gps` (belt-and-braces; buildEntry never persists it either way).
+// Exported for the unit tests (they feed it a real EXIF-bearing jpeg).
+export async function readExif(file) {
   try {
-    const raw = await exifr.parse(file, { pick: EXIF_PICK });
-    return normaliseExif(raw);
+    const raw = await exifr.parse(file, { gps: false });
+    const { date, camera } = normaliseExif(raw);
+    return { date, camera, gps: null };
   } catch {
     return { date: null, camera: null, gps: null };
   }

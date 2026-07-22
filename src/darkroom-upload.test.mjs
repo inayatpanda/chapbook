@@ -162,3 +162,100 @@ test('createSiteOriginResolver shares one in-flight fetch across concurrent call
   assert.deepEqual(await Promise.all([a, b]), ['https://blog.example.com', 'https://blog.example.com']);
   assert.equal(calls, 1);
 });
+
+// --- Fix (QA, HIGH): EXIF was NEVER read — the vendored exifr LITE build rejects `pick` ----
+// readExif used `exifr.parse(file, { pick: [...] })`, but the lite build (src/vendor/
+// exifr.esm.js) does not support the `pick` option: it throws "undefined is not iterable"
+// for EVERY jpeg, the catch swallowed it, and date/camera were silently null — while the
+// darkroom UI advertises "EXIF date and camera are read first". The fix parses with
+// `{ gps: false }` (supported by the lite build), which reads Make/Model/DateTimeOriginal
+// AND never even parses the GPS block, so coordinates never enter browser memory (the
+// privacy goal the old `pick` list was serving). These tests run the REAL vendored exifr
+// against a real EXIF-bearing JPEG built byte-by-byte below.
+import exifr from './vendor/exifr.esm.js';
+import { readExif } from './darkroom-upload.src.js';
+
+// A minimal but genuine EXIF JPEG: SOI + APP1("Exif\0\0" + little-endian TIFF) + EOI.
+// IFD0 { Make, Model, ExifIFD*, GPSIFD* } · ExifIFD { DateTimeOriginal } ·
+// GPSIFD { LatRef/Lat/LonRef/Lon } — GPS is INCLUDED so the tests can prove it is dropped.
+function buildExifJpeg() {
+  const ascii = (s) => [...s].map((c) => c.charCodeAt(0));
+  const u16 = (v) => [v & 0xff, (v >> 8) & 0xff];
+  const u32 = (v) => [v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff, (v >> 24) & 0xff];
+  const rat = (n, d) => [...u32(n), ...u32(d)];
+  const make = 'FUJIFILM\0', model = 'X-T5\0', dto = '2024:08:12 15:30:00\0';
+  const ifd0Off = 8;
+  const ifd0Size = 2 + 4 * 12 + 4;
+  const makeOff = ifd0Off + ifd0Size;
+  const modelOff = makeOff + make.length;
+  const exifIfdOff = modelOff + model.length;
+  const exifIfdSize = 2 + 1 * 12 + 4;
+  const dtoOff = exifIfdOff + exifIfdSize;
+  const gpsIfdOff = dtoOff + dto.length;
+  const gpsIfdSize = 2 + 4 * 12 + 4;
+  const latOff = gpsIfdOff + gpsIfdSize;
+  const lonOff = latOff + 24;
+  const entry = (tag, type, count, off, inline = null) =>
+    [...u16(tag), ...u16(type), ...u32(count), ...(inline != null ? inline : u32(off))];
+  const tiff = [
+    ...ascii('II'), ...u16(42), ...u32(8),
+    ...u16(4),
+    ...entry(0x010f, 2, make.length, makeOff),   // Make (ASCII)
+    ...entry(0x0110, 2, model.length, modelOff), // Model (ASCII)
+    ...entry(0x8769, 4, 1, exifIfdOff),          // ExifIFD pointer
+    ...entry(0x8825, 4, 1, gpsIfdOff),           // GPSIFD pointer
+    ...u32(0),
+    ...ascii(make), ...ascii(model),
+    ...u16(1),
+    ...entry(0x9003, 2, dto.length, dtoOff),     // DateTimeOriginal
+    ...u32(0),
+    ...ascii(dto),
+    ...u16(4),
+    ...entry(0x0001, 2, 2, 0, [...ascii('N\0'), 0, 0]), // GPSLatitudeRef (inline)
+    ...entry(0x0002, 5, 3, latOff),                     // GPSLatitude 3× RATIONAL
+    ...entry(0x0003, 2, 2, 0, [...ascii('E\0'), 0, 0]), // GPSLongitudeRef (inline)
+    ...entry(0x0004, 5, 3, lonOff),                     // GPSLongitude
+    ...u32(0),
+    ...rat(51, 1), ...rat(30, 1), ...rat(0, 1),         // 51°30'00" N
+    ...rat(0, 1), ...rat(7, 1), ...rat(0, 1),           //  0°07'00" E
+  ];
+  const app1Body = [...ascii('Exif\0\0'), ...tiff];
+  const app1 = [0xff, 0xe1, ((app1Body.length + 2) >> 8) & 0xff, (app1Body.length + 2) & 0xff, ...app1Body];
+  return new Uint8Array([0xff, 0xd8, ...app1, 0xff, 0xd9]);
+}
+
+test('the vendored exifr lite build REJECTS the pick option (the bug this guards against)', async () => {
+  // Canary: if this ever starts passing (a vendored-build upgrade that supports `pick`),
+  // re-evaluate readExif — but until then, `pick` must never be passed.
+  await assert.rejects(exifr.parse(buildExifJpeg(), { pick: ['DateTimeOriginal', 'Make', 'Model'] }));
+});
+
+test('readExif reads date + camera from a real EXIF jpeg', async () => {
+  const r = await readExif(buildExifJpeg());
+  // 15:30 local in the file → the exact UTC instant depends on the machine's TZ; assert the
+  // date parsed to a real ISO instant on the right day (any TZ), and the camera is tidied.
+  assert.match(String(r.date), /^2024-08-1[123]T\d{2}:30:00/);
+  assert.equal(r.camera, 'Fujifilm X-T5');
+});
+
+test('readExif NEVER stages gps, even when the photo has GPS EXIF', async () => {
+  const r = await readExif(buildExifJpeg());
+  assert.deepEqual(Object.keys(r).sort(), ['camera', 'date', 'gps']);
+  assert.equal(r.gps, null);
+});
+
+test('the parse options keep GPS out of memory entirely (no GPS keys in the raw output)', async () => {
+  // The privacy property the old `pick` list was for: with { gps: false } the lite build
+  // does not even parse the GPS block, so coordinates never exist in browser memory.
+  const raw = await exifr.parse(buildExifJpeg(), { gps: false });
+  const gpsKeys = Object.keys(raw).filter((k) => /gps|latitude|longitude/i.test(k));
+  assert.deepEqual(gpsKeys, []);
+  assert.equal(raw.Make, 'FUJIFILM'); // and the wanted tags ARE there
+  assert.equal(raw.Model, 'X-T5');
+  assert.ok(raw.DateTimeOriginal);
+});
+
+test('readExif returns nulls (never throws) for a jpeg with no EXIF', async () => {
+  const r = await readExif(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]));
+  assert.deepEqual(r, { date: null, camera: null, gps: null });
+});
