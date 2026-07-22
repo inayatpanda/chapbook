@@ -74,6 +74,23 @@ export function appendDictation(existing, text) {
   return base + (/\s$/.test(base) ? '' : ' ') + t;
 }
 
+// Merge one worker progress event into a file's running { loaded, total }.
+// transformers' events: 'initiate' (no bytes) → 'progress' (loaded/total) →
+// 'done' (NO bytes — must complete the file, never zero it out). loaded is
+// monotonic so an out-of-order tick can't march the bar backwards.
+export function mergeProgress(prev, event) {
+  const p = prev || { loaded: 0, total: 0 };
+  const e = event || {};
+  if (e.status === 'done') {
+    const total = p.total || p.loaded;
+    return { loaded: total, total };
+  }
+  return {
+    loaded: Math.max(p.loaded, e.loaded || 0),
+    total: e.total || p.total,
+  };
+}
+
 // Aggregate per-file model-download progress into one 0-100 number.
 // files: iterable of { loaded, total } (bytes). Unknown totals contribute 0.
 export function preloadPct(files) {

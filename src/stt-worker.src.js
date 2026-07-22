@@ -35,6 +35,21 @@ const STT_MODEL_FALLBACK = 'Xenova/whisper-tiny.en';
 
 let _asrLoading = null; // in-flight/settled pipeline init — cached after first build
 
+// transformers 4.2.0 requests shared model files once per consumer with NO in-flight
+// dedup (measured E2E: config.json 3×, each ~10-30 MB .onnx 2× → ~111 MB first-use
+// instead of 67.7 MB; the SW's cache-first rule can't help because the duplicates are
+// CONCURRENT misses). Dedupe same-origin STT fetches while the pipeline initialises;
+// the map is cleared once init settles (the weights live in WASM memory after that,
+// and a failed init must retry with real fetches).
+const _inflight = new Map();
+const _rawFetch = self.fetch.bind(self);
+self.fetch = (input, init) => {
+  const url = typeof input === 'string' ? input : (input && input.url) || '';
+  if (!url.includes(STT_MODEL_PATH) && !url.includes(STT_VENDOR_PATH)) return _rawFetch(input, init);
+  if (!_inflight.has(url)) _inflight.set(url, _rawFetch(input, init));
+  return _inflight.get(url).then((r) => r.clone());
+};
+
 async function loadPipeline(post) {
   const { pipeline, env } = await import(/* staged, never bundled */ '/app/vendor/stt/transformers.min.js');
 
@@ -72,7 +87,11 @@ async function loadPipeline(post) {
 
 function ensureAsr(post) {
   if (!_asrLoading) {
-    _asrLoading = loadPipeline(post).catch((e) => {
+    _asrLoading = loadPipeline(post).then((asr) => {
+      _inflight.clear(); // release the buffered responses — the model is in WASM memory now
+      return asr;
+    }).catch((e) => {
+      _inflight.clear();
       _asrLoading = null; // a failed init must not poison every later attempt
       throw e;
     });

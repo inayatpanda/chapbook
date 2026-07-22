@@ -164,6 +164,13 @@ test('sw.js: activate keeps the STT cache across shell updates', () => {
     'the activate sweep must exempt the STT cache or every app update re-downloads the model');
 });
 
+test('grep-gate: skips the staged third-party STT trees (English vocab ≠ leaked fork content)', () => {
+  const gate = readFileSync('scripts/grep-gate.mjs', 'utf8');
+  assert.match(gate, /SKIP_DIRS = \['dist\/app\/models\/', 'dist\/app\/vendor\/stt\/'\]/,
+    'the whisper tokenizer vocabulary must not trip the clinical denylist');
+  assert.ok(gate.includes("'.onnx', '.wasm'"), 'model/runtime binaries must not be text-scanned');
+});
+
 test('sw.js: cache-name stamping still targets the shell CACHE, not STT_CACHE', () => {
   // withCacheName replaces the FIRST `const CACHE = '…'`; STT_CACHE must survive it.
   const stamped = sw.replace(/const CACHE = '[^']+'/, "const CACHE = 'chapbook-12345678'");

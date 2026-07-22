@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   STT_PROVIDERS, STT_ENGINE_KEY, STT_MAX_RECORD_MS, STT_STATES,
-  resolveSttProvider, sttNext, appendDictation, preloadPct,
+  resolveSttProvider, sttNext, appendDictation, preloadPct, mergeProgress,
 } from './stt.js';
 
 /* ── provider metadata ── */
@@ -130,4 +130,24 @@ test('preloadPct: unknown totals contribute nothing (no divide-by-zero)', () => 
   assert.equal(preloadPct([{ loaded: 10, total: 0 }]), 0);
   assert.equal(preloadPct([{ loaded: 10 }, null]), 0);
   assert.equal(preloadPct([{ loaded: 5, total: 10 }, { loaded: 0, total: 0 }]), 50);
+});
+
+test('mergeProgress: the initiate → progress → done lifecycle', () => {
+  let f = mergeProgress(undefined, { status: 'initiate' });
+  assert.deepEqual(f, { loaded: 0, total: 0 });
+  f = mergeProgress(f, { status: 'progress', loaded: 40, total: 100 });
+  assert.deepEqual(f, { loaded: 40, total: 100 });
+  // 'done' carries NO byte counts — it must COMPLETE the file, never zero it
+  f = mergeProgress(f, { status: 'done' });
+  assert.deepEqual(f, { loaded: 100, total: 100 });
+});
+
+test('mergeProgress: monotonic — a late out-of-order tick cannot regress', () => {
+  const f = mergeProgress({ loaded: 80, total: 100 }, { status: 'progress', loaded: 60, total: 100 });
+  assert.deepEqual(f, { loaded: 80, total: 100 });
+});
+
+test('mergeProgress: done with never-known total falls back to bytes seen', () => {
+  assert.deepEqual(mergeProgress({ loaded: 55, total: 0 }, { status: 'done' }), { loaded: 55, total: 55 });
+  assert.deepEqual(mergeProgress(null, { status: 'done' }), { loaded: 0, total: 0 });
 });

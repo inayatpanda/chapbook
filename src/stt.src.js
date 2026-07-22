@@ -14,7 +14,7 @@
 //                 download, cached by the SW) + Whisper inference.
 import {
   STT_PROVIDERS, STT_ENGINE_KEY, STT_MAX_RECORD_MS,
-  resolveSttProvider, sttNext, appendDictation, preloadPct,
+  resolveSttProvider, sttNext, appendDictation, preloadPct, mergeProgress,
 } from './core/stt.js';
 
 export {
@@ -93,7 +93,7 @@ export function createWhisperProvider() {
       if (!p) return;
       if (type === 'progress') {
         // Aggregate per-file byte counts into one percentage for the UI.
-        p.files.set(ev.data.file, { loaded: ev.data.loaded, total: ev.data.total });
+        p.files.set(ev.data.file, mergeProgress(p.files.get(ev.data.file), ev.data));
         if (p.onProgress) p.onProgress({ pct: preloadPct(p.files.values()), file: ev.data.file, status: ev.data.status });
         return;
       }

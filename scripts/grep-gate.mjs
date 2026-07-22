@@ -68,7 +68,16 @@ const SKIP_EXT = new Set([
   '.webm', '.mp4', '.mov', '.m4v', // marketing video loops (dist/media/loops) — binary, not text
   '.woff', '.woff2', '.ttf', '.otf', '.eot', '.map',
   '.dmg', '.exe', // staged installers in dist/downloads/ — binary, not text to gate
+  '.onnx', '.wasm', // staged STT model/runtime (stage-stt.mjs) — binary, not text to gate
 ]);
+
+// Staged THIRD-PARTY trees the gate must not read (same spirit as the installer
+// binaries above): sha-256-pinned upstream data, not Chapbook-authored content.
+// The whisper tokenizer's 50k-entry ENGLISH VOCABULARY legitimately contains
+// ordinary words the clinical denylist bans ("fracture", "clinical", …) — they are
+// dictionary entries, not leaked fork content. Provenance/integrity of these trees
+// is enforced by the per-file sha-256 pins in scripts/stt-files.mjs instead.
+const SKIP_DIRS = ['dist/app/models/', 'dist/app/vendor/stt/'];
 
 function* walk(dir) {
   for (const name of readdirSync(dir)) {
@@ -96,6 +105,7 @@ if (!root.isDirectory()) {
 
 for (const file of walk(DIST)) {
   if (SKIP_EXT.has(extname(file).toLowerCase())) continue;
+  if (SKIP_DIRS.some((d) => file.startsWith(d))) continue;
   let text;
   try { text = readFileSync(file, 'utf8'); } catch { continue; }
   scanned++;
