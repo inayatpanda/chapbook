@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Download Chapbook</title>
-<meta name="description" content="Get Chapbook for macOS or Windows, or open it in your browser. Same app everywhere; your posts publish to a blog you own.">
+<meta name="description" content="Get Chapbook for macOS, Windows or Android, or open it in your browser. Same app everywhere; your posts publish to a blog you own.">
 <link rel="canonical" href="https://chapbook.rqai.co.uk/download">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#0b1120">
 <meta property="og:title" content="Download Chapbook">
-<meta property="og:description" content="Desktop apps for macOS and Windows, or straight in the browser. Your blog, wherever you write.">
+<meta property="og:description" content="Apps for macOS, Windows and Android, or straight in the browser. Your blog, wherever you write.">
 <meta property="og:image" content="https://chapbook.rqai.co.uk/icon-512.png">
 <link rel="stylesheet" href="/marketing.css">
 <style>
@@ -62,10 +62,17 @@
   .sub{margin-top:14px;max-width:34em;color:var(--mist)}
 
   /* ---------- the three editions (book covers) ---------- */
+  /* auto-fit (not a fixed track count) so the row adapts to how many editions are
+     visible: the Android card is hidden until the manifest confirms an APK, and
+     auto-fit collapses that empty track so the remaining 3 cards still fill the row. */
   .editions{
-    display:grid;grid-template-columns:repeat(3,1fr);gap:16px;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(216px,1fr));gap:16px;
     padding-block:8px 8px;
   }
+  /* An author display rule on .edition would otherwise beat the UA [hidden] rule,
+     so make hidden editions (the Android card, until the manifest confirms an APK)
+     explicitly collapse. */
+  .edition[hidden]{display:none}
   .edition{
     position:relative;
     display:grid;grid-template-columns:32px 1fr;
@@ -135,7 +142,7 @@
   footer a{color:var(--mist);text-decoration:none}
   footer a:hover{color:var(--teal)}
 
-  @media (max-width:860px){
+  @media (max-width:560px){
     .editions{grid-template-columns:1fr}
     .cover{min-height:0}
     .cover p{flex:none}
@@ -146,6 +153,7 @@
     .edition{opacity:0;transform:translateY(10px);animation:rise .45s ease forwards}
     .edition:nth-child(2){animation-delay:.07s}
     .edition:nth-child(3){animation-delay:.14s}
+    .edition:nth-child(4){animation-delay:.21s}
     @keyframes rise{to{opacity:1;transform:none}}
     .edition.here:hover{transform:translateY(-2px)}
   }
@@ -187,6 +195,20 @@
         </div>
       </article>
 
+      <!-- Android is a native edition (violet spine). Hidden until the deploy manifest
+           confirms an .apk on the release; the APK is optional (see stage-installers.mjs),
+           so a release without one simply never reveals this card. -->
+      <article class="edition" data-plat="android" data-android hidden>
+        <div class="spine" aria-hidden="true"><span>Android</span></div>
+        <div class="cover">
+          <span class="chip">For this phone</span>
+          <h2>Chapbook for Android</h2>
+          <p>A full offline bundle, dictation model included. Sideload the APK: your phone will ask to allow &ldquo;install unknown apps&rdquo; the first time.</p>
+          <span class="meta" data-mf="android-meta">Sideloaded APK &middot; ~100&nbsp;MB</span>
+          <a class="btn" href="/downloads/Chapbook-Android.apk" download>Download for Android</a>
+        </div>
+      </article>
+
       <article class="edition" data-plat="web">
         <div class="spine" aria-hidden="true"><span>Browser</span></div>
         <div class="cover">
@@ -202,15 +224,17 @@
 
     <section class="fine" aria-label="Good to know">
       <ul>
-        <li><span class="ver" data-mf="version">Desktop apps version 1.0.0</span></li>
+        <li><span class="ver" data-mf="version">Apps version 1.0.0</span></li>
         <li>Activate each device with the same licence key. Drafts stay on the device you write them on; published posts live in your blog&rsquo;s own repository and appear everywhere.</li>
         <li>On Windows, SmartScreen may show &ldquo;Windows protected your PC&rdquo; while the app is new. Choose <i>More info</i>, then <i>Run anyway</i>.</li>
+        <li data-android hidden>On Android, the APK installs by sideloading: your phone asks to allow &ldquo;install unknown apps&rdquo; for your browser or files app the first time, which is expected. This build is signed for direct install, not from the Play Store.</li>
       </ul>
       <details>
         <summary>Verify your download (SHA&#8209;256)</summary>
         <div class="sums">
           <div>Chapbook-macOS.dmg<code data-mf="mac-sha">Load this page online to fetch the current checksum, or read /downloads/manifest.json.</code></div>
           <div>Chapbook-Windows.exe<code data-mf="win-sha">Load this page online to fetch the current checksum, or read /downloads/manifest.json.</code></div>
+          <div data-android hidden>Chapbook-Android.apk<code data-mf="android-sha">Load this page online to fetch the current checksum, or read /downloads/manifest.json.</code></div>
         </div>
       </details>
     </section>
@@ -255,7 +279,7 @@
   var mb = function (n) { return (n / 1e6).toFixed(1).replace(/\.0$/, '') + ' MB'; };
   fetch('/downloads/manifest.json').then(function (r) { return r.ok ? r.json() : null; }).then(function (m) {
     if (!m || !m.files) return;
-    set('version', 'Desktop apps version ' + m.version + (m.released ? ', released ' + m.released : ''));
+    set('version', 'Apps version ' + m.version + (m.released ? ', released ' + m.released : ''));
     if (m.files.mac) {
       set('mac-meta', 'macOS 10.13 or later · ' + mb(m.files.mac.size));
       set('mac-sha', m.files.mac.sha256);
@@ -264,7 +288,17 @@
       set('win-meta', 'Windows 10 or later · ' + mb(m.files.win.size));
       set('win-sha', m.files.win.sha256);
     }
-  }).catch(function () { /* baked fallbacks stand */ });
+    // Android is OPTIONAL: stage-installers.mjs only writes files.android when the
+    // release carries an .apk. Reveal the (hidden-by-default) Android edition, its
+    // sideload note and its checksum row ONLY when the manifest confirms one, so a
+    // release without an APK, or a failed manifest fetch, never shows a dead link.
+    if (m.files.android) {
+      set('android-meta', 'Sideloaded APK · ' + mb(m.files.android.size));
+      set('android-sha', m.files.android.sha256);
+      var els = document.querySelectorAll('[data-android]');
+      for (var i = 0; i < els.length; i++) els[i].hidden = false;
+    }
+  }).catch(function () { /* baked fallbacks stand; Android stays hidden */ });
 })();
 </script>
 
