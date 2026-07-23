@@ -2,4 +2,4 @@
 // time (window.__LICENCE_PUBLIC_KEY in index.html). Lifted from helm/server/licence.js
 // as a bare constant so build.mjs's drift guard doesn't drag in @noble/ed25519 (a
 // server-only dependency). Keep this value identical to the inline key in src/index.html.
-export const PUBLIC_KEY = '20e5e11738c29f3ee250dd38fa1b72695a327a2eb18cf4f9b817c56c664c7201';
+export const PUBLIC_KEY = '';
