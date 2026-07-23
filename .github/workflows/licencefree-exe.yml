@@ -1,0 +1,65 @@
+name: Licence-free EXE (bundle-local)
+
+# Builds a licence-free, BUNDLE-LOCAL Windows NSIS .exe of Chapbook.
+#   • The licence gate is disabled at source on the `licence-free-exe` branch
+#     (empty Ed25519 verify key in src/index.html + src/lib/licence-pubkey.js), so
+#     the build boots straight into the app with no paywall.
+#   • The webview is wrapped around the app's OWN bundled assets in dist/ (via the
+#     tauri.bundle-local.conf.json --config override), not the remote hosted site.
+#   • Output is uploaded as a build ARTIFACT only — no GitHub Release, no signing,
+#     no publishing. The .exe is unsigned (Windows SmartScreen will warn on first run).
+#
+# MANUAL-ONLY: workflow_dispatch is the ONLY trigger. There is deliberately NO
+# push / tag / pull_request trigger, so this can never fire accidentally or collide
+# with the paid desktop-release.yml (desktop-v* tag) flow.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # The root web build (`npm run build`) requires node >=22.5 per
+          # package.json engines — the paid desktop-release.yml uses node 20 only
+          # because it never runs the root build (it wraps the remote site).
+          node-version: 22
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri -> target
+
+      - name: Install root deps
+        run: npm ci
+
+      - name: Install desktop deps
+        working-directory: desktop
+        run: npm ci
+
+      - name: Build web app (licence-free, gate disabled)
+        run: npm run build
+
+      - name: Stage on-device Whisper model into dist
+        run: npm run stage:stt
+
+      - name: Build Windows NSIS installer (bundle-local)
+        working-directory: desktop
+        run: npx tauri build --bundles nsis --config src-tauri/tauri.bundle-local.conf.json
+
+      - name: Upload NSIS installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chapbook-licence-free-exe
+          path: desktop/src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
