@@ -191,11 +191,22 @@ test('handler: evil origin (https://evil.example) is NOT allowed, no ACAO header
   assert.equal(res.headers.get('access-control-allow-origin'), null);
 });
 
-test('handler: existing exact origin (https://chapbook.rqai.co.uk) still works', async () => {
-  const res = await handler(
-    new Request('https://site/x', { method: 'OPTIONS', headers: { origin: 'https://chapbook.rqai.co.uk' } }),
-    {},
-  );
-  assert.equal(res.status, 204);
-  assert.equal(res.headers.get('access-control-allow-origin'), 'https://chapbook.rqai.co.uk');
+test('handler: allow-listed origins (hosted site + Tauri native-app origins) are reflected', async () => {
+  // The hosted site plus the three bundled native-app webview origins: iOS/macOS/Linux
+  // (tauri://localhost) and Android/Windows wry hosts (http/https://tauri.localhost).
+  // Android's default http://tauri.localhost was previously rejected (403) — this is
+  // the fix that lets a bundled native app complete device-flow sign-in via the relay.
+  for (const origin of [
+    'https://chapbook.rqai.co.uk',
+    'tauri://localhost',
+    'http://tauri.localhost',
+    'https://tauri.localhost',
+  ]) {
+    const res = await handler(
+      new Request('https://site/x', { method: 'OPTIONS', headers: { origin } }),
+      {},
+    );
+    assert.equal(res.status, 204, `${origin} preflight → 204`);
+    assert.equal(res.headers.get('access-control-allow-origin'), origin, `${origin} reflected`);
+  }
 });

@@ -20,6 +20,16 @@ const TARGETS = {
 const ALLOWED_ORIGINS = new Set([
   'https://chapbook.rqai.co.uk',
   'https://inayat-studio.netlify.app',
+  // Bundled native apps (iOS + Android) have no backend of their own, so their
+  // in-product sign-in fetch reaches this hosted relay CROSS-ORIGIN, from the Tauri
+  // v2 webview's custom-protocol origin. iOS/macOS/Linux (WKWebView/webkitgtk) load
+  // from tauri://localhost; Android/Windows use wry's workaround host
+  // http://tauri.localhost (https://tauri.localhost when useHttpsScheme is set).
+  // tauri://localhost also happens to satisfy the localhost hostname check below,
+  // but it is listed explicitly here so the native-app allowance is intentional.
+  'tauri://localhost',
+  'http://tauri.localhost',
+  'https://tauri.localhost',
 ]);
 
 // localhost on any port (dev) is also permitted, alongside the fixed allow-list.
