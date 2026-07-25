@@ -8,6 +8,12 @@ export const DEFAULT_MODEL = 'gemini-flash-latest';
 
 const BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
+// Fixed cap on hidden "thinking" tokens (see the note at each thinkingConfig site). Small
+// enough to leave room for output under the lowest feature ceiling (~1200), large enough
+// that the Partner (big draft) and low-ceiling features (social pack/thread/carousel) all
+// finish. Verified: at 256 the Partner drafts a full post AND socialPack returns 4 posts.
+const GEMINI_THINKING_BUDGET = 256;
+
 // Pass the API key in the x-goog-api-key HEADER, not the URL query string. Google's API
 // accepts both, but `?key=…` lands in URL/access logs (the key leaks). (L1)
 const headers = (key) => ({ 'content-type': 'application/json', ...(key ? { 'x-goog-api-key': key } : {}) });
@@ -33,9 +39,12 @@ export function buildText({ system, prompt, maxTokens, model, key, json, baseUrl
     generationConfig: {
       maxOutputTokens: maxTokens ?? 4000,
       // Gemini 2.5 / flash-latest are "thinking" models — hidden reasoning tokens are billed
-      // against maxOutputTokens FIRST, truncating JSON on modest budgets (→ AI_PARSE). Use -1
-      // (dynamic: the model decides): gemini-flash-latest rejects thinkingBudget:0 with 400.
-      thinkingConfig: { thinkingBudget: -1 },
+      // against maxOutputTokens FIRST. With -1 (dynamic) the model over-thinks on "complex"
+      // creative tasks (social pack, thread, carousel) and spends the WHOLE low output ceiling
+      // (~1200) on hidden thinking → truncated JSON → AI_PARSE. Cap it at a small FIXED budget
+      // so thinking can never starve the output; simple tasks still use less than the cap.
+      // (0 is rejected with 400 by gemini-flash-latest, so use a positive floor.)
+      thinkingConfig: { thinkingBudget: GEMINI_THINKING_BUDGET },
       ...(json ? { responseMimeType: 'application/json', responseSchema: stripAdditionalProps(json) } : {}),
     },
   };
@@ -49,7 +58,7 @@ export function buildVision({ system, prompt, imageBase64, mimeType, maxTokens, 
       { inlineData: { mimeType: mimeType || 'image/jpeg', data: imageBase64 } },
       { text: prompt },
     ] }],
-    generationConfig: { maxOutputTokens: maxTokens ?? 300, thinkingConfig: { thinkingBudget: -1 } },
+    generationConfig: { maxOutputTokens: maxTokens ?? 300, thinkingConfig: { thinkingBudget: GEMINI_THINKING_BUDGET } },
   };
   return { url, headers: headers(key), body: JSON.stringify(body) };
 }
@@ -86,7 +95,7 @@ export async function readDocument({ system, instruction, fileBase64, mimeType, 
     ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
     generationConfig: {
       maxOutputTokens: 4000,
-      thinkingConfig: { thinkingBudget: -1 },
+      thinkingConfig: { thinkingBudget: GEMINI_THINKING_BUDGET },
       ...(json ? { responseMimeType: 'application/json', responseSchema: stripAdditionalProps(json) } : {}),
     },
   };

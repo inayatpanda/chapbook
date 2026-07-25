@@ -5353,6 +5353,18 @@ function classifyError({ status, payload, raw } = {}){
   e.detail = String(rawMsg || (status ? 'HTTP '+status : '') || '').slice(0,400);
   // keep the source's typed code (e.g. AI_NO_KEY) so callers can branch on it (isNoKeyErr)
   const srcCode=String((payload&&payload.code)||(raw&&raw.code)||''); if(srcCode) e.code=srcCode;
+  // AI adapter errors (src/lib/ai) carry an AI_* code. AI_PARSE (output truncated before the
+  // JSON closed) and AI_REFUSAL come through with NO HTTP status, so without this they'd fall
+  // into the status-0 branch below and masquerade as "Could not reach GitHub". Surface the real
+  // AI reason instead. AI_NO_KEY (status 503) and status-bearing AI_HTTP keep their own paths
+  // below, where rate-limit / 5xx get their tailored copy.
+  if(/^AI_/.test(srcCode) && srcCode!=='AI_NO_KEY' && !e.status){
+    e.kind='ai';
+    e.message = srcCode==='AI_PARSE'
+      ? 'The AI reply was cut off before it finished — try a shorter source, or raise the output limit for this provider in Settings → AI.'
+      : (rawMsg || 'The AI request failed — try again, or check your provider key in Settings → AI.');
+    return e;
+  }
   // network / offline: a fetch that never reached GitHub (TypeError), or no status
   // at all (status 0 — request blocked by CORS, or the device is offline).
   if((raw && (raw.name === 'TypeError' || /failed to fetch|networkerror|load failed/.test(low))) || (e.status===0 && !low.includes('not configured')) ){
