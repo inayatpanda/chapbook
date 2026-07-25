@@ -12014,8 +12014,17 @@ function edVideo(b, isSel){
    removing allow-scripts, which would break playgrounds entirely. Accepted because
    the preview runs the AUTHOR'S OWN code in an opaque origin holding no secrets;
    copy about previews must therefore say "cannot load external resources", never
-   claim "no network at all". */
-const PG_PREVIEW_CSP = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'unsafe-inline\'; style-src \'unsafe-inline\'; img-src data: blob:; media-src data: blob:; font-src data:">';
+   claim "no network at all".
+   EVAL NOTE ('unsafe-eval' in script-src): two families — function-explorer and mixer —
+   compile the author's own inline expressions with `new Function`; without eval those
+   widgets throw at build time and render FLAT (a zero-valued curve) in both the maker
+   preview and the exported .html. Allowing eval here is safe: the frame is
+   sandbox="allow-scripts" (opaque origin, no storage) under default-src 'none' (no
+   network), so eval can only execute the author's ALREADY-INLINE code in this doc —
+   nothing it could not already do — and the PUBLISHED runtime already runs every widget
+   through `new Function` with no CSP at all, so this only makes preview/export match
+   production. Mirrors the documented 'wasm-unsafe-eval' precedent in netlify.toml. */
+const PG_PREVIEW_CSP = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'unsafe-inline\' \'unsafe-eval\'; style-src \'unsafe-inline\'; img-src data: blob:; media-src data: blob:; font-src data:">';
 /* Reusable placement chooser (standard/wide/left/right) — used by image,
    playground and the template-library picker. Sets target.placement, runs the
    given onChange (e.g. markDirty), and keeps the tile selection in sync.
