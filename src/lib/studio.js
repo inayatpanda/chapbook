@@ -127,7 +127,9 @@ From this source material, write ONE optimised post per requested platform, each
 - facebook: conversational, 50–120 words, reads like talking to colleagues — no hashtag pile.${linkNote}
 Source material:
 """${source}"""`;
-  const { json } = await ai.generateText({ provider, system: styleFor(profile), prompt: user, maxTokens: 1200, json: schema });
+  // Four platform posts in one JSON object — give comfortable output headroom so a thinking
+  // model (see google.js GEMINI_THINKING_BUDGET) can never truncate the pack mid-post.
+  const { json } = await ai.generateText({ provider, system: styleFor(profile), prompt: user, maxTokens: 2000, json: schema });
   if (!link) return json;
   // Append the link per platform: LinkedIn + X get the URL; Instagram gets "link in bio".
   const out = { ...json };
@@ -163,7 +165,9 @@ ${guide}
 ${guardFor(profile)} British spelling.
 Source material:
 """${src}"""`;
-  const { json } = await ai.generateText({ provider, system: styleFor(profile), prompt: user, maxTokens: 1600, json: schema });
+  // 4–8 thread tweets / carousel slides — comfortable headroom so a thinking model can't
+  // truncate the parts array mid-way (see google.js GEMINI_THINKING_BUDGET).
+  const { json } = await ai.generateText({ provider, system: styleFor(profile), prompt: user, maxTokens: 2000, json: schema });
   const parts = (Array.isArray(json && json.parts) ? json.parts : [])
     .map((p) => String(p == null ? '' : p).trim())
     .filter(Boolean);
