@@ -157,6 +157,14 @@ if (!html.includes('if(window.__studioApi){')) throw new Error('build: api() no 
 mkdirSync(`${DIST}/app`, { recursive: true });
 writeFileSync(`${DIST}/app/index.html`, html);
 
+// (c1) Illustrations library manifest → dist/app/illustrations-manifest.json. The
+//      Illustrations gallery picker fetches this once on open (same-origin, so CSP
+//      connect-src 'self' allows it). ~1121 entries, so it ships as a standalone JSON
+//      file (NOT inlined into index.html). Thumbnails/full images stay on R2 (img-src
+//      https:); only this index travels with the app.
+copyFileSync(`${SRC}/illustrations-manifest.json`, `${DIST}/app/illustrations-manifest.json`);
+console.log('illustrations manifest → dist/app/illustrations-manifest.json');
+
 // ---- marketing shell inputs ----
 // Partials + tokens shared by every marketing page. _nav/_footer are stubs in Task 1
 // (fleshed out in Task 2); _trial is empty-safe until Task 7. The legal wrapper and the

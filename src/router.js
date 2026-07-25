@@ -50,7 +50,7 @@ export function makeRouter(deps) {
     if (a === 'playgrounds' && b === 'build') return { block: playgrounds.buildInstance(body.familyId, body.params || {}, body.domId) };
     if (a === 'playgrounds' && b === 'suggest') return studio.suggestInteractive({ description: body.description, profile: profile() }, ai);
     if (a === 'playgrounds' && b === 'tweak') return studio.tweakInteractive({ familyId: body.familyId, params: body.params || {}, instruction: body.instruction, profile: profile() }, ai);
-    if (a === 'playgrounds' && b === 'invent') return studio.inventInteractive({ description: body.description, profile: profile() }, ai);
+    if (a === 'playgrounds' && b === 'invent') return studio.inventInteractive({ description: body.description, base: body.base, profile: profile() }, ai);
 
     // ---- figures (parametric SVG line-art; pure core) ----
     if (a === 'figures' && !b) return { families: figures.listFamilies() };
