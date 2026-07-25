@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chapbook tutorials</title>
+<meta name="description" content="Ten short videos — learn every Chapbook feature in about a minute each. Connect GitHub, write with AI, dictate, illustrate, animate, and publish to the web.">
+<link rel="canonical" href="https://chapbook.rqai.co.uk/tutorials">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#0b1120">
+<meta property="og:title" content="Chapbook tutorials">
+<meta property="og:description" content="Learn every Chapbook feature in about a minute each: GitHub, AI writing, dictation, illustrations, flipbooks, interactives, social, and publishing.">
+<meta property="og:image" content="https://chapbook.rqai.co.uk/icon-512.png">
+<style>
+  /* Self-hosted faces only (no external hosts; mirrors download.html / the app font set). */
+  @font-face{font-family:'Inter';font-weight:400;font-style:normal;font-display:swap;src:url('/fonts/inter-400.woff2') format('woff2')}
+  @font-face{font-family:'Inter';font-weight:500;font-style:normal;font-display:swap;src:url('/fonts/inter-500.woff2') format('woff2')}
+  @font-face{font-family:'Inter';font-weight:600;font-style:normal;font-display:swap;src:url('/fonts/inter-600.woff2') format('woff2')}
+  @font-face{font-family:'Space Grotesk';font-weight:600;font-style:normal;font-display:swap;src:url('/fonts/space-grotesk-600.woff2') format('woff2')}
+  @font-face{font-family:'Space Grotesk';font-weight:700;font-style:normal;font-display:swap;src:url('/fonts/space-grotesk-700.woff2') format('woff2')}
+
+  :root{
+    --well:#05070e;            /* the icon's own background stops */
+    --midnight:#0b1120;
+    --paper:#e6edf7;
+    --mist:rgba(230,237,247,.62);
+    --faint:rgba(230,237,247,.38);
+    --hairline:rgba(230,237,247,.09);
+    --teal:#2dd4bf;            /* the book's page gradient */
+    --cyan:#22d0ee;
+    --violet:#8b5cf6;          /* the book's spine */
+    --ink:#06121a;             /* text on filled teal buttons */
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{color-scheme:dark}
+  body{
+    font:400 16px/1.6 'Inter',system-ui,sans-serif;
+    color:var(--paper);
+    background:linear-gradient(180deg,var(--midnight) 0%,var(--well) 100%) fixed;
+    min-height:100dvh;
+    display:flex;flex-direction:column;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  a{color:var(--teal)}
+  :focus-visible{outline:2px solid var(--teal);outline-offset:3px;border-radius:4px}
+
+  .wrap{width:min(1100px,100% - 2*clamp(18px,5vw,48px));margin-inline:auto}
+
+  /* ---------- hero ---------- */
+  main{flex:1}
+  .hero{padding-block:clamp(30px,7vh,64px) clamp(20px,4vh,36px)}
+  h1{
+    font:700 clamp(2.1rem,5.4vw,3.3rem)/1.08 'Space Grotesk',sans-serif;
+    letter-spacing:-.025em;
+  }
+  h1 .brand{
+    background:linear-gradient(100deg,var(--teal),var(--cyan) 60%,var(--violet) 130%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .sub{margin-top:14px;max-width:40em;color:var(--mist)}
+  .herolinks{margin-top:20px;display:flex;flex-wrap:wrap;gap:10px 12px}
+  .herobtn{
+    display:inline-block;text-decoration:none;
+    font:600 14.5px 'Inter',sans-serif;
+    padding:10px 16px;border-radius:9px;
+    color:var(--ink);border:1px solid transparent;
+    background:linear-gradient(90deg,var(--teal),var(--cyan));
+    transition:filter .16s ease;
+  }
+  .herobtn:hover{filter:brightness(1.07)}
+  .herobtn.ghost{
+    color:var(--teal);background:none;border-color:rgba(45,212,191,.45);
+    transition:background .16s ease;
+  }
+  .herobtn.ghost:hover{background:rgba(45,212,191,.1);filter:none}
+
+  /* ---------- the tutorial grid ---------- */
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+    gap:20px;
+    padding-block:clamp(18px,4vh,32px);
+  }
+  .card{
+    display:flex;flex-direction:column;
+    border:1px solid var(--hairline);border-radius:14px;
+    background:linear-gradient(180deg,rgba(230,237,247,.035),rgba(230,237,247,.012));
+    overflow:hidden;
+    transition:transform .16s ease,border-color .16s ease;
+  }
+  .card:hover{transform:translateY(-2px);border-color:rgba(230,237,247,.2)}
+  .frame{background:#000;line-height:0}
+  video{
+    display:block;width:100%;max-width:100%;
+    aspect-ratio:16/9;background:#000;
+  }
+  .body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:8px;flex:1}
+  .body h2{
+    font:600 18px/1.3 'Space Grotesk',sans-serif;letter-spacing:-.01em;
+    display:flex;align-items:baseline;gap:10px;
+  }
+  .num{
+    flex:none;
+    font:700 12px 'Inter',sans-serif;font-variant-numeric:tabular-nums;
+    color:var(--ink);
+    background:linear-gradient(90deg,var(--teal),var(--cyan));
+    min-width:24px;height:24px;padding:0 6px;border-radius:99px;
+    display:inline-flex;align-items:center;justify-content:center;
+    align-self:center;
+  }
+  .body p{font-size:14px;color:var(--mist);flex:1}
+  .dl{
+    display:flex;flex-wrap:wrap;gap:8px 10px;margin-top:6px;
+    padding-top:12px;border-top:1px solid var(--hairline);
+  }
+  .dl a{
+    text-decoration:none;font:600 12.5px 'Inter',sans-serif;
+    color:var(--mist);border:1px solid var(--hairline);
+    padding:6px 11px;border-radius:8px;
+    display:inline-flex;align-items:center;gap:6px;
+    transition:color .16s ease,border-color .16s ease;
+  }
+  .dl a:hover{color:var(--teal);border-color:rgba(45,212,191,.45)}
+  .dl a svg{width:13px;height:13px;flex:none}
+
+  /* ---------- footer ---------- */
+  footer{border-top:1px solid var(--hairline);margin-top:clamp(28px,6vh,48px)}
+  footer .wrap{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center;padding-block:20px;font-size:13px;color:var(--faint)}
+  footer a{color:var(--mist);text-decoration:none}
+  footer a:hover{color:var(--teal)}
+
+  @media (max-width:520px){
+    .grid{grid-template-columns:1fr}
+  }
+
+  /* one gentle entrance; nothing moves for reduced-motion readers */
+  @media (prefers-reduced-motion:no-preference){
+    .card{opacity:0;transform:translateY(10px);animation:rise .45s ease forwards}
+    .card:nth-child(2){animation-delay:.04s}
+    .card:nth-child(3){animation-delay:.08s}
+    .card:nth-child(4){animation-delay:.12s}
+    .card:nth-child(5){animation-delay:.16s}
+    .card:nth-child(6){animation-delay:.20s}
+    .card:nth-child(7){animation-delay:.24s}
+    .card:nth-child(8){animation-delay:.28s}
+    .card:nth-child(9){animation-delay:.32s}
+    .card:nth-child(10){animation-delay:.36s}
+    @keyframes rise{to{opacity:1;transform:none}}
+    .card:hover{transform:translateY(-2px)}
+  }
+</style>
+</head>
+<body>
+
+<!-- MKT:NAV -->
+
+<main>
+  <div class="wrap">
+
+    <div class="hero">
+      <h1><span class="brand">Chapbook</span> tutorials</h1>
+      <p class="sub">Learn every feature in about a minute. Ten short videos take you from connecting GitHub to publishing your post live on the web.</p>
+      <div class="herolinks">
+        <a class="herobtn" href="https://chapbook.rqai.co.uk/app">Open Chapbook</a>
+        <a class="herobtn ghost" href="/download">Download the app</a>
+        <a class="herobtn ghost" href="/">Back to home</a>
+      </div>
+    </div>
+
+    <section class="grid" aria-label="Chapbook tutorials">
+
+      <article class="card">
+        <div class="frame">
+          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/getting-started-16x9.mp4"></video>
+        </div>
+        <div class="body">
+          <h2><span class="num">1</span> Getting started</h2>
+          <p>Connect GitHub and write your first post.</p>
+          <div class="dl">
+            <a href="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/getting-started-9x16.mp4" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>Vertical 9:16</a>
+            <a href="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/getting-started-16x9.mp4" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>Widescreen 16:9</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="frame">
+          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/setup-16x9.mp4"></video>
+        </div>
+        <div class="body">
+          <h2><span class="num">2</span> Set up Chapbook</h2>
+          <p>Your AI key, your GitHub, your image hosting.</p>
+          <div class="dl">
+            <a href="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/setup-9x16.mp4" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>Vertical 9:16</a>
+            <a href="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/setup-16x9.mp4" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>Widescreen 16:9</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="frame">
+          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/partner-16x9.mp4"></video>
+        </div>
+        <div class="body">
+          <h2><span class="num">3</span> Write with the AI Partner</h2>
+          <p>An idea in plain words becomes a full drafted post.</p>
+          <div class="dl">
+            <a href="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/partner-9x16.mp4" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>Vertical 9:16</a>
+            <a href="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/partner-16x9.mp4" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>Widescreen 16:9</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="frame">
+          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/chat-16x9.mp4"></video>
+        </div>
+        <div class="body">
+          <h2><span class="num">4</span> Write a long post by chatting</h2>
+          <p>Describe it, then steer the AI turn by turn.</p>
+          <div class="dl">
+            <a href="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/chat-9x16.mp4" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>Vertical 9:16</a>
+            <a href="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/chat-16x9.mp4" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>Widescreen 16:9</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="frame">
+          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/dictation-16x9.mp4"></video>
+        </div>
+        <div class="body">
+          <h2><span class="num">5</span> Dictate a post</h2>
+          <p>Hands-free, transcribed privately on-device.</p>
+          <div class="dl">
+            <a href="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/dictation-9x16.mp4" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>Vertical 9:16</a>
+            <a href="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/dictation-16x9.mp4" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>Widescreen 16:9</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="frame">
+          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/illustrations-16x9.mp4"></video>
+        </div>
+        <div class="body">
+          <h2><span class="num">6</span> Illustration gallery</h2>
+          <p>Browse and insert from 1,121 built-in illustrations.</p>
+          <div class="dl">
+            <a href="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/illustrations-9x16.mp4" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>Vertical 9:16</a>
+            <a href="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/illustrations-16x9.mp4" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>Widescreen 16:9</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="frame">
+          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/flipbook-16x9.mp4"></video>
+        </div>
+        <div class="body">
+          <h2><span class="num">7</span> Flipbook</h2>
+          <p>Draw a multi-frame animation, frame by frame.</p>
+          <div class="dl">
+            <a href="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/flipbook-9x16.mp4" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>Vertical 9:16</a>
+            <a href="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/flipbook-16x9.mp4" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>Widescreen 16:9</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="frame">
+          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/interactive-16x9.mp4"></video>
+        </div>
+        <div class="body">
+          <h2><span class="num">8</span> Make an interactive</h2>
+          <p>Describe it, and AI builds the widget.</p>
+          <div class="dl">
+            <a href="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/interactive-9x16.mp4" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>Vertical 9:16</a>
+            <a href="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/interactive-16x9.mp4" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>Widescreen 16:9</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="frame">
+          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/social-16x9.mp4"></video>
+        </div>
+        <div class="body">
+          <h2><span class="num">9</span> Turn your post into social</h2>
+          <p>A thread, a carousel, a post for every platform.</p>
+          <div class="dl">
+            <a href="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/social-9x16.mp4" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>Vertical 9:16</a>
+            <a href="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/social-16x9.mp4" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>Widescreen 16:9</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="frame">
+          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/github-page-16x9.mp4"></video>
+        </div>
+        <div class="body">
+          <h2><span class="num">10</span> Publish to the web</h2>
+          <p>Your post goes live on a free GitHub Pages site.</p>
+          <div class="dl">
+            <a href="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/github-page-9x16.mp4" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>Vertical 9:16</a>
+            <a href="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/github-page-16x9.mp4" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></svg>Widescreen 16:9</a>
+          </div>
+        </div>
+      </article>
+
+    </section>
+
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>&copy; RQAI Ltd</span>
+    <a href="/">Home</a>
+    <a href="/download">Download</a>
+    <a href="https://chapbook.rqai.co.uk/app">Open Chapbook</a>
+    <a href="mailto:support@rqai.co.uk">Support</a>
+    <a href="https://chapbook.rqai.co.uk/">chapbook.rqai.co.uk</a>
+  </div>
+</footer>
+
+</body>
+</html>
