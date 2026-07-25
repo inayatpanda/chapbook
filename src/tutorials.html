@@ -48,6 +48,22 @@
 
   .wrap{width:min(1100px,100% - 2*clamp(18px,5vw,48px));margin-inline:auto}
 
+  /* ---------- top nav (shared _nav.html markup; styles mirror src/marketing/marketing.css,
+     which this standalone page does not link) ---------- */
+  .mkt-wrap{width:min(1100px,100% - 2*clamp(18px,5vw,48px));margin-inline:auto}
+  .mkt-nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(8px);background:rgba(11,17,32,.72);border-bottom:1px solid var(--hairline)}
+  .mkt-nav .mkt-wrap{display:flex;align-items:center;gap:16px;padding-block:14px}
+  .mkt-nav .lockup{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--paper);margin-right:auto}
+  .mkt-nav .lockup img{width:26px;height:26px}
+  .mkt-nav .lockup b{font:700 17px 'Space Grotesk',sans-serif;letter-spacing:-.01em}
+  .mkt-nav a.lnk{font-size:14px;font-weight:500;color:var(--mist);text-decoration:none}
+  .mkt-nav a.lnk[aria-current="page"],.mkt-nav a.lnk:hover{color:var(--teal)}
+  .mkt-nav .cta{font:600 13.5px 'Inter',sans-serif;color:var(--ink);background:linear-gradient(90deg,var(--teal),var(--cyan));padding:8px 13px;border-radius:8px;text-decoration:none}
+  @media (max-width:600px){
+    .mkt-nav .mkt-wrap{flex-wrap:wrap;gap:9px 16px;padding-block:11px}
+    .mkt-nav a.lnk{order:1}
+  }
+
   /* ---------- hero ---------- */
   main{flex:1}
   .hero{padding-block:clamp(30px,7vh,64px) clamp(20px,4vh,36px)}
@@ -200,7 +216,7 @@
 
       <article class="card feature">
         <div class="frame">
-          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/interactive-guide-16x9.mp4"></video>
+          <video controls playsinline preload="metadata" poster="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/interactive-guide-poster.jpg" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/interactive-guide-16x9.mp4"></video>
         </div>
         <div class="body">
           <h2><span class="tag">Full guide</span> Interactive HTMLs — the full guide</h2>
@@ -214,7 +230,7 @@
 
       <article class="card">
         <div class="frame">
-          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/modify-function-explorer-16x9.mp4"></video>
+          <video controls playsinline preload="metadata" poster="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/modify-function-explorer-poster.jpg" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/modify-function-explorer-16x9.mp4"></video>
         </div>
         <div class="body">
           <h2>Modify: Function explorer</h2>
@@ -228,7 +244,7 @@
 
       <article class="card">
         <div class="frame">
-          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/modify-scored-quiz-16x9.mp4"></video>
+          <video controls playsinline preload="metadata" poster="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/modify-scored-quiz-poster.jpg" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/modify-scored-quiz-16x9.mp4"></video>
         </div>
         <div class="body">
           <h2>Modify: Scored quiz</h2>
@@ -242,7 +258,7 @@
 
       <article class="card">
         <div class="frame">
-          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/modify-chart-16x9.mp4"></video>
+          <video controls playsinline preload="metadata" poster="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/modify-chart-poster.jpg" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/modify-chart-16x9.mp4"></video>
         </div>
         <div class="body">
           <h2>Modify: Chart</h2>
@@ -256,7 +272,7 @@
 
       <article class="card">
         <div class="frame">
-          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/modify-decision-tree-16x9.mp4"></video>
+          <video controls playsinline preload="metadata" poster="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/modify-decision-tree-poster.jpg" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/modify-decision-tree-16x9.mp4"></video>
         </div>
         <div class="body">
           <h2>Modify: Decision flow</h2>
@@ -279,7 +295,7 @@
 
       <article class="card">
         <div class="frame">
-          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/getting-started-16x9.mp4"></video>
+          <video controls playsinline preload="metadata" poster="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/getting-started-poster.jpg" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/getting-started-16x9.mp4"></video>
         </div>
         <div class="body">
           <h2><span class="num">1</span> Getting started</h2>
@@ -293,7 +309,7 @@
 
       <article class="card">
         <div class="frame">
-          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/setup-16x9.mp4"></video>
+          <video controls playsinline preload="metadata" poster="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/setup-poster.jpg" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/setup-16x9.mp4"></video>
         </div>
         <div class="body">
           <h2><span class="num">2</span> Set up Chapbook</h2>
@@ -307,7 +323,7 @@
 
       <article class="card">
         <div class="frame">
-          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/partner-16x9.mp4"></video>
+          <video controls playsinline preload="metadata" poster="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/partner-poster.jpg" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/partner-16x9.mp4"></video>
         </div>
         <div class="body">
           <h2><span class="num">3</span> Write with the AI Partner</h2>
@@ -321,7 +337,7 @@
 
       <article class="card">
         <div class="frame">
-          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/chat-16x9.mp4"></video>
+          <video controls playsinline preload="metadata" poster="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/chat-poster.jpg" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/chat-16x9.mp4"></video>
         </div>
         <div class="body">
           <h2><span class="num">4</span> Write a long post by chatting</h2>
@@ -335,7 +351,7 @@
 
       <article class="card">
         <div class="frame">
-          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/dictation-16x9.mp4"></video>
+          <video controls playsinline preload="metadata" poster="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/dictation-poster.jpg" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/dictation-16x9.mp4"></video>
         </div>
         <div class="body">
           <h2><span class="num">5</span> Dictate a post</h2>
@@ -349,7 +365,7 @@
 
       <article class="card">
         <div class="frame">
-          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/illustrations-16x9.mp4"></video>
+          <video controls playsinline preload="metadata" poster="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/illustrations-poster.jpg" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/illustrations-16x9.mp4"></video>
         </div>
         <div class="body">
           <h2><span class="num">6</span> Illustration gallery</h2>
@@ -363,7 +379,7 @@
 
       <article class="card">
         <div class="frame">
-          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/flipbook-16x9.mp4"></video>
+          <video controls playsinline preload="metadata" poster="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/flipbook-poster.jpg" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/flipbook-16x9.mp4"></video>
         </div>
         <div class="body">
           <h2><span class="num">7</span> Flipbook</h2>
@@ -377,7 +393,7 @@
 
       <article class="card">
         <div class="frame">
-          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/interactive-16x9.mp4"></video>
+          <video controls playsinline preload="metadata" poster="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/interactive-poster.jpg" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/interactive-16x9.mp4"></video>
         </div>
         <div class="body">
           <h2><span class="num">8</span> Make an interactive</h2>
@@ -391,7 +407,7 @@
 
       <article class="card">
         <div class="frame">
-          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/social-16x9.mp4"></video>
+          <video controls playsinline preload="metadata" poster="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/social-poster.jpg" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/social-16x9.mp4"></video>
         </div>
         <div class="body">
           <h2><span class="num">9</span> Turn your post into social</h2>
@@ -405,7 +421,7 @@
 
       <article class="card">
         <div class="frame">
-          <video controls playsinline preload="metadata" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/github-page-16x9.mp4"></video>
+          <video controls playsinline preload="metadata" poster="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/github-page-poster.jpg" src="https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/tutorials/github-page-16x9.mp4"></video>
         </div>
         <div class="body">
           <h2><span class="num">10</span> Publish to the web</h2>
