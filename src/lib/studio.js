@@ -625,10 +625,14 @@ export async function tweakFigure({ familyId, params = {}, instruction, animate 
  * sandboxed iframe for the owner to APPROVE first. Returns a playground-shaped
  * block { domId, title, html, css, js, notes } plus jsError (null when the JS parses).
  */
-export async function inventInteractive({ description, profile, provider } = {}, ai) {
+export async function inventInteractive({ description, base, profile, provider } = {}, ai) {
   const desc = String(description || '').trim();
   if (desc.length < 4) throw Object.assign(new Error('Describe the interactive you want'), { status: 400 });
-  const domId = 'pg-' + Math.random().toString(36).slice(2, 9);
+  // MODIFY mode: when an existing widget is supplied, the AI edits it in place and
+  // returns the COMPLETE updated widget (used by the standalone maker's duplicate-and-
+  // modify flow). Reuse the existing domId so the JS root-scoping stays valid.
+  const hasBase = !!(base && (String(base.html || '').trim() || String(base.js || '').trim()));
+  const domId = (hasBase && base.domId) ? String(base.domId) : ('pg-' + Math.random().toString(36).slice(2, 9));
   const schema = {
     type: 'object', additionalProperties: false,
     required: ['title', 'html', 'js'],
@@ -640,20 +644,42 @@ export async function inventInteractive({ description, profile, provider } = {},
       notes: { type: 'string' },
     },
   };
-  const system = `You invent a small, self-contained interactive teaching widget ("playground") for ${blogDomainFor(profile)}. Output HTML, optional CSS, and JS that bring one idea to life — a slider, a toggle, a small simulation, an animated SVG diagram.
-
-HARD RULES — the widget must run first time with no console errors:
+  const rules = `HARD RULES — the widget must run first time with no console errors:
 - Vanilla JS only. No external libraries, no <script src>, no fetch/network, no localStorage/cookies. Entirely self-contained.
 - Your HTML is placed inside <div class="playground" id="${domId}">…</div>. Do NOT repeat that wrapper. Scope every DOM lookup to it: write your JS as (function(){ const root = document.getElementById('${domId}'); if(!root) return; /* root.querySelector(...) */ })(); — never use document-wide selectors and never use inline on* attributes (they are stripped).
 - Use the host classes where natural: .pg-stage (main visual area), .pg-controls, .pg-row, .pg-field, .pg-readout (live numbers), <label><b>…</b></label>; sliders are <input type="range">.
 - Dark theme is already applied (near-black background, light text). Do not set a page background. Use the site accents teal #2dd4bf, cyan #22d3ee, violet #818cf8 for highlights.
 - Honour reduced motion: gate any continuous animation behind window.matchMedia('(prefers-reduced-motion: reduce)').
-- British spelling; concise, accurate labels; never hype. ${visualGuardFor(profile)}
-Return ONLY the JSON the schema requires; put a one-line plain-language summary in "notes".`;
+- British spelling; concise, accurate labels; never hype. ${visualGuardFor(profile)}`;
+  const tail = `Return ONLY the JSON the schema requires; put a one-line plain-language summary in "notes".`;
+  const system = hasBase
+    ? `You MODIFY an existing small, self-contained interactive teaching widget ("playground") for ${blogDomainFor(profile)}. Apply the requested change and return the COMPLETE updated widget (HTML, optional CSS, JS) — never a diff or a fragment.
+
+${rules}
+- Preserve everything that already works; change only what the instruction asks for. Keep the same overall idea unless the instruction says otherwise.
+${tail}`
+    : `You invent a small, self-contained interactive teaching widget ("playground") for ${blogDomainFor(profile)}. Output HTML, optional CSS, and JS that bring one idea to life — a slider, a toggle, a small simulation, an animated SVG diagram.
+
+${rules}
+${tail}`;
+  const prompt = hasBase
+    ? `Here is the existing widget's code.
+
+--- HTML ---
+${String(base.html || '').slice(0, 6000)}
+
+--- CSS ---
+${String(base.css || '').slice(0, 3000)}
+
+--- JS ---
+${String(base.js || '').slice(0, 6000)}
+
+Apply this change: "${desc.slice(0, 800)}". Return the complete updated widget.`
+    : `Invent an interactive that: "${desc.slice(0, 800)}". Keep it focused and compact so the whole thing fits comfortably — a tight, working widget beats an elaborate one.`;
   // Generous budget: JSON-escaped html+css+js is token-heavy and truncation = invalid JSON.
   const r = await ai.generateText({
     provider, maxTokens: 14000, effort: 'medium', json: schema,
-    system, prompt: `Invent an interactive that: "${desc.slice(0, 800)}". Keep it focused and compact so the whole thing fits comfortably — a tight, working widget beats an elaborate one.`,
+    system, prompt,
   });
   const out = (r && r.json) || {};
   let jsError = null;

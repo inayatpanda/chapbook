@@ -33,8 +33,9 @@ export function buildText({ system, prompt, maxTokens, model, key, json, baseUrl
     generationConfig: {
       maxOutputTokens: maxTokens ?? 4000,
       // Gemini 2.5 / flash-latest are "thinking" models — hidden reasoning tokens are billed
-      // against maxOutputTokens FIRST, truncating JSON on modest budgets (→ AI_PARSE). Disable.
-      thinkingConfig: { thinkingBudget: 0 },
+      // against maxOutputTokens FIRST, truncating JSON on modest budgets (→ AI_PARSE). Use -1
+      // (dynamic: the model decides): gemini-flash-latest rejects thinkingBudget:0 with 400.
+      thinkingConfig: { thinkingBudget: -1 },
       ...(json ? { responseMimeType: 'application/json', responseSchema: stripAdditionalProps(json) } : {}),
     },
   };
@@ -48,7 +49,7 @@ export function buildVision({ system, prompt, imageBase64, mimeType, maxTokens, 
       { inlineData: { mimeType: mimeType || 'image/jpeg', data: imageBase64 } },
       { text: prompt },
     ] }],
-    generationConfig: { maxOutputTokens: maxTokens ?? 300, thinkingConfig: { thinkingBudget: 0 } },
+    generationConfig: { maxOutputTokens: maxTokens ?? 300, thinkingConfig: { thinkingBudget: -1 } },
   };
   return { url, headers: headers(key), body: JSON.stringify(body) };
 }
@@ -85,7 +86,7 @@ export async function readDocument({ system, instruction, fileBase64, mimeType, 
     ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
     generationConfig: {
       maxOutputTokens: 4000,
-      thinkingConfig: { thinkingBudget: 0 },
+      thinkingConfig: { thinkingBudget: -1 },
       ...(json ? { responseMimeType: 'application/json', responseSchema: stripAdditionalProps(json) } : {}),
     },
   };

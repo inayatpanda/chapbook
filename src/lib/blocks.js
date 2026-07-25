@@ -397,7 +397,10 @@ export function renderPreviewHtml(blocks, ctx = {}) {
   // A fresh data URL (owned upload in progress) wins; then a reference `url` to an
   // already-committed image; then the editor src; finally the conventional per-slug
   // path. url/file are root-relative, so prefix the preview origin for them.
-  const imgSrc = (b) => b.base64 ? asDataUri(b.base64) : b.url ? `${origin}${b.url}` : (b.src || `${origin}/images/posts/${slug}/${b.file}`);
+  // A reference `url` is normally a root-relative same-site path (prefix the preview
+  // origin); an ABSOLUTE url (e.g. an illustration on R2) is used verbatim — prefixing
+  // the origin would corrupt it into `https://sitehttps://…`.
+  const imgSrc = (b) => b.base64 ? asDataUri(b.base64) : b.url ? (/^https?:\/\//i.test(b.url) ? b.url : `${origin}${b.url}`) : (b.src || `${origin}/images/posts/${slug}/${b.file}`);
   const figure = (b) => {
     const cap = b.caption ? `<figcaption>${escHtml(b.caption)}</figcaption>` : '';
     const cls = figureClasses(b).join(' ');
@@ -475,6 +478,19 @@ export function renderPreviewHtml(blocks, ctx = {}) {
 const SAFE_IMAGE_REF = /^\/images\/posts\/[A-Za-z0-9._\-\/]+$/;
 const isSafeImageRef = (url) => SAFE_IMAGE_REF.test(String(url || '')) && !String(url).split('/').includes('..');
 
+// The Illustrations gallery (src/illustrations-manifest.json) inserts an image block whose
+// `url` is a FULL https URL on the FIRST-PARTY illustration R2 bucket — NOT a same-site
+// /images/posts path. That host is a fixed, app-owned asset origin (like the video block's
+// own-R2 clips), so image `url` values on THIS exact host are trusted the same way: https
+// only, no whitespace/quote/angle/backslash breakout chars, no `..` segment. Any other
+// absolute URL stays rejected by isSafeImageRef above (an arbitrary external/js:/data: URL
+// must never become a live <img src>). Keep in sync with the picker's baseUrl in index.html.
+const ILLUSTRATION_ORIGIN = 'https://pub-d0c0f024bcde4912b0366f54204bd01a.r2.dev/';
+const isSafeIllustrationUrl = (url) => {
+  const s = String(url || '');
+  return s.startsWith(ILLUSTRATION_ORIGIN) && SAFE_HTTPS_URL.test(s) && !s.split('/').includes('..');
+};
+
 // A `video` block's url/poster point at the user's OWN R2 bucket, so — unlike an image
 // `url` reference (a same-site /images/posts path) — they are FULL public https URLs.
 // Same spirit as isSafeImageRef: accept only an https:// URL with no whitespace or
@@ -519,9 +535,10 @@ export function validateDoc(doc) {
     if (b.type === 'image' && !b.file && !b.base64 && !b.url) throw Object.assign(new Error('image block needs file, base64 or url'), { status: 400 });
     // A base64 upload MUST carry a filename — else publishBlocks commits to `.../undefined`.
     if (b.type === 'image' && b.base64 && !b.file) throw Object.assign(new Error('image with image data needs a filename'), { status: 400 });
-    // url-mode reference (no fresh base64 upload): require a safe same-site image path.
-    if (b.type === 'image' && b.url && !b.base64 && !isSafeImageRef(b.url))
-      throw Object.assign(new Error('image reference must be a site image path under /images/posts/'), { status: 400 });
+    // url-mode reference (no fresh base64 upload): require a safe same-site image path
+    // OR a full https URL on the first-party illustration bucket (the gallery picker).
+    if (b.type === 'image' && b.url && !b.base64 && !isSafeImageRef(b.url) && !isSafeIllustrationUrl(b.url))
+      throw Object.assign(new Error('image reference must be a site image path under /images/posts/ or an illustration URL'), { status: 400 });
     // Path-traversal guard: image and gallery `file` values must be bare filenames.
     if (b.type === 'image' && b.file && isUnsafeFilename(b.file))
       throw Object.assign(new Error('unsafe image filename'), { status: 400 });
