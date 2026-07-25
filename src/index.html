@@ -18778,7 +18778,7 @@ async function figExportFlipbook(kind){
   try{
     if(kind === 'gif'){
       figDrawNote('Encoding GIF…');
-      const { encodeGif } = await import('./vendor/gifenc.esm.js');
+      const { encodeGif } = await import('/vendor/gifenc.esm.js');
       const frames = order.map(fr => {
         renderFigFrameToCtx(ctx, fr, { w: W, h: H });
         return { data: ctx.getImageData(0, 0, W, H).data, delayMs: (1000 / fps) * (fr.dur || 1) };

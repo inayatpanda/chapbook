@@ -263,6 +263,7 @@ console.log('SEO: sitemap.xml + robots.txt emitted');
 // module's external `./vendor/exifr.esm.js` import resolves at the dist root too.
 mkdirSync(`${DIST}/vendor`, { recursive: true });
 copyFileSync(`${SRC}/vendor/exifr.esm.js`, `${DIST}/vendor/exifr.esm.js`);
+copyFileSync(`${SRC}/vendor/gifenc.esm.js`, `${DIST}/vendor/gifenc.esm.js`);
 
 // Vendored blog-theme catalogue → dist/themes-css/ (Task 3). The exact CSS the published
 // blogs use (global.css + themes.css + 20 theme files + kids extras + theme fonts) plus the
