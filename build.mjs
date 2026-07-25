@@ -240,6 +240,12 @@ for (const f of ['manifest.json', 'studio.js', 'darkroom-upload.js', 'stt.js', '
 // marketing.css — only its <!-- MKT:NAV --> marker is filled (its own footer stays bespoke).
 writeFileSync(`${DIST}/download.html`, inject(readFileSync(`${SRC}/download.html`, 'utf8')));
 
+// tutorials.html is a public marketing surface too (ungated, self-styled like download.html):
+// run it through inject() so it carries the SAME shared nav as every other page. Only its
+// <!-- MKT:NAV --> marker is filled; its own footer stays bespoke. The tutorial videos it
+// embeds are hosted on R2 (media-src https:), so nothing but this HTML ships with the build.
+writeFileSync(`${DIST}/tutorials.html`, inject(readFileSync(`${SRC}/tutorials.html`, 'utf8')));
+
 // Shared marketing shell assets → dist root. marketing.css is the one visual language every
 // marketing page links; og-image.png is the committed Open Graph share card (1200x630).
 copyFileSync(`${MKT}/marketing.css`, `${DIST}/marketing.css`);
@@ -250,7 +256,7 @@ console.log('marketing shell: marketing.css + og-image.png → dist root');
 // private tool with no SEO value). robots allows the crawl, keeps /app out of the index
 // (advisory only — the app stays reachable), and points crawlers at the sitemap.
 const SITE = 'https://chapbook.rqai.co.uk';
-const pages = ['/', '/features', '/themes', '/pricing', '/download', '/privacy', '/terms', '/refunds'];
+const pages = ['/', '/features', '/themes', '/pricing', '/tutorials', '/download', '/privacy', '/terms', '/refunds'];
 const today = new Date().toISOString().slice(0, 10);
 writeFileSync(`${DIST}/sitemap.xml`,
   '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
