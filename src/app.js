@@ -30,6 +30,7 @@ import * as connection from './core/connection.js';
 import * as themeCatalogue from './core/themeCatalogue.js';
 import { ed25519Verify } from './lib/ed25519Verify.js';
 import { isNativeOrigin, externalUrlToOpen } from './lib/nativeLinks.js';
+import { installNativeFetchBridge } from './lib/nativeFetch.js';
 
 // Minimal HTML escaper for the few spots where user text (a chosen blog name) is written
 // into the onboarding overlay's innerHTML — that overlay's origin holds the buyer's
@@ -543,7 +544,19 @@ function installNativeExternalLinkOpener() {
   } catch { /* never break boot */ }
 }
 
+// Native-only fetch bridge (see lib/nativeFetch.js). Installed FIRST — synchronously, before
+// refresh()/buildApi() below construct the GitHub + AI seams (which capture `fetchImpl = fetch`
+// at construction time) — so those seams pick up the bridged window.fetch. The Tauri HTTP plugin
+// is imported LAZILY on the first bridged request, so the plugin code never runs on the web
+// (isNativeOrigin is false there → the bridge isn't installed and the import is never reached).
+// On the web this is a strict no-op: window.fetch is left exactly as the browser provided it.
+function installNativeFetchBridgeBoot() {
+  if (typeof window === 'undefined' || typeof location === 'undefined') return;
+  installNativeFetchBridge(window, location, () => import('@tauri-apps/plugin-http').then((m) => m.fetch));
+}
+
 if (typeof window !== 'undefined') {
+  installNativeFetchBridgeBoot();     // native-only; strict no-op on the web (must precede refresh())
   installNativeExternalLinkOpener(); // native-only; strict no-op on the web
   window.__studioConfig = config;       // the static index's boot gate reads this
   window.__studioRefresh = refresh;     // rebuild seams after the repo/keys change
