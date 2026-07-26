@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isNativeOrigin, externalUrlToOpen } from './nativeLinks.js';
+import { isNativeOrigin, externalUrlToOpen, viewportContentFor } from './nativeLinks.js';
 
 // Stand-ins for `location` on each platform.
 const web = { protocol: 'https:', hostname: 'chapbook.rqai.co.uk', href: 'https://chapbook.rqai.co.uk/app/', origin: 'https://chapbook.rqai.co.uk' };
@@ -41,4 +41,19 @@ test('externalUrlToOpen — in-app / same-origin / non-http links are left to th
 test('externalUrlToOpen — resolves relative external-looking hrefs against the native origin', () => {
   // A protocol-relative or relative href resolves under the tauri origin, so it is NOT external.
   assert.equal(externalUrlToOpen('/foo', tauriProto), null, 'root-relative resolves to same origin');
+});
+
+test('viewportContentFor — web keeps pinch-zoom, native gets the zoom lock', () => {
+  const base = 'width=device-width, initial-scale=1, viewport-fit=cover';
+  // Web: untouched (Android Chrome would drop accessibility zoom if we added user-scalable=no).
+  assert.equal(viewportContentFor(web, base), base, 'hosted web is left zoomable');
+  assert.equal(viewportContentFor(null, base), base, 'no location → treat as web');
+  // Native (both origin shapes): the lock is appended.
+  const locked = base + ', maximum-scale=1, user-scalable=no';
+  assert.equal(viewportContentFor(tauriProto, base), locked, 'tauri: protocol gets the lock');
+  assert.equal(viewportContentFor(tauriHttp, base), locked, 'http://tauri.localhost gets the lock');
+  // Idempotent — never doubles the lock if it is already present.
+  assert.equal(viewportContentFor(tauriProto, locked), locked, 'already-locked content is unchanged');
+  // Falls back to a sane default when no base is supplied.
+  assert.equal(viewportContentFor(web, ''), 'width=device-width, initial-scale=1, viewport-fit=cover', 'empty base → default');
 });

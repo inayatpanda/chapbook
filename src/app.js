@@ -29,7 +29,7 @@ import * as postList from './core/postList.js';
 import * as connection from './core/connection.js';
 import * as themeCatalogue from './core/themeCatalogue.js';
 import { ed25519Verify } from './lib/ed25519Verify.js';
-import { isNativeOrigin, externalUrlToOpen } from './lib/nativeLinks.js';
+import { isNativeOrigin, externalUrlToOpen, viewportContentFor } from './lib/nativeLinks.js';
 import { installNativeFetchBridge } from './lib/nativeFetch.js';
 import { downloadUrlKind, mimeFromDataUrl, decodeDataUrl, deriveDownloadFilename, dialogFiltersFor } from './lib/nativeSave.js';
 
@@ -139,8 +139,8 @@ export function renderOnboarding() {
         </div>
         <div id="gh-codebox" style="display:none;margin-top:.8rem;text-align:center">
           <div class="hint" style="margin:0 0 .3rem">Enter this code on GitHub (copied for you):</div>
-          <div id="gh-code" style="font:700 1.5rem/1 'Space Grotesk',monospace;letter-spacing:.18em;color:#f4f7fd"></div>
-          <a id="gh-open" target="_blank" rel="noopener" style="display:inline-block;margin-top:.6rem;color:#22d3ee;text-decoration:underline">Open GitHub →</a>
+          <div id="gh-code" style="font:700 1.5rem/1 'Space Grotesk',monospace;letter-spacing:.18em;color:var(--ink,#f4f7fd)"></div>
+          <a id="gh-open" target="_blank" rel="noopener" style="display:inline-block;margin-top:.6rem;color:var(--acc,#22d3ee);text-decoration:underline">Open GitHub →</a>
           <div class="hint" id="gh-poll" style="margin-top:.4rem">Waiting for you to authorise…</div>
         </div>
         <div id="gh-create" style="display:none;margin-top:.9rem">
@@ -171,7 +171,7 @@ export function renderOnboarding() {
           <div class="hint">Only public repos appear (sign-in grants <code>public_repo</code>). Need a private one? Use a token below.</div>
         </div>
         <details style="margin-top:1rem">
-          <summary style="cursor:pointer;color:#aebbd2;font-size:.82rem">Advanced — use a GitHub token instead</summary>
+          <summary style="cursor:pointer;color:var(--mut,#aebbd2);font-size:.82rem">Advanced — use a GitHub token instead</summary>
           <div style="margin-top:.6rem">${manualFields}
           </div>
         </details>
@@ -184,7 +184,8 @@ export function renderOnboarding() {
   // iOS WKWebView (the native bundle) that promotes the layer and mis-registers descendant
   // hit-testing, making specific controls — the × (#byok-close) and "Create my blog" (#cb-go) —
   // untappable while sibling buttons (e.g. #gh-start) still worked. It was also a visual no-op:
-  // this overlay's own background (#04060c) is fully opaque, so there was nothing behind to blur.
+  // this overlay's own background (var(--bg), opaque in both themes) is fully opaque, so there
+  // was nothing behind to blur.
   // Do not re-add backdrop-filter here; if a blur is ever wanted, put it on a pointer-events:none
   // sibling layer BEHIND .bc, never on an ancestor of the interactive content.
   ov.innerHTML = `
@@ -197,47 +198,56 @@ export function renderOnboarding() {
        plus .bc margin:auto centres the card when it's short and lets the overlay scroll as one
        surface when it's tall (margin:auto, unlike justify/align-center, doesn't clip the top on
        overflow). Do NOT reintroduce overflow:auto/max-height on .bc or #cb-theme-picker. */
-    #byok-overlay{position:fixed;inset:0;z-index:9999;background:#04060c;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;padding:1rem;
-      font:15px/1.5 'Inter',system-ui,sans-serif;color:#f4f7fd}
-    #byok-overlay .bc{position:relative;width:min(440px,94vw);margin:auto;background:linear-gradient(180deg,#0f1730,#0b1120);border:1px solid rgba(140,160,200,.18);
-      border-radius:18px;padding:1.4rem 1.5rem;box-shadow:0 24px 70px rgba(0,0,0,.6)}
+    /* Palette comes from the app's theme tokens (defined on :root / :root[data-theme="light"]
+       in index.html) so the overlay HONOURS light & dark with proper contrast instead of the
+       old hardcoded dark hexes. The overlay is appended to <body>, so it inherits those vars. */
+    #byok-overlay{position:fixed;inset:0;z-index:9999;background:var(--bg,#04060c);overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;padding:1rem;
+      font:15px/1.5 'Inter',system-ui,sans-serif;color:var(--ink,#f4f7fd)}
+    #byok-overlay .bc{position:relative;width:min(440px,94vw);margin:auto;background:linear-gradient(180deg,var(--surface-2,#0f1730),var(--surface,#0b1120));border:1px solid var(--line,rgba(140,160,200,.18));
+      border-radius:18px;padding:1.4rem 1.5rem;box-shadow:var(--shadow,0 24px 70px rgba(0,0,0,.6))}
     #byok-overlay .byok-x{position:absolute;top:.55rem;right:.55rem;width:44px;height:44px;margin:0;padding:0;
-      border-radius:11px;border:1px solid rgba(140,160,200,.25);background:rgba(8,12,22,.6);color:#aebbd2;
+      border-radius:11px;border:1px solid var(--line-2,rgba(140,160,200,.25));background:var(--bg-1,rgba(8,12,22,.6));color:var(--mut,#aebbd2);
       font:400 1.6rem/1 system-ui;cursor:pointer;display:flex;align-items:center;justify-content:center}
-    #byok-overlay .byok-x:hover{color:#f4f7fd;border-color:rgba(140,160,200,.5)}
+    #byok-overlay .byok-x:hover{color:var(--ink,#f4f7fd);border-color:var(--acc,rgba(140,160,200,.5))}
     /* Tap feedback — on native the onboarding buttons fired but showed no pressed state, so
        taps felt dead. A subtle :active press-state makes every tap register visually. */
     #byok-overlay button:active{transform:scale(.98);filter:brightness(.94)}
-    #byok-overlay h2{font:700 1.25rem 'Space Grotesk',system-ui;margin:0 0 .2rem}
-    #byok-overlay h2 b{background:linear-gradient(120deg,#2dd4bf,#22d3ee 55%,#818cf8);-webkit-background-clip:text;background-clip:text;color:transparent}
-    #byok-overlay p{color:#aebbd2;font-size:.86rem;margin:.1rem 0 1rem}
-    #byok-overlay label{display:block;font:600 .68rem 'Space Grotesk',system-ui;letter-spacing:.08em;text-transform:uppercase;color:#aebbd2;margin:.7rem 0 .25rem}
-    #byok-overlay input,#byok-overlay select{width:100%;background:#080c16;border:1px solid rgba(140,160,200,.18);border-radius:10px;color:#f4f7fd;padding:.6em .7em;font:inherit}
-    #byok-overlay input:focus,#byok-overlay select:focus{outline:none;border-color:#22d3ee;box-shadow:0 0 0 3px rgba(34,211,238,.22)}
+    #byok-overlay h2{font:700 1.25rem 'Space Grotesk',system-ui;margin:0 0 .2rem;color:var(--ink,#f4f7fd)}
+    #byok-overlay h2 b{background:var(--grad,linear-gradient(120deg,#2dd4bf,#22d3ee 55%,#818cf8));-webkit-background-clip:text;background-clip:text;color:transparent}
+    #byok-overlay p{color:var(--mut,#aebbd2);font-size:.86rem;margin:.1rem 0 1rem}
+    #byok-overlay label{display:block;font:600 .68rem 'Space Grotesk',system-ui;letter-spacing:.08em;text-transform:uppercase;color:var(--mut,#aebbd2);margin:.7rem 0 .25rem}
+    #byok-overlay input,#byok-overlay select{width:100%;background:var(--bg-1,#080c16);border:1px solid var(--line,rgba(140,160,200,.18));border-radius:10px;color:var(--ink,#f4f7fd);padding:.6em .7em;font:inherit}
+    #byok-overlay input::placeholder{color:var(--faint,#6f7e98)}
+    #byok-overlay input:focus,#byok-overlay select:focus{outline:none;border-color:var(--acc,#22d3ee);box-shadow:var(--ring,0 0 0 3px rgba(34,211,238,.22))}
     #byok-overlay .row{display:flex;gap:.5rem}#byok-overlay .row>*{flex:1}
+    /* The theme picker inside the overlay remaps the --cbtp-* card vars to the app's theme
+       tokens (mirrors Settings → Site's #ss-theme-picker) so the swatch cards read on the
+       light surface instead of staying a dark card on a light overlay. */
+    #byok-overlay #cb-theme-picker{--cbtp-surface:var(--surface);--cbtp-line:var(--line);--cbtp-line2:var(--line-2);
+      --cbtp-acc:var(--acc);--cbtp-ink:var(--ink);--cbtp-mut:var(--mut);--cbtp-faint:var(--faint);--cbtp-font:var(--font-display)}
     /* Catch-all action-button styling. Excludes the theme picker's .cbtp-card buttons —
        they carry their own dark-card styling (themeCatalogue PICKER_CSS); without this
        exclusion the gradient here paints every theme card teal with unreadable text.
        :where() keeps specificity at (1,0,1) so the .ghost + .byok-x overrides still win. */
     #byok-overlay button:where(:not(.cbtp-card)){width:100%;margin-top:1.1rem;border:0;border-radius:12px;padding:.8em;font:700 1rem 'Space Grotesk',system-ui;
-      color:#042018;background:linear-gradient(95deg,#2dd4bf,#22d3ee);cursor:pointer}
-    #byok-overlay button.ghost{margin-top:.6rem;background:transparent;border:1px solid rgba(140,160,200,.3);color:#aebbd2}
-    #byok-overlay .hint{font-size:.74rem;color:#6f7e98;margin-top:.6rem}
+      color:#042018;background:var(--grad-pub,linear-gradient(95deg,#2dd4bf,#22d3ee));cursor:pointer}
+    #byok-overlay button.ghost{margin-top:.6rem;background:transparent;border:1px solid var(--line-2,rgba(140,160,200,.3));color:var(--ink,#aebbd2)}
+    #byok-overlay .hint{font-size:.74rem;color:var(--faint,#6f7e98);margin-top:.6rem}
     #byok-overlay .msg{font-size:.8rem;margin-top:.6rem;min-height:1em}
-    #byok-overlay #gh-create{border:1px solid rgba(140,160,200,.18);border-radius:14px;padding:.9rem 1rem;background:rgba(8,12,22,.5)}
-    #byok-overlay .cb-head{font:700 1rem 'Space Grotesk',system-ui;color:#f4f7fd}
-    #byok-overlay .cb-or{display:flex;align-items:center;gap:.6rem;margin:1rem 0 .2rem;font-size:.72rem;color:#6f7e98;text-transform:uppercase;letter-spacing:.08em}
-    #byok-overlay .cb-or::before,#byok-overlay .cb-or::after{content:"";flex:1;height:1px;background:rgba(140,160,200,.18)}
-    #byok-overlay .no-gh{margin-top:.7rem;padding:.6rem .75rem;border:1px solid rgba(140,160,200,.16);border-radius:10px;
-      background:rgba(8,12,22,.4);font-size:.76rem;line-height:1.5;color:#aebbd2}
-    #byok-overlay .no-gh a{color:#22d3ee;text-decoration:underline;white-space:nowrap;margin-left:.3rem}
-    #byok-overlay .no-gh .no-gh-sub{display:block;margin-top:.2rem;color:#6f7e98}
-    #byok-overlay .no-gh a.no-gh-back{display:inline-block;margin:.45rem 0 0;color:#2dd4bf;text-decoration:none;font-weight:700;white-space:normal}
+    #byok-overlay #gh-create{border:1px solid var(--line,rgba(140,160,200,.18));border-radius:14px;padding:.9rem 1rem;background:var(--bg-1,rgba(8,12,22,.5))}
+    #byok-overlay .cb-head{font:700 1rem 'Space Grotesk',system-ui;color:var(--ink,#f4f7fd)}
+    #byok-overlay .cb-or{display:flex;align-items:center;gap:.6rem;margin:1rem 0 .2rem;font-size:.72rem;color:var(--faint,#6f7e98);text-transform:uppercase;letter-spacing:.08em}
+    #byok-overlay .cb-or::before,#byok-overlay .cb-or::after{content:"";flex:1;height:1px;background:var(--line,rgba(140,160,200,.18))}
+    #byok-overlay .no-gh{margin-top:.7rem;padding:.6rem .75rem;border:1px solid var(--line,rgba(140,160,200,.16));border-radius:10px;
+      background:var(--bg-1,rgba(8,12,22,.4));font-size:.76rem;line-height:1.5;color:var(--mut,#aebbd2)}
+    #byok-overlay .no-gh a{color:var(--acc,#22d3ee);text-decoration:underline;white-space:nowrap;margin-left:.3rem}
+    #byok-overlay .no-gh .no-gh-sub{display:block;margin-top:.2rem;color:var(--faint,#6f7e98)}
+    #byok-overlay .no-gh a.no-gh-back{display:inline-block;margin:.45rem 0 0;color:var(--teal,#2dd4bf);text-decoration:none;font-weight:700;white-space:normal}
     #byok-overlay .gh-signedin{display:flex;align-items:center;gap:.5rem;margin:.2rem 0 .3rem;padding:.55rem .7rem;
       border:1px solid rgba(45,212,191,.42);border-radius:10px;background:rgba(45,212,191,.08);
-      color:#f4f7fd;font:600 .85rem 'Space Grotesk',system-ui}
-    #byok-overlay .gh-signedin b{color:#2dd4bf;font-weight:700}
-    #byok-overlay .gh-signedin .gh-si-dot{color:#2dd4bf;font-weight:700;font-size:1rem;line-height:1}
+      color:var(--ink,#f4f7fd);font:600 .85rem 'Space Grotesk',system-ui}
+    #byok-overlay .gh-signedin b{color:var(--teal,#2dd4bf);font-weight:700}
+    #byok-overlay .gh-signedin .gh-si-dot{color:var(--teal,#2dd4bf);font-weight:700;font-size:1rem;line-height:1}
   </style>
   <div class="bc">
     <button type="button" id="byok-close" class="byok-x" aria-label="Close setup" title="Close">×</button>
@@ -753,8 +763,23 @@ function installNativeFetchBridgeBoot() {
   installNativeFetchBridge(window, location, () => import('@tauri-apps/plugin-http').then((m) => m.fetch));
 }
 
+// Native-only viewport zoom lock. The static <meta name="viewport"> intentionally ships WITHOUT
+// maximum-scale/user-scalable so ALL web browsers keep pinch-zoom (Android Chrome honours
+// user-scalable=no on the web and would lose accessibility zoom). Inside the Tauri wrappers we
+// append the lock at boot so the native app can't be pinch-zoomed and feels app-like. Web build:
+// isNativeOrigin is false → viewportContentFor returns the base content unchanged (strict no-op).
+function applyNativeViewportLock() {
+  try {
+    if (typeof document === 'undefined' || typeof location === 'undefined') return;
+    const meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) return;
+    meta.setAttribute('content', viewportContentFor(location, meta.getAttribute('content')));
+  } catch { /* never break boot */ }
+}
+
 if (typeof window !== 'undefined') {
   installNativeFetchBridgeBoot();     // native-only; strict no-op on the web (must precede refresh())
+  applyNativeViewportLock();          // native-only: lock pinch-zoom; web keeps accessibility zoom
   installNativeExternalLinkOpener(); // native-only; strict no-op on the web
   installNativeBlobUrlRegistry();     // native-only: capture Blob objects so exports read bytes CSP-free
   installNativeDownloadInterceptor(); // native-only: <a download> blob:/data: exports → OS Save dialog

@@ -10,6 +10,18 @@ export function isNativeOrigin(loc) {
   return loc.protocol === 'tauri:' || /(^|\.)tauri\.localhost$/i.test(loc.hostname || '');
 }
 
+// Viewport <meta content> for the current origin. The web build keeps the base content
+// verbatim so ALL web browsers retain pinch-zoom (Android Chrome honours user-scalable=no,
+// which would remove accessibility zoom on the website). On a native origin the zoom lock
+// (maximum-scale=1, user-scalable=no) is appended so the WKWebView/WebView2 wrapper can't be
+// zoomed and feels like an app. Idempotent — never appends the lock twice. Pure.
+export function viewportContentFor(loc, base) {
+  const content = String(base || 'width=device-width, initial-scale=1, viewport-fit=cover');
+  if (!isNativeOrigin(loc)) return content;
+  if (/user-scalable\s*=\s*no/i.test(content)) return content; // already locked
+  return content + ', maximum-scale=1, user-scalable=no';
+}
+
 // External-link classifier. Given an anchor's href (absolute or relative) and the current
 // location, return the absolute http(s) URL that should be handed to the system browser, or
 // null to leave the click to the webview. A link is "external" when it is an http(s) URL to

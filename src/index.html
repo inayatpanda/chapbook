@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<!-- APP viewport (the #app document, NOT a marketing page). maximum-scale=1 + user-scalable=no
-     stop pinch-zoom so the NATIVE webview feels like an app: WKWebView (the iOS/macOS native
-     wrapper) HONOURS these, so the native UI can't be zoomed. Mobile Safari deliberately
-     IGNORES user-scalable=no, so the hosted web build keeps full accessibility zoom — that
-     platform split is intended (native = app-like, web = accessible). -->
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<!-- APP viewport (the #app document, NOT a marketing page). The zoom lock (maximum-scale=1 +
+     user-scalable=no) is applied at boot by JS ONLY on the native origin (see app.js
+     applyNativeViewportLock / nativeLinks.viewportContentFor) so the NATIVE webview feels like
+     an app. It is deliberately NOT in this static meta: Android Chrome on the WEB honours
+     user-scalable=no and would lose pinch-zoom accessibility. All web browsers therefore keep
+     pinch-zoom; native = app-like. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#04060c" />
 <link rel="manifest" href="/manifest.json" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -534,7 +535,7 @@
   .cal-cell{position:relative;min-height:88px;background:var(--surface-2);border:1px solid var(--line-2);
     border-radius:10px;padding:.3rem;display:flex;flex-direction:column;gap:.22rem;overflow:hidden;
     cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s}
-  .cal-cell:hover{border-color:var(--acc);background:#13203c}
+  .cal-cell:hover{border-color:var(--acc);background:var(--surface-2)}
   .cal-cell:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
   .cal-cell.out{background:var(--bg-1);border-color:var(--line);opacity:.62}
   .cal-cell.today{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc),0 0 14px rgba(34,211,238,.18)}
@@ -802,7 +803,7 @@
   .vid-music-x{padding:.3em .6em}
   .vid-music-hint{margin:.35rem 0 0;font-size:.74rem}
   .vsc-fps{display:flex;align-items:center;gap:.4rem;margin-top:.4rem;font-size:.78rem;color:var(--mut)}
-  .vsc-fps input{width:4.5em;background:#080c16;border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:.3em .4em;font:inherit}
+  .vsc-fps input{width:4.5em;background:var(--bg-1);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:.3em .4em;font:inherit}
   .vid-scenes{display:flex;flex-direction:column;gap:.5rem;margin:.4rem 0}
   .vsc{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:.6rem .7rem}
   .vsc-hd{display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem}
@@ -2025,8 +2026,12 @@
     font-size:.78rem;color:var(--mut);flex:1 1 130px;min-width:120px}
   .fig-draw-width span{flex:0 0 auto}
   .fig-draw-width input[type=range]{flex:1 1 auto;width:auto;accent-color:var(--acc);height:30px;min-width:80px}
+  /* The figure/flipbook board is a DARK sketch surface in BOTH themes: the default pen ink
+     (FIG_DRAW_INK #f4f7fd) + pastel palette are light, and the GIF/video export bakes a dark
+     (#04060c) background — so a light board in light mode would draw white-on-white (invisible)
+     and mislead the export. Fixed dark = the pen is always visible and previews the export. */
   .fig-draw-surface{position:relative;border:1px solid var(--line);border-radius:13px;
-    background:var(--surface);overflow:hidden;touch-action:auto}
+    background:#0b1120;overflow:hidden;touch-action:auto}
   #figCanvas{display:block;width:100%;height:auto;touch-action:none;cursor:crosshair;
     background:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
   .fig-draw-actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem}
@@ -2604,7 +2609,8 @@
   .series-hint{flex-basis:100%;font-size:.74rem;color:var(--faint);margin-top:.15rem;line-height:1.4}
 
   /* ── live preview sheet ─────────────────────────────────────────────────── */
-  .pv-iframe{display:block;width:100%;height:70vh;border:0;border-radius:12px;background:#04060c}
+  /* theme-aware empty/loading backdrop (was a hardcoded near-black slab in light mode) */
+  .pv-iframe{display:block;width:100%;height:70vh;border:0;border-radius:12px;background:var(--bg)}
   /* inline-AI toolbar (appears on a text selection in the editor) */
   .inline-ai-bar{position:absolute;z-index:9999;display:none;gap:.12rem;align-items:center;
     background:var(--surface);border:1px solid var(--line-strong);border-radius:11px;padding:.3rem;
@@ -2990,7 +2996,9 @@
   .pt-input textarea{flex:1;min-width:0}
   .pt-input .btn{flex:0 0 auto;width:auto;margin-top:0;padding-inline:1.5rem}
   .pt-preview iframe{width:100%;min-height:60vh;border:1px solid var(--line);border-radius:16px;
-    background:#04060c;box-shadow:var(--shadow)}
+    /* theme-aware empty/loading backdrop — a hardcoded near-black slab dominated the Partner
+       pane in light mode; the rendered post fills the frame with its own bg once it loads */
+    background:var(--bg);box-shadow:var(--shadow)}
   .pt-preview{display:none}
   .pt-preview.show{display:block}
   @media(min-width:900px){
@@ -5340,15 +5348,22 @@ function tico(name, cls){
 let state={platform:'linkedin', idea:'', post:'', hooks:[], imageDataUrl:null, imageFile:null};
 
 /* ── theme system ───────────────────────────────────────────────────────── */
-function setTheme(t){
-  // dark is the default/base (empty data-theme); light is the opt-in override
-  document.documentElement.dataset.theme = t==='light' ? 'light' : '';
-  localStorage.setItem('helm-theme', t==='light' ? 'light' : 'dark');
+// LIGHT is the product default for a NEW / unset user (owner's call, 2026-07); DARK is a
+// first-class opt-in via the toggle. dark is still the CSS base (empty data-theme); light is
+// the [data-theme="light"] override.
+const DEFAULT_THEME='light';
+function setTheme(t, persist){
+  const light = t==='light';
+  document.documentElement.dataset.theme = light ? 'light' : '';
+  // Only an EXPLICIT user action (toggleTheme) persists the choice. Boot passes persist=false
+  // so an unset user is never silently pinned to whatever the default is at the time — that is
+  // exactly what let the old build masquerade the persisted default as a real choice.
+  if(persist) localStorage.setItem('helm-theme', light ? 'light' : 'dark');
   // keep the browser chrome in step (a dark theme-color under a light UI paints
   // a dark band around fixed bottom bars on phones)
   const mc = document.querySelector('meta[name="theme-color"]');
-  if(mc) mc.content = t==='light' ? '#eef1f6' : '#04060c';
-  const icon = tico(t==='light' ? 'sun' : 'moon');
+  if(mc) mc.content = light ? '#eef1f6' : '#04060c';
+  const icon = tico(light ? 'sun' : 'moon');
   const t1=$('themeToggleMain'), t2=$('themeToggleEditor'), t3=$('themeToggleSettings');
   if(t1) t1.innerHTML=icon;
   if(t2) t2.innerHTML=icon;
@@ -5356,13 +5371,21 @@ function setTheme(t){
 }
 function toggleTheme(){
   const cur=document.documentElement.dataset.theme;
-  setTheme(cur==='light' ? 'dark' : 'light');
+  setTheme(cur==='light' ? 'dark' : 'light', true);  // explicit choice → persist
 }
-// initialise theme — default DARK (first-party companion to the dark site).
-// One-time migration: the old build force-set 'light' on every load, so a stored
-// 'light' is not a real choice — clear it once so existing users land on dark.
+// Default regardless of prefers-color-scheme: the product has one intended default (light);
+// anyone who wants dark toggles once and it sticks.
+// One-time migrations of the stored key (helm-theme):
+//  • v2 (pre-existing): the ancient build force-set 'light' on every load, so a stored 'light'
+//    was not a real choice — cleared once so those users fell to the then-default (dark).
+//  • v3 (this change): the interim build then persisted the DARK default on EVERY boot (setTheme
+//    always wrote), so a stored 'dark' is likewise not necessarily a real choice. Now that the
+//    default is light we clear a stored 'dark' once so returning users land on the new default.
+//    A genuine dark preference re-set AFTER this migration persists (toggleTheme) and is kept;
+//    a stored 'light' is always an explicit choice here (the interim default was dark) → kept.
 if(!localStorage.getItem('helm-theme-v2')){ localStorage.removeItem('helm-theme'); localStorage.setItem('helm-theme-v2','1'); }
-setTheme(localStorage.getItem('helm-theme')||'dark');
+if(!localStorage.getItem('helm-theme-v3')){ if(localStorage.getItem('helm-theme')==='dark') localStorage.removeItem('helm-theme'); localStorage.setItem('helm-theme-v3','1'); }
+setTheme(localStorage.getItem('helm-theme')||DEFAULT_THEME, false);  // boot: never persist
 
 window.setTheme=setTheme;
 window.toggleTheme=toggleTheme;
