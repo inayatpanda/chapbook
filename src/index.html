@@ -2026,12 +2026,17 @@
     font-size:.78rem;color:var(--mut);flex:1 1 130px;min-width:120px}
   .fig-draw-width span{flex:0 0 auto}
   .fig-draw-width input[type=range]{flex:1 1 auto;width:auto;accent-color:var(--acc);height:30px;min-width:80px}
-  /* The figure/flipbook board is a DARK sketch surface in BOTH themes: the default pen ink
-     (FIG_DRAW_INK #f4f7fd) + pastel palette are light, and the GIF/video export bakes a dark
-     (#04060c) background — so a light board in light mode would draw white-on-white (invisible)
-     and mislead the export. Fixed dark = the pen is always visible and previews the export. */
+  /* The figure/flipbook board is a LIGHT "paper" surface in BOTH themes, with a faint dot-grid
+     guide: the default pen ink (FIG_DRAW_INK, dark) reads on paper, and the GIF/video export
+     bakes the SAME light paper (#fbfaf6) so the board previews the export. The dot grid is a CSS
+     background on the surface (behind the transparent canvas) — a drawing guide ONLY; it never
+     appears in the exported GIF/video. Fixed light in both themes so a dark board never hides a
+     dark pen or misleads the (now light) export. */
   .fig-draw-surface{position:relative;border:1px solid var(--line);border-radius:13px;
-    background:#0b1120;overflow:hidden;touch-action:auto}
+    background-color:#fbfaf6;
+    background-image:radial-gradient(rgba(27,36,51,.11) 1.1px, transparent 1.3px);
+    background-size:22px 22px;background-position:11px 11px;
+    overflow:hidden;touch-action:auto}
   #figCanvas{display:block;width:100%;height:auto;touch-action:none;cursor:crosshair;
     background:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
   .fig-draw-actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem}
@@ -2996,9 +3001,10 @@
   .pt-input textarea{flex:1;min-width:0}
   .pt-input .btn{flex:0 0 auto;width:auto;margin-top:0;padding-inline:1.5rem}
   .pt-preview iframe{width:100%;min-height:60vh;border:1px solid var(--line);border-radius:16px;
-    /* theme-aware empty/loading backdrop — a hardcoded near-black slab dominated the Partner
-       pane in light mode; the rendered post fills the frame with its own bg once it loads */
-    background:var(--bg);box-shadow:var(--shadow)}
+    /* cream "paper" empty/loading backdrop — reuses the editor writing-surface token so the
+       Partner draft pane reads as paper (cream in light, dark in dark); the rendered post
+       fills the frame with its own bg once it loads */
+    background:var(--thread-canvas);box-shadow:var(--shadow)}
   .pt-preview{display:none}
   .pt-preview.show{display:block}
   @media(min-width:900px){
@@ -4868,7 +4874,7 @@
           <input id="figDrawWidth" type="range" min="1" max="14" step="1" value="3" />
         </label>
         <span class="fig-draw-swatches" id="figDrawSwatches" role="group" aria-label="Pen colour">
-          <button type="button" class="fig-sw on" data-c="#f4f7fd" title="Ink (default)" style="background:#f4f7fd"></button>
+          <button type="button" class="fig-sw on" data-c="#1b2433" title="Ink (default)" style="background:#1b2433"></button>
           <button type="button" class="fig-sw" data-c="#9fb3c8" title="Grey" style="background:#9fb3c8"></button>
           <button type="button" class="fig-sw" data-c="#2dd4bf" title="Teal" style="background:#2dd4bf"></button>
           <button type="button" class="fig-sw" data-c="#22d3ee" title="Cyan" style="background:#22d3ee"></button>
@@ -17076,7 +17082,7 @@ const _figDraw = {
   bgMode: 'trace',           // 'trace' (faint guide, not exported) | 'keep' (still base, exported)
   snap: false,               // Snap shapes: round a freehand stroke to a clean line/circle/box on lift-off
   mirror: false,             // Mirror: duplicate each completed stroke across the vertical centre axis
-  colour: '#f4f7fd',         // current pen colour (session-sticky; default = FIG_DRAW_INK)
+  colour: '#1b2433',         // current pen colour (session-sticky; default = FIG_DRAW_INK)
   fillMode: false,           // Fill: the next stroke auto-closes and renders filled (35%) + outlined
   tool: 'pen',               // 'pen' | 'text' | 'erase'
   textDrag: null,            // in-progress label drag: { frame, idx, dx, dy } | null
@@ -17229,8 +17235,10 @@ function sizeFigCanvas(){
   _figDraw.ctx = ctx;
 }
 
-/* the visible ink colour for the raster preview (matches --ink in the SVG) */
-const FIG_DRAW_INK = '#f4f7fd';
+/* the visible ink colour for the raster preview: dark ink on the light paper board + light
+   export bake (matches the light-theme --ink; default-ink strokes serialise to var(--ink),
+   so the SVG block stays theme-aware for the reader). */
+const FIG_DRAW_INK = '#1b2433';
 
 /* the faint onion-skin ink for the previous frame (translucent) */
 const FIG_ONION_INK = 'rgba(130,140,170,0.34)';
@@ -18834,7 +18842,8 @@ function buildWeightedFlipbookSvg({ includedFrames, durs, w, h, fps, blend, ping
 
 /* ── Social exports: flipbook → GIF / video (client-side, no server) ────────
    One renderer serves both: a frame model drawn onto an export canvas at social
-   size with the site-dark background baked in. GIF = hard cuts (the format has
+   size with the light paper background (#fbfaf6) baked in — matches the on-screen
+   board so the board previews the export. GIF = hard cuts (the format has
    no cross-fade); video re-runs the preview timing maths, so dissolve + per-frame
    durations + ping-pong are honoured. */
 function renderFigFrameToCtx(ctx, fr, opts){
@@ -18842,7 +18851,7 @@ function renderFigFrameToCtx(ctx, fr, opts){
   const W = opts.w, H = opts.h, pad = opts.pad != null ? opts.pad : Math.round(W * 0.07);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1;
-  ctx.fillStyle = opts.bg || '#04060c';
+  ctx.fillStyle = opts.bg || '#fbfaf6';
   ctx.fillRect(0, 0, W, H);
   if(!fr) return;
   const k = Math.min((W - pad * 2) / (sw || 1), (H - pad * 2) / (sh || 1));
