@@ -39,7 +39,31 @@ const escHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
 // Public OAuth Client ID + relay base, injected into dist/index.html at build (Task 5).
 // Absent in the local server-backed Studio → device sign-in hides, PAT path only.
 const GH_CLIENT_ID = (typeof window !== 'undefined' && window.__STUDIO_GH_CLIENT_ID) || '';
-const RELAY_BASE = (typeof window !== 'undefined' && window.__STUDIO_RELAY_BASE) || '/.netlify/functions/gh-device';
+
+// The canonical hosted origin — where the gh-device relay function actually lives.
+// (Already the sole host in the native builds' CSP connect-src.)
+const HOSTED_ORIGIN = 'https://chapbook.rqai.co.uk';
+
+// Resolve the device-flow relay URL. The GitHub device endpoints send no CORS headers, so
+// the browser calls them THROUGH the /.netlify/functions/gh-device relay. On the hosted web
+// build that relative, same-origin path is correct. But the native wrappers (Tauri iOS/Android)
+// serve the app from a custom protocol (tauri://localhost) or http://tauri.localhost, where a
+// RELATIVE /.netlify/... path has no backend — the POST 404s and "Sign in with GitHub" silently
+// dies. Native builds are meant to bake an ABSOLUTE STUDIO_RELAY_BASE, but that env var is easy
+// to forget on a rebuild (a plain `npm run build` bakes the relative default), which regresses
+// sign-in. So detect a native origin at runtime and point the relative path at the hosted relay
+// — sign-in then works regardless of the build env, and the hosted web build is unchanged.
+// Pure + injectable for unit tests. An already-absolute baked value is always used as-is.
+export function resolveRelayBase(baked, loc) {
+  const base = baked || '/.netlify/functions/gh-device';
+  if (!base.startsWith('/') || !loc) return base;
+  const nativeOrigin = loc.protocol === 'tauri:' || /(^|\.)tauri\.localhost$/i.test(loc.hostname || '');
+  return nativeOrigin ? HOSTED_ORIGIN + base : base;
+}
+const RELAY_BASE = resolveRelayBase(
+  (typeof window !== 'undefined' && window.__STUDIO_RELAY_BASE) || '',
+  (typeof location !== 'undefined') ? location : null,
+);
 
 export function buildApi() {
   const gh = makeGithub(config.getGithub());
