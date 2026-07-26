@@ -177,10 +177,18 @@ export function renderOnboarding() {
 
   const ov = document.createElement('div');
   ov.id = 'byok-overlay';
+  // NB: #byok-overlay deliberately carries NO backdrop-filter. It previously set
+  // `backdrop-filter:blur(8px)` on this container (the ancestor of every overlay control). On
+  // iOS WKWebView (the native bundle) that promotes the layer and mis-registers descendant
+  // hit-testing, making specific controls — the × (#byok-close) and "Create my blog" (#cb-go) —
+  // untappable while sibling buttons (e.g. #gh-start) still worked. It was also a visual no-op:
+  // this overlay's own background (#04060c) is fully opaque, so there was nothing behind to blur.
+  // Do not re-add backdrop-filter here; if a blur is ever wanted, put it on a pointer-events:none
+  // sibling layer BEHIND .bc, never on an ancestor of the interactive content.
   ov.innerHTML = `
   <style>
     #byok-overlay{position:fixed;inset:0;z-index:9999;background:#04060c;display:grid;place-items:center;padding:1rem;
-      font:15px/1.5 'Inter',system-ui,sans-serif;color:#f4f7fd;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+      font:15px/1.5 'Inter',system-ui,sans-serif;color:#f4f7fd}
     #byok-overlay .bc{position:relative;width:min(440px,94vw);max-height:94vh;overflow:auto;background:linear-gradient(180deg,#0f1730,#0b1120);border:1px solid rgba(140,160,200,.18);
       border-radius:18px;padding:1.4rem 1.5rem;box-shadow:0 24px 70px rgba(0,0,0,.6)}
     #byok-overlay .byok-x{position:absolute;top:.7rem;right:.7rem;width:32px;height:32px;margin:0;padding:0;
