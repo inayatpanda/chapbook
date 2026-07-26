@@ -287,8 +287,15 @@ export function serialiseBlock(block, ctx = {}) {
       return '';
     }
     case 'playground': {
-      const html = pgHtml(block.html), js = String(block.js || '').trim();
-      const css = pgHtml(block.css || '');
+      const html = pgHtml(block.html);
+      // Neutralise the ONE sequence that can break js/css out of its own <script>/<style>
+      // element into live blog DOM: an embedded closing tag. The published .md is rendered
+      // with rehype-raw and NO sanitiser, so a js string containing "</script>" would
+      // otherwise inject arbitrary HTML for every reader (an AI-invented/tweaked widget can
+      // emit exactly that). "<\/script>" is inert inside JS strings/regex/templates
+      // (backslash-slash === slash) and never closes the element; likewise "<\/style" in CSS.
+      const js = String(block.js || '').trim().replace(/<\/(script)/gi, '<\\/$1');
+      const css = pgHtml(block.css || '').replace(/<\/(style)/gi, '<\\/$1');
       if (!html && !js && !css) return '';
       // optional DOM id so authors can scope styles (#id .pg-stage{…}); each post is
       // its own page, so an unscoped <style> is also safe — id is for multi-playground pages.
@@ -449,7 +456,11 @@ export function renderPreviewHtml(blocks, ctx = {}) {
         return '';
       }
       case 'playground': {
-        const html = pgHtml(b.html), js = String(b.js || '').trim(), css = pgHtml(b.css || '');
+        // Same closing-tag breakout guard as serialiseBlock (keep in lockstep) so the
+        // in-app preview matches what publishing emits.
+        const html = pgHtml(b.html);
+        const js = String(b.js || '').trim().replace(/<\/(script)/gi, '<\\/$1');
+        const css = pgHtml(b.css || '').replace(/<\/(style)/gi, '<\\/$1');
         if (!html && !js && !css) return '';
         const idAttr = b.domId && /^[a-zA-Z][\w-]*$/.test(b.domId) ? ` id="${b.domId}"` : '';
         return `<div class="playground${placementClass(b)}"${idAttr}${resizeAttrs(b)}>${css ? `<style>${css}</style>` : ''}${html}${js ? `<script>${js}</script>` : ''}</div>`;
