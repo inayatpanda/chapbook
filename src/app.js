@@ -29,6 +29,7 @@ import * as postList from './core/postList.js';
 import * as connection from './core/connection.js';
 import * as themeCatalogue from './core/themeCatalogue.js';
 import { ed25519Verify } from './lib/ed25519Verify.js';
+import { isNativeOrigin, externalUrlToOpen } from './lib/nativeLinks.js';
 
 // Minimal HTML escaper for the few spots where user text (a chosen blog name) is written
 // into the onboarding overlay's innerHTML — that overlay's origin holds the buyer's
@@ -57,8 +58,7 @@ const HOSTED_ORIGIN = 'https://chapbook.rqai.co.uk';
 export function resolveRelayBase(baked, loc) {
   const base = baked || '/.netlify/functions/gh-device';
   if (!base.startsWith('/') || !loc) return base;
-  const nativeOrigin = loc.protocol === 'tauri:' || /(^|\.)tauri\.localhost$/i.test(loc.hostname || '');
-  return nativeOrigin ? HOSTED_ORIGIN + base : base;
+  return isNativeOrigin(loc) ? HOSTED_ORIGIN + base : base;
 }
 const RELAY_BASE = resolveRelayBase(
   (typeof window !== 'undefined' && window.__STUDIO_RELAY_BASE) || '',
@@ -467,7 +467,45 @@ export function renderOnboarding() {
   }
 }
 
+// Hand an external URL to the OS. In the native wrappers the tauri-plugin-opener command is
+// reachable a few ways depending on config; try the most specific first and fall back. The
+// webview always exposes __TAURI_INTERNALS__, so this works even without withGlobalTauri.
+function openInSystemBrowser(url) {
+  const T = (typeof window !== 'undefined') ? window.__TAURI__ : null;
+  if (T && T.opener && typeof T.opener.openUrl === 'function') { T.opener.openUrl(url); return true; }
+  if (T && T.core && typeof T.core.invoke === 'function') { T.core.invoke('plugin:opener|open_url', { url }); return true; }
+  const I = (typeof window !== 'undefined') ? window.__TAURI_INTERNALS__ : null;
+  if (I && typeof I.invoke === 'function') { I.invoke('plugin:opener|open_url', { url }); return true; }
+  return false;
+}
+
+// Native-only delegated interceptor: in the Tauri webview a plain external <a> click goes
+// nowhere (no browser, external navigation blocked), so onboarding's "Create one" and the
+// device-flow "Open GitHub →" — the link that COMPLETES GitHub sign-in — silently do
+// nothing. Capture-phase so it runs before the app's own handlers AND before the opener
+// plugin's built-in target="_blank" listener (which bails on defaultPrevented, so no
+// double-open). On the web isNativeOrigin() is false → this attaches nothing and links
+// behave exactly as before. Wrapped in try/catch so it can never break boot.
+function installNativeExternalLinkOpener() {
+  try {
+    if (typeof document === 'undefined' || typeof location === 'undefined') return;
+    if (!isNativeOrigin(location)) return; // web: no-op
+    document.addEventListener('click', (ev) => {
+      try {
+        if (ev.defaultPrevented || ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+        const a = ev.target && ev.target.closest && ev.target.closest('a[href]');
+        if (!a) return;
+        const url = externalUrlToOpen(a.href, location);
+        if (!url) return;
+        ev.preventDefault();
+        openInSystemBrowser(url);
+      } catch { /* never let a click handler throw */ }
+    }, true);
+  } catch { /* never break boot */ }
+}
+
 if (typeof window !== 'undefined') {
+  installNativeExternalLinkOpener(); // native-only; strict no-op on the web
   window.__studioConfig = config;       // the static index's boot gate reads this
   window.__studioRefresh = refresh;     // rebuild seams after the repo/keys change
   window.__studioOnboard = renderOnboarding;

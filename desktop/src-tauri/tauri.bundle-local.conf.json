@@ -5,6 +5,7 @@
     "devUrl": null
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "label": "main",
