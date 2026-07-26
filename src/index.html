@@ -2,7 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<!-- APP viewport (the #app document, NOT a marketing page). maximum-scale=1 + user-scalable=no
+     stop pinch-zoom so the NATIVE webview feels like an app: WKWebView (the iOS/macOS native
+     wrapper) HONOURS these, so the native UI can't be zoomed. Mobile Safari deliberately
+     IGNORES user-scalable=no, so the hosted web build keeps full accessibility zoom — that
+     platform split is intended (native = app-like, web = accessible). -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#04060c" />
 <link rel="manifest" href="/manifest.json" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -691,7 +696,14 @@
     box-shadow:0 20px 60px rgba(0,0,0,.4)}
   .pp-head{display:flex;align-items:center;gap:.6rem;padding:.9rem 1.1rem;border-bottom:1px solid var(--line)}
   .pp-head strong{flex:1;font-size:1rem}
-  .pp-x{background:transparent;border:0;color:var(--mut);font-size:1.05rem;cursor:pointer;line-height:1}
+  /* Close × — a proper ≥44px tap target with a bigger glyph (was a small bare 1.05rem hit area). */
+  .pp-x{background:transparent;border:0;color:var(--mut);font-size:1.3rem;cursor:pointer;line-height:1;
+    width:44px;height:44px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;border-radius:8px}
+  .pp-x:hover,.pp-x:focus-visible{color:var(--ink);background:var(--surface-2)}
+  /* Tap feedback: on native (WKWebView) the overlay/sheet buttons fired but showed no pressed
+     cue, so taps felt dead. A subtle press-state confirms the tap landed. Applies on web too. */
+  .pp-overlay button:active,.pp-card button:active,.surface button:active,
+  .chat-sheet-card button:active,#helmDlg button:active{transform:scale(.98);filter:brightness(.94)}
   .pp-body{padding:.4rem 1.1rem;overflow:auto;font-size:.88rem}
   .pp-item{display:flex;gap:.55rem;padding:.55rem 0;border-bottom:1px solid var(--line);line-height:1.45}
   .pp-item:last-child{border-bottom:0}
@@ -1902,7 +1914,10 @@
     /* keep the Rough draft rail's column; only the settings rail collapses */
     body.focus-mode #v-editor #editorOuter{grid-template-columns:180px minmax(0,1fr) !important}
   }
-  #focusExitBtn{display:none}
+  /* Hidden unless focus mode. Scoped through #v-editor .editor-bar so it out-specifies the
+     editor-bar .iconBtn base (which sets display:inline-flex); the focus-mode rule below keeps
+     its !important so it still wins when focus mode is on. */
+  #v-editor .editor-bar #focusExitBtn{display:none}
   body.focus-mode #focusExitBtn{display:inline-flex !important}
 
   /* ── template picker cards (new-post only) ──────────────────────────────── */
@@ -2421,7 +2436,10 @@
     line-height:1.45;cursor:pointer;white-space:pre-wrap}
   .ti-card:hover,.ti-card:focus-visible{border-color:var(--partner-voice);outline:none}
   @media(max-width:640px){ .thread-inbox{max-width:88%} }
-  /* Ask toggle: ✦ flips the next message from "write into the post" to "say to the Partner" */
+  /* Ask toggle: ✦ flips the next message from "write into the post" to "say to the Partner".
+     Its central ✦ glyph is text (not a .tico SVG), so it read smaller than the camera/mic
+     icons beside it — bump the glyph so the Partner button reads as an equal, deliberate icon. */
+  #chatAskToggle{font-size:1.5rem;line-height:1}
   #chatAskToggle.on{border-color:var(--acc);color:var(--acc);background:rgba(45,212,191,.12)}
   /* quick chips: rendering them is free; tapping one spends tokens (spec 4.2).
      Partner-washed + ✦-marked so they read as the Partner offering, not toolbar chrome. */
@@ -2747,7 +2765,7 @@
     .editor-bar-main #sessionWords{display:none !important}
     .editor-bar-main #editorStatus{min-width:0;overflow:hidden}
     .editor-bar-main #editorStatusText{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .editor-bar-tools{display:flex;gap:.4rem;margin-top:.45rem;overflow-x:auto;
+    .editor-bar-tools{display:flex;gap:.5rem;margin-top:.5rem;overflow-x:auto;
       flex-wrap:nowrap;scrollbar-width:none;overscroll-behavior-inline:contain}
     .editor-bar-tools::-webkit-scrollbar{display:none}
     .editor-bar-tools > *{flex:0 0 auto}
@@ -2764,11 +2782,19 @@
   .pub-btn{background:var(--grad-pub);color:#04121a;font-weight:700;
     font-size:.82rem;padding:.5em 1em;border-radius:999px;border:0;cursor:pointer;
     white-space:nowrap}
+  /* One consistent size for EVERY toolbar button. Text-only buttons (the AI ▾ / Checks ▾
+     dropdown summaries) used to render ~8px shorter than the icon-bearing ones (Focus, Live
+     preview, Doc), which is what made the compose-mode top nav look lopsided — inline-flex +
+     a shared min-height evens them out, and the slightly larger box gives a comfier tap target. */
   #v-editor .editor-bar .iconBtn{background:transparent;border:1px solid var(--line);
-    color:var(--ink);border-radius:10px;padding:.35em .7em;font:600 .9rem system-ui;
-    cursor:pointer;line-height:1}
+    color:var(--ink);border-radius:10px;padding:.42em .8em;font:600 .92rem system-ui;
+    cursor:pointer;line-height:1;box-sizing:border-box;min-height:38px;
+    display:inline-flex;align-items:center;justify-content:center;gap:.35em}
   #v-editor .editor-bar .iconBtn:hover{border-color:var(--acc);color:var(--acc)}
   #v-editor .editor-bar .iconBtn:disabled{opacity:.5;cursor:default}
+  /* Publish + Back share the toolbar height so the compose-mode bar reads as one even row. */
+  #v-editor .editor-bar .pub-btn{min-height:38px;padding:.5em 1.1em;font-size:.85rem}
+  #v-editor .editor-bar .back{min-height:38px;display:inline-flex;align-items:center;gap:.3em}
   /* labelled toolbar buttons: icon + short word, so nothing is cryptic */
   #v-editor .editor-bar .tb-labelled{display:inline-flex;align-items:center;gap:.35em;white-space:nowrap}
 
@@ -3098,8 +3124,8 @@
     gap:12px;border-bottom:1px solid var(--line);flex:0 0 auto}
   .surface-head .surface-title{margin:0;flex:1;font:650 1rem/1.25 var(--font-display);
     letter-spacing:0;text-transform:none;color:var(--ink)}
-  .surface-close{width:36px;height:36px;display:grid;place-items:center;border:0;border-radius:8px;
-    color:var(--mut);background:transparent;cursor:pointer;flex:0 0 auto;font-size:1.05rem;
+  .surface-close{width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:8px;
+    color:var(--mut);background:transparent;cursor:pointer;flex:0 0 auto;font-size:1.3rem;
     line-height:1;padding:0}
   .surface-close:hover,.surface-close:focus-visible{color:var(--ink);background:var(--surface-2)}
   .surface--sheet{width:min(1200px,calc(100vw - 32px));max-width:none;margin-inline:auto;
@@ -6884,11 +6910,25 @@ function setRowDeleting(row,btn){
     setBusy(btn,false);
   };
 }
+// Per-repo cache of the last-known posts list, so the Posts page paints INSTANTLY from the
+// previous true state instead of sitting on "Loading…" for the round trip(s) to GitHub.
+// Keyed by owner/repo/branch so switching repos never shows the wrong blog's posts.
+function _postsCacheKey(){ try{ const g=window.__studioConfig&&window.__studioConfig.getGithub&&window.__studioConfig.getGithub(); return g?('chapbook.posts.v1.'+(g.owner||'')+'/'+(g.repo||'')+'/'+(g.branch||'')):null; }catch{ return null; } }
+function _readPostsCache(){ try{ const k=_postsCacheKey(); if(!k) return null; const raw=localStorage.getItem(k); const arr=raw?JSON.parse(raw):null; return Array.isArray(arr)?arr:null; }catch{ return null; } }
+function _writePostsCache(list){ try{ const k=_postsCacheKey(); if(k&&Array.isArray(list)) localStorage.setItem(k, JSON.stringify(list)); }catch{} }
 async function loadPosts(){
   const list=$('postsList');
-  list.innerHTML='<p class="sub">Loading…</p>';
-  try{ _posts=await api('/posts'); renderPosts(); renderPostCalendar(); }
-  catch(e){ list.innerHTML=`<p class="sub" style="color:#f472b6">${esc(e.message)}</p>`; }
+  // Instant paint from the cache, THEN refresh in the background. The refreshed result is the
+  // true repo state and overwrites the cache — so correctness is preserved; the cache only
+  // removes the multi-second blank wait on entry.
+  const cached=_readPostsCache();
+  if(cached){ _posts=cached; renderPosts(); renderPostCalendar(); }
+  else { list.innerHTML='<p class="sub">Loading…</p>'; }
+  try{ const fresh=await api('/posts'); _posts=fresh; _writePostsCache(fresh); renderPosts(); renderPostCalendar(); }
+  catch(e){
+    // A transient refresh failure must not blank a list we already showed from cache.
+    if(!cached) list.innerHTML=`<p class="sub" style="color:#f472b6">${esc(e.message)}</p>`;
+  }
 }
 function renderPosts(){
   const list=$('postsList'), cnt=$('postsCount');
@@ -9595,6 +9635,28 @@ async function chatSend(){
   const t = (inp.value || '').trim();
   if(!t) return;
   pushHistory();   // a sent message is a structural add — one ⌘Z step
+  // Compose-mode guide sweep (mirrors core/chatCompose.js isEmptyGuideBlock/dropEmptyGuides,
+  // tested there — keep in lockstep). A template's instruction boxes are non-destructive GUIDES —
+  // guideify() moves the prewritten text into `ph` and empties the content field, so an
+  // untouched box holds no content (and never publishes). But an unbound Send inserts a NEW
+  // block, so the still-empty guide boxes were left stranded as empty blocks ABOVE the
+  // message that the user then had to delete by hand (e.g. the "Announcement" template's
+  // heading + paragraph guides). A sent message is the user's first real content, so drop
+  // the untouched guide boxes here. Filled boxes (content non-empty) never match `ph`+empty,
+  // so a partly-written scaffold is preserved; the plain empty new-post seed carries no `ph`
+  // and is left to the trailing-empty replace below. Only runs on an unbound send (bound
+  // edits returned above).
+  {
+    const _strip = (h) => String(h || '').replace(/<[^>]+>/g, '').trim();
+    const _isEmptyGuide = (x) => x && x.ph && (
+      (x.type === 'text' || x.type === 'quote') ? !_strip(x.html)
+      : x.type === 'heading' ? !String(x.text || '').trim()
+      : false);
+    if(doc.blocks.some(_isEmptyGuide)){
+      doc.blocks = doc.blocks.filter(x => !_isEmptyGuide(x));
+      _composeAnchorId = null;   // the anchor may have pointed at a now-removed guide box
+    }
+  }
   let focusId = null;
   if(chatIsPlainParagraph(t)){
     const b = { id: mkId(), type: 'text', html: inlineMdToHtml(t) };
@@ -21580,40 +21642,77 @@ applyBrandName();
     if(isMobile() && ta && ta.classList && ta.classList.contains('be-raw')) autogrow(ta);
   });
 
+  const editorBar = () => $('v-editor') && $('v-editor').querySelector('.editor-bar');
+  // The page scroll position captured the moment the keyboard opened, so we can return the
+  // page to it on close. iOS scrolls the layout viewport to reveal the field but never scrolls
+  // it back, which left the whole page (and the top nav) lifted "until manually dragged".
+  let _preKbScrollY = null;
+
+  /* Pin the STICKY top bar to the top of the VISIBLE (visual) viewport. On iOS the on-screen
+     keyboard shifts the visual viewport but a position:sticky/top:0 bar stays anchored to the
+     LAYOUT viewport, so it slides up out of view (the "top nav rides up" report). Translating
+     it down by the visual viewport's top offset re-pins it to what the user can see. When
+     offsetTop is 0 — the common keyboard case and EVERY desktop engine — this is a strict
+     no-op, so web behaviour is unchanged. Mirrors the bottom compose bar's chatPlaceBar. */
+  function editorPinBar(open){
+    const bar = editorBar();
+    if(!bar) return;
+    bar.style.transform = (open && vv && vv.offsetTop > 0) ? `translateY(${vv.offsetTop}px)` : '';
+  }
+
   /* (2) keyboard height → CSS var --kb + body.kb-open. visualViewport.height shrinks
      by the keyboard's height when it opens; the gap below the layout viewport is the
-     keyboard. We also re-scroll the active field into view as the viewport settles. */
+     keyboard. We also re-scroll the active field into view as the viewport settles, and
+     restore the page scroll when it closes so the top nav returns on its own. */
   function syncViewport(){
     if(!vv) return;
     const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
     const open = isMobile() && editorOpen() && kb > 80;
+    const wasOpen = document.body.classList.contains('kb-open');
+    if(open && !wasOpen) _preKbScrollY = window.scrollY;   // remember the pre-keyboard scroll
     document.documentElement.style.setProperty('--kb', (open ? kb : 0) + 'px');
     document.body.classList.toggle('kb-open', open);
-    if(open) keepActiveAboveKeyboard();
+    editorPinBar(open);
+    if(open){ keepActiveAboveKeyboard(); }
+    else if(wasOpen){ restorePageScroll(); }
   }
 
-  /* (1) scroll the focused field/caret to sit just above the keyboard. With
-     visualViewport we know the visible bottom precisely; without it we fall back
-     to centring the field. */
+  // Return the page to where it was before the keyboard lifted it (fixes "doesn't return
+  // until manually dragged"). Best-effort: only if we captured a starting point.
+  function restorePageScroll(){
+    editorPinBar(false);
+    if(_preKbScrollY == null) return;
+    const y = _preKbScrollY; _preKbScrollY = null;
+    try{ window.scrollTo({ top: y, behavior: reduceMotion() ? 'auto' : 'smooth' }); }catch{}
+  }
+
+  /* (1) scroll the focused field/caret to sit inside the visible band — BELOW the sticky top
+     nav and ABOVE the on-screen keyboard — with the minimum movement. Anchoring on the caret
+     (or, when no caret rect is available, on the field's writing EDGE / bottom rather than its
+     top) fixes the case where a block TALLER than the band was top-aligned, which shoved the
+     caret down BEHIND the keyboard. We only ever nudge the window when the caret is actually
+     outside the band, and never lift content up behind the top nav. */
   function keepActiveAboveKeyboard(){
     const el = document.activeElement;
     if(!isEditable(el)) return;
     const behavior = reduceMotion() ? 'auto' : 'smooth';
-    if(!vv){ try{ el.scrollIntoView({ block:'center', behavior }); }catch{} return; }
-    // caret rect when available (collapsed selection), else the field's own rect
+    if(!vv){ try{ el.scrollIntoView({ block:'nearest', behavior }); }catch{} return; }
+    // caret rect when available (collapsed selection), else the field's writing edge (bottom)
     let rect = null;
     const sel = window.getSelection && window.getSelection();
     if(sel && sel.rangeCount){
-      try{ const r = sel.getRangeAt(0).getClientRects()[0]; if(r && r.height) rect = r; }catch{}
+      try{ const r = sel.getRangeAt(0).getClientRects()[0]; if(r && r.height) rect = { top:r.top, bottom:r.bottom }; }catch{}
     }
-    if(!rect) rect = el.getBoundingClientRect();
-    const visibleBottom = vv.offsetTop + vv.height;   // top of the keyboard, in layout coords
-    const margin = 24;                                 // breathing room above the keyboard
-    if(rect.bottom > visibleBottom - margin){
-      window.scrollBy({ top: rect.bottom - (visibleBottom - margin), behavior });
-    } else if(rect.top < vv.offsetTop + margin){
-      window.scrollBy({ top: rect.top - (vv.offsetTop + margin), behavior });
-    }
+    if(!rect){ const b = el.getBoundingClientRect(); rect = { top: b.bottom - 1, bottom: b.bottom }; }
+    const bar = editorBar();
+    const navBottom = bar ? Math.max(0, bar.getBoundingClientRect().bottom) : 0;   // sticky top nav
+    const margin = 20;
+    const bandTop = vv.offsetTop + navBottom + margin;         // just under the top nav
+    const bandBottom = vv.offsetTop + vv.height - margin;      // just above the keyboard
+    let delta = 0;
+    if(rect.bottom > bandBottom) delta = rect.bottom - bandBottom;          // caret under keyboard → lift up
+    else if(rect.top < bandTop) delta = rect.top - bandTop;                 // caret behind nav → lower down
+    if(Math.abs(delta) > 1) window.scrollBy({ top: delta, behavior });
   }
 
   if(vv){
@@ -21629,12 +21728,15 @@ applyBrandName();
     setTimeout(() => { syncViewport(); keepActiveAboveKeyboard(); }, vv ? 60 : 0);
     if(!vv){ try{ e.target.scrollIntoView({ block:'center', behavior: reduceMotion() ? 'auto' : 'smooth' }); }catch{} }
   });
-  // Reset keyboard state when focus leaves the editor entirely.
+  // Reset keyboard state when focus leaves the editor entirely — clear --kb/kb-open, unpin the
+  // top bar, and return the page to its pre-keyboard scroll so the top nav comes back.
   document.addEventListener('focusout', () => {
     setTimeout(() => {
       if(!isEditable(document.activeElement)){
+        const wasOpen = document.body.classList.contains('kb-open');
         document.documentElement.style.setProperty('--kb', '0px');
         document.body.classList.remove('kb-open');
+        if(wasOpen) restorePageScroll(); else editorPinBar(false);
       }
     }, 80);
   });
