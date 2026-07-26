@@ -124,13 +124,16 @@ export function renderOnboarding() {
   // Manual fields collapse into the "Advanced" disclosure beneath it.
   const signinBlock = `
       <div id="gh-signin">
-        <button type="button" id="gh-start">Sign in with GitHub</button>
-        <div class="hint">Recommended — no token to create. GitHub shows a page where you type a short code.</div>
-        <div class="no-gh">
-          <span>No GitHub account? It's free, takes about 2 minutes.</span>
-          <a href="https://github.com/signup" target="_blank" rel="noopener">Create one (free) →</a>
-          <span class="no-gh-sub">It's just where your blog's files live — no coding. Once you've made it, come back here.</span>
-          <a href="#" id="gh-have-account" class="no-gh-back">I've got one — continue ↑</a>
+        <div id="gh-signedin" class="gh-signedin" style="display:none"></div>
+        <div id="gh-signin-cta">
+          <button type="button" id="gh-start">Sign in with GitHub</button>
+          <div class="hint">Recommended — no token to create. GitHub shows a page where you type a short code.</div>
+          <div class="no-gh">
+            <span>No GitHub account? It's free, takes about 2 minutes.</span>
+            <a href="https://github.com/signup" target="_blank" rel="noopener">Create one (free) →</a>
+            <span class="no-gh-sub">It's just where your blog's files live — no coding. Once you've made it, come back here.</span>
+            <a href="#" id="gh-have-account" class="no-gh-back">I've got one — continue ↑</a>
+          </div>
         </div>
         <div id="gh-codebox" style="display:none;margin-top:.8rem;text-align:center">
           <div class="hint" style="margin:0 0 .3rem">Enter this code on GitHub (copied for you):</div>
@@ -189,7 +192,11 @@ export function renderOnboarding() {
     #byok-overlay input,#byok-overlay select{width:100%;background:#080c16;border:1px solid rgba(140,160,200,.18);border-radius:10px;color:#f4f7fd;padding:.6em .7em;font:inherit}
     #byok-overlay input:focus,#byok-overlay select:focus{outline:none;border-color:#22d3ee;box-shadow:0 0 0 3px rgba(34,211,238,.22)}
     #byok-overlay .row{display:flex;gap:.5rem}#byok-overlay .row>*{flex:1}
-    #byok-overlay button{width:100%;margin-top:1.1rem;border:0;border-radius:12px;padding:.8em;font:700 1rem 'Space Grotesk',system-ui;
+    /* Catch-all action-button styling. Excludes the theme picker's .cbtp-card buttons —
+       they carry their own dark-card styling (themeCatalogue PICKER_CSS); without this
+       exclusion the gradient here paints every theme card teal with unreadable text.
+       :where() keeps specificity at (1,0,1) so the .ghost + .byok-x overrides still win. */
+    #byok-overlay button:where(:not(.cbtp-card)){width:100%;margin-top:1.1rem;border:0;border-radius:12px;padding:.8em;font:700 1rem 'Space Grotesk',system-ui;
       color:#042018;background:linear-gradient(95deg,#2dd4bf,#22d3ee);cursor:pointer}
     #byok-overlay button.ghost{margin-top:.6rem;background:transparent;border:1px solid rgba(140,160,200,.3);color:#aebbd2}
     #byok-overlay .hint{font-size:.74rem;color:#6f7e98;margin-top:.6rem}
@@ -203,6 +210,11 @@ export function renderOnboarding() {
     #byok-overlay .no-gh a{color:#22d3ee;text-decoration:underline;white-space:nowrap;margin-left:.3rem}
     #byok-overlay .no-gh .no-gh-sub{display:block;margin-top:.2rem;color:#6f7e98}
     #byok-overlay .no-gh a.no-gh-back{display:inline-block;margin:.45rem 0 0;color:#2dd4bf;text-decoration:none;font-weight:700;white-space:normal}
+    #byok-overlay .gh-signedin{display:flex;align-items:center;gap:.5rem;margin:.2rem 0 .3rem;padding:.55rem .7rem;
+      border:1px solid rgba(45,212,191,.42);border-radius:10px;background:rgba(45,212,191,.08);
+      color:#f4f7fd;font:600 .85rem 'Space Grotesk',system-ui}
+    #byok-overlay .gh-signedin b{color:#2dd4bf;font-weight:700}
+    #byok-overlay .gh-signedin .gh-si-dot{color:#2dd4bf;font-weight:700;font-size:1rem;line-height:1}
   </style>
   <div class="bc">
     <button type="button" id="byok-close" class="byok-x" aria-label="Close setup" title="Close">×</button>
@@ -301,6 +313,31 @@ export function renderOnboarding() {
 
   // --- Device-Flow sign-in (only present when a Client ID was injected) ---
   if (GH_CLIENT_ID && $('gh-start')) {
+    // Once we hold a token, the "Sign in with GitHub" CTA (button + account help) is
+    // stale — collapse it to a compact "✓ Signed in as @who" chip so the create/pick
+    // panels below don't sit stacked under a redundant sign-in prompt. The create/pick
+    // panels live INSIDE #gh-signin, so we only hide the CTA sub-block, never the whole
+    // block. Shared by the live device-flow success path and by re-opening onboarding
+    // when a device sign-in is already on record.
+    const showSignedIn = (login) => {
+      const cta = $('gh-signin-cta'); if (cta) cta.style.display = 'none';
+      const box = $('gh-codebox'); if (box) box.style.display = 'none';
+      const chip = $('gh-signedin');
+      if (chip) {
+        chip.innerHTML = `<span class="gh-si-dot" aria-hidden="true">✓</span> <span>Signed in${login ? ` as <b>@${escHtml(login)}</b>` : ''}</span>`;
+        chip.style.display = 'flex';
+      }
+    };
+    // Re-opening onboarding while a device sign-in is already on record (e.g. Settings →
+    // Change, or a reload before a repo was chosen): open in the signed-in state instead
+    // of showing "Sign in with GitHub" to someone already authenticated. If no repo is
+    // wired up yet, reveal the create/pick step so there's still a way forward (cb-go
+    // falls back to the persisted token).
+    const priorUser = config.getGithubUser();
+    if (priorUser && priorUser.login) {
+      showSignedIn(priorUser.login);
+      if (!config.isConfigured()) { const gc = $('gh-create'); if (gc) gc.style.display = 'block'; }
+    }
     // "I've got one — continue": the user already has an account, so take them
     // straight into sign-in — scroll the button into view and start the flow.
     // (Just focusing it was a no-op when the button was already on screen.)
@@ -331,6 +368,8 @@ export function renderOnboarding() {
         const gh = makeGithub({ token });
         const me = await gh.whoami().catch(() => ({ login: '' }));
         config.saveDeviceAuth({ token, login: me.login });
+        // Collapse the sign-in CTA to the confirmation chip now that we're authenticated.
+        showSignedIn(me.login);
         const repos = (await gh.listRepos().catch(() => [])).filter((r) => !r.private);
         const sel = $('gh-repo-select');
         // Primary path: create a brand-new blog — always available, even with no repos yet.
