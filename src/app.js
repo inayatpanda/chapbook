@@ -149,7 +149,9 @@ export function renderOnboarding() {
           <label for="cb-name">Blog name</label>
           <input id="cb-name" placeholder="e.g. Second Breakfast" autocomplete="off">
           <label id="cb-theme-label">Theme</label>
-          <div id="cb-theme-picker" style="max-height:44vh;overflow:auto;margin-top:.1rem;padding:.1rem"></div>
+          <!-- No max-height/overflow here: a scroll layer nested in the fixed overlay breaks
+               button hit-testing on iOS WKWebView. Let the theme list flow; the overlay scrolls. -->
+          <div id="cb-theme-picker" style="margin-top:.1rem;padding:.1rem"></div>
           <input type="hidden" id="cb-theme" value="observatory">
           <label for="cb-core" style="margin-top:.9rem">Hero figure</label>
           <select id="cb-core">
@@ -187,9 +189,17 @@ export function renderOnboarding() {
   // sibling layer BEHIND .bc, never on an ancestor of the interactive content.
   ov.innerHTML = `
   <style>
-    #byok-overlay{position:fixed;inset:0;z-index:9999;background:#04060c;display:grid;place-items:center;padding:1rem;
+    /* The fixed overlay is itself the SINGLE scroll surface (overflow-y:auto). It must NOT
+       contain a nested overflow:auto scroller: on iOS WKWebView a scroll container nested
+       inside a position:fixed ancestor mis-maps touch coordinates by its scroll offset, so
+       <button>/<a> hit-testing misses (native <select>/<input> are handled by iOS and are
+       immune) — which is exactly why the × and "Create my blog" were untappable. Flex column
+       plus .bc margin:auto centres the card when it's short and lets the overlay scroll as one
+       surface when it's tall (margin:auto, unlike justify/align-center, doesn't clip the top on
+       overflow). Do NOT reintroduce overflow:auto/max-height on .bc or #cb-theme-picker. */
+    #byok-overlay{position:fixed;inset:0;z-index:9999;background:#04060c;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;padding:1rem;
       font:15px/1.5 'Inter',system-ui,sans-serif;color:#f4f7fd}
-    #byok-overlay .bc{position:relative;width:min(440px,94vw);max-height:94vh;overflow:auto;background:linear-gradient(180deg,#0f1730,#0b1120);border:1px solid rgba(140,160,200,.18);
+    #byok-overlay .bc{position:relative;width:min(440px,94vw);margin:auto;background:linear-gradient(180deg,#0f1730,#0b1120);border:1px solid rgba(140,160,200,.18);
       border-radius:18px;padding:1.4rem 1.5rem;box-shadow:0 24px 70px rgba(0,0,0,.6)}
     #byok-overlay .byok-x{position:absolute;top:.7rem;right:.7rem;width:32px;height:32px;margin:0;padding:0;
       border-radius:9px;border:1px solid rgba(140,160,200,.25);background:rgba(8,12,22,.6);color:#aebbd2;
@@ -247,6 +257,39 @@ export function renderOnboarding() {
     <div class="hint">You can change these any time in Settings.</div>
   </div>`;
   document.body.appendChild(ov);
+
+  /* DIAGNOSTIC TAP PROBE — remove after */
+  // Native-only on-screen readout of what element each tap actually lands on. If a control
+  // still won't respond on-device after the scroll-container fix above, tap it and screenshot
+  // this banner: it shows the tap coords and document.elementFromPoint(x,y) rendered as
+  // tag#id.firstClass, revealing exactly which element received the touch. pointer-events:none
+  // ⇒ it can never intercept input; the whole thing is wrapped in try/catch ⇒ it can never
+  // break boot. Web builds skip it (isNativeOrigin is false). Delete this whole block to remove.
+  try {
+    if (isNativeOrigin(location) && !document.getElementById('cb-tap-probe')) {
+      const probe = document.createElement('div');
+      probe.id = 'cb-tap-probe';
+      probe.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:2147483647;pointer-events:none;'
+        + 'background:rgba(0,0,0,.82);color:#22ff88;font:700 15px/1.35 ui-monospace,Menlo,monospace;'
+        + 'padding:6px 10px;white-space:pre-wrap;word-break:break-all';
+      probe.textContent = 'TAP PROBE ready — tap any control';
+      document.body.appendChild(probe);
+      document.addEventListener('pointerdown', (e) => {
+        try {
+          const x = Math.round(e.clientX), y = Math.round(e.clientY);
+          const el = document.elementFromPoint(x, y);
+          let desc = 'none';
+          if (el) {
+            const id = el.id ? '#' + el.id : '';
+            const cls = (el.classList && el.classList[0]) ? '.' + el.classList[0] : '';
+            desc = el.tagName.toLowerCase() + id + cls;
+          }
+          probe.textContent = 'tap ' + x + ',' + y + ' → ' + desc;
+        } catch (_) {}
+      }, { capture: true, passive: true });
+    }
+  } catch (_) {}
+
   const $ = (id) => document.getElementById(id);
   const v = (id) => ($(id).value || '').trim();
 
