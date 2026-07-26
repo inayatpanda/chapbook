@@ -12,6 +12,16 @@ pub fn run() {
     // Rust HTTP client, which is not subject to CORS or the webview limitation. URLs are scoped
     // to the CSP connect-src hosts in capabilities/default.json.
     .plugin(tauri_plugin_http::init())
+    // Native file-export SAVE flow (frontend: src/app.js installNativeDownloadInterceptor).
+    // The webview ignores <a download> and won't persist blob:/data: URLs, so the app reads the
+    // export bytes and writes them to a user-chosen path: the dialog plugin opens the OS Save
+    // panel, the fs plugin writes the bytes (scoped in capabilities/default.json to the user's
+    // output dirs — Downloads/Documents/Desktop/Pictures/Movies — never a broad filesystem grant).
+    .plugin(tauri_plugin_dialog::init())
+    .plugin(tauri_plugin_fs::init())
+    // Native "Copy" support (frontend: src/app.js installNativeClipboardShim). navigator.clipboard
+    // is unavailable on the custom-scheme origin, so copy buttons route through this plugin.
+    .plugin(tauri_plugin_clipboard_manager::init())
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(

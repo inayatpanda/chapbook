@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Minimal permissions for the main Chapbook window, deliberately narrowed from core:default. The app registers no custom Tauri commands, so only the core app/window/event essentials the shell uses, the opener (system-browser external links) and the HTTP plugin are granted. The HTTP scope is the native fetch bridge (src/lib/nativeFetch.js): it is restricted to exactly the CSP connect-src hosts the frontend calls, so the Rust client can reach GitHub, the AI providers, the R2/Worker media hosts and the device-flow relay — and nothing else. Keep this allow-list in lockstep with the bundle-local CSP connect-src.",
+  "description": "Minimal permissions for the main Chapbook window, deliberately narrowed from core:default. The app registers no custom Tauri commands, so only the core app/window/event essentials the shell uses, the opener (system-browser external links) and the HTTP plugin are granted. The HTTP scope is the native fetch bridge (src/lib/nativeFetch.js): it is restricted to exactly the CSP connect-src hosts the frontend calls, so the Rust client can reach GitHub, the AI providers, the R2/Worker media hosts and the device-flow relay — and nothing else. Keep this allow-list in lockstep with the bundle-local CSP connect-src. dialog:allow-save + fs:allow-write-file power the native file-export SAVE flow (src/app.js installNativeDownloadInterceptor): the export bytes are written ONLY to a user-chosen path inside the standard output dirs ($DOWNLOAD/$DOCUMENT/$DESKTOP/$PICTURE/$VIDEO) — no broad filesystem or read grant. clipboard-manager:allow-write-text powers the native Copy shim (installNativeClipboardShim).",
   "windows": [
     "main"
   ],
@@ -25,6 +25,18 @@
         { "url": "https://*.workers.dev/*" },
         { "url": "https://*.r2.dev/*" },
         { "url": "https://inayatpanda.com/*" }
+      ]
+    },
+    "dialog:allow-save",
+    "clipboard-manager:allow-write-text",
+    {
+      "identifier": "fs:allow-write-file",
+      "allow": [
+        { "path": "$DOWNLOAD/**" },
+        { "path": "$DOCUMENT/**" },
+        { "path": "$DESKTOP/**" },
+        { "path": "$PICTURE/**" },
+        { "path": "$VIDEO/**" }
       ]
     }
   ]

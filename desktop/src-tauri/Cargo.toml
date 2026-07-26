@@ -25,3 +25,11 @@ tauri = { version = "2.11.3", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-http = "2"
+# Native file-export SAVE flow (frontend: src/app.js installNativeDownloadInterceptor):
+# WKWebView / the custom-scheme origin ignore <a download> + blob:/data: saves, so the app
+# reads the export bytes and writes them to a user-chosen path via these two plugins.
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+# Native "Copy" support: navigator.clipboard.writeText is unavailable on the tauri:// origin,
+# so the copy shim (src/app.js installNativeClipboardShim) routes through this plugin.
+tauri-plugin-clipboard-manager = "2"

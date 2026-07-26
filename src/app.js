@@ -31,6 +31,7 @@ import * as themeCatalogue from './core/themeCatalogue.js';
 import { ed25519Verify } from './lib/ed25519Verify.js';
 import { isNativeOrigin, externalUrlToOpen } from './lib/nativeLinks.js';
 import { installNativeFetchBridge } from './lib/nativeFetch.js';
+import { downloadUrlKind, mimeFromDataUrl, decodeDataUrl, deriveDownloadFilename, dialogFiltersFor } from './lib/nativeSave.js';
 
 // Minimal HTML escaper for the few spots where user text (a chosen blog name) is written
 // into the onboarding overlay's innerHTML — that overlay's origin holds the buyer's
@@ -544,6 +545,181 @@ function installNativeExternalLinkOpener() {
   } catch { /* never break boot */ }
 }
 
+// Minimal toast for the native shims below. The app's own toast() lives in index.html's inline
+// module (out of this bundle's scope), so we drive its #toast element directly — same behaviour,
+// no coupling. No-ops if the element isn't there. Native-only callers, so never runs on the web.
+function nativeToast(text) {
+  try {
+    const el = (typeof document !== 'undefined') && document.getElementById('toast');
+    if (!el) return;
+    el.textContent = String(text || '');
+    el.classList.add('show');
+    clearTimeout(nativeToast._t);
+    nativeToast._t = setTimeout(() => { try { el.classList.remove('show'); } catch { /* noop */ } }, 3000);
+  } catch { /* a toast must never throw */ }
+}
+
+// Native-only registry mapping each blob: URL → the Blob it was made from. WHY: the download
+// interceptor needs the export's bytes, but a same-origin `fetch('blob:…')` can be BLOCKED by the
+// bundle-local CSP (connect-src doesn't list blob:), so we can't rely on fetching the URL back.
+// Reading the Blob OBJECT (Blob.arrayBuffer()) is not a network op, so CSP never applies. We wrap
+// URL.createObjectURL to remember the Blob and URL.revokeObjectURL to forget it (bounded so it can
+// never grow without limit even if some caller never revokes). Native-only: not installed on web.
+const _blobRegistry = new Map();
+const _BLOB_REG_CAP = 128;
+function installNativeBlobUrlRegistry() {
+  try {
+    if (typeof URL === 'undefined' || typeof location === 'undefined') return;
+    if (!isNativeOrigin(location)) return; // web: no-op — createObjectURL is left untouched
+    const origCreate = (typeof URL.createObjectURL === 'function') ? URL.createObjectURL.bind(URL) : null;
+    const origRevoke = (typeof URL.revokeObjectURL === 'function') ? URL.revokeObjectURL.bind(URL) : null;
+    if (!origCreate) return;
+    URL.createObjectURL = function createObjectURL(obj) {
+      const u = origCreate(obj);
+      try {
+        if (obj && typeof Blob !== 'undefined' && obj instanceof Blob) {
+          if (_blobRegistry.size >= _BLOB_REG_CAP) { const k = _blobRegistry.keys().next().value; _blobRegistry.delete(k); }
+          _blobRegistry.set(u, obj);
+        }
+      } catch { /* registry is best-effort */ }
+      return u;
+    };
+    if (origRevoke) {
+      URL.revokeObjectURL = function revokeObjectURL(u) {
+        try { _blobRegistry.delete(u); } catch { /* noop */ }
+        return origRevoke(u);
+      };
+    }
+  } catch { /* never break boot */ }
+}
+
+// Read the bytes behind a blob:/data: download URL as { bytes, mime }, or null. data: is decoded
+// purely (no network). blob: is read from the captured Blob object (Blob.arrayBuffer(), CSP-free);
+// only if the Blob wasn't captured do we fall back to the original fetch (best effort — may be
+// CSP-limited on native). Never throws.
+async function readDownloadBytes(kind, url) {
+  try {
+    if (kind === 'data') {
+      const d = decodeDataUrl(url);
+      return d ? { bytes: d.bytes, mime: d.mime || mimeFromDataUrl(url) } : null;
+    }
+    const blob = _blobRegistry.get(url);
+    if (blob) {
+      const buf = await blob.arrayBuffer();
+      return { bytes: new Uint8Array(buf), mime: (blob.type || '').split(';')[0].trim().toLowerCase() };
+    }
+    const res = await fetch(url);                       // fallback: read the URL back (best effort)
+    const buf = await res.arrayBuffer();
+    const ct = (res.headers && res.headers.get && res.headers.get('content-type')) || '';
+    return { bytes: new Uint8Array(buf), mime: ct.split(';')[0].trim().toLowerCase() };
+  } catch { return null; }
+}
+
+// Native-only download interceptor. WKWebView / the custom-scheme origin ignore `<a download>`
+// and won't persist blob:/data: URLs, so every Chapbook export (interactive .html, flipbook
+// GIF/video, share-card image, PDF, drafts JSON) silently fails on native. Every one of those
+// export paths builds the file then appends a hidden `<a download>` to <body> and clicks it — so
+// a single capture-phase click listener on `a[download]` catches them ALL, with ZERO changes to
+// the export code (the web build runs that same code untouched; this listener just isn't
+// installed there). On a hit we cancel the (doomed) default, read the bytes, open the OS Save
+// dialog (tauri-plugin-dialog) and write them to the chosen path (tauri-plugin-fs). Wrapped in
+// try/catch throughout so it can never break a click or boot.
+function installNativeDownloadInterceptor() {
+  try {
+    if (typeof document === 'undefined' || typeof location === 'undefined') return;
+    if (!isNativeOrigin(location)) return; // web: no-op
+    document.addEventListener('click', (ev) => {
+      try {
+        if (ev.defaultPrevented || ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+        const a = ev.target && ev.target.closest && ev.target.closest('a[download]');
+        if (!a) return;
+        const href = a.getAttribute('href') || a.href || '';
+        const kind = downloadUrlKind(href);
+        if (!kind) return;                 // http(s)/relative <a download> → leave to the webview
+        const downloadAttr = a.getAttribute('download');
+        ev.preventDefault();               // stop the doomed native download; do it ourselves
+        saveDownloadNatively(kind, href, downloadAttr);
+      } catch { /* a click handler must never throw */ }
+    }, true);
+  } catch { /* never break boot */ }
+}
+
+// The async save half of the interceptor: read bytes → Save dialog → write. The dialog/fs plugin
+// JS is imported LAZILY (first save only) so the plugin code never executes on the web build.
+async function saveDownloadNatively(kind, href, downloadAttr) {
+  try {
+    const read = await readDownloadBytes(kind, href);
+    if (!read) { nativeToast('Export failed — could not read the file'); return; }
+    const filename = deriveDownloadFilename(downloadAttr, read.mime, 'download');
+    const [dialog, fs] = await Promise.all([
+      import('@tauri-apps/plugin-dialog'),
+      import('@tauri-apps/plugin-fs'),
+    ]);
+    const path = await dialog.save({ defaultPath: filename, filters: dialogFiltersFor(filename) });
+    if (!path) return;                     // user cancelled the Save dialog — silent, no error
+    await fs.writeFile(path, read.bytes);
+    nativeToast('Saved ' + filename);
+  } catch (e) {
+    nativeToast('Save failed' + (e && e.message ? ': ' + e.message : ''));
+  }
+}
+
+// Native-only window.open shim. In the wrappers window.open('…','_blank') opens nothing (no
+// browser), so the desktop "share"/composer intents (e.g. the X/LinkedIn web composers) go
+// nowhere. Route EXTERNAL http(s) targets through the system browser (openInSystemBrowser); leave
+// same-origin / app / non-http targets to the original window.open so in-app behaviour is intact.
+// (Plain `target="_blank"` anchors are already handled by installNativeExternalLinkOpener.)
+function installNativeWindowOpenShim() {
+  try {
+    if (typeof window === 'undefined' || typeof location === 'undefined') return;
+    if (!isNativeOrigin(location)) return; // web: no-op
+    const original = (typeof window.open === 'function') ? window.open.bind(window) : null;
+    window.open = function open(url, target, features) {
+      try {
+        const ext = (url != null) ? externalUrlToOpen(String(url), location) : null;
+        if (ext) { openInSystemBrowser(ext); return null; }
+      } catch { /* fall through to the original */ }
+      return original ? original(url, target, features) : null;
+    };
+  } catch { /* never break boot */ }
+}
+
+// Native-only clipboard shim. navigator.clipboard.writeText may be unavailable on the
+// tauri://localhost / http://tauri.localhost origin (not a "secure context" in the webview's
+// eyes), so every "Copy" button silently no-ops. Replace navigator.clipboard with a wrapper whose
+// writeText routes through tauri-plugin-clipboard-manager (imported lazily); readText and any
+// other members delegate to the original where present. Web build: isNativeOrigin is false → not
+// installed, navigator.clipboard is exactly the browser's.
+function installNativeClipboardShim() {
+  try {
+    if (typeof navigator === 'undefined' || typeof location === 'undefined') return;
+    if (!isNativeOrigin(location)) return; // web: no-op
+    const original = navigator.clipboard || null;
+    const wrapper = {
+      writeText(text) {
+        return import('@tauri-apps/plugin-clipboard-manager')
+          .then((m) => m.writeText(String(text == null ? '' : text)))
+          .catch((e) => {                                   // last-resort fall back to the native clipboard
+            if (original && typeof original.writeText === 'function') return original.writeText(String(text == null ? '' : text));
+            throw e;
+          });
+      },
+      readText() {
+        if (original && typeof original.readText === 'function') return original.readText();
+        return import('@tauri-apps/plugin-clipboard-manager').then((m) => m.readText());
+      },
+      write(data) { return original && typeof original.write === 'function' ? original.write(data) : Promise.reject(new Error('clipboard.write unavailable')); },
+      read() { return original && typeof original.read === 'function' ? original.read() : Promise.reject(new Error('clipboard.read unavailable')); },
+    };
+    try {
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, get() { return wrapper; } });
+    } catch {
+      // Can't redefine the property (older engines) — patch writeText in place if we can.
+      if (original) { try { original.writeText = wrapper.writeText; } catch { /* give up quietly */ } }
+    }
+  } catch { /* never break boot */ }
+}
+
 // Native-only fetch bridge (see lib/nativeFetch.js). Installed FIRST — synchronously, before
 // refresh()/buildApi() below construct the GitHub + AI seams (which capture `fetchImpl = fetch`
 // at construction time) — so those seams pick up the bridged window.fetch. The Tauri HTTP plugin
@@ -558,6 +734,10 @@ function installNativeFetchBridgeBoot() {
 if (typeof window !== 'undefined') {
   installNativeFetchBridgeBoot();     // native-only; strict no-op on the web (must precede refresh())
   installNativeExternalLinkOpener(); // native-only; strict no-op on the web
+  installNativeBlobUrlRegistry();     // native-only: capture Blob objects so exports read bytes CSP-free
+  installNativeDownloadInterceptor(); // native-only: <a download> blob:/data: exports → OS Save dialog
+  installNativeWindowOpenShim();      // native-only: window.open external http(s) → system browser
+  installNativeClipboardShim();       // native-only: navigator.clipboard.writeText → Tauri clipboard
   window.__studioConfig = config;       // the static index's boot gate reads this
   window.__studioRefresh = refresh;     // rebuild seams after the repo/keys change
   window.__studioOnboard = renderOnboarding;
