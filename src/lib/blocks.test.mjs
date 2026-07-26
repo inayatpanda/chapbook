@@ -94,6 +94,26 @@ test('video: renderPreviewHtml skips a video block with no url', () => {
   assert.equal(renderPreviewHtml([{ id: 'v1', type: 'video', poster: POS }]), '');
 });
 
+// Regression — playground js/css must not break out of its <script>/<style> element on
+// publish (the published .md is rendered with rehype-raw and NO sanitiser).
+test('playground: js "</script>" is neutralised so it cannot break out of the <script> element', () => {
+  const out = serialiseBlock({ id: 'p1', type: 'playground', html: '<div class="x"></div>', js: 'const s = "</script><img src=x onerror=alert(1)>";' });
+  assert.ok(out.includes('<\\/script>'), 'the injected close-tag must be neutralised to <\\/script>');
+  assert.equal(out.split('</script>').length - 1, 1, 'only the wrapper </script> may remain — no breakout');
+});
+
+test('playground: css "</style>" is neutralised so it cannot break out of the <style> element', () => {
+  const out = serialiseBlock({ id: 'p2', type: 'playground', html: '<div></div>', css: '.x::after{content:"</style><script>alert(1)</script>"}' });
+  assert.ok(out.includes('<\\/style>'), 'the injected close-tag must be neutralised to <\\/style>');
+  assert.equal(out.split('</style>').length - 1, 1, 'only the wrapper </style> may remain — no breakout');
+});
+
+test('playground: renderPreviewHtml applies the same </script> breakout guard', () => {
+  const html = renderPreviewHtml([{ id: 'p3', type: 'playground', html: '<div></div>', js: 'x = "</script><b>hi</b>";' }]);
+  assert.ok(html.includes('<\\/script>'));
+  assert.equal(html.split('</script>').length - 1, 1);
+});
+
 // ── L3: inlineHtmlToMd neutralises script-y anchor hrefs (HTML → markdown) ───────
 // A text/quote block's html is converted to markdown by inlineHtmlToMd at publish. A
 // `javascript:`/`vbscript:` href must NOT survive into `[text](javascript:…)`, or remark

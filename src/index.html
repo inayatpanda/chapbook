@@ -13867,6 +13867,22 @@ async function doSchedule(){
   const when = new Date(raw);
   if(isNaN(when)){ $('schHint').textContent='That date didn’t parse.'; rearmAutosaveIfDirty(); return; }
   if(when.getTime() <= Date.now()){ $('schHint').textContent='Pick a time in the future (a past time would publish on the next Action run).'; rearmAutosaveIfDirty(); return; }
+  // SAFETY GATE — a scheduled post goes live later (via the site's hourly Action) with this
+  // exact content, so it must clear the SAME pre-publish checks as the Publish button. Without
+  // this, an unsafe raw-HTML block or an unsafe playground would reach the live blog with none
+  // of the checks Publish enforces (the pre-publish panel is the ONLY barrier — the commit core
+  // does not sanitise). Errors block here; a clean check falls through to the commit below.
+  try{
+    const _chk = await runPrepublishCheck();
+    if(_chk && Array.isArray(_chk.errors) && _chk.errors.length){
+      closeSchedule();
+      renderPrepublish(_chk, openSchedule);   // show the blocking issues; fix, then reschedule
+      rearmAutosaveIfDirty();
+      return;
+    }
+  }catch(e){
+    if(!(await helmConfirm({ title:'Pre-publish check unavailable ('+(e.message||'error')+').', text:'Schedule anyway?', okText:'Schedule' }))){ rearmAutosaveIfDirty(); return; }
+  }
   // Self-heal the slug (same contract as doPublish): reserve from the title before
   // committing the scheduled draft, and surface the real reason rather than no-op silently.
   if(!currentSlug){
