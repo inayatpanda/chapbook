@@ -25,6 +25,54 @@ function fakeGh(files = {}) {
 const B64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ==';
 const PNG64 = 'data:image/png;base64,iVBORw0KGgo=';
 
+// ── listPosts: bounded-parallel frontmatter reads (Posts-page load speed) ─────
+
+// Fake gh whose getFile is async with a tick of latency; records concurrency so the test can
+// prove the reads run in PARALLEL (not the old one-at-a-time loop) yet stay bounded.
+function fakeBlogGh(n, { missing = new Set() } = {}) {
+  const names = Array.from({ length: n }, (_, i) => `post-${i}.md`);
+  let inFlight = 0, maxInFlight = 0;
+  const gh = {
+    async listDir(path) {
+      if (path !== 'src/content/blog') return [];
+      return names.map((name) => ({ name, path: `src/content/blog/${name}`, type: 'file', sha: 's' }));
+    },
+    async getFile(path) {
+      inFlight++; maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise((r) => setTimeout(r, 5));
+      inFlight--;
+      const slug = path.replace('src/content/blog/', '').replace(/\.md$/, '');
+      if (missing.has(slug)) return null;
+      const i = Number(slug.split('-')[1]);
+      const date = `2026-01-${String((i % 28) + 1).padStart(2, '0')}`;
+      return { sha: 'blob-' + slug, content: `---\ntitle: "Title ${i}"\ndate: ${date}\ntags: []\n---\n\nBody ${i}.\n` };
+    },
+    async getBinary() { return null; },
+  };
+  return { gh, stats: () => ({ maxInFlight }) };
+}
+
+test('listPosts reads post frontmatter in PARALLEL (bounded), not serially', async () => {
+  const { gh, stats } = fakeBlogGh(20);
+  const posts = makePosts(gh);
+  const rows = await posts.listPosts();
+  assert.equal(rows.length, 20, 'every post is listed');
+  const mif = stats().maxInFlight;
+  assert.ok(mif > 1, `reads must overlap (was serial: maxInFlight=${mif})`);
+  assert.ok(mif <= 8, `concurrency must be bounded to 8 (maxInFlight=${mif})`);
+  // newest-first date sort is preserved
+  const dates = rows.map((r) => r.date);
+  assert.deepEqual(dates, [...dates].sort((a, b) => b.localeCompare(a)), 'sorted newest-first');
+});
+
+test('listPosts skips a file that 404s mid-list (delete racing the read)', async () => {
+  const { gh } = fakeBlogGh(5, { missing: new Set(['post-2']) });
+  const posts = makePosts(gh);
+  const rows = await posts.listPosts();
+  assert.equal(rows.length, 4, 'the missing post is skipped, not thrown on');
+  assert.ok(!rows.some((r) => r.slug === 'post-2'), 'the 404 slug is absent');
+});
+
 // ── duplicate: a copy is a PLAIN draft, never a second scheduled post ─────────
 
 test('duplicatePost drops publishAt — the copy is a plain draft, not scheduled', async () => {

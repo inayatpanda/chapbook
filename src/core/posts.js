@@ -98,18 +98,28 @@ export function makePosts(gh) {
 
     async listPosts() {
       const entries = (await gh.listDir(BLOG_DIR)).filter((e) => e.type === 'file' && e.name.endsWith('.md'));
-      const out = [];
-      for (const e of entries) {
+      // Read each post's frontmatter with BOUNDED CONCURRENCY instead of one-at-a-time. The old
+      // serial `for … await gh.getFile` waited on N sequential api.github.com round trips, which
+      // is what made the Posts page take a few seconds to appear on a real blog. A small worker
+      // pool collapses those N round trips into ~one wall-clock wait while staying well under
+      // GitHub's abuse thresholds. Order is preserved (results indexed by position) and the final
+      // date sort is unchanged. A file that 404s mid-list (a delete racing the read) is skipped.
+      const rowFor = async (e) => {
         const f = await gh.getFile(e.path);
+        if (!f) return null;
         const { data, body } = parse(f.content);
-        out.push({
+        return {
           slug: e.name.replace(/\.md$/, ''), title: data.title || e.name, date: data.date || '',
           draft: data.draft === true, publishAt: data.publishAt || '', tags: Array.isArray(data.tags) ? data.tags : [],
           series: data.series || '', seriesPart: Number.isFinite(Number(data.seriesPart)) ? Number(data.seriesPart) : null,
           photoCount: readGallery(body).length,
-        });
-      }
-      return out.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        };
+      };
+      const out = new Array(entries.length);
+      let next = 0;
+      const worker = async () => { while (next < entries.length) { const i = next++; out[i] = await rowFor(entries[i]); } };
+      await Promise.all(Array.from({ length: Math.min(8, entries.length) }, worker));
+      return out.filter(Boolean).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
     },
 
     getPost,

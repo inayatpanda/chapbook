@@ -2,6 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<!-- APP viewport (the #app document, NOT a marketing page). The zoom lock (maximum-scale=1 +
+     user-scalable=no) is applied at boot by JS ONLY on the native origin (see app.js
+     applyNativeViewportLock / nativeLinks.viewportContentFor) so the NATIVE webview feels like
+     an app. It is deliberately NOT in this static meta: Android Chrome on the WEB honours
+     user-scalable=no and would lose pinch-zoom accessibility. All web browsers therefore keep
+     pinch-zoom; native = app-like. -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#04060c" />
 <link rel="manifest" href="/manifest.json" />
@@ -529,7 +535,7 @@
   .cal-cell{position:relative;min-height:88px;background:var(--surface-2);border:1px solid var(--line-2);
     border-radius:10px;padding:.3rem;display:flex;flex-direction:column;gap:.22rem;overflow:hidden;
     cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s}
-  .cal-cell:hover{border-color:var(--acc);background:#13203c}
+  .cal-cell:hover{border-color:var(--acc);background:var(--surface-2)}
   .cal-cell:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
   .cal-cell.out{background:var(--bg-1);border-color:var(--line);opacity:.62}
   .cal-cell.today{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc),0 0 14px rgba(34,211,238,.18)}
@@ -691,7 +697,14 @@
     box-shadow:0 20px 60px rgba(0,0,0,.4)}
   .pp-head{display:flex;align-items:center;gap:.6rem;padding:.9rem 1.1rem;border-bottom:1px solid var(--line)}
   .pp-head strong{flex:1;font-size:1rem}
-  .pp-x{background:transparent;border:0;color:var(--mut);font-size:1.05rem;cursor:pointer;line-height:1}
+  /* Close × — a proper ≥44px tap target with a bigger glyph (was a small bare 1.05rem hit area). */
+  .pp-x{background:transparent;border:0;color:var(--mut);font-size:1.3rem;cursor:pointer;line-height:1;
+    width:44px;height:44px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;border-radius:8px}
+  .pp-x:hover,.pp-x:focus-visible{color:var(--ink);background:var(--surface-2)}
+  /* Tap feedback: on native (WKWebView) the overlay/sheet buttons fired but showed no pressed
+     cue, so taps felt dead. A subtle press-state confirms the tap landed. Applies on web too. */
+  .pp-overlay button:active,.pp-card button:active,.surface button:active,
+  .chat-sheet-card button:active,#helmDlg button:active{transform:scale(.98);filter:brightness(.94)}
   .pp-body{padding:.4rem 1.1rem;overflow:auto;font-size:.88rem}
   .pp-item{display:flex;gap:.55rem;padding:.55rem 0;border-bottom:1px solid var(--line);line-height:1.45}
   .pp-item:last-child{border-bottom:0}
@@ -790,7 +803,7 @@
   .vid-music-x{padding:.3em .6em}
   .vid-music-hint{margin:.35rem 0 0;font-size:.74rem}
   .vsc-fps{display:flex;align-items:center;gap:.4rem;margin-top:.4rem;font-size:.78rem;color:var(--mut)}
-  .vsc-fps input{width:4.5em;background:#080c16;border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:.3em .4em;font:inherit}
+  .vsc-fps input{width:4.5em;background:var(--bg-1);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:.3em .4em;font:inherit}
   .vid-scenes{display:flex;flex-direction:column;gap:.5rem;margin:.4rem 0}
   .vsc{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:.6rem .7rem}
   .vsc-hd{display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem}
@@ -1902,7 +1915,10 @@
     /* keep the Rough draft rail's column; only the settings rail collapses */
     body.focus-mode #v-editor #editorOuter{grid-template-columns:180px minmax(0,1fr) !important}
   }
-  #focusExitBtn{display:none}
+  /* Hidden unless focus mode. Scoped through #v-editor .editor-bar so it out-specifies the
+     editor-bar .iconBtn base (which sets display:inline-flex); the focus-mode rule below keeps
+     its !important so it still wins when focus mode is on. */
+  #v-editor .editor-bar #focusExitBtn{display:none}
   body.focus-mode #focusExitBtn{display:inline-flex !important}
 
   /* ── template picker cards (new-post only) ──────────────────────────────── */
@@ -2010,8 +2026,17 @@
     font-size:.78rem;color:var(--mut);flex:1 1 130px;min-width:120px}
   .fig-draw-width span{flex:0 0 auto}
   .fig-draw-width input[type=range]{flex:1 1 auto;width:auto;accent-color:var(--acc);height:30px;min-width:80px}
+  /* The figure/flipbook board is a LIGHT "paper" surface in BOTH themes, with a faint dot-grid
+     guide: the default pen ink (FIG_DRAW_INK, dark) reads on paper, and the GIF/video export
+     bakes the SAME light paper (#fbfaf6) so the board previews the export. The dot grid is a CSS
+     background on the surface (behind the transparent canvas) — a drawing guide ONLY; it never
+     appears in the exported GIF/video. Fixed light in both themes so a dark board never hides a
+     dark pen or misleads the (now light) export. */
   .fig-draw-surface{position:relative;border:1px solid var(--line);border-radius:13px;
-    background:var(--surface);overflow:hidden;touch-action:auto}
+    background-color:#fbfaf6;
+    background-image:radial-gradient(rgba(27,36,51,.11) 1.1px, transparent 1.3px);
+    background-size:22px 22px;background-position:11px 11px;
+    overflow:hidden;touch-action:auto}
   #figCanvas{display:block;width:100%;height:auto;touch-action:none;cursor:crosshair;
     background:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
   .fig-draw-actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem}
@@ -2421,7 +2446,10 @@
     line-height:1.45;cursor:pointer;white-space:pre-wrap}
   .ti-card:hover,.ti-card:focus-visible{border-color:var(--partner-voice);outline:none}
   @media(max-width:640px){ .thread-inbox{max-width:88%} }
-  /* Ask toggle: ✦ flips the next message from "write into the post" to "say to the Partner" */
+  /* Ask toggle: ✦ flips the next message from "write into the post" to "say to the Partner".
+     Its central ✦ glyph is text (not a .tico SVG), so it read smaller than the camera/mic
+     icons beside it — bump the glyph so the Partner button reads as an equal, deliberate icon. */
+  #chatAskToggle{font-size:1.5rem;line-height:1}
   #chatAskToggle.on{border-color:var(--acc);color:var(--acc);background:rgba(45,212,191,.12)}
   /* quick chips: rendering them is free; tapping one spends tokens (spec 4.2).
      Partner-washed + ✦-marked so they read as the Partner offering, not toolbar chrome. */
@@ -2586,7 +2614,8 @@
   .series-hint{flex-basis:100%;font-size:.74rem;color:var(--faint);margin-top:.15rem;line-height:1.4}
 
   /* ── live preview sheet ─────────────────────────────────────────────────── */
-  .pv-iframe{display:block;width:100%;height:70vh;border:0;border-radius:12px;background:#04060c}
+  /* theme-aware empty/loading backdrop (was a hardcoded near-black slab in light mode) */
+  .pv-iframe{display:block;width:100%;height:70vh;border:0;border-radius:12px;background:var(--bg)}
   /* inline-AI toolbar (appears on a text selection in the editor) */
   .inline-ai-bar{position:absolute;z-index:9999;display:none;gap:.12rem;align-items:center;
     background:var(--surface);border:1px solid var(--line-strong);border-radius:11px;padding:.3rem;
@@ -2747,7 +2776,7 @@
     .editor-bar-main #sessionWords{display:none !important}
     .editor-bar-main #editorStatus{min-width:0;overflow:hidden}
     .editor-bar-main #editorStatusText{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .editor-bar-tools{display:flex;gap:.4rem;margin-top:.45rem;overflow-x:auto;
+    .editor-bar-tools{display:flex;gap:.5rem;margin-top:.5rem;overflow-x:auto;
       flex-wrap:nowrap;scrollbar-width:none;overscroll-behavior-inline:contain}
     .editor-bar-tools::-webkit-scrollbar{display:none}
     .editor-bar-tools > *{flex:0 0 auto}
@@ -2764,11 +2793,19 @@
   .pub-btn{background:var(--grad-pub);color:#04121a;font-weight:700;
     font-size:.82rem;padding:.5em 1em;border-radius:999px;border:0;cursor:pointer;
     white-space:nowrap}
+  /* One consistent size for EVERY toolbar button. Text-only buttons (the AI ▾ / Checks ▾
+     dropdown summaries) used to render ~8px shorter than the icon-bearing ones (Focus, Live
+     preview, Doc), which is what made the compose-mode top nav look lopsided — inline-flex +
+     a shared min-height evens them out, and the slightly larger box gives a comfier tap target. */
   #v-editor .editor-bar .iconBtn{background:transparent;border:1px solid var(--line);
-    color:var(--ink);border-radius:10px;padding:.35em .7em;font:600 .9rem system-ui;
-    cursor:pointer;line-height:1}
+    color:var(--ink);border-radius:10px;padding:.42em .8em;font:600 .92rem system-ui;
+    cursor:pointer;line-height:1;box-sizing:border-box;min-height:38px;
+    display:inline-flex;align-items:center;justify-content:center;gap:.35em}
   #v-editor .editor-bar .iconBtn:hover{border-color:var(--acc);color:var(--acc)}
   #v-editor .editor-bar .iconBtn:disabled{opacity:.5;cursor:default}
+  /* Publish + Back share the toolbar height so the compose-mode bar reads as one even row. */
+  #v-editor .editor-bar .pub-btn{min-height:38px;padding:.5em 1.1em;font-size:.85rem}
+  #v-editor .editor-bar .back{min-height:38px;display:inline-flex;align-items:center;gap:.3em}
   /* labelled toolbar buttons: icon + short word, so nothing is cryptic */
   #v-editor .editor-bar .tb-labelled{display:inline-flex;align-items:center;gap:.35em;white-space:nowrap}
 
@@ -2964,7 +3001,10 @@
   .pt-input textarea{flex:1;min-width:0}
   .pt-input .btn{flex:0 0 auto;width:auto;margin-top:0;padding-inline:1.5rem}
   .pt-preview iframe{width:100%;min-height:60vh;border:1px solid var(--line);border-radius:16px;
-    background:#04060c;box-shadow:var(--shadow)}
+    /* cream "paper" empty/loading backdrop — reuses the editor writing-surface token so the
+       Partner draft pane reads as paper (cream in light, dark in dark); the rendered post
+       fills the frame with its own bg once it loads */
+    background:var(--thread-canvas);box-shadow:var(--shadow)}
   .pt-preview{display:none}
   .pt-preview.show{display:block}
   @media(min-width:900px){
@@ -3098,8 +3138,8 @@
     gap:12px;border-bottom:1px solid var(--line);flex:0 0 auto}
   .surface-head .surface-title{margin:0;flex:1;font:650 1rem/1.25 var(--font-display);
     letter-spacing:0;text-transform:none;color:var(--ink)}
-  .surface-close{width:36px;height:36px;display:grid;place-items:center;border:0;border-radius:8px;
-    color:var(--mut);background:transparent;cursor:pointer;flex:0 0 auto;font-size:1.05rem;
+  .surface-close{width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:8px;
+    color:var(--mut);background:transparent;cursor:pointer;flex:0 0 auto;font-size:1.3rem;
     line-height:1;padding:0}
   .surface-close:hover,.surface-close:focus-visible{color:var(--ink);background:var(--surface-2)}
   .surface--sheet{width:min(1200px,calc(100vw - 32px));max-width:none;margin-inline:auto;
@@ -4834,7 +4874,7 @@
           <input id="figDrawWidth" type="range" min="1" max="14" step="1" value="3" />
         </label>
         <span class="fig-draw-swatches" id="figDrawSwatches" role="group" aria-label="Pen colour">
-          <button type="button" class="fig-sw on" data-c="#f4f7fd" title="Ink (default)" style="background:#f4f7fd"></button>
+          <button type="button" class="fig-sw on" data-c="#1b2433" title="Ink (default)" style="background:#1b2433"></button>
           <button type="button" class="fig-sw" data-c="#9fb3c8" title="Grey" style="background:#9fb3c8"></button>
           <button type="button" class="fig-sw" data-c="#2dd4bf" title="Teal" style="background:#2dd4bf"></button>
           <button type="button" class="fig-sw" data-c="#22d3ee" title="Cyan" style="background:#22d3ee"></button>
@@ -5314,15 +5354,22 @@ function tico(name, cls){
 let state={platform:'linkedin', idea:'', post:'', hooks:[], imageDataUrl:null, imageFile:null};
 
 /* ── theme system ───────────────────────────────────────────────────────── */
-function setTheme(t){
-  // dark is the default/base (empty data-theme); light is the opt-in override
-  document.documentElement.dataset.theme = t==='light' ? 'light' : '';
-  localStorage.setItem('helm-theme', t==='light' ? 'light' : 'dark');
+// LIGHT is the product default for a NEW / unset user (owner's call, 2026-07); DARK is a
+// first-class opt-in via the toggle. dark is still the CSS base (empty data-theme); light is
+// the [data-theme="light"] override.
+const DEFAULT_THEME='light';
+function setTheme(t, persist){
+  const light = t==='light';
+  document.documentElement.dataset.theme = light ? 'light' : '';
+  // Only an EXPLICIT user action (toggleTheme) persists the choice. Boot passes persist=false
+  // so an unset user is never silently pinned to whatever the default is at the time — that is
+  // exactly what let the old build masquerade the persisted default as a real choice.
+  if(persist) localStorage.setItem('helm-theme', light ? 'light' : 'dark');
   // keep the browser chrome in step (a dark theme-color under a light UI paints
   // a dark band around fixed bottom bars on phones)
   const mc = document.querySelector('meta[name="theme-color"]');
-  if(mc) mc.content = t==='light' ? '#eef1f6' : '#04060c';
-  const icon = tico(t==='light' ? 'sun' : 'moon');
+  if(mc) mc.content = light ? '#eef1f6' : '#04060c';
+  const icon = tico(light ? 'sun' : 'moon');
   const t1=$('themeToggleMain'), t2=$('themeToggleEditor'), t3=$('themeToggleSettings');
   if(t1) t1.innerHTML=icon;
   if(t2) t2.innerHTML=icon;
@@ -5330,13 +5377,21 @@ function setTheme(t){
 }
 function toggleTheme(){
   const cur=document.documentElement.dataset.theme;
-  setTheme(cur==='light' ? 'dark' : 'light');
+  setTheme(cur==='light' ? 'dark' : 'light', true);  // explicit choice → persist
 }
-// initialise theme — default DARK (first-party companion to the dark site).
-// One-time migration: the old build force-set 'light' on every load, so a stored
-// 'light' is not a real choice — clear it once so existing users land on dark.
+// Default regardless of prefers-color-scheme: the product has one intended default (light);
+// anyone who wants dark toggles once and it sticks.
+// One-time migrations of the stored key (helm-theme):
+//  • v2 (pre-existing): the ancient build force-set 'light' on every load, so a stored 'light'
+//    was not a real choice — cleared once so those users fell to the then-default (dark).
+//  • v3 (this change): the interim build then persisted the DARK default on EVERY boot (setTheme
+//    always wrote), so a stored 'dark' is likewise not necessarily a real choice. Now that the
+//    default is light we clear a stored 'dark' once so returning users land on the new default.
+//    A genuine dark preference re-set AFTER this migration persists (toggleTheme) and is kept;
+//    a stored 'light' is always an explicit choice here (the interim default was dark) → kept.
 if(!localStorage.getItem('helm-theme-v2')){ localStorage.removeItem('helm-theme'); localStorage.setItem('helm-theme-v2','1'); }
-setTheme(localStorage.getItem('helm-theme')||'dark');
+if(!localStorage.getItem('helm-theme-v3')){ if(localStorage.getItem('helm-theme')==='dark') localStorage.removeItem('helm-theme'); localStorage.setItem('helm-theme-v3','1'); }
+setTheme(localStorage.getItem('helm-theme')||DEFAULT_THEME, false);  // boot: never persist
 
 window.setTheme=setTheme;
 window.toggleTheme=toggleTheme;
@@ -6884,11 +6939,25 @@ function setRowDeleting(row,btn){
     setBusy(btn,false);
   };
 }
+// Per-repo cache of the last-known posts list, so the Posts page paints INSTANTLY from the
+// previous true state instead of sitting on "Loading…" for the round trip(s) to GitHub.
+// Keyed by owner/repo/branch so switching repos never shows the wrong blog's posts.
+function _postsCacheKey(){ try{ const g=window.__studioConfig&&window.__studioConfig.getGithub&&window.__studioConfig.getGithub(); return g?('chapbook.posts.v1.'+(g.owner||'')+'/'+(g.repo||'')+'/'+(g.branch||'')):null; }catch{ return null; } }
+function _readPostsCache(){ try{ const k=_postsCacheKey(); if(!k) return null; const raw=localStorage.getItem(k); const arr=raw?JSON.parse(raw):null; return Array.isArray(arr)?arr:null; }catch{ return null; } }
+function _writePostsCache(list){ try{ const k=_postsCacheKey(); if(k&&Array.isArray(list)) localStorage.setItem(k, JSON.stringify(list)); }catch{} }
 async function loadPosts(){
   const list=$('postsList');
-  list.innerHTML='<p class="sub">Loading…</p>';
-  try{ _posts=await api('/posts'); renderPosts(); renderPostCalendar(); }
-  catch(e){ list.innerHTML=`<p class="sub" style="color:#f472b6">${esc(e.message)}</p>`; }
+  // Instant paint from the cache, THEN refresh in the background. The refreshed result is the
+  // true repo state and overwrites the cache — so correctness is preserved; the cache only
+  // removes the multi-second blank wait on entry.
+  const cached=_readPostsCache();
+  if(cached){ _posts=cached; renderPosts(); renderPostCalendar(); }
+  else { list.innerHTML='<p class="sub">Loading…</p>'; }
+  try{ const fresh=await api('/posts'); _posts=fresh; _writePostsCache(fresh); renderPosts(); renderPostCalendar(); }
+  catch(e){
+    // A transient refresh failure must not blank a list we already showed from cache.
+    if(!cached) list.innerHTML=`<p class="sub" style="color:#f472b6">${esc(e.message)}</p>`;
+  }
 }
 function renderPosts(){
   const list=$('postsList'), cnt=$('postsCount');
@@ -9595,6 +9664,28 @@ async function chatSend(){
   const t = (inp.value || '').trim();
   if(!t) return;
   pushHistory();   // a sent message is a structural add — one ⌘Z step
+  // Compose-mode guide sweep (mirrors core/chatCompose.js isEmptyGuideBlock/dropEmptyGuides,
+  // tested there — keep in lockstep). A template's instruction boxes are non-destructive GUIDES —
+  // guideify() moves the prewritten text into `ph` and empties the content field, so an
+  // untouched box holds no content (and never publishes). But an unbound Send inserts a NEW
+  // block, so the still-empty guide boxes were left stranded as empty blocks ABOVE the
+  // message that the user then had to delete by hand (e.g. the "Announcement" template's
+  // heading + paragraph guides). A sent message is the user's first real content, so drop
+  // the untouched guide boxes here. Filled boxes (content non-empty) never match `ph`+empty,
+  // so a partly-written scaffold is preserved; the plain empty new-post seed carries no `ph`
+  // and is left to the trailing-empty replace below. Only runs on an unbound send (bound
+  // edits returned above).
+  {
+    const _strip = (h) => String(h || '').replace(/<[^>]+>/g, '').trim();
+    const _isEmptyGuide = (x) => x && x.ph && (
+      (x.type === 'text' || x.type === 'quote') ? !_strip(x.html)
+      : x.type === 'heading' ? !String(x.text || '').trim()
+      : false);
+    if(doc.blocks.some(_isEmptyGuide)){
+      doc.blocks = doc.blocks.filter(x => !_isEmptyGuide(x));
+      _composeAnchorId = null;   // the anchor may have pointed at a now-removed guide box
+    }
+  }
   let focusId = null;
   if(chatIsPlainParagraph(t)){
     const b = { id: mkId(), type: 'text', html: inlineMdToHtml(t) };
@@ -16991,7 +17082,7 @@ const _figDraw = {
   bgMode: 'trace',           // 'trace' (faint guide, not exported) | 'keep' (still base, exported)
   snap: false,               // Snap shapes: round a freehand stroke to a clean line/circle/box on lift-off
   mirror: false,             // Mirror: duplicate each completed stroke across the vertical centre axis
-  colour: '#f4f7fd',         // current pen colour (session-sticky; default = FIG_DRAW_INK)
+  colour: '#1b2433',         // current pen colour (session-sticky; default = FIG_DRAW_INK)
   fillMode: false,           // Fill: the next stroke auto-closes and renders filled (35%) + outlined
   tool: 'pen',               // 'pen' | 'text' | 'erase'
   textDrag: null,            // in-progress label drag: { frame, idx, dx, dy } | null
@@ -17144,8 +17235,10 @@ function sizeFigCanvas(){
   _figDraw.ctx = ctx;
 }
 
-/* the visible ink colour for the raster preview (matches --ink in the SVG) */
-const FIG_DRAW_INK = '#f4f7fd';
+/* the visible ink colour for the raster preview: dark ink on the light paper board + light
+   export bake (matches the light-theme --ink; default-ink strokes serialise to var(--ink),
+   so the SVG block stays theme-aware for the reader). */
+const FIG_DRAW_INK = '#1b2433';
 
 /* the faint onion-skin ink for the previous frame (translucent) */
 const FIG_ONION_INK = 'rgba(130,140,170,0.34)';
@@ -18749,7 +18842,8 @@ function buildWeightedFlipbookSvg({ includedFrames, durs, w, h, fps, blend, ping
 
 /* ── Social exports: flipbook → GIF / video (client-side, no server) ────────
    One renderer serves both: a frame model drawn onto an export canvas at social
-   size with the site-dark background baked in. GIF = hard cuts (the format has
+   size with the light paper background (#fbfaf6) baked in — matches the on-screen
+   board so the board previews the export. GIF = hard cuts (the format has
    no cross-fade); video re-runs the preview timing maths, so dissolve + per-frame
    durations + ping-pong are honoured. */
 function renderFigFrameToCtx(ctx, fr, opts){
@@ -18757,7 +18851,7 @@ function renderFigFrameToCtx(ctx, fr, opts){
   const W = opts.w, H = opts.h, pad = opts.pad != null ? opts.pad : Math.round(W * 0.07);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1;
-  ctx.fillStyle = opts.bg || '#04060c';
+  ctx.fillStyle = opts.bg || '#fbfaf6';
   ctx.fillRect(0, 0, W, H);
   if(!fr) return;
   const k = Math.min((W - pad * 2) / (sw || 1), (H - pad * 2) / (sh || 1));
@@ -21580,40 +21674,77 @@ applyBrandName();
     if(isMobile() && ta && ta.classList && ta.classList.contains('be-raw')) autogrow(ta);
   });
 
+  const editorBar = () => $('v-editor') && $('v-editor').querySelector('.editor-bar');
+  // The page scroll position captured the moment the keyboard opened, so we can return the
+  // page to it on close. iOS scrolls the layout viewport to reveal the field but never scrolls
+  // it back, which left the whole page (and the top nav) lifted "until manually dragged".
+  let _preKbScrollY = null;
+
+  /* Pin the STICKY top bar to the top of the VISIBLE (visual) viewport. On iOS the on-screen
+     keyboard shifts the visual viewport but a position:sticky/top:0 bar stays anchored to the
+     LAYOUT viewport, so it slides up out of view (the "top nav rides up" report). Translating
+     it down by the visual viewport's top offset re-pins it to what the user can see. When
+     offsetTop is 0 — the common keyboard case and EVERY desktop engine — this is a strict
+     no-op, so web behaviour is unchanged. Mirrors the bottom compose bar's chatPlaceBar. */
+  function editorPinBar(open){
+    const bar = editorBar();
+    if(!bar) return;
+    bar.style.transform = (open && vv && vv.offsetTop > 0) ? `translateY(${vv.offsetTop}px)` : '';
+  }
+
   /* (2) keyboard height → CSS var --kb + body.kb-open. visualViewport.height shrinks
      by the keyboard's height when it opens; the gap below the layout viewport is the
-     keyboard. We also re-scroll the active field into view as the viewport settles. */
+     keyboard. We also re-scroll the active field into view as the viewport settles, and
+     restore the page scroll when it closes so the top nav returns on its own. */
   function syncViewport(){
     if(!vv) return;
     const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
     const open = isMobile() && editorOpen() && kb > 80;
+    const wasOpen = document.body.classList.contains('kb-open');
+    if(open && !wasOpen) _preKbScrollY = window.scrollY;   // remember the pre-keyboard scroll
     document.documentElement.style.setProperty('--kb', (open ? kb : 0) + 'px');
     document.body.classList.toggle('kb-open', open);
-    if(open) keepActiveAboveKeyboard();
+    editorPinBar(open);
+    if(open){ keepActiveAboveKeyboard(); }
+    else if(wasOpen){ restorePageScroll(); }
   }
 
-  /* (1) scroll the focused field/caret to sit just above the keyboard. With
-     visualViewport we know the visible bottom precisely; without it we fall back
-     to centring the field. */
+  // Return the page to where it was before the keyboard lifted it (fixes "doesn't return
+  // until manually dragged"). Best-effort: only if we captured a starting point.
+  function restorePageScroll(){
+    editorPinBar(false);
+    if(_preKbScrollY == null) return;
+    const y = _preKbScrollY; _preKbScrollY = null;
+    try{ window.scrollTo({ top: y, behavior: reduceMotion() ? 'auto' : 'smooth' }); }catch{}
+  }
+
+  /* (1) scroll the focused field/caret to sit inside the visible band — BELOW the sticky top
+     nav and ABOVE the on-screen keyboard — with the minimum movement. Anchoring on the caret
+     (or, when no caret rect is available, on the field's writing EDGE / bottom rather than its
+     top) fixes the case where a block TALLER than the band was top-aligned, which shoved the
+     caret down BEHIND the keyboard. We only ever nudge the window when the caret is actually
+     outside the band, and never lift content up behind the top nav. */
   function keepActiveAboveKeyboard(){
     const el = document.activeElement;
     if(!isEditable(el)) return;
     const behavior = reduceMotion() ? 'auto' : 'smooth';
-    if(!vv){ try{ el.scrollIntoView({ block:'center', behavior }); }catch{} return; }
-    // caret rect when available (collapsed selection), else the field's own rect
+    if(!vv){ try{ el.scrollIntoView({ block:'nearest', behavior }); }catch{} return; }
+    // caret rect when available (collapsed selection), else the field's writing edge (bottom)
     let rect = null;
     const sel = window.getSelection && window.getSelection();
     if(sel && sel.rangeCount){
-      try{ const r = sel.getRangeAt(0).getClientRects()[0]; if(r && r.height) rect = r; }catch{}
+      try{ const r = sel.getRangeAt(0).getClientRects()[0]; if(r && r.height) rect = { top:r.top, bottom:r.bottom }; }catch{}
     }
-    if(!rect) rect = el.getBoundingClientRect();
-    const visibleBottom = vv.offsetTop + vv.height;   // top of the keyboard, in layout coords
-    const margin = 24;                                 // breathing room above the keyboard
-    if(rect.bottom > visibleBottom - margin){
-      window.scrollBy({ top: rect.bottom - (visibleBottom - margin), behavior });
-    } else if(rect.top < vv.offsetTop + margin){
-      window.scrollBy({ top: rect.top - (vv.offsetTop + margin), behavior });
-    }
+    if(!rect){ const b = el.getBoundingClientRect(); rect = { top: b.bottom - 1, bottom: b.bottom }; }
+    const bar = editorBar();
+    const navBottom = bar ? Math.max(0, bar.getBoundingClientRect().bottom) : 0;   // sticky top nav
+    const margin = 20;
+    const bandTop = vv.offsetTop + navBottom + margin;         // just under the top nav
+    const bandBottom = vv.offsetTop + vv.height - margin;      // just above the keyboard
+    let delta = 0;
+    if(rect.bottom > bandBottom) delta = rect.bottom - bandBottom;          // caret under keyboard → lift up
+    else if(rect.top < bandTop) delta = rect.top - bandTop;                 // caret behind nav → lower down
+    if(Math.abs(delta) > 1) window.scrollBy({ top: delta, behavior });
   }
 
   if(vv){
@@ -21629,12 +21760,15 @@ applyBrandName();
     setTimeout(() => { syncViewport(); keepActiveAboveKeyboard(); }, vv ? 60 : 0);
     if(!vv){ try{ e.target.scrollIntoView({ block:'center', behavior: reduceMotion() ? 'auto' : 'smooth' }); }catch{} }
   });
-  // Reset keyboard state when focus leaves the editor entirely.
+  // Reset keyboard state when focus leaves the editor entirely — clear --kb/kb-open, unpin the
+  // top bar, and return the page to its pre-keyboard scroll so the top nav comes back.
   document.addEventListener('focusout', () => {
     setTimeout(() => {
       if(!isEditable(document.activeElement)){
+        const wasOpen = document.body.classList.contains('kb-open');
         document.documentElement.style.setProperty('--kb', '0px');
         document.body.classList.remove('kb-open');
+        if(wasOpen) restorePageScroll(); else editorPinBar(false);
       }
     }, 80);
   });

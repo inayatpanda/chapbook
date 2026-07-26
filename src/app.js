@@ -29,6 +29,9 @@ import * as postList from './core/postList.js';
 import * as connection from './core/connection.js';
 import * as themeCatalogue from './core/themeCatalogue.js';
 import { ed25519Verify } from './lib/ed25519Verify.js';
+import { isNativeOrigin, externalUrlToOpen, viewportContentFor } from './lib/nativeLinks.js';
+import { installNativeFetchBridge } from './lib/nativeFetch.js';
+import { downloadUrlKind, mimeFromDataUrl, decodeDataUrl, deriveDownloadFilename, dialogFiltersFor } from './lib/nativeSave.js';
 
 // Minimal HTML escaper for the few spots where user text (a chosen blog name) is written
 // into the onboarding overlay's innerHTML — that overlay's origin holds the buyer's
@@ -39,7 +42,30 @@ const escHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
 // Public OAuth Client ID + relay base, injected into dist/index.html at build (Task 5).
 // Absent in the local server-backed Studio → device sign-in hides, PAT path only.
 const GH_CLIENT_ID = (typeof window !== 'undefined' && window.__STUDIO_GH_CLIENT_ID) || '';
-const RELAY_BASE = (typeof window !== 'undefined' && window.__STUDIO_RELAY_BASE) || '/.netlify/functions/gh-device';
+
+// The canonical hosted origin — where the gh-device relay function actually lives.
+// (Already the sole host in the native builds' CSP connect-src.)
+const HOSTED_ORIGIN = 'https://chapbook.rqai.co.uk';
+
+// Resolve the device-flow relay URL. The GitHub device endpoints send no CORS headers, so
+// the browser calls them THROUGH the /.netlify/functions/gh-device relay. On the hosted web
+// build that relative, same-origin path is correct. But the native wrappers (Tauri iOS/Android)
+// serve the app from a custom protocol (tauri://localhost) or http://tauri.localhost, where a
+// RELATIVE /.netlify/... path has no backend — the POST 404s and "Sign in with GitHub" silently
+// dies. Native builds are meant to bake an ABSOLUTE STUDIO_RELAY_BASE, but that env var is easy
+// to forget on a rebuild (a plain `npm run build` bakes the relative default), which regresses
+// sign-in. So detect a native origin at runtime and point the relative path at the hosted relay
+// — sign-in then works regardless of the build env, and the hosted web build is unchanged.
+// Pure + injectable for unit tests. An already-absolute baked value is always used as-is.
+export function resolveRelayBase(baked, loc) {
+  const base = baked || '/.netlify/functions/gh-device';
+  if (!base.startsWith('/') || !loc) return base;
+  return isNativeOrigin(loc) ? HOSTED_ORIGIN + base : base;
+}
+const RELAY_BASE = resolveRelayBase(
+  (typeof window !== 'undefined' && window.__STUDIO_RELAY_BASE) || '',
+  (typeof location !== 'undefined') ? location : null,
+);
 
 export function buildApi() {
   const gh = makeGithub(config.getGithub());
@@ -113,8 +139,8 @@ export function renderOnboarding() {
         </div>
         <div id="gh-codebox" style="display:none;margin-top:.8rem;text-align:center">
           <div class="hint" style="margin:0 0 .3rem">Enter this code on GitHub (copied for you):</div>
-          <div id="gh-code" style="font:700 1.5rem/1 'Space Grotesk',monospace;letter-spacing:.18em;color:#f4f7fd"></div>
-          <a id="gh-open" target="_blank" rel="noopener" style="display:inline-block;margin-top:.6rem;color:#22d3ee;text-decoration:underline">Open GitHub →</a>
+          <div id="gh-code" style="font:700 1.5rem/1 'Space Grotesk',monospace;letter-spacing:.18em;color:var(--ink,#f4f7fd)"></div>
+          <a id="gh-open" target="_blank" rel="noopener" style="display:inline-block;margin-top:.6rem;color:var(--acc,#22d3ee);text-decoration:underline">Open GitHub →</a>
           <div class="hint" id="gh-poll" style="margin-top:.4rem">Waiting for you to authorise…</div>
         </div>
         <div id="gh-create" style="display:none;margin-top:.9rem">
@@ -123,7 +149,9 @@ export function renderOnboarding() {
           <label for="cb-name">Blog name</label>
           <input id="cb-name" placeholder="e.g. Second Breakfast" autocomplete="off">
           <label id="cb-theme-label">Theme</label>
-          <div id="cb-theme-picker" style="max-height:44vh;overflow:auto;margin-top:.1rem;padding:.1rem"></div>
+          <!-- No max-height/overflow here: a scroll layer nested in the fixed overlay breaks
+               button hit-testing on iOS WKWebView. Let the theme list flow; the overlay scrolls. -->
+          <div id="cb-theme-picker" style="margin-top:.1rem;padding:.1rem"></div>
           <input type="hidden" id="cb-theme" value="observatory">
           <label for="cb-core" style="margin-top:.9rem">Hero figure</label>
           <select id="cb-core">
@@ -143,7 +171,7 @@ export function renderOnboarding() {
           <div class="hint">Only public repos appear (sign-in grants <code>public_repo</code>). Need a private one? Use a token below.</div>
         </div>
         <details style="margin-top:1rem">
-          <summary style="cursor:pointer;color:#aebbd2;font-size:.82rem">Advanced — use a GitHub token instead</summary>
+          <summary style="cursor:pointer;color:var(--mut,#aebbd2);font-size:.82rem">Advanced — use a GitHub token instead</summary>
           <div style="margin-top:.6rem">${manualFields}
           </div>
         </details>
@@ -151,46 +179,75 @@ export function renderOnboarding() {
 
   const ov = document.createElement('div');
   ov.id = 'byok-overlay';
+  // NB: #byok-overlay deliberately carries NO backdrop-filter. It previously set
+  // `backdrop-filter:blur(8px)` on this container (the ancestor of every overlay control). On
+  // iOS WKWebView (the native bundle) that promotes the layer and mis-registers descendant
+  // hit-testing, making specific controls — the × (#byok-close) and "Create my blog" (#cb-go) —
+  // untappable while sibling buttons (e.g. #gh-start) still worked. It was also a visual no-op:
+  // this overlay's own background (var(--bg), opaque in both themes) is fully opaque, so there
+  // was nothing behind to blur.
+  // Do not re-add backdrop-filter here; if a blur is ever wanted, put it on a pointer-events:none
+  // sibling layer BEHIND .bc, never on an ancestor of the interactive content.
   ov.innerHTML = `
   <style>
-    #byok-overlay{position:fixed;inset:0;z-index:9999;background:#04060c;display:grid;place-items:center;padding:1rem;
-      font:15px/1.5 'Inter',system-ui,sans-serif;color:#f4f7fd;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
-    #byok-overlay .bc{position:relative;width:min(440px,94vw);max-height:94vh;overflow:auto;background:linear-gradient(180deg,#0f1730,#0b1120);border:1px solid rgba(140,160,200,.18);
-      border-radius:18px;padding:1.4rem 1.5rem;box-shadow:0 24px 70px rgba(0,0,0,.6)}
-    #byok-overlay .byok-x{position:absolute;top:.7rem;right:.7rem;width:32px;height:32px;margin:0;padding:0;
-      border-radius:9px;border:1px solid rgba(140,160,200,.25);background:rgba(8,12,22,.6);color:#aebbd2;
-      font:400 1.3rem/1 system-ui;cursor:pointer;display:flex;align-items:center;justify-content:center}
-    #byok-overlay .byok-x:hover{color:#f4f7fd;border-color:rgba(140,160,200,.5)}
-    #byok-overlay h2{font:700 1.25rem 'Space Grotesk',system-ui;margin:0 0 .2rem}
-    #byok-overlay h2 b{background:linear-gradient(120deg,#2dd4bf,#22d3ee 55%,#818cf8);-webkit-background-clip:text;background-clip:text;color:transparent}
-    #byok-overlay p{color:#aebbd2;font-size:.86rem;margin:.1rem 0 1rem}
-    #byok-overlay label{display:block;font:600 .68rem 'Space Grotesk',system-ui;letter-spacing:.08em;text-transform:uppercase;color:#aebbd2;margin:.7rem 0 .25rem}
-    #byok-overlay input,#byok-overlay select{width:100%;background:#080c16;border:1px solid rgba(140,160,200,.18);border-radius:10px;color:#f4f7fd;padding:.6em .7em;font:inherit}
-    #byok-overlay input:focus,#byok-overlay select:focus{outline:none;border-color:#22d3ee;box-shadow:0 0 0 3px rgba(34,211,238,.22)}
+    /* The fixed overlay is itself the SINGLE scroll surface (overflow-y:auto). It must NOT
+       contain a nested overflow:auto scroller: on iOS WKWebView a scroll container nested
+       inside a position:fixed ancestor mis-maps touch coordinates by its scroll offset, so
+       <button>/<a> hit-testing misses (native <select>/<input> are handled by iOS and are
+       immune) — which is exactly why the × and "Create my blog" were untappable. Flex column
+       plus .bc margin:auto centres the card when it's short and lets the overlay scroll as one
+       surface when it's tall (margin:auto, unlike justify/align-center, doesn't clip the top on
+       overflow). Do NOT reintroduce overflow:auto/max-height on .bc or #cb-theme-picker. */
+    /* Palette comes from the app's theme tokens (defined on :root / :root[data-theme="light"]
+       in index.html) so the overlay HONOURS light & dark with proper contrast instead of the
+       old hardcoded dark hexes. The overlay is appended to <body>, so it inherits those vars. */
+    #byok-overlay{position:fixed;inset:0;z-index:9999;background:var(--bg,#04060c);overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;padding:1rem;
+      font:15px/1.5 'Inter',system-ui,sans-serif;color:var(--ink,#f4f7fd)}
+    #byok-overlay .bc{position:relative;width:min(440px,94vw);margin:auto;background:linear-gradient(180deg,var(--surface-2,#0f1730),var(--surface,#0b1120));border:1px solid var(--line,rgba(140,160,200,.18));
+      border-radius:18px;padding:1.4rem 1.5rem;box-shadow:var(--shadow,0 24px 70px rgba(0,0,0,.6))}
+    #byok-overlay .byok-x{position:absolute;top:.55rem;right:.55rem;width:44px;height:44px;margin:0;padding:0;
+      border-radius:11px;border:1px solid var(--line-2,rgba(140,160,200,.25));background:var(--bg-1,rgba(8,12,22,.6));color:var(--mut,#aebbd2);
+      font:400 1.6rem/1 system-ui;cursor:pointer;display:flex;align-items:center;justify-content:center}
+    #byok-overlay .byok-x:hover{color:var(--ink,#f4f7fd);border-color:var(--acc,rgba(140,160,200,.5))}
+    /* Tap feedback — on native the onboarding buttons fired but showed no pressed state, so
+       taps felt dead. A subtle :active press-state makes every tap register visually. */
+    #byok-overlay button:active{transform:scale(.98);filter:brightness(.94)}
+    #byok-overlay h2{font:700 1.25rem 'Space Grotesk',system-ui;margin:0 0 .2rem;color:var(--ink,#f4f7fd)}
+    #byok-overlay h2 b{background:var(--grad,linear-gradient(120deg,#2dd4bf,#22d3ee 55%,#818cf8));-webkit-background-clip:text;background-clip:text;color:transparent}
+    #byok-overlay p{color:var(--mut,#aebbd2);font-size:.86rem;margin:.1rem 0 1rem}
+    #byok-overlay label{display:block;font:600 .68rem 'Space Grotesk',system-ui;letter-spacing:.08em;text-transform:uppercase;color:var(--mut,#aebbd2);margin:.7rem 0 .25rem}
+    #byok-overlay input,#byok-overlay select{width:100%;background:var(--bg-1,#080c16);border:1px solid var(--line,rgba(140,160,200,.18));border-radius:10px;color:var(--ink,#f4f7fd);padding:.6em .7em;font:inherit}
+    #byok-overlay input::placeholder{color:var(--faint,#6f7e98)}
+    #byok-overlay input:focus,#byok-overlay select:focus{outline:none;border-color:var(--acc,#22d3ee);box-shadow:var(--ring,0 0 0 3px rgba(34,211,238,.22))}
     #byok-overlay .row{display:flex;gap:.5rem}#byok-overlay .row>*{flex:1}
+    /* The theme picker inside the overlay remaps the --cbtp-* card vars to the app's theme
+       tokens (mirrors Settings → Site's #ss-theme-picker) so the swatch cards read on the
+       light surface instead of staying a dark card on a light overlay. */
+    #byok-overlay #cb-theme-picker{--cbtp-surface:var(--surface);--cbtp-line:var(--line);--cbtp-line2:var(--line-2);
+      --cbtp-acc:var(--acc);--cbtp-ink:var(--ink);--cbtp-mut:var(--mut);--cbtp-faint:var(--faint);--cbtp-font:var(--font-display)}
     /* Catch-all action-button styling. Excludes the theme picker's .cbtp-card buttons —
        they carry their own dark-card styling (themeCatalogue PICKER_CSS); without this
        exclusion the gradient here paints every theme card teal with unreadable text.
        :where() keeps specificity at (1,0,1) so the .ghost + .byok-x overrides still win. */
     #byok-overlay button:where(:not(.cbtp-card)){width:100%;margin-top:1.1rem;border:0;border-radius:12px;padding:.8em;font:700 1rem 'Space Grotesk',system-ui;
-      color:#042018;background:linear-gradient(95deg,#2dd4bf,#22d3ee);cursor:pointer}
-    #byok-overlay button.ghost{margin-top:.6rem;background:transparent;border:1px solid rgba(140,160,200,.3);color:#aebbd2}
-    #byok-overlay .hint{font-size:.74rem;color:#6f7e98;margin-top:.6rem}
+      color:#042018;background:var(--grad-pub,linear-gradient(95deg,#2dd4bf,#22d3ee));cursor:pointer}
+    #byok-overlay button.ghost{margin-top:.6rem;background:transparent;border:1px solid var(--line-2,rgba(140,160,200,.3));color:var(--ink,#aebbd2)}
+    #byok-overlay .hint{font-size:.74rem;color:var(--faint,#6f7e98);margin-top:.6rem}
     #byok-overlay .msg{font-size:.8rem;margin-top:.6rem;min-height:1em}
-    #byok-overlay #gh-create{border:1px solid rgba(140,160,200,.18);border-radius:14px;padding:.9rem 1rem;background:rgba(8,12,22,.5)}
-    #byok-overlay .cb-head{font:700 1rem 'Space Grotesk',system-ui;color:#f4f7fd}
-    #byok-overlay .cb-or{display:flex;align-items:center;gap:.6rem;margin:1rem 0 .2rem;font-size:.72rem;color:#6f7e98;text-transform:uppercase;letter-spacing:.08em}
-    #byok-overlay .cb-or::before,#byok-overlay .cb-or::after{content:"";flex:1;height:1px;background:rgba(140,160,200,.18)}
-    #byok-overlay .no-gh{margin-top:.7rem;padding:.6rem .75rem;border:1px solid rgba(140,160,200,.16);border-radius:10px;
-      background:rgba(8,12,22,.4);font-size:.76rem;line-height:1.5;color:#aebbd2}
-    #byok-overlay .no-gh a{color:#22d3ee;text-decoration:underline;white-space:nowrap;margin-left:.3rem}
-    #byok-overlay .no-gh .no-gh-sub{display:block;margin-top:.2rem;color:#6f7e98}
-    #byok-overlay .no-gh a.no-gh-back{display:inline-block;margin:.45rem 0 0;color:#2dd4bf;text-decoration:none;font-weight:700;white-space:normal}
+    #byok-overlay #gh-create{border:1px solid var(--line,rgba(140,160,200,.18));border-radius:14px;padding:.9rem 1rem;background:var(--bg-1,rgba(8,12,22,.5))}
+    #byok-overlay .cb-head{font:700 1rem 'Space Grotesk',system-ui;color:var(--ink,#f4f7fd)}
+    #byok-overlay .cb-or{display:flex;align-items:center;gap:.6rem;margin:1rem 0 .2rem;font-size:.72rem;color:var(--faint,#6f7e98);text-transform:uppercase;letter-spacing:.08em}
+    #byok-overlay .cb-or::before,#byok-overlay .cb-or::after{content:"";flex:1;height:1px;background:var(--line,rgba(140,160,200,.18))}
+    #byok-overlay .no-gh{margin-top:.7rem;padding:.6rem .75rem;border:1px solid var(--line,rgba(140,160,200,.16));border-radius:10px;
+      background:var(--bg-1,rgba(8,12,22,.4));font-size:.76rem;line-height:1.5;color:var(--mut,#aebbd2)}
+    #byok-overlay .no-gh a{color:var(--acc,#22d3ee);text-decoration:underline;white-space:nowrap;margin-left:.3rem}
+    #byok-overlay .no-gh .no-gh-sub{display:block;margin-top:.2rem;color:var(--faint,#6f7e98)}
+    #byok-overlay .no-gh a.no-gh-back{display:inline-block;margin:.45rem 0 0;color:var(--teal,#2dd4bf);text-decoration:none;font-weight:700;white-space:normal}
     #byok-overlay .gh-signedin{display:flex;align-items:center;gap:.5rem;margin:.2rem 0 .3rem;padding:.55rem .7rem;
       border:1px solid rgba(45,212,191,.42);border-radius:10px;background:rgba(45,212,191,.08);
-      color:#f4f7fd;font:600 .85rem 'Space Grotesk',system-ui}
-    #byok-overlay .gh-signedin b{color:#2dd4bf;font-weight:700}
-    #byok-overlay .gh-signedin .gh-si-dot{color:#2dd4bf;font-weight:700;font-size:1rem;line-height:1}
+      color:var(--ink,#f4f7fd);font:600 .85rem 'Space Grotesk',system-ui}
+    #byok-overlay .gh-signedin b{color:var(--teal,#2dd4bf);font-weight:700}
+    #byok-overlay .gh-signedin .gh-si-dot{color:var(--teal,#2dd4bf);font-weight:700;font-size:1rem;line-height:1}
   </style>
   <div class="bc">
     <button type="button" id="byok-close" class="byok-x" aria-label="Close setup" title="Close">×</button>
@@ -213,6 +270,7 @@ export function renderOnboarding() {
     <div class="hint">You can change these any time in Settings.</div>
   </div>`;
   document.body.appendChild(ov);
+
   const $ = (id) => document.getElementById(id);
   const v = (id) => ($(id).value || '').trim();
 
@@ -482,7 +540,251 @@ export function renderOnboarding() {
   }
 }
 
+// Hand an external URL to the OS. In the native wrappers the tauri-plugin-opener command is
+// reachable a few ways depending on config; try the most specific first and fall back. The
+// webview always exposes __TAURI_INTERNALS__, so this works even without withGlobalTauri.
+function openInSystemBrowser(url) {
+  const T = (typeof window !== 'undefined') ? window.__TAURI__ : null;
+  if (T && T.opener && typeof T.opener.openUrl === 'function') { T.opener.openUrl(url); return true; }
+  if (T && T.core && typeof T.core.invoke === 'function') { T.core.invoke('plugin:opener|open_url', { url }); return true; }
+  const I = (typeof window !== 'undefined') ? window.__TAURI_INTERNALS__ : null;
+  if (I && typeof I.invoke === 'function') { I.invoke('plugin:opener|open_url', { url }); return true; }
+  return false;
+}
+
+// Native-only delegated interceptor: in the Tauri webview a plain external <a> click goes
+// nowhere (no browser, external navigation blocked), so onboarding's "Create one" and the
+// device-flow "Open GitHub →" — the link that COMPLETES GitHub sign-in — silently do
+// nothing. Capture-phase so it runs before the app's own handlers AND before the opener
+// plugin's built-in target="_blank" listener (which bails on defaultPrevented, so no
+// double-open). On the web isNativeOrigin() is false → this attaches nothing and links
+// behave exactly as before. Wrapped in try/catch so it can never break boot.
+function installNativeExternalLinkOpener() {
+  try {
+    if (typeof document === 'undefined' || typeof location === 'undefined') return;
+    if (!isNativeOrigin(location)) return; // web: no-op
+    document.addEventListener('click', (ev) => {
+      try {
+        if (ev.defaultPrevented || ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+        const a = ev.target && ev.target.closest && ev.target.closest('a[href]');
+        if (!a) return;
+        const url = externalUrlToOpen(a.href, location);
+        if (!url) return;
+        ev.preventDefault();
+        openInSystemBrowser(url);
+      } catch { /* never let a click handler throw */ }
+    }, true);
+  } catch { /* never break boot */ }
+}
+
+// Minimal toast for the native shims below. The app's own toast() lives in index.html's inline
+// module (out of this bundle's scope), so we drive its #toast element directly — same behaviour,
+// no coupling. No-ops if the element isn't there. Native-only callers, so never runs on the web.
+function nativeToast(text) {
+  try {
+    const el = (typeof document !== 'undefined') && document.getElementById('toast');
+    if (!el) return;
+    el.textContent = String(text || '');
+    el.classList.add('show');
+    clearTimeout(nativeToast._t);
+    nativeToast._t = setTimeout(() => { try { el.classList.remove('show'); } catch { /* noop */ } }, 3000);
+  } catch { /* a toast must never throw */ }
+}
+
+// Native-only registry mapping each blob: URL → the Blob it was made from. WHY: the download
+// interceptor needs the export's bytes, but a same-origin `fetch('blob:…')` can be BLOCKED by the
+// bundle-local CSP (connect-src doesn't list blob:), so we can't rely on fetching the URL back.
+// Reading the Blob OBJECT (Blob.arrayBuffer()) is not a network op, so CSP never applies. We wrap
+// URL.createObjectURL to remember the Blob and URL.revokeObjectURL to forget it (bounded so it can
+// never grow without limit even if some caller never revokes). Native-only: not installed on web.
+const _blobRegistry = new Map();
+const _BLOB_REG_CAP = 128;
+function installNativeBlobUrlRegistry() {
+  try {
+    if (typeof URL === 'undefined' || typeof location === 'undefined') return;
+    if (!isNativeOrigin(location)) return; // web: no-op — createObjectURL is left untouched
+    const origCreate = (typeof URL.createObjectURL === 'function') ? URL.createObjectURL.bind(URL) : null;
+    const origRevoke = (typeof URL.revokeObjectURL === 'function') ? URL.revokeObjectURL.bind(URL) : null;
+    if (!origCreate) return;
+    URL.createObjectURL = function createObjectURL(obj) {
+      const u = origCreate(obj);
+      try {
+        if (obj && typeof Blob !== 'undefined' && obj instanceof Blob) {
+          if (_blobRegistry.size >= _BLOB_REG_CAP) { const k = _blobRegistry.keys().next().value; _blobRegistry.delete(k); }
+          _blobRegistry.set(u, obj);
+        }
+      } catch { /* registry is best-effort */ }
+      return u;
+    };
+    if (origRevoke) {
+      URL.revokeObjectURL = function revokeObjectURL(u) {
+        try { _blobRegistry.delete(u); } catch { /* noop */ }
+        return origRevoke(u);
+      };
+    }
+  } catch { /* never break boot */ }
+}
+
+// Read the bytes behind a blob:/data: download URL as { bytes, mime }, or null. data: is decoded
+// purely (no network). blob: is read from the captured Blob object (Blob.arrayBuffer(), CSP-free);
+// only if the Blob wasn't captured do we fall back to the original fetch (best effort — may be
+// CSP-limited on native). Never throws.
+async function readDownloadBytes(kind, url) {
+  try {
+    if (kind === 'data') {
+      const d = decodeDataUrl(url);
+      return d ? { bytes: d.bytes, mime: d.mime || mimeFromDataUrl(url) } : null;
+    }
+    const blob = _blobRegistry.get(url);
+    if (blob) {
+      const buf = await blob.arrayBuffer();
+      return { bytes: new Uint8Array(buf), mime: (blob.type || '').split(';')[0].trim().toLowerCase() };
+    }
+    const res = await fetch(url);                       // fallback: read the URL back (best effort)
+    const buf = await res.arrayBuffer();
+    const ct = (res.headers && res.headers.get && res.headers.get('content-type')) || '';
+    return { bytes: new Uint8Array(buf), mime: ct.split(';')[0].trim().toLowerCase() };
+  } catch { return null; }
+}
+
+// Native-only download interceptor. WKWebView / the custom-scheme origin ignore `<a download>`
+// and won't persist blob:/data: URLs, so every Chapbook export (interactive .html, flipbook
+// GIF/video, share-card image, PDF, drafts JSON) silently fails on native. Every one of those
+// export paths builds the file then appends a hidden `<a download>` to <body> and clicks it — so
+// a single capture-phase click listener on `a[download]` catches them ALL, with ZERO changes to
+// the export code (the web build runs that same code untouched; this listener just isn't
+// installed there). On a hit we cancel the (doomed) default, read the bytes, open the OS Save
+// dialog (tauri-plugin-dialog) and write them to the chosen path (tauri-plugin-fs). Wrapped in
+// try/catch throughout so it can never break a click or boot.
+function installNativeDownloadInterceptor() {
+  try {
+    if (typeof document === 'undefined' || typeof location === 'undefined') return;
+    if (!isNativeOrigin(location)) return; // web: no-op
+    document.addEventListener('click', (ev) => {
+      try {
+        if (ev.defaultPrevented || ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+        const a = ev.target && ev.target.closest && ev.target.closest('a[download]');
+        if (!a) return;
+        const href = a.getAttribute('href') || a.href || '';
+        const kind = downloadUrlKind(href);
+        if (!kind) return;                 // http(s)/relative <a download> → leave to the webview
+        const downloadAttr = a.getAttribute('download');
+        ev.preventDefault();               // stop the doomed native download; do it ourselves
+        saveDownloadNatively(kind, href, downloadAttr);
+      } catch { /* a click handler must never throw */ }
+    }, true);
+  } catch { /* never break boot */ }
+}
+
+// The async save half of the interceptor: read bytes → Save dialog → write. The dialog/fs plugin
+// JS is imported LAZILY (first save only) so the plugin code never executes on the web build.
+async function saveDownloadNatively(kind, href, downloadAttr) {
+  try {
+    const read = await readDownloadBytes(kind, href);
+    if (!read) { nativeToast('Export failed — could not read the file'); return; }
+    const filename = deriveDownloadFilename(downloadAttr, read.mime, 'download');
+    const [dialog, fs] = await Promise.all([
+      import('@tauri-apps/plugin-dialog'),
+      import('@tauri-apps/plugin-fs'),
+    ]);
+    const path = await dialog.save({ defaultPath: filename, filters: dialogFiltersFor(filename) });
+    if (!path) return;                     // user cancelled the Save dialog — silent, no error
+    await fs.writeFile(path, read.bytes);
+    nativeToast('Saved ' + filename);
+  } catch (e) {
+    nativeToast('Save failed' + (e && e.message ? ': ' + e.message : ''));
+  }
+}
+
+// Native-only window.open shim. In the wrappers window.open('…','_blank') opens nothing (no
+// browser), so the desktop "share"/composer intents (e.g. the X/LinkedIn web composers) go
+// nowhere. Route EXTERNAL http(s) targets through the system browser (openInSystemBrowser); leave
+// same-origin / app / non-http targets to the original window.open so in-app behaviour is intact.
+// (Plain `target="_blank"` anchors are already handled by installNativeExternalLinkOpener.)
+function installNativeWindowOpenShim() {
+  try {
+    if (typeof window === 'undefined' || typeof location === 'undefined') return;
+    if (!isNativeOrigin(location)) return; // web: no-op
+    const original = (typeof window.open === 'function') ? window.open.bind(window) : null;
+    window.open = function open(url, target, features) {
+      try {
+        const ext = (url != null) ? externalUrlToOpen(String(url), location) : null;
+        if (ext) { openInSystemBrowser(ext); return null; }
+      } catch { /* fall through to the original */ }
+      return original ? original(url, target, features) : null;
+    };
+  } catch { /* never break boot */ }
+}
+
+// Native-only clipboard shim. navigator.clipboard.writeText may be unavailable on the
+// tauri://localhost / http://tauri.localhost origin (not a "secure context" in the webview's
+// eyes), so every "Copy" button silently no-ops. Replace navigator.clipboard with a wrapper whose
+// writeText routes through tauri-plugin-clipboard-manager (imported lazily); readText and any
+// other members delegate to the original where present. Web build: isNativeOrigin is false → not
+// installed, navigator.clipboard is exactly the browser's.
+function installNativeClipboardShim() {
+  try {
+    if (typeof navigator === 'undefined' || typeof location === 'undefined') return;
+    if (!isNativeOrigin(location)) return; // web: no-op
+    const original = navigator.clipboard || null;
+    const wrapper = {
+      writeText(text) {
+        return import('@tauri-apps/plugin-clipboard-manager')
+          .then((m) => m.writeText(String(text == null ? '' : text)))
+          .catch((e) => {                                   // last-resort fall back to the native clipboard
+            if (original && typeof original.writeText === 'function') return original.writeText(String(text == null ? '' : text));
+            throw e;
+          });
+      },
+      readText() {
+        if (original && typeof original.readText === 'function') return original.readText();
+        return import('@tauri-apps/plugin-clipboard-manager').then((m) => m.readText());
+      },
+      write(data) { return original && typeof original.write === 'function' ? original.write(data) : Promise.reject(new Error('clipboard.write unavailable')); },
+      read() { return original && typeof original.read === 'function' ? original.read() : Promise.reject(new Error('clipboard.read unavailable')); },
+    };
+    try {
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, get() { return wrapper; } });
+    } catch {
+      // Can't redefine the property (older engines) — patch writeText in place if we can.
+      if (original) { try { original.writeText = wrapper.writeText; } catch { /* give up quietly */ } }
+    }
+  } catch { /* never break boot */ }
+}
+
+// Native-only fetch bridge (see lib/nativeFetch.js). Installed FIRST — synchronously, before
+// refresh()/buildApi() below construct the GitHub + AI seams (which capture `fetchImpl = fetch`
+// at construction time) — so those seams pick up the bridged window.fetch. The Tauri HTTP plugin
+// is imported LAZILY on the first bridged request, so the plugin code never runs on the web
+// (isNativeOrigin is false there → the bridge isn't installed and the import is never reached).
+// On the web this is a strict no-op: window.fetch is left exactly as the browser provided it.
+function installNativeFetchBridgeBoot() {
+  if (typeof window === 'undefined' || typeof location === 'undefined') return;
+  installNativeFetchBridge(window, location, () => import('@tauri-apps/plugin-http').then((m) => m.fetch));
+}
+
+// Native-only viewport zoom lock. The static <meta name="viewport"> intentionally ships WITHOUT
+// maximum-scale/user-scalable so ALL web browsers keep pinch-zoom (Android Chrome honours
+// user-scalable=no on the web and would lose accessibility zoom). Inside the Tauri wrappers we
+// append the lock at boot so the native app can't be pinch-zoomed and feels app-like. Web build:
+// isNativeOrigin is false → viewportContentFor returns the base content unchanged (strict no-op).
+function applyNativeViewportLock() {
+  try {
+    if (typeof document === 'undefined' || typeof location === 'undefined') return;
+    const meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) return;
+    meta.setAttribute('content', viewportContentFor(location, meta.getAttribute('content')));
+  } catch { /* never break boot */ }
+}
+
 if (typeof window !== 'undefined') {
+  installNativeFetchBridgeBoot();     // native-only; strict no-op on the web (must precede refresh())
+  applyNativeViewportLock();          // native-only: lock pinch-zoom; web keeps accessibility zoom
+  installNativeExternalLinkOpener(); // native-only; strict no-op on the web
+  installNativeBlobUrlRegistry();     // native-only: capture Blob objects so exports read bytes CSP-free
+  installNativeDownloadInterceptor(); // native-only: <a download> blob:/data: exports → OS Save dialog
+  installNativeWindowOpenShim();      // native-only: window.open external http(s) → system browser
+  installNativeClipboardShim();       // native-only: navigator.clipboard.writeText → Tauri clipboard
   window.__studioConfig = config;       // the static index's boot gate reads this
   window.__studioRefresh = refresh;     // rebuild seams after the repo/keys change
   window.__studioOnboard = renderOnboarding;

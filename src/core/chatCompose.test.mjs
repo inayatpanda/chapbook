@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chatFieldFor, enterSends, stripLabel, isPlainParagraph, htmlToChatText } from './chatCompose.js';
+import { chatFieldFor, enterSends, stripLabel, isPlainParagraph, htmlToChatText, isEmptyGuideBlock, dropEmptyGuides } from './chatCompose.js';
 
 test('chatFieldFor maps every wordy block type', () => {
   assert.deepEqual(chatFieldFor({ type: 'text' }), { field: 'html', label: 'paragraph', md: true });
@@ -42,6 +42,35 @@ test('isPlainParagraph: plain single lines only', () => {
   assert.equal(isPlainParagraph('1. numbered'), false);
   assert.equal(isPlainParagraph('two\nlines'), false);
   assert.equal(isPlainParagraph('   '), false);
+});
+
+test('isEmptyGuideBlock: only untouched template guides (ph + empty content) match', () => {
+  // untouched guides from a template (e.g. "Announcement") → true
+  assert.equal(isEmptyGuideBlock({ type: 'heading', text: '', ph: "What's the news?" }), true);
+  assert.equal(isEmptyGuideBlock({ type: 'text', html: '', ph: 'State it plainly.' }), true);
+  assert.equal(isEmptyGuideBlock({ type: 'quote', html: '<br>', ph: 'A line.' }), true);
+  // a FILLED guide box is kept (partly-written scaffold survives)
+  assert.equal(isEmptyGuideBlock({ type: 'heading', text: 'My real title', ph: 'x' }), false);
+  assert.equal(isEmptyGuideBlock({ type: 'text', html: '<em>hi</em>', ph: 'x' }), false);
+  // a plain empty new-post seed (no ph) is NOT a guide
+  assert.equal(isEmptyGuideBlock({ type: 'text', html: '' }), false);
+  assert.equal(isEmptyGuideBlock(null), false);
+});
+
+test('dropEmptyGuides removes only the stranded instruction boxes (bug: leftover block above)', () => {
+  // "Announcement": heading + text guides. A sent message must not strand the heading above it.
+  const blocks = [
+    { id: 'h1', type: 'heading', text: '', ph: "What's the news?" },
+    { id: 'p1', type: 'text', html: '', ph: 'State it plainly.' },
+  ];
+  assert.deepEqual(dropEmptyGuides(blocks), [], 'both untouched guides are dropped');
+  // partly-filled: the filled heading survives, the empty guide goes
+  const mixed = [
+    { id: 'h1', type: 'heading', text: 'Real title' },
+    { id: 'p1', type: 'text', html: '', ph: 'guide' },
+    { id: 'p2', type: 'text', html: '' },
+  ];
+  assert.deepEqual(dropEmptyGuides(mixed).map((b) => b.id), ['h1', 'p2'], 'filled + plain-empty kept, guide removed');
 });
 
 test('htmlToChatText round-trips the chat-writable formatting', () => {

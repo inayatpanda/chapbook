@@ -46,6 +46,27 @@ export function isPlainParagraph(text) {
   return !/^(#{1,6} |> |[-*] |\d+\. |```)/.test(t);
 }
 
+/* An untouched template GUIDE block: guideify() moves a template's prewritten instruction
+   text into `ph` and empties the content field, so the box shows ghost guidance and never
+   publishes. `true` iff the block is such a guide AND still holds no real content. When the
+   user composes by SENDING a message (not by filling the box), these still-empty guide boxes
+   must give way to the message rather than be stranded as empty blocks above it that have to
+   be deleted by hand. A filled box (content non-empty) is NOT an empty guide, so a partly
+   written scaffold survives; a plain empty new-post seed carries no `ph`, so it is left to the
+   caller's trailing-empty replace. Mirrored inline in index.html's chatSend. */
+export function isEmptyGuideBlock(block) {
+  if (!block || !block.ph) return false;
+  const strip = (h) => String(h == null ? '' : h).replace(/<[^>]+>/g, '').trim();
+  if (block.type === 'text' || block.type === 'quote') return !strip(block.html);
+  if (block.type === 'heading') return !String(block.text == null ? '' : block.text).trim();
+  return false;
+}
+
+/* Drop the untouched guide boxes ahead of committing a sent message. */
+export function dropEmptyGuides(blocks) {
+  return (Array.isArray(blocks) ? blocks : []).filter((b) => !isEmptyGuideBlock(b));
+}
+
 /* Minimal html → chat-text: enough to round-trip what the chatbox writes back
    via the inline md→html converter (bold/italic/links/line breaks); everything
    else is stripped to its text. NOT a general converter — a chat-editing aid. */
