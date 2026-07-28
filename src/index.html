@@ -3026,6 +3026,9 @@
   .lib-ix-card{background:linear-gradient(180deg,var(--surface-2),var(--surface));border:1px solid var(--line);
     border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.04);display:flex;flex-direction:column}
   .lib-ix-frame{width:100%;height:230px;border:0;border-bottom:1px solid var(--line);background:#04060c;display:block}
+  .lib-ix-preview{height:230px;border-bottom:1px solid var(--line);background:
+    radial-gradient(circle at 50% 40%,rgba(34,211,238,.1),transparent 65%),#04060c;
+    display:grid;place-items:center;color:var(--faint);font:600 .72rem var(--font-display);letter-spacing:.04em}
   .lib-ix-meta{padding:.8rem 1rem 1rem}
   .lib-ix-cat{font:600 .62rem var(--font-display);letter-spacing:.1em;text-transform:uppercase;color:var(--cyan)}
   .lib-ix-name{font:600 1rem var(--font-display);margin-top:.2rem}
@@ -4590,8 +4593,8 @@
     <button class="ptile" data-type="__video"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-video"/></svg><span class="nm">Video</span></button>
     <button class="ptile" data-type="embed"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-video"/></svg><span class="nm">Embed (YouTube/Vimeo)</span></button>
     <button class="ptile" data-type="table"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-table"/></svg><span class="nm">Table</span></button>
-    <button class="ptile" data-type="playground"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-terminal-2"/></svg><span class="nm">Playground</span></button>
-    <button class="ptile" id="tplLibTile" data-type="__tpllib"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-wand"/></svg><span class="nm">Interactive (template)</span></button>
+    <button class="ptile" data-type="playground"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-terminal-2"/></svg><span class="nm">Interactive code</span></button>
+    <button class="ptile" id="tplLibTile" data-type="__tpllib"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-wand"/></svg><span class="nm">Interactive block</span></button>
     <button class="ptile" id="figTile" data-type="__figure"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-chart-dots"/></svg><span class="nm">Figure</span></button>
     <button class="ptile" data-type="divider"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-separator"/></svg><span class="nm">Divider</span></button>
   </div>
@@ -5948,8 +5951,10 @@ window.regen=regen;
 const SHARE = (typeof window!=='undefined' && window.__studioShare) || (function(){
   const DEFAULT_ORIGIN='';   // no owner default: empty origin → sharing disabled until the site URL is set
   function normaliseOrigin(o){ const raw=String(o||'').trim(); if(!raw) return DEFAULT_ORIGIN;
+    if(/^[a-z][a-z0-9+.-]*:/i.test(raw)&&!/^https?:\/\//i.test(raw)) return DEFAULT_ORIGIN;
     let u; try{ u=new URL(/^https?:\/\//i.test(raw)?raw:'https://'+raw); }catch{ return DEFAULT_ORIGIN; }
-    return (u.origin&&u.origin!=='null')?u.origin:DEFAULT_ORIGIN; }
+    if(!u.origin||u.origin==='null'||!/^https?:$/.test(u.protocol)) return DEFAULT_ORIGIN;
+    const path=u.pathname.replace(/\/+$/g,''); return u.origin+(path==='/'?'':path); }
   function displayShareUrl(url){ const s=String(url||'').trim(); return s?s.replace(/^https?:\/\//i,''):''; }
   function shareableUrl(url){ const s=String(url||'').trim(); if(!s) return '';
     if(/^[a-z][a-z0-9+.-]*:\/\//i.test(s)||/^(mailto|tel):/i.test(s)) return s; return 'https://'+s.replace(/^\/+/,''); }
@@ -6982,11 +6987,11 @@ function renderPosts(){
   if(!rows.length){ list.innerHTML='<p class="sub">No posts match.</p>'; updateBulkUI(); return; }
   list.innerHTML='';
   if(_postFilter.group==='topic'){
-    // group each post under its primary topic (first non-"interactive" tag); posts with
+    // group each post under its primary topic (the first tag); posts with
     // no topic fall under "Untagged". Groups ordered by post-count, then alphabetically.
     const groups=new Map();
     for(const p of rows){
-      const topics=(p.tags||[]).filter(t=>t!=='interactive');
+      const topics=(p.tags||[]).filter(Boolean);
       const key=topics[0]||'untagged';
       if(!groups.has(key)) groups.set(key,[]);
       groups.get(key).push(p);
@@ -7008,7 +7013,7 @@ function renderPosts(){
   updateBulkUI();
 }
 function makePostRow(p){
-  const topics=(p.tags||[]).filter(t=>t!=='interactive');
+  const topics=(p.tags||[]).filter(Boolean);
   const scheduled = !!(p.draft && p.publishAt);
   const schWhen = scheduled ? new Date(p.publishAt) : null;
   const schLabel = (schWhen && !isNaN(schWhen)) ? schWhen.toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'}) : (p.publishAt||'');
@@ -9825,7 +9830,7 @@ function chatCloseSheet(){ $('chatSheet').hidden = true; }
      • whisper (DEFAULT, private): record-then-transcribe — MediaRecorder captures the
        clip, /stt.js decodes it to 16 kHz mono and a Web Worker runs the self-hosted
        whisper-tiny.en q8 pipeline. Nothing leaves the browser. First use downloads
-       the model (~30 MB, one-time; SW-cached after).
+       the model (~68 MB, one-time; SW-cached after).
      • webspeech (OPT-IN ONLY, disclosed): the continuous Web Speech engine below —
        the browser may route audio to a cloud speech service, so it is never silently
        selected. Long-press (or right-click) the mic to switch engines. */
@@ -9963,6 +9968,7 @@ function chatInitMic(){
     clearTimeout(whCapT); whCapT = 0;
     if(!whRec){ whCancel(); return; }            // mic permission still pending — treat as cancel
     whGo('stop');                                // → transcribing; onstop hands over to whTranscribe
+    toast('Transcribing privately on this device…');
     try{ whRec.stop(); }catch(_){ whRec = null; whDropStream(); whFail('Recording failed. Try again.'); }
   };
   const whTranscribe = async (session) => {
@@ -9976,6 +9982,7 @@ function chatInitMic(){
       if(text){
         const el = $('chatInput');
         if(el){ el.value = appendDictation(el.value, text); chatAutosize(); chatSyncInput(); }
+        toast('Transcript added.');
       } else { toast('No speech was detected.'); }
       whGo('done');
     }catch(e){
@@ -10002,7 +10009,8 @@ function chatInitMic(){
     // start() can throw at runtime (device wedged/track ended) — without this guard
     // the stream stays live, the state sticks in 'recording' and the tap's async
     // promise rejects unhandled.
-    try{ whRec.start(); }catch(_){ whRec = null; whDropStream(); whFail('Recording failed. Try again.'); return; }
+    try{ whRec.start(); toast('Listening — tap Stop when you finish.'); }
+    catch(_){ whRec = null; whDropStream(); whFail('Recording failed. Try again.'); return; }
     // the whole clip is decoded in memory before transcription — cap the session
     whCapT = setTimeout(() => {
       if(whSession === session && whState === 'recording'){
@@ -10018,7 +10026,7 @@ function chatInitMic(){
     const session = ++whSession;
     if(!whPrepared){
       whGo('prepare');
-      toast('Preparing dictation — loading the on-device model…');
+      toast('Preparing dictation — downloading the private on-device model (~68 MB) once…');
       try{
         await whisper.preload({ onProgress: (p) => {
           if(whSession === session && whState === 'preparing' && p.pct) setMic('Preparing dictation — ' + p.pct + '%', false);
@@ -10031,6 +10039,7 @@ function chatInitMic(){
       if(whSession !== session || whState !== 'preparing') return;     // cancelled meanwhile
       whPrepared = true;
       whGo('ready');                             // → recording
+      toast('Dictation ready — speak now.');
     } else {
       whGo('record');
     }
@@ -14367,8 +14376,8 @@ const INSERT_ACTIONS = [
   { ic:'video',         label:'Embed (YouTube/Vimeo)', key:'embed youtube vimeo video url', insert:(at)=>addBlock('embed', at) },
   { ic:'table',         label:'Table',       key:'table grid columns rows',      insert:(at)=>addBlock('table', at) },
   { ic:'code',          label:'Code / Raw',  key:'code raw html block',          insert:(at)=>addBlock('raw', at) },
-  { ic:'terminal-2',    label:'Playground',  key:'playground interactive code',  insert:(at)=>addBlock('playground', at) },
-  { ic:'wand',          label:'Interactive (template)', key:'interactive template playground library', insert:(at)=>openTplLib(at) },
+  { ic:'terminal-2',    label:'Interactive code',  key:'playground interactive code html css javascript',  insert:(at)=>addBlock('playground', at) },
+  { ic:'wand',          label:'Interactive block', key:'interactive template block playground library', insert:(at)=>openTplLib(at) },
   { ic:'chart-dots',    label:'Figure',      key:'figure diagram svg drawing',   insert:(at)=>openFigLib(at) },
 ];
 
@@ -19379,41 +19388,141 @@ function appendFigLabel(pt, text){
   toast('Label added');
 }
 
-/* ── Tweak-field dictation (reuses the Web Speech pattern, targets #figTweakText) */
-let _figTweakRecog = null;
-let _figTweakRecBase = '';
-function stopFigTweakDictation(){
-  if(_figTweakRecog){ try{ _figTweakRecog.stop(); }catch(_){} }
-  _figTweakRecog = null;
-  const mic = $('figTweakMic');
-  if(mic){ mic.classList.remove('rec'); mic.setAttribute('aria-pressed','false'); mic.textContent = '🎙 Dictate'; }
-}
-function startFigTweakDictation(){
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SR) return;
-  const inp = $('figTweakText');
-  _figTweakRecBase = inp.value ? (inp.value.replace(/\s+$/,'') + ' ') : '';
-  try{ _figTweakRecog = new SR(); }catch(_){ _figTweakRecog = null; return; }
-  _figTweakRecog.lang = (navigator.language || 'en-GB');
-  _figTweakRecog.interimResults = true;
-  _figTweakRecog.continuous = true;
-  _figTweakRecog.onresult = (ev) => {
-    let txt = ''; for(let i = 0; i < ev.results.length; i++){ txt += ev.results[i][0].transcript; }
-    inp.value = _figTweakRecBase + txt;
+/* ── Private field dictation ────────────────────────────────────────────────
+   Figure description + tweak fields use the same self-hosted Whisper path as
+   the main Speak-to-write mic. They never invoke SpeechRecognition directly:
+   browser speech can be cloud-routed and is only available through the main
+   mic's explicit opt-in disclosure. One shared provider keeps one worker/model
+   alive across both short fields. */
+const _fieldWhisper = sttCreateWhisperProvider();
+let _fieldWhisperPrepared = false;
+let _fieldDictationActive = null;
+
+function makePrivateFieldDictation(buttonId, inputId){
+  const btn = $(buttonId), input = $(inputId);
+  if(!btn || !input || !sttWhisperSupported()) return null;
+  let state = 'idle', session = 0, stream = null, recorder = null, chunks = [], capT = 0;
+  const paint = (label='🎙 Dictate', pressed=false, busy=false) => {
+    btn.textContent = label;
+    btn.classList.toggle('rec', pressed);
+    btn.classList.toggle('busy', busy);
+    btn.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+    const a11y = pressed ? 'Stop dictation' : busy ? label.replace(/^🎙\s*/, '') : 'Dictate';
+    btn.setAttribute('aria-label', a11y); btn.title = a11y;
   };
-  _figTweakRecog.onerror = () => { stopFigTweakDictation(); };
-  _figTweakRecog.onend = () => {
-    _figTweakRecBase = $('figTweakText').value;
-    const mic = $('figTweakMic');
-    if(mic){ mic.classList.remove('rec'); mic.setAttribute('aria-pressed','false'); mic.textContent = '🎙 Dictate'; }
-    _figTweakRecog = null;
+  const dropStream = () => {
+    if(stream){ try{ stream.getTracks().forEach(t => t.stop()); }catch(_){} stream = null; }
   };
-  try{
-    _figTweakRecog.start();
-    const mic = $('figTweakMic');
-    if(mic){ mic.classList.add('rec'); mic.setAttribute('aria-pressed','true'); mic.textContent = '■ Stop'; }
-  }catch(_){ stopFigTweakDictation(); }
+  const idle = () => {
+    clearTimeout(capT); capT = 0; recorder = null; chunks = []; dropStream();
+    state = 'idle'; if(_fieldDictationActive === api) _fieldDictationActive = null;
+    paint();
+  };
+  const cancel = () => {
+    session++;
+    const r = recorder; recorder = null;
+    try{ if(r && r.state !== 'inactive') r.stop(); }catch(_){}
+    dropStream();
+    if(state === 'preparing' || state === 'transcribing'){
+      _fieldWhisper.cancel();
+      _fieldWhisperPrepared = false;
+    }
+    idle();
+  };
+  const fail = (message) => { idle(); toast(message); };
+  const transcribe = async (mySession) => {
+    dropStream();
+    const blob = new Blob(chunks, { type: (chunks[0] && chunks[0].type) || 'audio/webm' });
+    chunks = [];
+    if(!blob.size){ idle(); toast('No audio was captured.'); return; }
+    state = 'transcribing'; paint('Cancel transcription', false, true);
+    toast('Transcribing privately on this device…');
+    try{
+      const text = await _fieldWhisper.transcribe(blob);
+      if(mySession !== session) return;
+      if(text){
+        input.value = appendDictation(input.value, text);
+        input.dispatchEvent(new Event('input', { bubbles:true }));
+        toast('Transcript added.');
+      } else { toast('No speech was detected.'); }
+      idle();
+    }catch(e){
+      if(mySession !== session) return;
+      fail(String(e && e.message || 'Transcription failed on this device. Try again.'));
+    }
+  };
+  const stopRecording = () => {
+    if(state !== 'recording') return;
+    clearTimeout(capT); capT = 0;
+    const r = recorder;
+    if(!r){ cancel(); return; }
+    state = 'transcribing'; paint('Cancel transcription', false, true);
+    try{ r.stop(); }catch(_){ fail('Recording failed. Try again.'); }
+  };
+  const startRecorder = async (mySession) => {
+    try{ stream = await navigator.mediaDevices.getUserMedia({ audio:true }); }
+    catch(e){
+      if(mySession !== session) return;
+      fail(e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')
+        ? 'Microphone access is blocked. Allow it in your browser settings to dictate.'
+        : 'No microphone was found for dictation.');
+      return;
+    }
+    if(mySession !== session){ dropStream(); return; }
+    try{ recorder = new MediaRecorder(stream); }
+    catch(_){ fail('Recording is not supported in this browser.'); return; }
+    chunks = [];
+    recorder.ondataavailable = (e) => { if(e.data && e.data.size) chunks.push(e.data); };
+    recorder.onstop = () => { recorder = null; if(mySession === session && state === 'transcribing') transcribe(mySession); };
+    try{
+      recorder.start();
+      state = 'recording'; paint('■ Stop', true);
+      toast('Listening — tap Stop when you finish.');
+      capT = setTimeout(() => {
+        if(mySession === session && state === 'recording'){
+          toast('Dictation reached the 5-minute limit — transcribing.');
+          stopRecording();
+        }
+      }, STT_MAX_RECORD_MS);
+    }catch(_){ fail('Recording failed. Try again.'); }
+  };
+  const start = async () => {
+    if(_fieldDictationActive && _fieldDictationActive !== api) _fieldDictationActive.cancel();
+    _fieldDictationActive = api;
+    const mySession = ++session;
+    if(!_fieldWhisperPrepared){
+      state = 'preparing'; paint('Cancel preparation', false, true);
+      toast('Preparing dictation — downloading the private on-device model (~68 MB) once…');
+      try{
+        await _fieldWhisper.preload({ onProgress:(p) => {
+          if(mySession === session && state === 'preparing' && p.pct) paint('Preparing ' + p.pct + '%', false, true);
+        } });
+      }catch(e){
+        if(mySession !== session) return;
+        fail(String(e && e.message || 'The dictation model could not be loaded. Check your connection and try again.'));
+        return;
+      }
+      if(mySession !== session) return;
+      _fieldWhisperPrepared = true;
+      toast('Dictation ready — speak now.');
+    }
+    await startRecorder(mySession);
+  };
+  const toggle = () => {
+    if(state === 'recording'){ stopRecording(); return; }
+    if(state === 'preparing' || state === 'transcribing'){ cancel(); toast('Dictation cancelled.'); return; }
+    start();
+  };
+  const api = { cancel, toggle, isActive:() => state !== 'idle' };
+  btn.hidden = false;
+  paint();
+  btn.addEventListener('click', toggle);
+  return api;
 }
+
+let _figTweakDictation = null;
+function stopFigTweakDictation(){ _figTweakDictation?.cancel(); }
+function startFigTweakDictation(){ _figTweakDictation?.toggle(); }
 
 /* refine wiring */
 $('figTweakGo').addEventListener('click', runFigTweak);
@@ -19422,58 +19531,12 @@ $('figTweakText').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.pr
 $('figSuggestLabels').addEventListener('click', runFigSuggestLabels);
 $('figLabelMode').addEventListener('click', () => setFigLabelMode(!_figLabelMode));
 (function initFigTweakMic(){
-  const mic = $('figTweakMic');
-  if(!mic) return;
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SR){ mic.hidden = true; return; }
-  mic.hidden = false;
-  mic.addEventListener('click', () => {
-    if(_figTweakRecog) stopFigTweakDictation();
-    else startFigTweakDictation();
-  });
+  _figTweakDictation = makePrivateFieldDictation('figTweakMic', 'figTweakText');
 })();
 
-/* ── Voice dictation (Web Speech API; degrades gracefully) ────────────────── */
-let _figRecog = null;       // active SpeechRecognition instance
-let _figRecBase = '';       // textarea text captured when dictation started
-
-function stopFigDictation(){
-  if(_figRecog){ try{ _figRecog.stop(); }catch(_){} }
-  _figRecog = null;
-  const mic = $('figMicBtn');
-  if(mic){ mic.classList.remove('rec'); mic.setAttribute('aria-pressed','false'); mic.textContent = '🎙 Dictate'; }
-}
-
-function startFigDictation(){
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SR) return;   // unsupported — button stays hidden, OS keyboard mic still works
-  const ta = $('figDescribeText');
-  _figRecBase = ta.value ? (ta.value.replace(/\s+$/,'') + ' ') : '';
-  try{
-    _figRecog = new SR();
-  }catch(_){ _figRecog = null; return; }
-  _figRecog.lang = (navigator.language || 'en-GB');
-  _figRecog.interimResults = true;
-  _figRecog.continuous = true;
-  _figRecog.onresult = (ev) => {
-    let txt = '';
-    for(let i = 0; i < ev.results.length; i++){ txt += ev.results[i][0].transcript; }
-    ta.value = _figRecBase + txt;
-  };
-  _figRecog.onerror = () => { stopFigDictation(); };
-  _figRecog.onend = () => {
-    // commit the final value as the new base; clear the active flag/UI
-    _figRecBase = $('figDescribeText').value;
-    const mic = $('figMicBtn');
-    if(mic){ mic.classList.remove('rec'); mic.setAttribute('aria-pressed','false'); mic.textContent = '🎙 Dictate'; }
-    _figRecog = null;
-  };
-  try{
-    _figRecog.start();
-    const mic = $('figMicBtn');
-    if(mic){ mic.classList.add('rec'); mic.setAttribute('aria-pressed','true'); mic.textContent = '■ Stop'; }
-  }catch(_){ stopFigDictation(); }
-}
+let _figDictation = null;
+function stopFigDictation(){ _figDictation?.cancel(); }
+function startFigDictation(){ _figDictation?.toggle(); }
 
 /* AI-entry wiring */
 $('figDescribeTile').addEventListener('click', () => openFigCompose('describe'));
@@ -19520,18 +19583,10 @@ $('figRegenBtn').addEventListener('click', regenFig);
   if(clr) clr.addEventListener('click', figOnImageClear);
 }
 
-/* reveal the mic only where the Web Speech API exists; otherwise it stays hidden
-   (the OS keyboard's own mic still dictates into the textarea). Must not throw. */
+/* Reveal the mic only where private on-device Whisper is available. The OS
+   keyboard's own mic can still dictate into the textarea on other devices. */
 (function initFigMic(){
-  const mic = $('figMicBtn');
-  if(!mic) return;
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SR){ mic.hidden = true; return; }
-  mic.hidden = false;
-  mic.addEventListener('click', () => {
-    if(_figRecog) stopFigDictation();
-    else startFigDictation();
-  });
+  _figDictation = makePrivateFieldDictation('figMicBtn', 'figDescribeText');
 })();
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -20527,10 +20582,10 @@ function _topicLabel(){
     for(const s of (t.sub||[])) flat.push({ name:s.name, tag:s.tag });
   }
   for(const tag of tags){
-    const hit = flat.find(f => f.tag === tag && tag !== 'interactive');
+    const hit = flat.find(f => f.tag === tag);
     if(hit) return hit.name;
   }
-  return (tags.find(t => t !== 'interactive') || '');
+  return (tags.find(Boolean) || '');
 }
 
 /* Effective share image: a custom image wins; otherwise the generated card.
@@ -21455,13 +21510,15 @@ async function loadLibInteractives(){
   catch(e){ cnt.textContent='Could not load templates: '+(e.message||e); _libIxLoaded=false; return; }
   fams=Array.isArray(fams)?fams:[];
   cnt.textContent=`${fams.length} interactive template${fams.length===1?'':'s'} — drop any into a post (Compose → Interactive) and customise.`;
-  // render cards immediately, then build live previews one at a time (no AI, just the build engine)
+  // Render cheap cards immediately. Live iframes are mounted only as cards approach
+  // the viewport: 70+ eager browsing contexts caused avoidable memory/CPU pressure.
+  const previews=[];
   for(const f of fams){
     const card=document.createElement('div');
     card.className='lib-ix-card';
     const presets=(f.presets||[]).map(p=>p.name).filter(Boolean);
     card.innerHTML=`
-      <iframe class="lib-ix-frame" title="${esc(f.name||f.id)} preview" sandbox="allow-scripts" loading="lazy"></iframe>
+      <div class="lib-ix-preview" role="img" aria-label="${esc(f.name||f.id)} preview loading">Preview loads when visible</div>
       <div class="lib-ix-meta">
         <div class="lib-ix-cat">${esc(f.category||'other')}</div>
         <div class="lib-ix-name">${esc(f.name||f.id)}</div>
@@ -21469,16 +21526,41 @@ async function loadLibInteractives(){
         ${presets.length?`<div class="lib-ix-presets">${presets.length} preset${presets.length===1?'':'s'}: ${esc(presets.slice(0,4).join(' · '))}</div>`:''}
       </div>`;
     grid.appendChild(card);
-    f._frame=card.querySelector('iframe');
+    previews.push({ family:f, host:card.querySelector('.lib-ix-preview') });
   }
-  for(const f of fams){
+  const buildPreview=async ({family:f,host})=>{
+    if(!host || host.dataset.loading) return;
+    host.dataset.loading='1';
     try{
       let params={};
       const pname=(f.presets&&f.presets[0]&&f.presets[0].name)||null;
       if(pname){ const pr=await api(`/playgrounds/${f.id}/preset/${encodeURIComponent(pname)}`); params=(pr&&pr.params)||{}; }
       const r=await api('/playgrounds/build',{method:'POST',body:JSON.stringify({familyId:f.id,params,domId:'lib-'+f.id})});
-      if(r&&r.block&&f._frame) f._frame.srcdoc=tplLibSrcdoc(r.block);
-    }catch(e){ if(f._frame) f._frame.srcdoc='<!doctype html><body style="margin:0;background:#04060c;color:#6f7e98;font:13px system-ui;display:grid;place-items:center;height:100%">preview unavailable</body>'; }
+      if(!host.isConnected || !r || !r.block) return;
+      const frame=document.createElement('iframe');
+      frame.className='lib-ix-frame';
+      frame.title=(f.name||f.id)+' preview';
+      frame.setAttribute('sandbox','allow-scripts');
+      frame.loading='lazy';
+      frame.srcdoc=tplLibSrcdoc(r.block);
+      host.replaceWith(frame);
+    }catch(e){
+      if(host.isConnected){ host.textContent='Preview unavailable'; host.setAttribute('aria-label',(f.name||f.id)+' preview unavailable'); }
+    }
+  };
+  if('IntersectionObserver' in window){
+    const observer=new IntersectionObserver((entries)=>{
+      for(const entry of entries){
+        if(!entry.isIntersecting) continue;
+        observer.unobserve(entry.target);
+        const item=previews.find(x=>x.host===entry.target);
+        if(item) buildPreview(item);
+      }
+    },{rootMargin:'600px 0px'});
+    previews.forEach(x=>observer.observe(x.host));
+  }else{
+    // Old WebViews: retain functionality, but sequence work to avoid a burst.
+    for(const item of previews) await buildPreview(item);
   }
 }
 

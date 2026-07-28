@@ -282,7 +282,7 @@ export function checkDoc({ doc, meta = {}, slug = 'post', knownSlugs = null } = 
   if (!desc) warnings.push({ message: 'No description — search results and share cards will fall back to the first line of the post.' });
   else if (desc.length > 155) warnings.push({ message: `Description is ${desc.length} characters — it will be trimmed to 155 in the post’s metadata.` });
   if (meta.date && !/^\d{4}-\d{2}-\d{2}$/.test(String(meta.date))) warnings.push({ message: `Date “${meta.date}” isn’t in YYYY-MM-DD form.` });
-  const topics = (meta.tags || []).filter((t) => t && t !== 'interactive');
+  const topics = (meta.tags || []).filter(Boolean);
   if (!topics.length) warnings.push({ message: 'No topic selected — the post won’t appear under any topic on the Writing page.' });
 
   // ── Content ──
