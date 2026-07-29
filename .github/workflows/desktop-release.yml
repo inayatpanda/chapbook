@@ -1,6 +1,6 @@
 name: Desktop release (Tauri)
 
-# Builds the Chapbook desktop wrapper (a signed app window onto the live PWA).
+# Builds the complete bundle-local Chapbook app, including the private dictation model.
 #   • macOS  → universal .dmg (Intel + Apple Silicon), code-signed + notarized
 #   • Windows → NSIS .exe installer (unsigned unless a Windows cert is added)
 # Trigger by pushing a tag like `desktop-v1.0.0`, or run manually.
@@ -41,7 +41,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -56,6 +56,12 @@ jobs:
       - name: Install desktop deps
         working-directory: desktop
         run: npm ci
+
+      - name: Build the bundle-local app and private dictation model
+        run: |
+          npm ci
+          npm run build
+          npm run stage:stt
 
       # Enable mac code-signing ONLY when the Apple secrets are present on this repo.
       # We must NOT export APPLE_SIGNING_IDENTITY at all when it's empty: an empty-but-
@@ -99,7 +105,7 @@ jobs:
         with:
           projectPath: desktop
           tauriScript: npx tauri
-          args: ${{ matrix.args }}
+          args: --config src-tauri/tauri.bundle-local.conf.json ${{ matrix.args }}
           tagName: ${{ github.ref_name }}
           releaseName: "Chapbook Desktop ${{ github.ref_name }}"
           releaseDraft: true

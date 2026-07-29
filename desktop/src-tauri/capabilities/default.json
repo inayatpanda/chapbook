@@ -14,7 +14,7 @@
     {
       "identifier": "http:default",
       "allow": [
-        { "url": "https://chapbook.rqai.co.uk/*" },
+        { "url": "https://chapbook-publishing-studio.netlify.app/*" },
         { "url": "https://api.anthropic.com/*" },
         { "url": "https://api.openai.com/*" },
         { "url": "https://generativelanguage.googleapis.com/*" },

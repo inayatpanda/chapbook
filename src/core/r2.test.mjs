@@ -94,11 +94,11 @@ test('contentTypeFor prefers file.type, falls back by extension', () => {
 
 test('buildCorsPolicy returns a valid R2 policy for the default origin', () => {
   const c = buildCorsPolicy();
-  assert.equal(c.origin, 'https://chapbook.rqai.co.uk');
+  assert.equal(c.origin, 'https://chapbook-publishing-studio.netlify.app');
   const parsed = JSON.parse(c.json);
   assert.equal(Array.isArray(parsed), true);
   const rule = parsed[0];
-  assert.deepEqual(rule.AllowedOrigins, ['https://chapbook.rqai.co.uk']);
+  assert.deepEqual(rule.AllowedOrigins, ['https://chapbook-publishing-studio.netlify.app']);
   assert.deepEqual(rule.AllowedMethods, ['PUT', 'GET']);
   assert.deepEqual(rule.AllowedHeaders, ['*']);
   assert.deepEqual(rule.ExposeHeaders, ['ETag']);

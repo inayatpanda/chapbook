@@ -209,3 +209,35 @@ test('handler: fresh Chapbook site origin is allowed', async () => {
   assert.equal(res.status, 204);
   assert.equal(res.headers.get('access-control-allow-origin'), origin);
 });
+
+test('handler: Tauri desktop/mobile origins are allowed', async () => {
+  for (const origin of ['http://tauri.localhost', 'tauri://localhost']) {
+    const res = await handler(
+      new Request('https://site/x', { method: 'OPTIONS', headers: { origin } }),
+      {},
+    );
+    assert.equal(res.status, 204);
+    assert.equal(res.headers.get('access-control-allow-origin'), origin);
+  }
+});
+
+test('handler: native device-flow POST is not rejected as forbidden_origin', async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () =>
+    new Response(JSON.stringify({ device_code: 'native-dc', user_code: 'ABCD-EFGH' }), { status: 200 });
+  try {
+    const res = await handler(
+      new Request('https://site/x', {
+        method: 'POST',
+        headers: { origin: 'http://tauri.localhost', 'content-type': 'application/json' },
+        body: JSON.stringify({ step: 'code', params: { client_id: 'native-client' } }),
+      }),
+      { ip: 'native-device-flow-test' },
+    );
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get('access-control-allow-origin'), 'http://tauri.localhost');
+    assert.equal((await res.json()).device_code, 'native-dc');
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});

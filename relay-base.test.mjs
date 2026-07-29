@@ -24,11 +24,11 @@ const src = readFileSync(join(HERE, 'src/app.js'), 'utf8');
 
 test('app.js still exports resolveRelayBase and pins the hosted origin', () => {
   assert.match(src, /export function resolveRelayBase\(/);
-  assert.match(src, /https:\/\/chapbook\.rqai\.co\.uk/);
+  assert.match(src, /https:\/\/chapbook-publishing-studio\.netlify\.app/);
 });
 
 // Behavioural spec (kept in lockstep with the implementation).
-function resolveRelayBase(baked, loc, HOSTED_ORIGIN = 'https://chapbook.rqai.co.uk') {
+function resolveRelayBase(baked, loc, HOSTED_ORIGIN = 'https://chapbook-publishing-studio.netlify.app') {
   const base = baked || '/.netlify/functions/gh-device';
   if (!base.startsWith('/') || !loc) return base;
   const nativeOrigin = loc.protocol === 'tauri:' || /(^|\.)tauri\.localhost$/i.test(loc.hostname || '');
@@ -37,29 +37,29 @@ function resolveRelayBase(baked, loc, HOSTED_ORIGIN = 'https://chapbook.rqai.co.
 
 test('hosted web (https on the real domain) keeps the relative same-origin relay', () => {
   assert.equal(
-    resolveRelayBase('/.netlify/functions/gh-device', { protocol: 'https:', hostname: 'chapbook.rqai.co.uk' }),
+    resolveRelayBase('/.netlify/functions/gh-device', { protocol: 'https:', hostname: 'chapbook-publishing-studio.netlify.app' }),
     '/.netlify/functions/gh-device');
 });
 
 test('iOS Tauri (tauri://localhost) repoints the relative relay at the hosted origin', () => {
   assert.equal(
     resolveRelayBase('/.netlify/functions/gh-device', { protocol: 'tauri:', hostname: 'localhost' }),
-    'https://chapbook.rqai.co.uk/.netlify/functions/gh-device');
+    'https://chapbook-publishing-studio.netlify.app/.netlify/functions/gh-device');
 });
 
 test('Android Tauri (http://tauri.localhost) repoints the relative relay at the hosted origin', () => {
   assert.equal(
     resolveRelayBase('/.netlify/functions/gh-device', { protocol: 'http:', hostname: 'tauri.localhost' }),
-    'https://chapbook.rqai.co.uk/.netlify/functions/gh-device');
+    'https://chapbook-publishing-studio.netlify.app/.netlify/functions/gh-device');
 });
 
 test('an absolute baked STUDIO_RELAY_BASE is always used as-is (native or not)', () => {
   const abs = 'https://example.test/.netlify/functions/gh-device';
   assert.equal(resolveRelayBase(abs, { protocol: 'tauri:', hostname: 'localhost' }), abs);
-  assert.equal(resolveRelayBase(abs, { protocol: 'https:', hostname: 'chapbook.rqai.co.uk' }), abs);
+  assert.equal(resolveRelayBase(abs, { protocol: 'https:', hostname: 'chapbook-publishing-studio.netlify.app' }), abs);
 });
 
 test('empty baked value falls back to the relative default (hidden PAT-only path on plain web)', () => {
-  assert.equal(resolveRelayBase('', { protocol: 'https:', hostname: 'chapbook.rqai.co.uk' }),
+  assert.equal(resolveRelayBase('', { protocol: 'https:', hostname: 'chapbook-publishing-studio.netlify.app' }),
     '/.netlify/functions/gh-device');
 });
