@@ -67,7 +67,7 @@ const SKIP_EXT = new Set([
   '.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.avif',
   '.webm', '.mp4', '.mov', '.m4v', // marketing video loops (dist/media/loops) — binary, not text
   '.woff', '.woff2', '.ttf', '.otf', '.eot', '.map',
-  '.dmg', '.exe', // staged installers in dist/downloads/ — binary, not text to gate
+  '.dmg', '.exe', '.apk', // staged installers in dist/downloads/ — binary, not text to gate
   '.onnx', '.wasm', // staged STT model/runtime (stage-stt.mjs) — binary, not text to gate
 ]);
 
