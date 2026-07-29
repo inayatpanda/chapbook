@@ -19,6 +19,7 @@ const TARGETS = {
 // answer to another.
 const ALLOWED_ORIGINS = new Set([
   'https://chapbook.rqai.co.uk',
+  'https://chapbook-publishing-studio.netlify.app',
   'https://inayat-studio.netlify.app',
 ]);
 

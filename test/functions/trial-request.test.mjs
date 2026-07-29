@@ -69,6 +69,17 @@ test('CORS: Netlify deploy-preview origin (https://abc123--inayat-studio.netlify
   assert.equal(res.headers.get('access-control-allow-origin'), 'https://abc123--inayat-studio.netlify.app');
 });
 
+test('CORS: fresh Chapbook site origin is allowed', async () => {
+  const origin = 'https://chapbook-publishing-studio.netlify.app';
+  const req = new Request('https://example.test', {
+    method: 'OPTIONS',
+    headers: { Origin: origin },
+  });
+  const res = await handler(req);
+  assert.equal(res.status, 204);
+  assert.equal(res.headers.get('access-control-allow-origin'), origin);
+});
+
 test('CORS: evil origin (https://evil.example) is NOT allowed, no ACAO header', async () => {
   const res = await handler(new Request('https://site/x', {
     method: 'OPTIONS', headers: { origin: 'https://evil.example' },

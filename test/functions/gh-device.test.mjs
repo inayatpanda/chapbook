@@ -199,3 +199,13 @@ test('handler: existing exact origin (https://chapbook.rqai.co.uk) still works',
   assert.equal(res.status, 204);
   assert.equal(res.headers.get('access-control-allow-origin'), 'https://chapbook.rqai.co.uk');
 });
+
+test('handler: fresh Chapbook site origin is allowed', async () => {
+  const origin = 'https://chapbook-publishing-studio.netlify.app';
+  const res = await handler(
+    new Request('https://site/x', { method: 'OPTIONS', headers: { origin } }),
+    {},
+  );
+  assert.equal(res.status, 204);
+  assert.equal(res.headers.get('access-control-allow-origin'), origin);
+});

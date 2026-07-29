@@ -69,6 +69,7 @@ const ALLOWED_ORIGINS = new Set([
   'https://scribble.rqai.co.uk',
   'https://audioquill.rqai.co.uk',
   'https://chapbook.rqai.co.uk',
+  'https://chapbook-publishing-studio.netlify.app',
 ]);
 
 // Check if an origin is allowed: exact match or Netlify deploy-preview subdomain.
