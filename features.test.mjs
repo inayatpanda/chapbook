@@ -19,10 +19,10 @@ test('features: SEO head carries a unique title, description, canonical and og',
   assert.match(html, /<title>[^<]*Chapbook[^<]*<\/title>/, 'a Chapbook title');
   assert.ok(!/<title>[^<]*—/.test(html), 'title uses a hyphen, never an em-dash');
   assert.match(html, /<meta name="description" content="[^"]{40,}">/, 'a substantive meta description');
-  assert.match(html, /<link rel="canonical" href="https:\/\/chapbook-publishing-studio\.netlify\.app\/features">/);
+  assert.match(html, /<link rel="canonical" href="https:\/\/chapbook\.rqai\.co\.uk\/features">/);
   assert.match(html, /<meta property="og:title"/);
   assert.match(html, /<meta property="og:image" content="\/og-image\.png">/);
-  assert.match(html, /<meta property="og:url" content="https:\/\/chapbook-publishing-studio\.netlify\.app\/features">/);
+  assert.match(html, /<meta property="og:url" content="https:\/\/chapbook\.rqai\.co\.uk\/features">/);
 });
 
 // ---- seven sections with the ids the home teasers deep-link to ---------------

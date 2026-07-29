@@ -30,7 +30,7 @@ test('home: SEO head carries the title, description, canonical and og image', ()
   assert.match(html, /<title>Chapbook - write a post, publish to a blog you own<\/title>/,
     'title uses a hyphen (never an em-dash)');
   assert.match(html, /<meta name="description" content="[^"]{40,}">/, 'a substantive meta description');
-  assert.match(html, /<link rel="canonical" href="https:\/\/chapbook-publishing-studio\.netlify\.app\/">/);
+  assert.match(html, /<link rel="canonical" href="https:\/\/chapbook\.rqai\.co\.uk\/">/);
   assert.match(html, /<meta property="og:image" content="\/og-image\.png">/);
   assert.match(html, /<meta property="og:title"/);
   assert.match(html, /<meta property="og:type" content="website">/);

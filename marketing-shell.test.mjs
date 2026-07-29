@@ -102,7 +102,7 @@ test('sitemap.xml is valid and lists every marketing + legal route', (t) => {
   assert.ok(x.startsWith('<?xml'), 'declares an XML prolog');
   assert.match(x, /<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9">/);
   for (const p of ['/', '/features', '/themes', '/pricing', '/download', '/privacy', '/terms', '/refunds']) {
-    assert.ok(x.includes(`<loc>https://chapbook-publishing-studio.netlify.app${p}</loc>`), `sitemap missing ${p}`);
+    assert.ok(x.includes(`<loc>https://chapbook.rqai.co.uk${p}</loc>`), `sitemap missing ${p}`);
   }
 });
 
@@ -112,5 +112,5 @@ test('robots.txt allows crawl, keeps /app out of the index, and points at the si
   assert.match(r, /User-agent: \*/);
   assert.match(r, /Allow: \//);
   assert.match(r, /Disallow: \/app/);
-  assert.match(r, /Sitemap: https:\/\/chapbook-publishing-studio\.netlify\.app\/sitemap\.xml/);
+  assert.match(r, /Sitemap: https:\/\/chapbook\.rqai\.co\.uk\/sitemap\.xml/);
 });

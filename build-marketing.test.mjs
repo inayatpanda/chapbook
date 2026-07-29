@@ -40,7 +40,7 @@ test('renderLegalPage produces a full standalone document', () => {
   const html = renderLegalPage({ kind: 'privacy', title: LEGAL_TITLES.privacy, inner: '<p>hi</p>', nav: 'N', footer: 'F', year: '2026' });
   assert.match(html, /<!doctype html>/i);
   assert.match(html, /<title>Privacy/);
-  assert.match(html, /<link rel="canonical" href="https:\/\/chapbook-publishing-studio\.netlify\.app\/privacy">/);
+  assert.match(html, /<link rel="canonical" href="https:\/\/chapbook\.rqai\.co\.uk\/privacy">/);
   assert.ok(html.includes('<p>hi</p>'));
 });
 

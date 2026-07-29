@@ -56,7 +56,7 @@ p{position:relative;margin-top:30px;font-size:42px;line-height:1.28;color:rgba(2
   <div class="eyebrow">Local-first blog writing</div>
   <h1>Chapbook</h1>
   <p>Write locally. Publish to a blog you own.</p>
-  <div class="host">chapbook-publishing-studio.netlify.app</div>
+  <div class="host">chapbook.rqai.co.uk</div>
 </div></body></html>`;
 
 function assertSize(path) {
