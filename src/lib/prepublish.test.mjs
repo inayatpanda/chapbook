@@ -13,6 +13,14 @@ const meta = { title: 'T' };
 const unsafeErrors = (content) =>
   checkDoc({ doc: rawDoc(content), meta }).errors.filter((e) => /unsafe/i.test(e.message));
 
+test('topic gate: Interactive is a real topic and does not trigger the no-topic warning', () => {
+  const result = checkDoc({
+    doc: { version: 1, blocks: [{ id: 't1', type: 'text', html: '<p>Hello</p>' }] },
+    meta: { title: 'Interactive post', tags: ['interactive'] },
+  });
+  assert.equal(result.warnings.some((w) => /No topic selected/i.test(w.message)), false);
+});
+
 test('raw gate: slash-delimited handler <img/src=x/onerror=…> is flagged (bypass fix)', () => {
   const errs = unsafeErrors('<img/src=x/onerror=alert(1)>');
   assert.equal(errs.length, 1, 'the attribute-boundary bypass must be caught');

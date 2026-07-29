@@ -45,7 +45,7 @@ const GH_CLIENT_ID = (typeof window !== 'undefined' && window.__STUDIO_GH_CLIENT
 
 // The canonical hosted origin — where the gh-device relay function actually lives.
 // (Already the sole host in the native builds' CSP connect-src.)
-const HOSTED_ORIGIN = 'https://chapbook.rqai.co.uk';
+const HOSTED_ORIGIN = 'https://chapbook-publishing-studio.netlify.app';
 
 // Resolve the device-flow relay URL. The GitHub device endpoints send no CORS headers, so
 // the browser calls them THROUGH the /.netlify/functions/gh-device relay. On the hosted web

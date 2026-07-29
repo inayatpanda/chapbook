@@ -5,7 +5,7 @@ import { buildInstance, getFamily } from './index.js';
 
 // Regression guard for the "flat curve" bug: the playground PREVIEW / EXPORT sandbox
 // CSP (PG_PREVIEW_CSP in src/index.html) once had `script-src 'unsafe-inline'` with NO
-// 'unsafe-eval'. The function-explorer + mixer families compile the author's inline
+// 'unsafe-eval'. The function-explorer + mixer + formula-calculator families compile the author's inline
 // expressions with `new Function`, which THROWS under a no-eval CSP, so their curves
 // rendered flat (a zero-valued line) in the maker preview and in the exported .html.
 // The published runtime has no CSP, so published posts were unaffected — this was
@@ -26,7 +26,7 @@ test('PG_PREVIEW_CSP script-src allows both unsafe-inline and unsafe-eval', () =
   const scriptSrc = (csp.match(/script-src([^;]*);/) || [])[1] || '';
   assert.match(scriptSrc, /'unsafe-inline'/, "script-src keeps 'unsafe-inline'");
   assert.match(scriptSrc, /'unsafe-eval'/,
-    "script-src MUST keep 'unsafe-eval' — new Function() families (function-explorer, mixer) render flat without it");
+    "script-src MUST keep 'unsafe-eval' — new Function() families (function-explorer, mixer, formula-calculator) break without it");
 });
 
 test('both preview/export srcdoc builders embed PG_PREVIEW_CSP (so the eval grant reaches the export)', () => {
@@ -39,6 +39,13 @@ test("function-explorer's built block ships the new Function() curve compiler", 
   const f = getFamily('function-explorer');
   const block = buildInstance('function-explorer', f.presets[0].params, 'pg-fx-probe');
   assert.match(block.js, /new Function/, 'built js compiles the curve expression via new Function');
+});
+
+test("formula-calculator's built block ships its expression compiler", () => {
+  const f = getFamily('formula-calculator');
+  const block = buildInstance('formula-calculator', f.presets[0].params, 'pg-fc-csp');
+  assert.match(block.js, /new Function/, 'calculator expression compiler present');
+  assert.match(block.js, /days \* rate/, 'preset formula reaches the sandbox runtime');
 });
 
 test('function-explorer preset curve is a NON-CONSTANT curve when eval is permitted', () => {

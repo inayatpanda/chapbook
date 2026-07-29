@@ -328,12 +328,13 @@ console.log('fonts:', readdirSync(`${SRC}/fonts`).filter((f) => f.endsWith('.wof
   console.log(`sw.js: CACHE stamped '${cacheName}' (content hash of ${shellEntries.length} shell assets)`);
 }
 
-// The product lives at chapbook.rqai.co.uk ONLY — Netlify serves the *.netlify.app name
-// too but never redirects it by itself, so enforce the canonical host here. (Netlify
-// _redirects host conditions: the 301! forces even though the file exists.)
-// Canonical-host 301 (Netlify serves the *.netlify.app name too but never redirects it
-// itself), plus an explicit /app rule so the app doc is served without a trailing-slash
-// bounce. No SPA catch-all: marketing/legal .html are served by Netlify pretty-URLs.
+// The public product lives at chapbook.rqai.co.uk — send the retired hostname there (the
+// 301! forces the redirect even though the file exists). Deliberately NOT redirected:
+// chapbook-publishing-studio.netlify.app, which native builds call as HOSTED_ORIGIN for the
+// GitHub device-flow relay (src/app.js) — a 301 there would break native sign-in. It serves
+// the same site, and SITE above makes its canonicals point back here, so it is not indexed
+// as a duplicate. Plus an explicit /app rule so the app document is served without a
+// trailing-slash bounce. No SPA catch-all: marketing/legal .html use Netlify pretty-URLs.
 writeFileSync(`${DIST}/_redirects`,
   'https://inayat-studio.netlify.app/* https://chapbook.rqai.co.uk/:splat 301!\n' +
   '/app /app/index.html 200\n');

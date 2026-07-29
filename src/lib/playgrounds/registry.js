@@ -91,6 +91,14 @@ import imageAnnotator from './image-annotator.js';
 import stepExplainer from './step-explainer.js';
 import scoredQuiz from './scored-quiz.js';
 import sortableTable from './sortable-table.js';
+// Chapbook 1.0.6 expansion: higher-purpose authoring formats
+import selfAssessment from './self-assessment.js';
+import formulaCalculator from './formula-calculator.js';
+import branchingScenario from './branching-scenario.js';
+import datasetExplorer from './dataset-explorer.js';
+import dragToLabel from './drag-to-label.js';
+import algorithmBuilder from './algorithm-builder.js';
+import relationshipNetwork from './relationship-network.js';
 
 const all = () => [
   toggleAb, functionExplorer, stepperTimeline, scatterSim,
@@ -109,6 +117,8 @@ const all = () => [
   poll, scratchReveal, swipeCarousel,
   keyboardLayout, doneness, keyChange, easingCurves,
   imageAnnotator, stepExplainer, scoredQuiz, sortableTable,
+  selfAssessment, formulaCalculator, branchingScenario, datasetExplorer,
+  dragToLabel, algorithmBuilder, relationshipNetwork,
 ];
 
 let _families = null;

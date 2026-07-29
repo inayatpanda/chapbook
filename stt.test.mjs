@@ -158,7 +158,12 @@ test('package.json: stage-stt wired into both deploys + runnable standalone', ()
 test('index.html: the inline module loads the engine from /stt.js', () => {
   const html = readFileSync('src/index.html', 'utf8');
   assert.match(html, /from '\/stt\.js'/);
-  assert.match(html, /id="chatMic"[^>]*aria-label="Dictate"/, 'mic keeps its a11y label');
+  assert.match(html, /id="chatMic"[^>]*aria-label="Start private transcription"/,
+    'mic explains the default private transcription action');
+  assert.match(html, /id="chatVoiceMode"[^>]*aria-haspopup="menu"/,
+    'the voice mode switcher is visible and exposes its menu semantics');
+  assert.match(html, /role="menuitemradio"[^>]*data-engine="webspeech"/,
+    'live dictation is available from the visible voice menu');
 });
 
 /* ── CSP: wasm-unsafe-eval added, nothing else loosened ── */
@@ -174,6 +179,16 @@ test('tauri.conf.json: desktop CSP gains wasm-unsafe-eval too', () => {
   const csp = conf.app.security.csp;
   assert.ok(csp.includes("'wasm-unsafe-eval'"), 'desktop script-src needs wasm-unsafe-eval');
   assert.ok(!csp.includes(" 'unsafe-eval'"), 'plain unsafe-eval must never appear');
+});
+
+test('macOS app declares microphone usage and the audio-input entitlement', () => {
+  const conf = JSON.parse(readFileSync('desktop/src-tauri/tauri.conf.json', 'utf8'));
+  const info = readFileSync('desktop/src-tauri/Info.plist', 'utf8');
+  const entitlements = readFileSync('desktop/src-tauri/Entitlements.plist', 'utf8');
+  assert.equal(conf.bundle.macOS.entitlements, 'Entitlements.plist');
+  assert.match(info, /NSMicrophoneUsageDescription/);
+  assert.match(info, /on-device dictation/);
+  assert.match(entitlements, /com\.apple\.security\.device\.audio-input/);
 });
 
 /* ── service worker: runtime cache-first for STT, shell precache untouched ── */
@@ -205,6 +220,12 @@ test('grep-gate: skips the staged third-party STT trees (English vocab ≠ leake
   assert.match(gate, /SKIP_DIRS = \['dist\/app\/models\/', 'dist\/app\/vendor\/stt\/'\]/,
     'the whisper tokenizer vocabulary must not trip the clinical denylist');
   assert.ok(gate.includes("'.onnx', '.wasm'"), 'model/runtime binaries must not be text-scanned');
+});
+
+test('grep-gate: treats the generated illustration catalogue as media metadata, not app copy', () => {
+  const gate = readFileSync('scripts/grep-gate.mjs', 'utf8');
+  assert.match(gate, /dist\/app\/illustrations-manifest\.json/);
+  assert.match(gate, /SKIP_FILES\.has\(file\)/);
 });
 
 test('sw.js: the two stampers are independent — each replaces only its own literal', () => {

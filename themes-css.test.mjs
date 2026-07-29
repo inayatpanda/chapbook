@@ -7,11 +7,11 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 
 const IDS = [
-  'observatory', 'ledger', 'air', 'graphite',
-  'broadsheet', 'journal', 'kiosk', 'gazette',
-  'neon', 'zine', 'scrapbook', 'arcade',
+  'observatory', 'ledger', 'air', 'blueprint-workshop',
+  'broadsheet', 'journal', 'kiosk', 'desert-archive',
+  'neon', 'zine', 'scrapbook', 'woodland-chronicle',
   'doodle', 'rocket', 'pixel', 'comic',
-  'gallery', 'darkroom', 'contact-sheet', 'polaroid',
+  'field-atlas', 'darkroom', 'contact-sheet', 'polaroid',
 ];
 
 test('all 20 theme CSS + kids extras vendored', () => {

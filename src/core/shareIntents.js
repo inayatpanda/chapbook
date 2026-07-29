@@ -17,15 +17,20 @@
 // sharing is disabled (the UI prompts them to set it in Settings).
 const DEFAULT_ORIGIN = '';
 
-// Normalise a site origin (from the user's configured site `url`) to a bare
-// scheme+host with no trailing slash. Junk / empty → '' (sharing disabled).
+// Normalise a configured site URL to a stable base URL with no trailing slash.
+// The pathname matters for GitHub Pages project sites
+// (https://owner.github.io/repository); dropping it produces a plausible but
+// broken link at https://owner.github.io/blog/….
 export function normaliseOrigin(origin) {
   const raw = String(origin || '').trim();
   if (!raw) return DEFAULT_ORIGIN;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(raw) && !/^https?:\/\//i.test(raw)) return DEFAULT_ORIGIN;
   let u;
   try { u = new URL(/^https?:\/\//i.test(raw) ? raw : 'https://' + raw); }
   catch { return DEFAULT_ORIGIN; }
-  return (u.origin && u.origin !== 'null') ? u.origin : DEFAULT_ORIGIN;
+  if (!u.origin || u.origin === 'null' || !/^https?:$/.test(u.protocol)) return DEFAULT_ORIGIN;
+  const path = u.pathname.replace(/\/+$/g, '');
+  return u.origin + (path === '/' ? '' : path);
 }
 
 // ── Share-link display: show the URL WITHOUT its scheme in the "Link to the full

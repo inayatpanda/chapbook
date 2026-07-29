@@ -1,4 +1,4 @@
-// Stage the desktop installers into dist/downloads/ for the /download page.
+// Stage the native installers into dist/downloads/ for the /download page.
 // Runs AFTER `npm run build` (which wipes dist/) and BEFORE `netlify deploy`
 // — see the deploy:draft / deploy:prod scripts in package.json.
 //
@@ -10,11 +10,8 @@
 // page fetches to render its fine print. Checksums live ONLY in the manifest —
 // one source, no drift.
 //
-// Fails hard if either DESKTOP installer (mac/win) is missing: a deploy must
-// never silently ship the download page with dead links. The Android APK is
-// OPTIONAL — if a release lacks one, we warn and omit it (the page hides its
-// Android section) rather than blocking the deploy, so every historical/future
-// release stays deployable even without an APK.
+// Fails hard if any installer is missing: a deploy must never silently
+// ship the download page with dead links.
 
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, statSync, readFileSync, openSync, closeSync } from 'node:fs';
@@ -24,14 +21,10 @@ const REPO = 'inayatpanda/chapbook';
 const OUT = 'dist/downloads';
 
 // Stable public names → matcher over the release's asset names.
-// `optional` assets warn-and-skip when absent instead of hard-failing (see the
-// per-asset loop below): the Android APK is a large (~100 MB) sideload artifact
-// not every desktop-v* release carries, whereas a missing mac/win installer is
-// always fatal.
 const WANTED = [
   { file: 'Chapbook-macOS.dmg', match: (n) => n.endsWith('.dmg'), key: 'mac' },
   { file: 'Chapbook-Windows.exe', match: (n) => n.endsWith('.exe'), key: 'win' },
-  { file: 'Chapbook-Android.apk', match: (n) => n.endsWith('.apk'), key: 'android', optional: true },
+  { file: 'Chapbook-Android.apk', match: (n) => n.endsWith('.apk'), key: 'android' },
 ];
 
 const gh = (args, opts = {}) => execFileSync('gh', args, { encoding: 'utf8', ...opts });
@@ -58,13 +51,6 @@ const files = {};
 for (const w of WANTED) {
   const asset = release.assets.find((a) => w.match(a.name));
   if (!asset) {
-    if (w.optional) {
-      // Optional (Android APK): warn loudly and omit from the manifest — no
-      // manifest.files[key], so the /download page hides its Android section.
-      // The deploy proceeds; mac/win still guard against dead links below.
-      console.warn(`stage-installers: ${tag} has no asset matching ${w.file} — omitting ${w.key} from the manifest (optional). The /download page will hide it.`);
-      continue;
-    }
     console.error(`stage-installers: ${tag} has no asset matching ${w.file} — refusing to deploy dead download links.`);
     process.exit(1);
   }

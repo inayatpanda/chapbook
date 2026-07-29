@@ -76,6 +76,18 @@ async function fetchT(url, opts = {}, ms = 15000) {
   }
 }
 
+// Release unread response bodies promptly. Undici otherwise keeps their
+// connections occupied until garbage collection, which can exhaust the small
+// connection pool during the gate's many sequential probes and make healthy
+// Netlify functions appear to time out.
+async function discardBody(res) {
+  try {
+    if (res?.body) await res.body.cancel();
+  } catch {
+    // A status-only probe has already obtained everything it needs.
+  }
+}
+
 // Short one-line reason from any thrown error (DNS, TLS, timeout, …).
 function errStr(e) {
   const cause = e?.cause?.code || e?.cause?.message;
@@ -162,12 +174,16 @@ async function check1_shell(origin) {
       // this mirrors real reachability. `/app` canonicalises to `/app/` (a Netlify
       // directory 301) before serving 200 — benign, and exactly what the app hits.
       const res = await fetchT(url, { redirect: 'follow' });
-      if (res.status !== 200) { bad.push(`${p} → ${res.status}`); continue; }
-      // …but a followed 200 is only trustworthy if it stayed on the requested path.
-      // Netlify's /app → /app/ canonicalisation is legal; a regression that bounces
-      // /app → / (the marketing home, also 200) must FAIL, not pass as "reachable".
-      const finalPath = new URL(res.url).pathname;
-      if (!samePathModuloTrailingSlash(p, finalPath)) bad.push(`${p} → redirected to ${finalPath}`);
+      try {
+        if (res.status !== 200) { bad.push(`${p} → ${res.status}`); continue; }
+        // …but a followed 200 is only trustworthy if it stayed on the requested path.
+        // Netlify's /app → /app/ canonicalisation is legal; a regression that bounces
+        // /app → / (the marketing home, also 200) must FAIL, not pass as "reachable".
+        const finalPath = new URL(res.url).pathname;
+        if (!samePathModuloTrailingSlash(p, finalPath)) bad.push(`${p} → redirected to ${finalPath}`);
+      } finally {
+        await discardBody(res);
+      }
     } catch (e) {
       bad.push(`${p} → ${errStr(e)}`);
     }
@@ -190,6 +206,7 @@ async function check2_headers(origin) {
     }
     const missing = REQUIRED_HEADERS.filter((h) => !res.headers.get(h));
     if (missing.length) missingAll.push(`${p}: missing ${missing.join(', ')}`);
+    await discardBody(res);
   }
   if (missingAll.length) return fail(2, 'Security headers on / and /sw.js', missingAll.join(' | '));
   return pass(2, 'Security headers on / and /sw.js', `all ${REQUIRED_HEADERS.length} present on / and /sw.js`);
@@ -203,7 +220,9 @@ async function check3_ghDevicePreflight(origin) {
       method: 'OPTIONS',
       headers: { Origin: origin, 'Access-Control-Request-Method': 'POST' },
     });
-    if (res.status !== 204) return fail(3, 'gh-device OPTIONS preflight → 204', `got ${res.status} (502 = the old undici-204 bug)`);
+    const status = res.status;
+    await discardBody(res);
+    if (status !== 204) return fail(3, 'gh-device OPTIONS preflight → 204', `got ${status} (502 = the old undici-204 bug)`);
     return pass(3, 'gh-device OPTIONS preflight → 204', 'status 204');
   } catch (e) {
     return fail(3, 'gh-device OPTIONS preflight → 204', errStr(e));
@@ -221,7 +240,9 @@ async function check4_metrics(origin) {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ type: 'visit' }),
     });
-    if (post.status !== 204) return fail(4, 'metrics visit → 204 + count', `POST returned ${post.status}, expected 204`);
+    const postStatus = post.status;
+    await discardBody(post);
+    if (postStatus !== 204) return fail(4, 'metrics visit → 204 + count', `POST returned ${postStatus}, expected 204`);
 
     // Retry GET up to 5 times with backoff for Netlify Blobs read-after-write consistency.
     const maxRetries = 5;
@@ -313,9 +334,13 @@ async function check10_marketing(origin) {
   for (const p of pages) {
     try {
       const res = await fetchT(new URL(p, origin).href);
-      if (res.status !== 200) { bad.push(`${p} → ${res.status}`); continue; }
-      const missing = REQUIRED_HEADERS.filter((h) => !res.headers.get(h));
-      if (missing.length) bad.push(`${p} missing ${missing.join(',')}`);
+      try {
+        if (res.status !== 200) { bad.push(`${p} → ${res.status}`); continue; }
+        const missing = REQUIRED_HEADERS.filter((h) => !res.headers.get(h));
+        if (missing.length) bad.push(`${p} missing ${missing.join(',')}`);
+      } finally {
+        await discardBody(res);
+      }
     } catch (e) { bad.push(`${p} → ${errStr(e)}`); }
   }
   // sitemap valid + trial CTA present on pricing + home
@@ -363,14 +388,18 @@ async function check12_appDoc(origin) {
   for (const p of ['/app', '/app/index.html']) {
     try {
       const res = await fetchT(new URL(p, origin).href, { redirect: 'follow' });
-      if (res.status !== 200) { bad.push(`${p} → ${res.status}`); continue; }
-      const ct = res.headers.get('content-type') || '';
-      if (!ct.includes('text/html')) { bad.push(`${p} content-type "${ct}" (not text/html)`); continue; }
-      // A 200 text/html is not enough: the follow must have landed INSIDE the app,
-      // not on the marketing home. Assert the final pathname is the app doc itself.
-      const finalPath = new URL(res.url).pathname;
-      if (!isAppFinalPath(finalPath)) { bad.push(`${p} → landed on ${finalPath} (not the app doc)`); continue; }
-      if (res.redirected) notes.push(`${p} via ${finalPath}`);
+      try {
+        if (res.status !== 200) { bad.push(`${p} → ${res.status}`); continue; }
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.includes('text/html')) { bad.push(`${p} content-type "${ct}" (not text/html)`); continue; }
+        // A 200 text/html is not enough: the follow must have landed INSIDE the app,
+        // not on the marketing home. Assert the final pathname is the app doc itself.
+        const finalPath = new URL(res.url).pathname;
+        if (!isAppFinalPath(finalPath)) { bad.push(`${p} → landed on ${finalPath} (not the app doc)`); continue; }
+        if (res.redirected) notes.push(`${p} via ${finalPath}`);
+      } finally {
+        await discardBody(res);
+      }
     } catch (e) { bad.push(`${p} → ${errStr(e)}`); }
   }
   if (bad.length) return fail(12, NAME, bad.join('; '));

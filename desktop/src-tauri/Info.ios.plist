@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  iOS-only Info.plist overrides, auto-merged by Tauri (tauri-cli 2.11.4) at
+  `tauri ios build`/`init` time. Tauri looks for `Info.plist` and
+  `Info.ios.plist` next to tauri.conf.json and merges them into the generated
+  gen/apple/app_iOS/Info.plist. Keep this file as the durable source — the
+  gen/ tree is regenerable and must not be hand-edited.
+
+  NSMicrophoneUsageDescription is REQUIRED: on-device Whisper dictation taps the
+  microphone; without this key iOS terminates the app on first mic access.
+
+  NSCameraUsageDescription / NSPhotoLibraryUsageDescription are REQUIRED for image
+  upload: the post editor uses <input type=file> (incl. capture="environment"),
+  which reaches the camera and the photo library on iOS; without these keys iOS
+  terminates the app the moment the picker touches either.
+-->
+<plist version="1.0">
+<dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Chapbook uses the microphone for on-device dictation. Audio is processed on this device and never uploaded.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Chapbook uses the camera when you add a photo to a post.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Chapbook accesses your photos when you add an image to a post.</string>
+</dict>
+</plist>

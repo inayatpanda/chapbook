@@ -10,7 +10,7 @@
 //                 blob → 16 kHz mono Float32 decode (below — AudioContext/
 //                 OfflineAudioContext are Window-only, so decode CANNOT live in
 //                 the worker; rendering is off-main-thread internally anyway);
-//   worker      : transformers.js pipeline init (one-time ~30 MB same-origin
+//   worker      : transformers.js pipeline init (one-time ~68 MB same-origin
 //                 download, cached by the SW) + Whisper inference.
 import {
   STT_PROVIDERS, STT_ENGINE_KEY, STT_MAX_RECORD_MS,
@@ -123,7 +123,7 @@ export function createWhisperProvider() {
     label: STT_PROVIDERS.whisper.label,
     disclosure: STT_PROVIDERS.whisper.disclosure,
     isAvailable: whisperSupported,
-    // Download + build the pipeline (one-time ~30 MB, then SW-cached).
+    // Download + build the pipeline (one-time ~68 MB, then SW-cached).
     // onProgress({ pct, file, status }) ticks through the model files.
     preload({ onProgress } = {}) {
       return call({ type: 'preload' }, [], onProgress).then(() => undefined);

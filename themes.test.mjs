@@ -16,11 +16,11 @@ const src = () => readFileSync(SRC, 'utf8');
 
 // The 20 themes in catalogue order, grouped by the five categories.
 const CATS = {
-  'Clean &amp; Simple': ['observatory', 'ledger', 'air', 'graphite'],
-  'Editorial': ['broadsheet', 'journal', 'kiosk', 'gazette'],
-  'Creative &amp; Fun': ['neon', 'zine', 'scrapbook', 'arcade'],
+  'Clean &amp; Simple': ['observatory', 'ledger', 'air', 'blueprint-workshop'],
+  'Editorial': ['broadsheet', 'journal', 'kiosk', 'desert-archive'],
+  'Creative &amp; Fun': ['neon', 'zine', 'scrapbook', 'woodland-chronicle'],
   'First Blogs (ages 10 to 15)': ['doodle', 'rocket', 'pixel', 'comic'],
-  'Photo &amp; Portfolio': ['gallery', 'darkroom', 'contact-sheet', 'polaroid'],
+  'Photo &amp; Portfolio': ['field-atlas', 'darkroom', 'contact-sheet', 'polaroid'],
 };
 const ALL = Object.values(CATS).flat();
 

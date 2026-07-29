@@ -1,18 +1,18 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Chapbook",
-  "version": "1.0.3",
+  "version": "1.0.7",
   "identifier": "uk.co.rqai.chapbook",
   "build": {
     "frontendDist": "../fallback",
-    "devUrl": "https://chapbook.rqai.co.uk/app"
+    "devUrl": "https://chapbook-publishing-studio.netlify.app/app"
   },
   "app": {
     "windows": [
       {
         "label": "main",
         "title": "Chapbook",
-        "url": "https://chapbook.rqai.co.uk/app",
+        "url": "https://chapbook-publishing-studio.netlify.app/app",
         "width": 1200,
         "height": 820,
         "minWidth": 720,
@@ -22,7 +22,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' https://chapbook.rqai.co.uk; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://chapbook.rqai.co.uk; style-src 'self' 'unsafe-inline' https://chapbook.rqai.co.uk; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://chapbook.rqai.co.uk https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com https://api.groq.com https://api.crossref.org https://github.com https://api.github.com https://*.workers.dev https://*.r2.dev https://inayatpanda.com; font-src 'self' https://chapbook.rqai.co.uk; frame-src 'self' https://www.youtube-nocookie.com https://player.vimeo.com; object-src 'none'; base-uri 'self'"
+      "csp": "default-src 'self' https://chapbook-publishing-studio.netlify.app; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://chapbook-publishing-studio.netlify.app; style-src 'self' 'unsafe-inline' https://chapbook-publishing-studio.netlify.app; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://chapbook-publishing-studio.netlify.app https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com https://api.groq.com https://api.crossref.org https://github.com https://api.github.com https://*.workers.dev https://*.r2.dev https://inayatpanda.com; font-src 'self' https://chapbook-publishing-studio.netlify.app; frame-src 'self' https://www.youtube-nocookie.com https://player.vimeo.com; object-src 'none'; base-uri 'self'"
     }
   },
   "bundle": {

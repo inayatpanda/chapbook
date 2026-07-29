@@ -17,6 +17,15 @@ test('BAKED_CATALOGUE default theme "observatory" is present and is the default'
   assert.equal(DEFAULT_THEME, 'observatory');
   assert.ok(BAKED_CATALOGUE.themes.some((t) => t.id === 'observatory'));
 });
+test('the four fresh full themes replace the retired repetitive themes', () => {
+  const ids = BAKED_CATALOGUE.themes.map((theme) => theme.id);
+  for (const id of ['graphite', 'gazette', 'arcade', 'gallery']) {
+    assert.equal(ids.includes(id), false, `${id} should be retired`);
+  }
+  for (const id of ['blueprint-workshop', 'desert-archive', 'woodland-chronicle', 'field-atlas']) {
+    assert.equal(ids.includes(id), true, `${id} should be available`);
+  }
+});
 test('every baked theme has id/name/category/preview{bg,ink,accent}', () => {
   const catIds = new Set(BAKED_CATALOGUE.categories.map((c) => c.id));
   for (const t of BAKED_CATALOGUE.themes) {

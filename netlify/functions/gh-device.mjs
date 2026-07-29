@@ -13,23 +13,19 @@ const TARGETS = {
 };
 
 // CORS is origin-reflected (never a wildcard). The relay is called from Chapbook's
-// public site, the Studio's Netlify app, and localhost during dev. Mirrors
+// public site, the Studio's Netlify app, the two Tauri native origins, and localhost
+// during dev. The native HTTP plugin still forwards the WebView's Origin header, so the
+// explicit server-side origin gate must allow those origins even though CORS itself does
+// not constrain the Rust request. Mirrors
 // trial-request.mjs's ALLOWED_ORIGINS pattern: reflect the Origin only when it is
 // allow-listed, and always Vary on Origin so a CDN never serves one origin's CORS
 // answer to another.
 const ALLOWED_ORIGINS = new Set([
   'https://chapbook.rqai.co.uk',
+  'https://chapbook-publishing-studio.netlify.app',
   'https://inayat-studio.netlify.app',
-  // Bundled native apps (iOS + Android) have no backend of their own, so their
-  // in-product sign-in fetch reaches this hosted relay CROSS-ORIGIN, from the Tauri
-  // v2 webview's custom-protocol origin. iOS/macOS/Linux (WKWebView/webkitgtk) load
-  // from tauri://localhost; Android/Windows use wry's workaround host
-  // http://tauri.localhost (https://tauri.localhost when useHttpsScheme is set).
-  // tauri://localhost also happens to satisfy the localhost hostname check below,
-  // but it is listed explicitly here so the native-app allowance is intentional.
-  'tauri://localhost',
   'http://tauri.localhost',
-  'https://tauri.localhost',
+  'tauri://localhost',
 ]);
 
 // localhost on any port (dev) is also permitted, alongside the fixed allow-list.

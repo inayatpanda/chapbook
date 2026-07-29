@@ -3,6 +3,6 @@
 <plist version="1.0">
 <dict>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Chapbook uses the microphone for on-device dictation. Audio is processed on your device and never uploaded.</string>
+	<string>Chapbook uses the microphone for on-device dictation. Audio is processed on this device and never uploaded.</string>
 </dict>
 </plist>

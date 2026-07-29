@@ -37,18 +37,25 @@ test('share-link round-trips: display(strip) → shareable(re-add) is lossless f
 });
 
 /* ── normaliseOrigin ──────────────────────────────────────────────────────── */
-test('normaliseOrigin: trims, drops trailing slash, empty on junk (no owner default)', () => {
+test('normaliseOrigin: keeps a project-site path, drops query/hash/trailing slash, empty on junk', () => {
   assert.equal(normaliseOrigin('https://example.com/'), 'https://example.com');
   assert.equal(normaliseOrigin('  https://example.com  '), 'https://example.com');
   assert.equal(normaliseOrigin('example.com'), 'https://example.com');     // adds scheme
+  assert.equal(normaliseOrigin('https://owner.github.io/my-blog/'), 'https://owner.github.io/my-blog');
+  assert.equal(normaliseOrigin('owner.github.io/my-blog/?preview=1#top'), 'https://owner.github.io/my-blog');
   assert.equal(normaliseOrigin(''), '');                                   // empty → '' (sharing disabled)
   assert.equal(normaliseOrigin(null), '');
   assert.equal(normaliseOrigin('::::'), '');                               // unparseable → ''
+  assert.equal(normaliseOrigin('mailto:hello@example.com'), '');           // non-http scheme → ''
 });
 
 /* ── postLiveUrl ──────────────────────────────────────────────────────────── */
 test('postLiveUrl: <origin>/blog/<slug>/ — the real blog path', () => {
   assert.equal(postLiveUrl('my-post', 'https://example.com'), 'https://example.com/blog/my-post/');
+  assert.equal(
+    postLiveUrl('my-post', 'https://owner.github.io/my-blog/'),
+    'https://owner.github.io/my-blog/blog/my-post/',
+  );
   assert.equal(postLiveUrl('my-post'), null);                              // no configured origin → null
   assert.equal(postLiveUrl('/my-post/', 'https://example.com'), 'https://example.com/blog/my-post/'); // strips slashes
   assert.equal(postLiveUrl('', 'https://example.com'), '');                 // no slug → empty
@@ -59,6 +66,10 @@ test('absoluteImageUrl: passes data/http through, absolutises root-relative', ()
   assert.equal(absoluteImageUrl('data:image/jpeg;base64,AAA'), 'data:image/jpeg;base64,AAA');
   assert.equal(absoluteImageUrl('https://cdn.test/x.jpg'), 'https://cdn.test/x.jpg');
   assert.equal(absoluteImageUrl('/images/posts/p/a.jpg', 'https://example.com'), 'https://example.com/images/posts/p/a.jpg');
+  assert.equal(
+    absoluteImageUrl('/images/posts/p/a.jpg', 'https://owner.github.io/my-blog/'),
+    'https://owner.github.io/my-blog/images/posts/p/a.jpg',
+  );
   assert.equal(absoluteImageUrl('/images/posts/p/a.jpg'), null); // root-relative, no origin → null (can't absolutise)
   assert.equal(absoluteImageUrl('relative/x.jpg', 'https://example.com'), ''); // unanchored → dropped
   assert.equal(absoluteImageUrl(''), '');

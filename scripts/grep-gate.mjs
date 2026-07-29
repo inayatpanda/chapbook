@@ -78,6 +78,10 @@ const SKIP_EXT = new Set([
 // dictionary entries, not leaked fork content. Provenance/integrity of these trees
 // is enforced by the per-file sha-256 pins in scripts/stt-files.mjs instead.
 const SKIP_DIRS = ['dist/app/models/', 'dist/app/vendor/stt/'];
+// The illustration picker is a deliberately broad, separately generated media
+// catalogue. Its metadata includes anatomy/medical subject names by design; those
+// are searchable assets, not product copy or a Helm-era preset leak.
+const SKIP_FILES = new Set(['dist/app/illustrations-manifest.json']);
 
 function* walk(dir) {
   for (const name of readdirSync(dir)) {
@@ -106,6 +110,7 @@ if (!root.isDirectory()) {
 for (const file of walk(DIST)) {
   if (SKIP_EXT.has(extname(file).toLowerCase())) continue;
   if (SKIP_DIRS.some((d) => file.startsWith(d))) continue;
+  if (SKIP_FILES.has(file)) continue;
   let text;
   try { text = readFileSync(file, 'utf8'); } catch { continue; }
   scanned++;
