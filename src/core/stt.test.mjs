@@ -20,6 +20,8 @@ test('STT_PROVIDERS: both providers carry id/label/disclosure', () => {
 });
 
 test('STT_PROVIDERS: whisper discloses on-device privacy; webspeech discloses the cloud', () => {
+  assert.equal(STT_PROVIDERS.whisper.label, 'Private transcription');
+  assert.equal(STT_PROVIDERS.webspeech.label, 'Live dictation');
   assert.match(STT_PROVIDERS.whisper.disclosure, /on this device|never leaves/i);
   assert.match(STT_PROVIDERS.webspeech.disclosure, /cloud/i);
 });

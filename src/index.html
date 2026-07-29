@@ -2284,7 +2284,7 @@
     .chat-row{gap:.35rem}
     #chatInput{min-width:0;overflow-y:hidden}
     .chat-row:not(.has-text) #chatSendBtn{display:none}
-    .chat-row.has-text #chatMic{display:none}
+    .chat-row.has-text .chat-voice{display:none}
     /* camera joins the bar on phones only, and steps aside while typing (like Dictate) */
     .chat-row:not(.has-text) #chatCam{display:flex}
   }
@@ -2302,6 +2302,28 @@
   #chatSendBtn{border-color:transparent;color:#04060c;background:var(--grad-pub);font-weight:700}
   #chatMic.on{border-color:#fb7185;color:#fb7185;animation:chatpulse 1.2s infinite}
   #chatMic.busy{border-color:#818cf8;color:#818cf8;animation:chatpulse 1.2s infinite}
+  .chat-voice[hidden],.chat-voice-menu[hidden]{display:none}
+  .chat-voice{position:relative;display:flex;align-items:flex-end;gap:.2rem;flex:0 0 auto}
+  .chat-voice-mode{height:44px;min-width:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:1px;border:1px solid var(--line);border-radius:13px;background:rgba(140,160,200,.06);
+    color:var(--mut);font:700 .625rem var(--font-display);letter-spacing:.02em;cursor:pointer;padding:0 .4rem}
+  .chat-voice-mode span:last-child{font-size:.55rem;line-height:.7;color:var(--faint)}
+  .chat-voice-mode:hover,.chat-voice-mode[aria-expanded="true"]{border-color:var(--acc);color:var(--acc)}
+  .chat-voice-mode:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+  .chat-voice-menu{position:absolute;right:0;bottom:52px;width:min(310px,calc(100vw - 1.25rem));z-index:72;
+    border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 18px 48px rgba(0,0,0,.35);
+    padding:.65rem}
+  .chat-voice-menu-hd{font:700 .68rem var(--font-display);letter-spacing:.08em;text-transform:uppercase;
+    color:var(--mut);padding:.15rem .25rem .45rem}
+  .chat-voice-choice{width:100%;display:grid;grid-template-columns:1fr auto;gap:.18rem .55rem;text-align:left;
+    min-height:58px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--ink);
+    font:inherit;padding:.55rem .65rem;cursor:pointer}
+  .chat-voice-choice:hover:not(:disabled){background:rgba(140,160,200,.07);border-color:var(--line)}
+  .chat-voice-choice[aria-checked="true"]{border-color:var(--acc);background:rgba(45,212,191,.08)}
+  .chat-voice-choice:disabled{opacity:.48;cursor:not-allowed}
+  .chat-voice-choice strong{font-size:.86rem}.chat-voice-choice small{grid-column:1/-1;color:var(--mut);font-size:.72rem;line-height:1.35}
+  .chat-voice-choice .chat-voice-check{color:var(--acc)}
+  .chat-voice-status{min-height:1.3em;margin:.4rem .3rem .05rem;color:var(--mut);font-size:.72rem;line-height:1.35}
   @keyframes chatpulse{50%{box-shadow:0 0 0 6px rgba(251,113,133,.15)}}
   @media (prefers-reduced-motion: reduce){#chatMic.on,#chatMic.busy{animation:none}}
   .chat-strip[hidden]{display:none}   /* author display:flex would otherwise defeat [hidden] */
@@ -4143,7 +4165,22 @@
       <button class="cbtn" id="chatAskToggle" type="button" title="Ask the Partner" aria-label="Ask the Partner instead of writing into the post">✦</button>
       <button class="cbtn" id="chatCam" type="button" title="Add a photo" aria-label="Add a photo to the post"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-camera"/></svg></button>
       <input id="chatCamInput" type="file" accept="image/*" capture="environment" multiple hidden />
-      <button class="cbtn" id="chatMic" type="button" title="Dictate" aria-label="Dictate" hidden><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-microphone"/></svg></button>
+      <div class="chat-voice" id="chatVoice" hidden>
+        <button class="cbtn" id="chatMic" type="button" title="Start private transcription" aria-label="Start private transcription" hidden><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-microphone"/></svg></button>
+        <button class="chat-voice-mode" id="chatVoiceMode" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="chatVoiceMenu" title="Choose voice input mode"><span id="chatVoiceModeLabel">Private</span><span aria-hidden="true">▼</span></button>
+        <div class="chat-voice-menu" id="chatVoiceMenu" role="menu" aria-label="Voice input mode" hidden>
+          <div class="chat-voice-menu-hd">Voice input</div>
+          <button class="chat-voice-choice" id="chatVoicePrivate" type="button" role="menuitemradio" aria-checked="true" data-engine="whisper">
+            <strong>Private transcription</strong><span class="chat-voice-check" aria-hidden="true">✓</span>
+            <small>Record first, then transcribe locally with Whisper. Audio stays on this device.</small>
+          </button>
+          <button class="chat-voice-choice" id="chatVoiceLive" type="button" role="menuitemradio" aria-checked="false" data-engine="webspeech">
+            <strong>Live dictation</strong><span class="chat-voice-check" aria-hidden="true"></span>
+            <small>English words appear while you speak. The speech service may use the cloud.</small>
+          </button>
+          <div class="chat-voice-status" id="chatVoiceStatus" role="status" aria-live="polite"></div>
+        </div>
+      </div>
       <button class="cbtn" id="chatSendBtn" type="button" title="Send" aria-label="Send"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-send-2"/></svg></button>
     </div>
   </div>
@@ -9833,11 +9870,14 @@ function chatCloseSheet(){ $('chatSheet').hidden = true; }
        the model (~68 MB, one-time; SW-cached after).
      • webspeech (OPT-IN ONLY, disclosed): the continuous Web Speech engine below —
        the browser may route audio to a cloud speech service, so it is never silently
-       selected. Long-press (or right-click) the mic to switch engines. */
+       selected. A visible mode menu explains and switches the two experiences. */
 function chatInitMic(){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   const btn = $('chatMic');
-  if(!btn) return;
+  const voiceWrap = $('chatVoice'), modeBtn = $('chatVoiceMode'), modeMenu = $('chatVoiceMenu');
+  const modeLabel = $('chatVoiceModeLabel'), modeStatus = $('chatVoiceStatus');
+  const privateChoice = $('chatVoicePrivate'), liveChoice = $('chatVoiceLive');
+  if(!btn || !voiceWrap || !modeBtn || !modeMenu) return;
   const engines = { whisper: sttWhisperSupported(), webspeech: !!SR };
   const engineId = () => {
     let stored = null;
@@ -9848,13 +9888,34 @@ function chatInitMic(){
   // webspeech exists without an opt-in yet, the button stays visible and a tap opens
   // the explicit opt-in flow (the cloud engine is still never silently selected).
   if(!engineId() && !engines.webspeech) return;
-  btn.hidden = false;
+  voiceWrap.hidden = false; btn.hidden = false;
+  privateChoice.disabled = !engines.whisper;
+  liveChoice.disabled = !engines.webspeech;
+  if(!engines.whisper) privateChoice.querySelector('small').textContent = 'Private transcription is not supported by this runtime.';
+  if(!engines.webspeech) liveChoice.querySelector('small').textContent = 'Live dictation is not available in this browser or app. Private transcription remains available.';
+  const setVoiceStatus = (text) => { if(modeStatus) modeStatus.textContent = text || ''; };
+  const idleMicLabel = () => engineId() === 'webspeech' ? 'Start live dictation' : 'Start private transcription';
+  const closeModeMenu = () => { modeMenu.hidden = true; modeBtn.setAttribute('aria-expanded','false'); };
+  const updateModeUi = () => {
+    const id = engineId();
+    modeLabel.textContent = id === 'webspeech' ? 'Live' : 'Private';
+    modeBtn.title = 'Voice mode: ' + (id === 'webspeech' ? 'Live dictation' : 'Private transcription');
+    modeBtn.setAttribute('aria-label', modeBtn.title + '. Choose voice input mode.');
+    privateChoice.setAttribute('aria-checked', id === 'whisper' ? 'true' : 'false');
+    liveChoice.setAttribute('aria-checked', id === 'webspeech' ? 'true' : 'false');
+    privateChoice.querySelector('.chat-voice-check').textContent = id === 'whisper' ? '✓' : '';
+    liveChoice.querySelector('.chat-voice-check').textContent = id === 'webspeech' ? '✓' : '';
+    setVoiceStatus(id === 'webspeech'
+      ? 'Live dictation is ready. English words will appear as you speak.'
+      : 'Private transcription is ready. Record first, then Chapbook transcribes locally.');
+  };
   // one a11y voice for BOTH engines: label + title + toggle state track every transition
   const setMic = (t, pressed) => {
     btn.setAttribute('aria-label', t); btn.title = t;
     btn.setAttribute('aria-pressed', pressed ? 'true' : 'false');
   };
-  setMic('Dictate', false);
+  setMic(idleMicLabel(), false);
+  updateModeUi();
 
   /* ── webspeech engine (opt-in): continuous — tap to start, speak through pauses,
      tap to stop. `continuous` rides short silences; a real engine timeout fires
@@ -9870,17 +9931,22 @@ function chatInitMic(){
     chatAutosize(); chatSyncInput();
     painting = false;
   };
-  const finish = () => { active = false; clearTimeout(restartT); restartT = 0; retry = 0; rec = null; btn.classList.remove('on'); setMic('Dictate', false); };
+  const finish = () => {
+    active = false; clearTimeout(restartT); restartT = 0; retry = 0; rec = null;
+    btn.classList.remove('on'); setMic(idleMicLabel(), false);
+    setVoiceStatus('Live dictation stopped.');
+  };
   const wsStop = () => {
     if(!active && !rec) return;
     active = false; clearTimeout(restartT); restartT = 0;
     const inst = rec; rec = null;              // invalidate any late result/end callbacks
-    btn.classList.remove('on'); setMic('Dictate', false);
+    btn.classList.remove('on'); setMic(idleMicLabel(), false);
     paint('');                                 // drop uncommitted interim; keep finals
+    setVoiceStatus('Live dictation stopped. Final words remain in the message.');
     try{ inst && inst.stop(); }catch(_){}
   };
   const queueRestart = () => {
-    if(++retry > 5){ finish(); toast('Dictation stopped after repeated failures. Check your mic or connection, then try again.'); return; }
+    if(++retry > 5){ finish(); setVoiceStatus('Live dictation stopped after repeated failures.'); toast('Dictation stopped after repeated failures. Check your mic or connection, then try again.'); return; }
     const delay = Math.min(250 * (2 ** (retry - 1)), 4000);
     restartT = setTimeout(() => { restartT = 0; if(active && !rec) start(); }, delay);
   };
@@ -9897,12 +9963,14 @@ function chatInitMic(){
       let interim = '';                         // rebuild the whole interim tail (results before resultIndex are unchanged, not dropped)
       for(let i = 0; i < e.results.length; i++){ if(!e.results[i].isFinal) interim += e.results[i][0] ? e.results[i][0].transcript : ''; }
       paint(interim);
+      setVoiceStatus(interim ? 'Hearing speech — provisional words are appearing.' : 'Listening for more speech…');
     };
     inst.onerror = (e) => {
       if(rec !== inst) return;
       const err = e && e.error;
       if(err === 'not-allowed' || err === 'service-not-allowed' || err === 'audio-capture'){
         finish();
+        setVoiceStatus(err === 'audio-capture' ? 'No microphone was found.' : 'Microphone access is blocked.');
         toast(err === 'audio-capture' ? 'No microphone was found for dictation.' : 'Microphone access is blocked. Allow it in your browser settings to dictate.');
       }
       /* no-speech / network / aborted fall through to onend, which restarts with backoff while active */
@@ -9911,14 +9979,16 @@ function chatInitMic(){
       if(rec !== inst) return;                  // a superseded instance ending: ignore
       rec = null;
       if(active) queueRestart();
-      else { btn.classList.remove('on'); setMic('Dictate', false); paint(''); }
+      else { btn.classList.remove('on'); setMic(idleMicLabel(), false); paint(''); }
     };
     try{ inst.start(); }catch(_){ if(rec === inst) finish(); }
   };
   const wsTap = () => {
     if(active){ wsStop(); return; }
     const el = $('chatInput'); base = el ? el.value : ''; committed = ''; retry = 0;
-    active = true; btn.classList.add('on'); setMic('Stop dictation', true); start();
+    active = true; btn.classList.add('on'); setMic('Stop live dictation', true);
+    setVoiceStatus('Listening — English words will appear as you speak.');
+    start();
   };
   // concurrent typing during WEBSPEECH dictation ends the session so keystrokes aren't
   // clobbered by an interim paint. (The whisper path needs no such guard: it paints
@@ -9939,10 +10009,14 @@ function chatInitMic(){
   const whApply = () => {
     btn.classList.toggle('on', whState === 'recording');
     btn.classList.toggle('busy', whState === 'preparing' || whState === 'transcribing');
-    setMic(whState === 'recording' ? 'Stop dictation'
-      : whState === 'preparing' ? 'Preparing dictation…'
-      : whState === 'transcribing' ? 'Transcribing…' : 'Dictate',
+    setMic(whState === 'recording' ? 'Stop private transcription'
+      : whState === 'preparing' ? 'Preparing private transcription…'
+      : whState === 'transcribing' ? 'Transcribing privately…' : idleMicLabel(),
       whState === 'recording');
+    setVoiceStatus(whState === 'recording' ? 'Recording privately — tap the microphone when you finish.'
+      : whState === 'preparing' ? 'Preparing the private on-device model…'
+      : whState === 'transcribing' ? 'Transcribing privately on this device…'
+      : 'Private transcription is ready. Record first, then Chapbook transcribes locally.');
   };
   const whGo = (ev) => { const n = sttNext(whState, ev); if(n){ whState = n; whApply(); } return !!n; };
   const whDropStream = () => {
@@ -10029,7 +10103,10 @@ function chatInitMic(){
       toast('Preparing dictation — downloading the private on-device model (~68 MB) once…');
       try{
         await whisper.preload({ onProgress: (p) => {
-          if(whSession === session && whState === 'preparing' && p.pct) setMic('Preparing dictation — ' + p.pct + '%', false);
+          if(whSession === session && whState === 'preparing' && p.pct){
+            setMic('Preparing private transcription — ' + p.pct + '%', false);
+            setVoiceStatus('Preparing the private model — ' + p.pct + '%.');
+          }
         } });
       }catch(e){
         if(whSession !== session || whState !== 'preparing') return;   // cancelled meanwhile
@@ -10046,36 +10123,47 @@ function chatInitMic(){
     await whStartRecorder(session);
   };
 
-  /* ── engine opt-in: long-press (or right-click) the mic to switch engines.
-     The cloud engine is NEVER auto-selected — switching to it requires this
-     explicit, disclosure-carrying confirm (the round-2 agreement). ── */
+  /* ── visible engine choice. The cloud-capable live engine is NEVER silently
+     selected: its menu action carries an explicit disclosure and confirm. The mic
+     itself has one job (start/stop the selected engine); mode changes stay in the
+     visible menu so a slow click cannot accidentally switch privacy modes. ── */
   const stopAll = () => { wsStop(); whCancel(); };
   _chatStopMic = stopAll;                        // view-change stops any live session
-  const chooseEngine = async () => {
+  const selectEngine = async (wanted) => {
+    if(wanted !== 'whisper' && wanted !== 'webspeech') return;
+    if(wanted === engineId()){ closeModeMenu(); return; }
     stopAll();
-    if(engineId() === 'webspeech'){
+    if(wanted === 'whisper'){
+      if(!engines.whisper){ setVoiceStatus('Private transcription is unavailable here.'); return; }
       try{ localStorage.setItem(STT_ENGINE_KEY, 'whisper'); }catch(_){}
-      toast('Dictation: on-device engine selected. Audio stays on this device.');
+      updateModeUi(); closeModeMenu(); setMic(idleMicLabel(), false);
+      toast('Private transcription selected. Audio stays on this device.');
       return;
     }
-    if(!engines.webspeech){ toast('This browser has no cloud dictation engine — on-device stays active.'); return; }
+    if(!engines.webspeech){ setVoiceStatus('Live dictation is not available in this browser or app.'); toast('Live dictation is unavailable here — Private transcription remains active.'); return; }
     const ok = await helmConfirm({
-      title: 'Use the browser’s cloud dictation?',
-      text: STT_PROVIDERS.webspeech.disclosure + ' On-device dictation is the private default; long-press the mic to switch back.',
-      okText: 'Use cloud dictation',
+      title: 'Turn on Live dictation?',
+      text: STT_PROVIDERS.webspeech.disclosure + ' The language is English (UK). You can switch back to Private transcription from the visible voice menu.',
+      okText: 'Use Live dictation',
     });
     if(!ok) return;
     try{ localStorage.setItem(STT_ENGINE_KEY, 'webspeech'); }catch(_){}
-    toast('Dictation: browser cloud engine selected.');
+    updateModeUi(); closeModeMenu(); setMic(idleMicLabel(), false);
+    toast('Live dictation selected. Words will appear as you speak.');
   };
-  let lpT = 0, lpFired = false;
-  btn.addEventListener('pointerdown', () => { lpFired = false; clearTimeout(lpT); lpT = setTimeout(() => { lpFired = true; chooseEngine(); }, 600); });
-  btn.addEventListener('pointerup', () => clearTimeout(lpT));
-  btn.addEventListener('pointerleave', () => clearTimeout(lpT));
-  btn.addEventListener('contextmenu', (e) => { e.preventDefault(); if(!lpFired) chooseEngine(); });
-
+  const chooseEngine = () => selectEngine(engineId() === 'webspeech' ? 'whisper' : 'webspeech');
+  modeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const opening = modeMenu.hidden;
+    modeMenu.hidden = !opening; modeBtn.setAttribute('aria-expanded', opening ? 'true' : 'false');
+    if(opening) updateModeUi();
+  });
+  modeMenu.addEventListener('click', (e) => e.stopPropagation());
+  privateChoice.addEventListener('click', () => selectEngine('whisper'));
+  liveChoice.addEventListener('click', () => selectEngine('webspeech'));
+  document.addEventListener('click', closeModeMenu);
+  document.addEventListener('keydown', (e) => { if(e.key === 'Escape' && !modeMenu.hidden){ closeModeMenu(); modeBtn.focus(); } });
   btn.addEventListener('click', () => {
-    if(lpFired){ lpFired = false; return; }      // the long-press already consumed this gesture
     const id = engineId();
     if(id === 'webspeech') wsTap();
     else if(id === 'whisper') whTap();
@@ -12115,8 +12203,8 @@ function edVideo(b, isSel){
    the preview runs the AUTHOR'S OWN code in an opaque origin holding no secrets;
    copy about previews must therefore say "cannot load external resources", never
    claim "no network at all".
-   EVAL NOTE ('unsafe-eval' in script-src): two families — function-explorer and mixer —
-   compile the author's own inline expressions with `new Function`; without eval those
+   EVAL NOTE ('unsafe-eval' in script-src): function-explorer, mixer and
+   formula-calculator compile the author's own inline expressions with `new Function`; without eval those
    widgets throw at build time and render FLAT (a zero-valued curve) in both the maker
    preview and the exported .html. Allowing eval here is safe: the frame is
    sandbox="allow-scripts" (opaque origin, no storage) under default-src 'none' (no

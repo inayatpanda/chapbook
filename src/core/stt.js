@@ -20,13 +20,13 @@
 export const STT_PROVIDERS = {
   whisper: {
     id: 'whisper',
-    label: 'On-device dictation (private)',
+    label: 'Private transcription',
     disclosure: 'Speech is transcribed on this device by a local Whisper model. Audio never leaves your browser.',
   },
   webspeech: {
     id: 'webspeech',
-    label: 'Browser dictation (cloud)',
-    disclosure: 'Uses your browser’s speech service — audio may be sent to the cloud (Chrome routes it to Google).',
+    label: 'Live dictation',
+    disclosure: 'Words appear while you speak. This uses your browser or operating system speech service, which may send audio to the cloud.',
   },
 };
 

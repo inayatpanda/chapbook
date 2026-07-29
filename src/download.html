@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Download Chapbook</title>
-<meta name="description" content="Get Chapbook for macOS or Windows, or open it in your browser. Same app everywhere; your posts publish to a blog you own.">
+<meta name="description" content="Get Chapbook for macOS, Windows or Android, or open it in your browser. Same app everywhere; your posts publish to a blog you own.">
 <link rel="canonical" href="https://chapbook.rqai.co.uk/download">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#0b1120">
 <meta property="og:title" content="Download Chapbook">
-<meta property="og:description" content="Desktop apps for macOS and Windows, or straight in the browser. Your blog, wherever you write.">
+<meta property="og:description" content="Apps for macOS, Windows and Android, or straight in the browser. Your blog, wherever you write.">
 <meta property="og:image" content="https://chapbook.rqai.co.uk/icon-512.png">
 <link rel="stylesheet" href="/marketing.css">
 <style>
@@ -61,9 +61,9 @@
   }
   .sub{margin-top:14px;max-width:34em;color:var(--mist)}
 
-  /* ---------- the three editions (book covers) ---------- */
+  /* ---------- the four editions (book covers) ---------- */
   .editions{
-    display:grid;grid-template-columns:repeat(3,1fr);gap:16px;
+    display:grid;grid-template-columns:repeat(2,1fr);gap:16px;
     padding-block:8px 8px;
   }
   .edition{
@@ -187,6 +187,17 @@
         </div>
       </article>
 
+      <article class="edition" data-plat="android">
+        <div class="spine" aria-hidden="true"><span>Android</span></div>
+        <div class="cover">
+          <span class="chip">For this phone</span>
+          <h2>Chapbook for Android</h2>
+          <p>Sideload the signed APK on Android 7 or later. Your phone may ask you to allow installs from this source.</p>
+          <span class="meta" data-mf="android-meta">Android 7 or later</span>
+          <a class="btn" href="/downloads/Chapbook-Android.apk" download>Download for Android</a>
+        </div>
+      </article>
+
       <article class="edition" data-plat="web">
         <div class="spine" aria-hidden="true"><span>Browser</span></div>
         <div class="cover">
@@ -202,7 +213,7 @@
 
     <section class="fine" aria-label="Good to know">
       <ul>
-        <li><span class="ver" data-mf="version">Desktop apps version 1.0.0</span></li>
+        <li><span class="ver" data-mf="version">Native apps version 1.0.0</span></li>
         <li>Activate each device with the same licence key. Drafts stay on the device you write them on; published posts live in your blog&rsquo;s own repository and appear everywhere.</li>
         <li>On Windows, SmartScreen may show &ldquo;Windows protected your PC&rdquo; while the app is new. Choose <i>More info</i>, then <i>Run anyway</i>.</li>
       </ul>
@@ -211,6 +222,7 @@
         <div class="sums">
           <div>Chapbook-macOS.dmg<code data-mf="mac-sha">Load this page online to fetch the current checksum, or read /downloads/manifest.json.</code></div>
           <div>Chapbook-Windows.exe<code data-mf="win-sha">Load this page online to fetch the current checksum, or read /downloads/manifest.json.</code></div>
+          <div>Chapbook-Android.apk<code data-mf="android-sha">Load this page online to fetch the current checksum, or read /downloads/manifest.json.</code></div>
         </div>
       </details>
     </section>
@@ -236,7 +248,7 @@
   var touchMac = /Mac/i.test(plat) && navigator.maxTouchPoints > 1;
   var pick, chip;
   if (/iPhone|iPad|iPod/i.test(ua) || touchMac) { pick = 'web'; chip = /iPad/i.test(ua) || touchMac ? 'For this iPad' : 'For this iPhone'; }
-  else if (/Android/i.test(ua)) { pick = 'web'; chip = 'For this phone'; }
+  else if (/Android/i.test(ua)) { pick = 'android'; chip = 'For this phone'; }
   else if (/Mac/i.test(plat)) { pick = 'mac'; }
   else if (/Win/i.test(plat)) { pick = 'win'; }
   else if (plat) { pick = 'web'; }               // Linux, ChromeOS, the rest
@@ -256,7 +268,7 @@
   var mb = function (n) { return (n / 1e6).toFixed(1).replace(/\.0$/, '') + ' MB'; };
   fetch('/downloads/manifest.json').then(function (r) { return r.ok ? r.json() : null; }).then(function (m) {
     if (!m || !m.files) return;
-    set('version', 'Desktop apps version ' + m.version + (m.released ? ', released ' + m.released : ''));
+    set('version', 'Native apps version ' + m.version + (m.released ? ', released ' + m.released : ''));
     if (m.files.mac) {
       set('mac-meta', 'macOS 10.13 or later · ' + mb(m.files.mac.size));
       set('mac-sha', m.files.mac.sha256);
@@ -264,6 +276,10 @@
     if (m.files.win) {
       set('win-meta', 'Windows 10 or later · ' + mb(m.files.win.size));
       set('win-sha', m.files.win.sha256);
+    }
+    if (m.files.android) {
+      set('android-meta', 'Android 7 or later · ' + mb(m.files.android.size));
+      set('android-sha', m.files.android.sha256);
     }
   }).catch(function () { /* baked fallbacks stand */ });
 })();

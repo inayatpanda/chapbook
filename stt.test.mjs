@@ -158,7 +158,12 @@ test('package.json: stage-stt wired into both deploys + runnable standalone', ()
 test('index.html: the inline module loads the engine from /stt.js', () => {
   const html = readFileSync('src/index.html', 'utf8');
   assert.match(html, /from '\/stt\.js'/);
-  assert.match(html, /id="chatMic"[^>]*aria-label="Dictate"/, 'mic keeps its a11y label');
+  assert.match(html, /id="chatMic"[^>]*aria-label="Start private transcription"/,
+    'mic explains the default private transcription action');
+  assert.match(html, /id="chatVoiceMode"[^>]*aria-haspopup="menu"/,
+    'the voice mode switcher is visible and exposes its menu semantics');
+  assert.match(html, /role="menuitemradio"[^>]*data-engine="webspeech"/,
+    'live dictation is available from the visible voice menu');
 });
 
 /* ── CSP: wasm-unsafe-eval added, nothing else loosened ── */

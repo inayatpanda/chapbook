@@ -1,4 +1,4 @@
-// Stage the desktop installers into dist/downloads/ for the /download page.
+// Stage the native installers into dist/downloads/ for the /download page.
 // Runs AFTER `npm run build` (which wipes dist/) and BEFORE `netlify deploy`
 // — see the deploy:draft / deploy:prod scripts in package.json.
 //
@@ -10,7 +10,7 @@
 // page fetches to render its fine print. Checksums live ONLY in the manifest —
 // one source, no drift.
 //
-// Fails hard if either installer is missing: a deploy must never silently
+// Fails hard if any installer is missing: a deploy must never silently
 // ship the download page with dead links.
 
 import { execFileSync } from 'node:child_process';
@@ -24,6 +24,7 @@ const OUT = 'dist/downloads';
 const WANTED = [
   { file: 'Chapbook-macOS.dmg', match: (n) => n.endsWith('.dmg'), key: 'mac' },
   { file: 'Chapbook-Windows.exe', match: (n) => n.endsWith('.exe'), key: 'win' },
+  { file: 'Chapbook-Android.apk', match: (n) => n.endsWith('.apk'), key: 'android' },
 ];
 
 const gh = (args, opts = {}) => execFileSync('gh', args, { encoding: 'utf8', ...opts });
