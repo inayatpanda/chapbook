@@ -72,13 +72,23 @@
     --partner-line:rgba(165,180,252,.22);
   }
   :root[data-theme="light"] {
-    --bg:#eef1f6; --bg-1:#e7ecf4; --surface:#ffffff; --surface-2:#f3f6fb;
+    /* The light field used to sit in one narrow pale band (#eef1f6 page, #f3f6fb nested,
+       #ffffff cards): everything was within a few percent of everything else, so nothing
+       read as raised and the whole app looked washed out. The page and nested surfaces are
+       deeper now so white cards actually separate (contrast against a white card goes
+       1.13 -> 1.22), and the lines carry real definition. This forced the muted text
+       colours below to be re-solved — see the note there. */
+    --bg:#e4e9f1; --bg-1:#dce3ed; --surface:#ffffff; --surface-2:#eef2f8;
     /* WCAG AA (a11y audit): --faint and --acc colour TEXT in light (bottom-nav labels,
        header subtitle, install/getting-started links) — the old #8a97a8 / #0ea5a3 sat at
        ~2.6:1 on the light field. These clear 4.5:1 on --bg, --bg-1 AND --surface.
        Dark theme is untouched (its values already pass on the near-black field). */
-    --ink:#1b2433; --mut:#5b6b80; --faint:#5f6b7c;
-    --line:#e4e9f0; --line-2:#d3dbe7; --acc:#0b7371;
+    /* Deepened alongside the field above. A darker page moves a MID-grey toward the
+       background rather than away from it, so the old values dropped to ~4.19:1 on --bg-1
+       and stopped clearing AA. Re-solved against the deepest field text sits on (--bg-1):
+       --mut 4.63:1, --faint 4.66:1, --acc 4.90:1, --ink 11.6:1. */
+    --ink:#1b2433; --mut:#556577; --faint:#586474;
+    --line:#cdd7e4; --line-2:#b6c3d5; --acc:#0a6b69;
     --thread-canvas:#fbfaf7; --thread-canvas-line:#e4e1db;
     --thread-post:#e7edf6; --thread-post-line:#d1dae7;
     --partner-voice:#574fd6; --partner-wash:rgba(87,79,214,.07); --partner-line:rgba(87,79,214,.24);
@@ -399,8 +409,12 @@
   .topbar-inner{margin:0 auto;padding:.5rem 0 .45rem;
     width:min(680px,calc(100vw - 1.6rem));min-height:3.9rem;
     display:flex;flex-direction:column;justify-content:center;gap:.35rem}
-  .topbar-title{font:700 .78rem var(--font-display);letter-spacing:.07em;
-    text-transform:uppercase;color:var(--mut)}
+  /* The bar owns the app identity on every page: name left, theme + Install right, the
+     section's pills underneath. The section NAME is deliberately not here — it would just
+     repeat the page's own heading. */
+  .topbar-row{display:flex;align-items:center;justify-content:space-between;gap:1rem}
+  .topbar-row h1{font:700 1.25rem var(--font-display);color:var(--ink);margin:0;letter-spacing:-.01em}
+  .topbar-actions{display:flex;align-items:center;gap:.5rem;flex:0 0 auto}
   .subnav{display:flex;gap:.4rem;overflow-x:auto;-webkit-overflow-scrolling:touch;
     scrollbar-width:none;padding:0;margin:0;width:auto}
   .subnav::-webkit-scrollbar{display:none}
@@ -3287,20 +3301,17 @@
      pills come and go. -->
 <div class="topbar" id="topbar" hidden>
   <div class="topbar-inner">
-    <div class="topbar-title" id="topbarTitle"></div>
+    <div class="topbar-row">
+      <h1 id="appHeaderTitle">Chapbook</h1>
+      <div class="topbar-actions">
+        <button class="themeBtn" id="themeToggleMain" title="Toggle theme" onclick="toggleTheme()">☀️</button>
+        <button class="install" id="installBtn">⤓ Install</button>
+      </div>
+    </div>
     <div class="subnav" id="subnav"></div>
   </div>
 </div>
 <div class="wrap">
-  <header>
-    <div>
-      <h1 id="appHeaderTitle">Chapbook</h1>
-    </div>
-    <div style="display:flex;align-items:center;gap:.5rem">
-      <button class="themeBtn" id="themeToggleMain" title="Toggle theme" onclick="toggleTheme()">☀️</button>
-      <button class="install" id="installBtn">⤓ Install</button>
-    </div>
-  </header>
 
   <!-- H4: shown by the boot storage probe when this browser blocks local storage
        (Safari private mode / ITP eviction) or can't persist drafts. Dismissible. -->
@@ -5867,7 +5878,7 @@ window.goSection=goSection;
 
 // Secondary nav: render the pill bar for the section that owns `view`.
 function renderSubnav(view){
-  const bar=$('topbar'), title=$('topbarTitle'), sub=$('subnav');
+  const bar=$('topbar'), sub=$('subnav');
   if(!bar || !sub) return;
   const sectionId=VIEW_SECTION[view];
   const def=sectionId && SECTIONS[sectionId];
@@ -5877,7 +5888,9 @@ function renderSubnav(view){
   // Otherwise the bar ALWAYS shows — a single-view section still gets its name, which is
   // what keeps the top of every tab identical instead of collapsing to nothing on Home.
   bar.hidden=false;
-  if(title) title.textContent=def.label;
+  // No section caption here any more: it duplicated the view's own heading word for word
+  // ("HOME" in the bar, "Home" below it). The bar carries the app identity — name, theme,
+  // Install — and the page carries its own title.
   const multi = def.views.length>1;
   sub.hidden = !multi;
   sub.innerHTML = multi ? def.views.map(o=>
