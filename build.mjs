@@ -16,6 +16,25 @@ import { STT_VENDOR_FILES, STT_MODELS } from './scripts/stt-files.mjs';
 const SRC = 'src';
 const DIST = 'dist';
 
+// TEST-ONLY licence key override. The licence gate blocks every authenticated E2E, and the
+// only safe way past it is a build that trusts a throwaway keypair (test/fixtures/
+// testLicence.mjs) instead of the production one. Requires BOTH env vars, so it can never
+// happen by accident, and a build that uses it is marked (dist/TEST-BUILD) and shouts about
+// it. A test-keyed build cannot verify a real licence, and a real build cannot verify a test
+// licence — the separation is cryptographic, not a flag someone has to remember.
+const TEST_LICENCE_PUBKEY = process.env.CHAPBOOK_TEST_BUILD === '1'
+  ? (process.env.CHAPBOOK_LICENCE_PUBKEY || '')
+  : '';
+if (process.env.CHAPBOOK_LICENCE_PUBKEY && process.env.CHAPBOOK_TEST_BUILD !== '1') {
+  throw new Error('build: CHAPBOOK_LICENCE_PUBKEY is a TEST-ONLY override and requires CHAPBOOK_TEST_BUILD=1. Refusing to bake a non-production licence key into a normal build.');
+}
+if (TEST_LICENCE_PUBKEY && !/^[0-9a-f]{64}$/.test(TEST_LICENCE_PUBKEY)) {
+  throw new Error('build: CHAPBOOK_LICENCE_PUBKEY must be 32 hex-encoded bytes.');
+}
+if (TEST_LICENCE_PUBKEY && TEST_LICENCE_PUBKEY === LICENCE_PUBLIC_KEY) {
+  throw new Error('build: CHAPBOOK_LICENCE_PUBKEY is the PRODUCTION key. The test override exists to avoid using it — mint against the test keypair instead.');
+}
+
 // Drift guard: the Studio's inline licence-gate key (window.__LICENCE_PUBLIC_KEY)
 // must match server/licence.js PUBLIC_KEY. `npm run licence:init` patches both;
 // this catches a hand-edit that touched only one. (Empty on both = unlicensed
@@ -26,7 +45,14 @@ const DIST = 'dist';
   if (!m) throw new Error('build: window.__LICENCE_PUBLIC_KEY not found in index.html');
   if (m[1] !== LICENCE_PUBLIC_KEY)
     throw new Error('build: Studio licence key drifted from server/licence.js — re-run `npm run licence:init` (or sync both).');
-  console.log(`licence verify key: ${LICENCE_PUBLIC_KEY ? 'baked ✓' : '(none — unlicensed build)'}`);
+  if (TEST_LICENCE_PUBKEY) {
+    console.log('');
+    console.log('  ⚠  TEST BUILD — licence gate keyed to a THROWAWAY keypair.');
+    console.log('     Real licences will NOT activate this build. NEVER deploy dist/ from here.');
+    console.log('');
+  } else {
+    console.log(`licence verify key: ${LICENCE_PUBLIC_KEY ? 'baked ✓' : '(none — unlicensed build)'}`);
+  }
 }
 
 // Sanity-check: the inline provider→default-model map in index.html must match the
@@ -152,10 +178,29 @@ html = html.replace('</head>', '  <script type="module" src="/studio.js"></scrip
 //     so no rewrite is needed here. Just sanity-check the client-router branch is present.
 if (!html.includes('if(window.__studioApi){')) throw new Error('build: api() no longer delegates to window.__studioApi — index.html changed?');
 
-// (c) The app now lives at /app. Assets stay root-relative at the dist root (studio.js,
+// (c) TEST-ONLY: swap the baked licence verify key so a fixture licence can open the gate.
+//     Applied to the EMITTED html only — src/index.html is never rewritten, so a test build
+//     cannot leave the test key behind in source for someone to commit by accident.
+if (TEST_LICENCE_PUBKEY) {
+  const before = html;
+  html = html.replace(
+    /window\.__LICENCE_PUBLIC_KEY='[^']*';/,
+    `window.__LICENCE_PUBLIC_KEY='${TEST_LICENCE_PUBKEY}';`,
+  );
+  if (html === before) throw new Error('build: failed to apply the test licence key override.');
+}
+
+// (d) The app now lives at /app. Assets stay root-relative at the dist root (studio.js,
 //     manifest.json, icons, fonts) so the app doc at /app/index.html loads them from '/'.
 mkdirSync(`${DIST}/app`, { recursive: true });
 writeFileSync(`${DIST}/app/index.html`, html);
+// Mark the artifact itself, so "is this dist/ safe to deploy?" is answerable by looking at
+// dist/ rather than by remembering which env vars the last build ran with.
+if (TEST_LICENCE_PUBKEY) {
+  writeFileSync(`${DIST}/TEST-BUILD`,
+    'This dist/ was built with a TEST licence key. Real licences cannot activate it.\n'
+    + 'It must never be deployed. Run `npm run build` (no CHAPBOOK_TEST_BUILD) to get a real one.\n');
+}
 
 // (c1) Illustrations library manifest → dist/app/illustrations-manifest.json. The
 //      Illustrations gallery picker fetches this once on open (same-origin, so CSP

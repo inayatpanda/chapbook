@@ -61,6 +61,40 @@ jobs:
             exit 1
           fi
 
+  e2e:
+    name: authenticated E2E (test-keyed build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: install a headless browser
+        run: |
+          npm i --no-save playwright
+          npx playwright install --with-deps chromium
+
+      # Builds dist/ with the THROWAWAY licence key from test/fixtures/testLicence.mjs so the
+      # activation gate can be driven for real. That artifact is marked dist/TEST-BUILD and
+      # scripts/assert-deployable.mjs refuses to deploy it, so it cannot escape this job.
+      - name: build with the test licence key
+        run: npm run build:test
+
+      - name: the test build is refused by the deploy guard
+        run: |
+          if npm run --silent build:test >/dev/null && node scripts/assert-deployable.mjs; then
+            echo "::error::assert-deployable.mjs ACCEPTED a test-keyed build — the guard is broken"
+            exit 1
+          fi
+          echo "deploy guard correctly refused the test build"
+
+      - run: npm run e2e
+
   gate:
     name: release gate (manual, needs a deployed URL)
     if: github.event_name == 'workflow_dispatch' && inputs.gate_url != ''

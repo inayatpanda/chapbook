@@ -12,8 +12,10 @@
     "gate": "node scripts/release-gate.mjs",
     "stage:installers": "node scripts/stage-installers.mjs",
     "stage:stt": "node scripts/stage-stt.mjs",
-    "deploy:draft": "npm run check && node scripts/stage-installers.mjs && node scripts/stage-stt.mjs && netlify deploy --dir dist --functions netlify/functions --site d825cd70-8cca-4b78-a92b-2245e6876d48",
-    "deploy:prod": "npm run check && node scripts/stage-installers.mjs && node scripts/stage-stt.mjs && netlify deploy --prod --dir dist --functions netlify/functions --site d825cd70-8cca-4b78-a92b-2245e6876d48"
+    "deploy:draft": "npm run check && node scripts/assert-deployable.mjs && node scripts/stage-installers.mjs && node scripts/stage-stt.mjs && netlify deploy --dir dist --functions netlify/functions --site d825cd70-8cca-4b78-a92b-2245e6876d48",
+    "deploy:prod": "npm run check && node scripts/assert-deployable.mjs && node scripts/stage-installers.mjs && node scripts/stage-stt.mjs && netlify deploy --prod --dir dist --functions netlify/functions --site d825cd70-8cca-4b78-a92b-2245e6876d48",
+    "build:test": "CHAPBOOK_TEST_BUILD=1 CHAPBOOK_LICENCE_PUBKEY=ed10832b08134c34ffef5290e1ced234c47c5f046cb3242fab90b148839413fb node build.mjs",
+    "e2e": "node test/e2e/activation.e2e.mjs"
   },
   "dependencies": {
     "@netlify/blobs": "^8",
