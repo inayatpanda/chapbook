@@ -266,13 +266,17 @@ async function check4_metrics(origin) {
           continue;
         }
         visits = data && typeof data.visit === 'number' ? data.visit : 0;
+        // Which consistency mode the function actually achieved. 'eventual' means the
+        // runtime never injected `uncachedEdgeURL`, so reads are cache-served again and
+        // this check is inherently flaky — report it rather than let it look healthy.
+        const mode = get.headers.get('x-metrics-consistency') || 'unreported';
         // Tolerate concurrent visits: assert ≥ 1, never == 1.
         if (!(visits >= 1)) {
-          lastError = `visit count for ${today} is ${visits}, expected ≥ 1`;
+          lastError = `visit count for ${today} is ${visits}, expected ≥ 1 (consistency=${mode})`;
           continue;
         }
         // Success!
-        return pass(4, 'metrics visit → 204 + count', `POST 204; GET ${today} visit=${visits} (≥1) after ${attempt + 1} attempt(s)`);
+        return pass(4, 'metrics visit → 204 + count', `POST 204; GET ${today} visit=${visits} (≥1) after ${attempt + 1} attempt(s); consistency=${mode}`);
       } catch (e) {
         lastError = errStr(e);
       }
