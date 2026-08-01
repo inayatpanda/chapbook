@@ -377,9 +377,32 @@
   /* ── SECONDARY NAV (sub-views within a section) ───────────────────────────
      A scrollable pill bar shown under the section header when a section owns
      >1 view (Write, Media, Share, Settings). Single-view sections hide it. */
+  /* ── TOP BAR ─────────────────────────────────────────────────────────────
+     The section nav, given an actual bar to live in. .subnav used to be a
+     transparent pill strip floating straight on the page background, and it was
+     hidden ENTIRELY on single-view sections (Home, Posts) — so the top of the app
+     looked different on every tab and content started at a different y depending
+     on where you were. The bar is always present now; only the pills come and go.
+     The wash is mixed from --acc so it follows both themes instead of hard-coding
+     a teal that would fight the light palette. */
+  .topbar{position:sticky;top:0;z-index:30;
+    background:var(--bg-1);                                   /* fallback */
+    background:color-mix(in srgb, var(--acc) 7%, var(--bg));
+    border-bottom:1px solid var(--line);
+    -webkit-backdrop-filter:saturate(140%) blur(6px);
+    backdrop-filter:saturate(140%) blur(6px)}
+  .topbar[hidden]{display:none}
+  /* min-height reserves the pill row even on single-view sections (Home, Posts), so the
+     bar is the same height everywhere and page content always starts at the same y.
+     Without it the bar collapses to just the caption and the whole page jumps when you
+     move between a section that has pills and one that doesn't. */
+  .topbar-inner{margin:0 auto;padding:.5rem 0 .45rem;
+    width:min(680px,calc(100vw - 1.6rem));min-height:3.9rem;
+    display:flex;flex-direction:column;justify-content:center;gap:.35rem}
+  .topbar-title{font:700 .78rem var(--font-display);letter-spacing:.07em;
+    text-transform:uppercase;color:var(--mut)}
   .subnav{display:flex;gap:.4rem;overflow-x:auto;-webkit-overflow-scrolling:touch;
-    scrollbar-width:none;padding:.2rem 0 .1rem;margin:0 auto;
-    width:min(680px,calc(100vw - 1.6rem))}
+    scrollbar-width:none;padding:0;margin:0;width:auto}
   .subnav::-webkit-scrollbar{display:none}
   .subnav[hidden]{display:none}
   .subnav button{flex:0 0 auto;background:var(--bg-1);border:1px solid var(--line);
@@ -389,7 +412,8 @@
   .subnav button:hover{color:var(--ink);border-color:var(--line-2)}
   .subnav button.on{background:var(--grad-pub);color:#042018;border-color:transparent;box-shadow:var(--glow)}
   @media(min-width:900px){
-    .subnav{width:min(940px,calc(100vw - 88px - 3rem));padding-top:1.1rem}
+    /* match the content column so the bar's contents line up with the page below */
+    .topbar-inner{width:min(940px,calc(100vw - 88px - 3rem));padding:.7rem 0 .6rem;min-height:4.7rem}
   }
 
   /* ── VIEWS ───────────────────────────────────────────────────────────────── */
@@ -3248,16 +3272,23 @@
 
 <!-- ===== MAIN APP ===== -->
 <div id="app" style="display:none">
-<!-- Section sub-navigation: a pill bar that switches between the views WITHIN the
-     active section (e.g. Write → Compose/Partner/Inbox). Populated by renderSubnav().
-     Lives directly in #app (before .wrap) so it shows for views inside AND outside .wrap
-     (Partner & Library sit outside .wrap). Hidden for single-view sections. -->
-<div class="subnav" id="subnav" hidden></div>
+<!-- Section navigation bar. Carries the section name and, when the section has more than
+     one view, the sub-view pills (e.g. Write → New post/Partner/Inbox). Populated by
+     renderSubnav(). Lives directly in #app (before .wrap) so it shows for views inside AND
+     outside .wrap (Partner & Library sit outside .wrap).
+     The BAR itself is shown for every section — including single-view ones — so the top of
+     the app is identical on every tab and content always starts at the same y. Only the
+     pills come and go. -->
+<div class="topbar" id="topbar" hidden>
+  <div class="topbar-inner">
+    <div class="topbar-title" id="topbarTitle"></div>
+    <div class="subnav" id="subnav"></div>
+  </div>
+</div>
 <div class="wrap">
   <header>
     <div>
       <h1 id="appHeaderTitle">Chapbook</h1>
-      <div class="sub" id="appHeaderSub" style="margin:0">draft · approve · share</div>
     </div>
     <div style="display:flex;align-items:center;gap:.5rem">
       <button class="themeBtn" id="themeToggleMain" title="Toggle theme" onclick="toggleTheme()">☀️</button>
@@ -5829,15 +5860,22 @@ window.goSection=goSection;
 
 // Secondary nav: render the pill bar for the section that owns `view`.
 function renderSubnav(view){
-  const sub=$('subnav'); if(!sub) return;
+  const bar=$('topbar'), title=$('topbarTitle'), sub=$('subnav');
+  if(!bar || !sub) return;
   const sectionId=VIEW_SECTION[view];
   const def=sectionId && SECTIONS[sectionId];
-  // hide for unknown views, single-view sections, and the full-screen editor.
-  if(!def || def.views.length<2 || view==='editor'){ sub.hidden=true; sub.innerHTML=''; return; }
-  sub.hidden=false;
-  sub.innerHTML = def.views.map(o=>
+  // The full-screen editor owns the whole viewport, so it gets no app chrome above it.
+  // An unknown view has no section to name, so there is nothing to put in the bar.
+  if(!def || view==='editor'){ bar.hidden=true; sub.innerHTML=''; return; }
+  // Otherwise the bar ALWAYS shows — a single-view section still gets its name, which is
+  // what keeps the top of every tab identical instead of collapsing to nothing on Home.
+  bar.hidden=false;
+  if(title) title.textContent=def.label;
+  const multi = def.views.length>1;
+  sub.hidden = !multi;
+  sub.innerHTML = multi ? def.views.map(o=>
     `<button type="button" class="${o.v===view?'on':''}" data-subv="${o.v}">${o.label}</button>`
-  ).join('');
+  ).join('') : '';
 }
 // delegated click — switch sub-view within the active section.
 $('subnav').addEventListener('click',e=>{
@@ -5879,9 +5917,6 @@ function go(v){
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on', b.dataset.section===sectionId));
   if(isEditor) syncEditorBack();
   renderSubnav(v);
-  // drop the always-on "draft → approve → share" banner away from Home — it's only
-  // a meaningful welcome on the dashboard; elsewhere the section header carries context.
-  const sub=$('appHeaderSub'); if(sub) sub.style.display = (v==='getting-started') ? '' : 'none';
   window.scrollTo(0,0);
 }
 window.go=go;
