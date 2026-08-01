@@ -695,6 +695,23 @@
     color:var(--mut);font-size:.92rem;line-height:1.55}
   .empty-state b{display:block;margin-bottom:.35rem;color:var(--ink);
     font:700 1.02rem var(--font-display)}
+  /* Partner's chat column is ~788px tall with nothing in it until you speak. It DOES have a
+     starters block, but it floated as loose text at the top of the void; bounding it gives
+     the emptiness an edge, same as every other empty view. */
+  .pt-starters{max-width:34rem;margin:1.4rem auto;padding:1.5rem 1.4rem;
+    background:var(--surface);border:var(--bw,1px) solid var(--line);border-radius:16px}
+  .pt-starters[hidden]{display:none}
+  .pt-starters-intro{color:var(--mut);font-size:.9rem;line-height:1.55;margin:0 0 .9rem}
+  .pt-starters-intro b{color:var(--ink);font:700 1.02rem var(--font-display)}
+  /* "Expand into blog post" and "Social pack" wrapped to two lines at 390px (49px vs the
+     44px every other control renders at). Tighten the label, not the tap target. */
+  @media(max-width:430px){
+    /* .btn.ghost is (0,2,0); a bare .rv-sec loses to it, so match the specificity. */
+    /* min-height keeps the tap target once the label stops wrapping — shrinking the text
+       alone took these from 49px to 29px, which is a worse problem than the wrap. */
+    .btn.rv-sec{font-size:.74rem;letter-spacing:-.01em;padding-left:.4em;padding-right:.4em;
+      white-space:nowrap;min-height:40px}
+  }
   .cal-empty-note{font-size:.78rem;color:var(--faint);text-align:center;padding:1.2rem 0}
   /* agenda fallback (rendered on narrow screens) — same contrast lift as the grid */
   .cal-agenda{display:flex;flex-direction:column;gap:.5rem}
