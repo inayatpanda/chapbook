@@ -357,6 +357,9 @@
   .share-parked-name{flex:1 1 auto;font-size:.85rem;color:var(--ink)}
   .share-parked .btn{margin-top:0;width:auto}
   .share-img-grid:empty{display:none}
+  /* The empty note is injected INTO the grid, so it became a grid ITEM pinned to one
+     ~90px column and wrapped to a few words a line. Span every column instead. */
+  .share-img-note{grid-column:1/-1;margin:.2rem 0}
   .share-img{position:relative;padding:0;border:2px solid var(--line);border-radius:10px;overflow:hidden;
     background:var(--bg);cursor:pointer;aspect-ratio:1/1;transition:border-color .15s,box-shadow .15s}
   .share-img img{width:100%;height:100%;object-fit:cover;display:block}
@@ -3560,11 +3563,11 @@
             <button data-s="link" type="button">Link</button>
           </div>
           <div class="card-maker-accents" id="cardAccent">
-            <button type="button" class="fig-sw on" data-c="#2dd4bf" style="background:#2dd4bf" title="Teal"></button>
-            <button type="button" class="fig-sw" data-c="#22d3ee" style="background:#22d3ee" title="Cyan"></button>
-            <button type="button" class="fig-sw" data-c="#818cf8" style="background:#818cf8" title="Violet"></button>
-            <button type="button" class="fig-sw" data-c="#f59e0b" style="background:#f59e0b" title="Amber"></button>
-            <button type="button" class="fig-sw" data-c="#fb7185" style="background:#fb7185" title="Rose"></button>
+            <button type="button" class="fig-sw on" data-c="#2dd4bf" style="background:#2dd4bf" title="Teal" aria-label="Card colour: Teal"></button>
+            <button type="button" class="fig-sw" data-c="#22d3ee" style="background:#22d3ee" title="Cyan" aria-label="Card colour: Cyan"></button>
+            <button type="button" class="fig-sw" data-c="#818cf8" style="background:#818cf8" title="Violet" aria-label="Card colour: Violet"></button>
+            <button type="button" class="fig-sw" data-c="#f59e0b" style="background:#f59e0b" title="Amber" aria-label="Card colour: Amber"></button>
+            <button type="button" class="fig-sw" data-c="#fb7185" style="background:#fb7185" title="Rose" aria-label="Card colour: Rose"></button>
           </div>
         </div>
         <input id="cardMain" type="text" placeholder="The line that carries it — quote, number, or title" autocomplete="off" />
@@ -5093,13 +5096,13 @@
           <input id="figDrawWidth" type="range" min="1" max="14" step="1" value="3" />
         </label>
         <span class="fig-draw-swatches" id="figDrawSwatches" role="group" aria-label="Pen colour">
-          <button type="button" class="fig-sw on" data-c="#1b2433" title="Ink (default)" style="background:#1b2433"></button>
-          <button type="button" class="fig-sw" data-c="#9fb3c8" title="Grey" style="background:#9fb3c8"></button>
-          <button type="button" class="fig-sw" data-c="#2dd4bf" title="Teal" style="background:#2dd4bf"></button>
-          <button type="button" class="fig-sw" data-c="#22d3ee" title="Cyan" style="background:#22d3ee"></button>
-          <button type="button" class="fig-sw" data-c="#818cf8" title="Violet" style="background:#818cf8"></button>
-          <button type="button" class="fig-sw" data-c="#f59e0b" title="Amber" style="background:#f59e0b"></button>
-          <button type="button" class="fig-sw" data-c="#fb7185" title="Rose" style="background:#fb7185"></button>
+          <button type="button" class="fig-sw on" data-c="#1b2433" title="Ink (default)" aria-label="Card colour: Ink (default)" style="background:#1b2433"></button>
+          <button type="button" class="fig-sw" data-c="#9fb3c8" title="Grey" aria-label="Card colour: Grey" style="background:#9fb3c8"></button>
+          <button type="button" class="fig-sw" data-c="#2dd4bf" title="Teal" aria-label="Card colour: Teal" style="background:#2dd4bf"></button>
+          <button type="button" class="fig-sw" data-c="#22d3ee" title="Cyan" aria-label="Card colour: Cyan" style="background:#22d3ee"></button>
+          <button type="button" class="fig-sw" data-c="#818cf8" title="Violet" aria-label="Card colour: Violet" style="background:#818cf8"></button>
+          <button type="button" class="fig-sw" data-c="#f59e0b" title="Amber" aria-label="Card colour: Amber" style="background:#f59e0b"></button>
+          <button type="button" class="fig-sw" data-c="#fb7185" title="Rose" aria-label="Card colour: Rose" style="background:#fb7185"></button>
         </span>
         <button class="btn ghost fig-draw-tool" id="figFillMode" type="button" aria-pressed="false" title="Fill: your next stroke closes into a filled shape">◧ Fill</button>
         <button class="btn ghost fig-draw-tool" id="figTextMode" type="button" aria-pressed="false" title="Text: tap to place a label, tap a label to edit, drag to move">T Text</button>
@@ -6271,7 +6274,7 @@ const _share = { images: [], fresh: [] };   // images:[{url,label,sel,fresh?}]
 function _renderShareImages(){
   const host=$('shareImgGrid'); if(!host) return;
   const all=_share.images;
-  if(!all.length){ host.innerHTML='<p class="sub" style="margin:.2rem 0">No images on this post yet — add one to include it.</p>'; return; }
+  if(!all.length){ host.innerHTML='<p class="sub share-img-note">No images on this post yet — add one to include it.</p>'; return; }
   host.innerHTML=all.map((im,i)=>
     `<button type="button" class="share-img${im.sel?' on':''}" data-i="${i}" title="${im.sel?'Tap to exclude':'Tap to include'}">`
     +`<img src="${esc(im.url)}" alt="" loading="lazy" onerror="this.closest('.share-img').classList.add('bad')">`
@@ -8598,13 +8601,13 @@ function renderTopicsEditor() {
   if (!wrap) return;
   wrap.innerHTML = '';
   if (!_topics.length) {
-    const p = document.createElement('p'); p.className = 'sub';
-    p.textContent = 'No topics found in this repo (src/data/topics.json).';
+    const p = document.createElement('div'); p.className = 'empty-state';
+    p.innerHTML = '<b>No topics yet</b>Topics come from <code>src/data/topics.json</code> in your repo. Add one there and it will show up here to rename and recolour.';
     wrap.appendChild(p); return;
   }
   _topics.forEach((t) => {
     const card = document.createElement('div');
-    card.style.cssText = 'border:1px solid var(--line,#1b2540);border-radius:12px;padding:.9rem;margin-bottom:.8rem';
+    card.style.cssText = 'border:var(--bw,1px) solid var(--line);border-radius:12px;padding:.9rem;margin-bottom:.8rem;background:var(--surface)';
     const head = document.createElement('div');
     head.style.cssText = 'display:flex;align-items:center;gap:.6rem;margin-bottom:.7rem';
     const colour = document.createElement('input');
