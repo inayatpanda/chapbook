@@ -19,7 +19,7 @@ const slideSchema = {
 export default {
   id: 'swipe-carousel',
   name: 'Swipeable carousel',
-  category: 'Interactive',
+  category: 'interactive',
   description: 'A swipeable carousel of cards with dots and prev/next — touch-swipe, tap, or arrow keys. For step-throughs, tips, and before/after-of-the-week sets.',
   paramsSchema: {
     type: 'object', additionalProperties: false,

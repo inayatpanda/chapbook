@@ -15065,6 +15065,18 @@ $('tplLibSearch').addEventListener('input', () => {
 });
 
 /* STEP 1 — family browser, grouped by category (★ Recent row first when browsing) */
+/* Category grouping for the picker. `category` is hand-typed in each family module
+   (src/lib/playgrounds/*.js) and HAS drifted in case: 'Game' and 'game' both existed, and
+   since headings sort as plain strings, ASCII uppercase put 'Game' near the top of the
+   sheet and 'game' far below it — one category shown as two, with nothing to say they
+   were the same. Grouping on a normalised key makes that unreachable from a single stray
+   file; playgrounds/categories.test.mjs keeps the source data itself clean. The label is
+   derived here so the modules can stay lowercase without the sheet looking untitled. */
+const TPLLIB_CAT_LABELS = { ui:'UI' };   // acronym — naive capitalisation reads "Ui"
+const tplLibCatKey = (c) => String(c == null ? '' : c).trim().toLowerCase() || 'other';
+const tplLibCatLabel = (k) => k.startsWith('★') ? k
+  : (TPLLIB_CAT_LABELS[k] || k.charAt(0).toUpperCase() + k.slice(1));
+
 function renderTplLibFamilies(list, opts = {}){
   const host = $('tplLibFamilies');
   host.innerHTML = '';
@@ -15075,11 +15087,11 @@ function renderTplLibFamilies(list, opts = {}){
     const rec = tplLibRecents().map(id => list.find(f => f.id === id)).filter(Boolean);
     if(rec.length) byCat['★ Recently used'] = rec;
   }
-  for(const f of list){ const c = f.category || 'other'; (byCat[c] = byCat[c] || []).push(f); }
+  for(const f of list){ const c = tplLibCatKey(f.category); (byCat[c] = byCat[c] || []).push(f); }
   Object.keys(byCat).sort((a, b) => a.startsWith('★') ? -1 : b.startsWith('★') ? 1 : (a < b ? -1 : a > b ? 1 : 0)).forEach(cat => {
     const h = document.createElement('div');
     h.className = 'tpllib-cat';
-    h.textContent = cat;
+    h.textContent = tplLibCatLabel(cat);
     host.appendChild(h);
     const grid = document.createElement('div');
     grid.className = 'tpllib-grid';

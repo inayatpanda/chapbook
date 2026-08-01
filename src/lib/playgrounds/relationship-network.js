@@ -8,7 +8,7 @@ import { esc } from './index.js';
 export default {
   id: 'relationship-network',
   name: 'Relationship network',
-  category: 'Diagram',
+  category: 'diagram',
   description: 'Explore connections between people, ideas, events or organisations through a selectable network and textual relationship list.',
   paramsSchema: {
     type: 'object', additionalProperties: false, required: ['nodes', 'links'],

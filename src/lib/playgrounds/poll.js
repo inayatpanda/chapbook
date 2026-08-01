@@ -22,7 +22,7 @@ const optionSchema = {
 export default {
   id: 'poll',
   name: 'Poll',
-  category: 'Interactive',
+  category: 'interactive',
   description: 'A question with tappable options. Tapping marks the reader\'s pick; optionally reveals an author-supplied distribution as bars (no live voting — there is no backend).',
   paramsSchema: {
     type: 'object', additionalProperties: false,

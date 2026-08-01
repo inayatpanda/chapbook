@@ -7,7 +7,7 @@ import { esc } from './index.js';
 export default {
   id: 'image-annotator',
   name: 'Image annotator',
-  category: 'Diagram',
+  category: 'diagram',
   description: 'Numbered pins over an image — tap a pin to reveal its caption. For anatomy, kit photos, maps and annotated screenshots.',
   paramsSchema: {
     type: 'object', additionalProperties: false,

@@ -9,7 +9,7 @@ const SHAPES = ['start', 'process', 'decision', 'input', 'end'];
 export default {
   id: 'algorithm-builder',
   name: 'Algorithm builder',
-  category: 'Diagram',
+  category: 'diagram',
   description: 'Arrange flowchart shapes into a working algorithm, then check the flow. Drag, buttons and keyboard all work.',
   paramsSchema: {
     type: 'object', additionalProperties: false, required: ['steps', 'solution'],

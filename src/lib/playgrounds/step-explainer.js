@@ -7,7 +7,7 @@ import { esc } from './index.js';
 export default {
   id: 'step-explainer',
   name: 'Step-through explainer',
-  category: 'Narrative',
+  category: 'narrative',
   description: 'A Prev/Next walkthrough of titled cards with dots and a step counter — for build-ups, procedures and arguments that land one step at a time.',
   paramsSchema: {
     type: 'object', additionalProperties: false,

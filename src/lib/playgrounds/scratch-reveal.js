@@ -28,7 +28,7 @@ function stripUnsafe(html) {
 export default {
   id: 'scratch-reveal',
   name: 'Scratch to reveal',
-  category: 'Interactive',
+  category: 'interactive',
   description: 'A scratch-off cover over hidden content — drag a finger to scratch it away and reveal the answer, with a "Reveal all" button and a reduced-motion fallback.',
   paramsSchema: {
     type: 'object', additionalProperties: false,

@@ -7,7 +7,7 @@ import { esc } from './index.js';
 export default {
   id: 'branching-scenario',
   name: 'Branching scenario',
-  category: 'Narrative',
+  category: 'narrative',
   description: 'A choose-your-path case study — decisions move through authored scenes, optionally changing a score before an outcome.',
   paramsSchema: {
     type: 'object', additionalProperties: false, required: ['start', 'nodes'],

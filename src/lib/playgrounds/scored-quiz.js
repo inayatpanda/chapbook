@@ -7,7 +7,7 @@ import { esc } from './index.js';
 export default {
   id: 'scored-quiz',
   name: 'Scored quiz',
-  category: 'Game',
+  category: 'game',
   description: 'A short multi-question quiz — answers are marked as you go, and the score lands on a verdict you write. For test-yourself posts.',
   paramsSchema: {
     type: 'object', additionalProperties: false,
