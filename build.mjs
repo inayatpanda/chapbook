@@ -16,6 +16,10 @@ import { STT_VENDOR_FILES, STT_MODELS } from './scripts/stt-files.mjs';
 const SRC = 'src';
 const DIST = 'dist';
 
+// Weight of every Tabler icon stroke, applied to the sprite copy in dist/ (see below).
+// Tabler ships at 2; the UI reads too thin against the editorial light theme's 2px borders.
+const ICON_STROKE = '2.2';
+
 // TEST-ONLY licence key override. The licence gate blocks every authenticated E2E, and the
 // only safe way past it is a build that trusts a throwaway keypair (test/fixtures/
 // testLicence.mjs) instead of the production one. Requires BOTH env vars, so it can never
@@ -278,6 +282,21 @@ console.log('legal pages: privacy/terms/refunds extracted from index.html ✓');
 // end of the build, once every SHELL asset (incl. fonts) exists in dist/.
 for (const f of ['manifest.json', 'studio.js', 'darkroom-upload.js', 'stt.js', 'stt-worker.js', 'preview.css', 'resize.js', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icons-manifest.json', 'icons-sprite.svg']) {
   copyFileSync(`${SRC}/${f}`, `${DIST}/${f}`);
+}
+
+// Icon stroke weight. Tabler bakes stroke-width="2" as a PRESENTATION ATTRIBUTE onto every
+// <symbol>, and an attribute on the symbol beats a CSS value inherited from the host <svg> —
+// verified in a browser: `.tico{stroke-width:3}` and even `use{stroke-width:3}` render
+// identically to the default. So the only way to weight the icons is to rewrite the sprite,
+// which is done HERE, on the copy in dist/, leaving src/icons-sprite.svg untouched.
+{
+  const p = `${DIST}/icons-sprite.svg`;
+  const before = readFileSync(p, 'utf8');
+  const after = before.replaceAll('stroke-width="2"', `stroke-width="${ICON_STROKE}"`);
+  const n = (before.match(/stroke-width="2"/g) || []).length;
+  if (!n) throw new Error('build: no stroke-width="2" found in icons-sprite.svg — did the sprite change?');
+  writeFileSync(p, after);
+  console.log(`icons-sprite: stroke-width 2 → ${ICON_STROKE} on ${n} symbols`);
 }
 
 // download.html is a marketing surface: run it through inject() (not a verbatim copy) so it

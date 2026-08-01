@@ -72,23 +72,28 @@
     --partner-line:rgba(165,180,252,.22);
   }
   :root[data-theme="light"] {
-    /* The light field used to sit in one narrow pale band (#eef1f6 page, #f3f6fb nested,
-       #ffffff cards): everything was within a few percent of everything else, so nothing
-       read as raised and the whole app looked washed out. The page and nested surfaces are
-       deeper now so white cards actually separate (contrast against a white card goes
-       1.13 -> 1.22), and the lines carry real definition. This forced the muted text
-       colours below to be re-solved — see the note there. */
-    --bg:#e4e9f1; --bg-1:#dce3ed; --surface:#ffffff; --surface-2:#eef2f8;
+    /* LIGHT THEME — "high-contrast editorial" (direction B).
+       The old light field sat in one narrow pale band (#eef1f6 page, #f3f6fb nested,
+       #ffffff cards): everything within a few percent of everything else, so nothing read
+       as raised and the app looked washed out and dull. Deepening the band helped but kept
+       the same cold blue-grey character. This drops the tint entirely: a white page, near
+       black ink, and hierarchy carried by TYPE and RULES rather than by pale grey boxes.
+       Containers get their colour from a per-card hue instead (see .lp-card below). */
+    --bg:#ffffff; --bg-1:#f6f7f9; --surface:#ffffff; --surface-2:#f6f7f9;
     /* WCAG AA (a11y audit): --faint and --acc colour TEXT in light (bottom-nav labels,
        header subtitle, install/getting-started links) — the old #8a97a8 / #0ea5a3 sat at
        ~2.6:1 on the light field. These clear 4.5:1 on --bg, --bg-1 AND --surface.
        Dark theme is untouched (its values already pass on the near-black field). */
-    /* Deepened alongside the field above. A darker page moves a MID-grey toward the
-       background rather than away from it, so the old values dropped to ~4.19:1 on --bg-1
-       and stopped clearing AA. Re-solved against the deepest field text sits on (--bg-1):
-       --mut 4.63:1, --faint 4.66:1, --acc 4.90:1, --ink 11.6:1. */
-    --ink:#1b2433; --mut:#556577; --faint:#586474;
-    --line:#cdd7e4; --line-2:#b6c3d5; --acc:#0a6b69;
+    /* Ink is near-black rather than blue-black so the page reads as print. --line is the
+       container border (drawn at 2px, see --bw) and --line-2 is the strong rule under a
+       page title. Re-measured against the lightest AND darkest fields text sits on
+       (#ffffff and --bg-1 #f6f7f9) — worst pair 4.62:1, so the whole palette clears AA. */
+    --ink:#0f1115; --mut:#4a505a; --faint:#4e545e;
+    /* --line-2 is the HOVER/emphasis border in 38 places, not just page rules, so it stays
+       a strong grey. Near-black here made every hover state slam. */
+    --line:#cbd1d9; --line-2:#98a1ae; --acc:#0a6b69;
+    /* Container border width. The old 1px hairlines disappeared against a white field. */
+    --bw:2px;
     --thread-canvas:#fbfaf7; --thread-canvas-line:#e4e1db;
     --thread-post:#e7edf6; --thread-post-line:#d1dae7;
     --partner-voice:#574fd6; --partner-wash:rgba(87,79,214,.07); --partner-line:rgba(87,79,214,.24);
@@ -215,6 +220,44 @@
   .lp-link:hover{border-color:var(--acc);color:var(--ink);background:var(--surface)}
   .lp-link:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
   .lp-link svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2}
+  /* ── LIGHT: colour inside the containers (direction C2) ────────────────────────────
+     On a white editorial field a white card is invisible, so each container carries a soft
+     wash of its own hue, with the icon and title in that hue. Colours are the existing
+     light-theme brand stops (--teal/--cyan/--violet/--goblin/--pink), not new ones, so
+     they are already the AA-checked values; measured again as heading text on their own
+     6% wash: 4.63–5.51:1.
+     Scoped to [data-theme="light"] because dark has its own hierarchy rules below. */
+  :root[data-theme="light"] .lp-grid .lp-card:nth-child(5n+1){--h:var(--teal)}
+  :root[data-theme="light"] .lp-grid .lp-card:nth-child(5n+2){--h:var(--cyan)}
+  :root[data-theme="light"] .lp-grid .lp-card:nth-child(5n+3){--h:var(--violet)}
+  :root[data-theme="light"] .lp-grid .lp-card:nth-child(5n+4){--h:var(--goblin)}
+  :root[data-theme="light"] .lp-grid .lp-card:nth-child(5n+5){--h:var(--pink)}
+  :root[data-theme="light"] .lp-sec .lp-link:nth-child(5n+1){--h:var(--teal)}
+  :root[data-theme="light"] .lp-sec .lp-link:nth-child(5n+2){--h:var(--cyan)}
+  :root[data-theme="light"] .lp-sec .lp-link:nth-child(5n+3){--h:var(--violet)}
+  :root[data-theme="light"] .lp-sec .lp-link:nth-child(5n+4){--h:var(--goblin)}
+  :root[data-theme="light"] .lp-sec .lp-link:nth-child(5n+5){--h:var(--pink)}
+  :root[data-theme="light"] .lp-card{
+    background:color-mix(in srgb,var(--h,var(--acc)) 6%,#fff);
+    border:var(--bw) solid color-mix(in srgb,var(--h,var(--acc)) 32%,var(--line));
+    box-shadow:none}
+  :root[data-theme="light"] .lp-card:hover{
+    background:color-mix(in srgb,var(--h,var(--acc)) 10%,#fff);
+    border-color:var(--h,var(--acc));box-shadow:none}
+  :root[data-theme="light"] .lp-ic{stroke:var(--h,var(--acc))}
+  :root[data-theme="light"] .lp-t{color:var(--h,var(--acc))}
+  /* The primary card keeps its prominence without the gradient ring, which read as a
+     smudge once the cards themselves carried colour. */
+  :root[data-theme="light"] .lp-card.lp-primary{
+    border:var(--bw) solid var(--h,var(--acc));box-shadow:none}
+  :root[data-theme="light"] .lp-link{
+    background:color-mix(in srgb,var(--h,var(--acc)) 9%,#fff);
+    border:var(--bw) solid color-mix(in srgb,var(--h,var(--acc)) 32%,var(--line));
+    color:var(--h,var(--acc))}
+  :root[data-theme="light"] .lp-link:hover{
+    background:color-mix(in srgb,var(--h,var(--acc)) 14%,#fff);
+    border-color:var(--h,var(--acc));color:var(--h,var(--acc))}
+
   /* dark-only hierarchy: task cards are the clear top layer (lp-primary keeps its
      gradient ring); the secondary row reads as one recessed navigation shelf */
   :root:not([data-theme="light"]) .lp-card:not(.lp-primary){
@@ -402,6 +445,9 @@
     -webkit-backdrop-filter:saturate(140%) blur(6px);
     backdrop-filter:saturate(140%) blur(6px)}
   .topbar[hidden]{display:none}
+  /* Light is the editorial direction: the bar is white and separated by its rule, not by a
+     wash. The accent tint above is kept for DARK, where a flat band would disappear. */
+  :root[data-theme="light"] .topbar{background:var(--surface);border-bottom-color:var(--line)}
   /* min-height reserves the pill row even on single-view sections (Home, Posts), so the
      bar is the same height everywhere and page content always starts at the same y.
      Without it the bar collapses to just the caption and the whole page jumps when you
@@ -415,8 +461,13 @@
   .topbar-row{display:flex;align-items:center;justify-content:space-between;gap:1rem}
   .topbar-row h1{font:700 1.25rem var(--font-display);color:var(--ink);margin:0;letter-spacing:-.01em}
   .topbar-actions{display:flex;align-items:center;gap:.5rem;flex:0 0 auto}
+  /* The pill row keeps its height even when a section has no pills, so the bar is the same
+     height everywhere. Reserving it HERE rather than with a min-height on .topbar-inner is
+     what makes that reliable: under border-box a min-height on the inner box includes its
+     padding, so it only floors the bar and the pills still push it taller (76px vs 93px).
+     2rem is one pill (.5em padding + .82rem text). */
   .subnav{display:flex;gap:.4rem;overflow-x:auto;-webkit-overflow-scrolling:touch;
-    scrollbar-width:none;padding:0;margin:0;width:auto}
+    scrollbar-width:none;padding:0;margin:0;width:auto;min-height:2rem}
   .subnav::-webkit-scrollbar{display:none}
   .subnav[hidden]{display:none}
   .subnav button{flex:0 0 auto;background:var(--bg-1);border:1px solid var(--line);
@@ -5891,8 +5942,9 @@ function renderSubnav(view){
   // No section caption here any more: it duplicated the view's own heading word for word
   // ("HOME" in the bar, "Home" below it). The bar carries the app identity — name, theme,
   // Install — and the page carries its own title.
+  // Left in flow even with no pills — .subnav reserves the row's height so the bar does not
+  // change height between sections. Hiding it is what made Home/Posts 76px and the rest 93px.
   const multi = def.views.length>1;
-  sub.hidden = !multi;
   sub.innerHTML = multi ? def.views.map(o=>
     `<button type="button" class="${o.v===view?'on':''}" data-subv="${o.v}">${o.label}</button>`
   ).join('') : '';
