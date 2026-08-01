@@ -41,9 +41,12 @@
     --ink:      #f4f7fd;
     --mut:      #aebbd2;
     --faint:    #6f7e98;
-    --line:     rgba(140,160,200,.13);
-    --line-2:   rgba(140,160,200,.26);
+    /* Borders were near-invisible hairlines (.13 alpha at 1px). Dark now matches the light
+       theme's editorial weight: a 2px border needs a stronger line or it reads as a blur. */
+    --line:     rgba(140,160,200,.24);
+    --line-2:   rgba(140,160,200,.42);
     --acc:      #64c6d3;
+    --bw:2px;
     /* brand palette — desaturated for dark so violet reads as the Partner's alone */
     --teal:   #58bbae;
     --cyan:   #64c6d3;
@@ -152,7 +155,12 @@
     letter-spacing:.09em;text-transform:uppercase}
 
   /* ── FORM ELEMENTS ───────────────────────────────────────────────────────── */
-  textarea,input[type=text],input[type=password],input[type=search],select{
+  /* url/number were missing here, so every Settings → Site field (Site URL, the three
+     socials, both Formspree endpoints) and the two series-part inputs fell back to browser
+     defaults: 149x19 inline-block boxes with a 2px inset border, sitting three-to-a-line
+     instead of full width. Measured against a styled sibling in the same form: 940x53. */
+  textarea,input[type=text],input[type=password],input[type=search],
+  input[type=url],input[type=number],select{
     width:100%;background:var(--bg-1);border:1px solid var(--line);border-radius:12px;
     color:var(--ink);padding:.8em .9em;font:inherit;resize:vertical;
     transition:border-color .15s,box-shadow .15s,background .15s}
@@ -258,12 +266,45 @@
     background:color-mix(in srgb,var(--h,var(--acc)) 14%,#fff);
     border-color:var(--h,var(--acc));color:var(--h,var(--acc))}
 
+  /* LIGHT: the editorial treatment beyond the launchpad. REPEATING surfaces — a list of
+     posts, a column of settings rows — deliberately do NOT cycle hues: twenty posts in five
+     rotating colours is noise, not information. The launchpad tiles earn their hues because
+     each one is a distinct destination. Everything else just takes the 2px border and a flat
+     surface, so the whole app reads as one editorial system.
+     .card also drops its top-to-bottom gradient, which on a white field was a smudge. */
+  :root[data-theme="light"] .card{background:var(--surface);border-width:var(--bw)}
+  :root[data-theme="light"] .postCard,
+  :root[data-theme="light"] .set-row{border-width:var(--bw)}
+  :root[data-theme="light"] textarea,
+  :root[data-theme="light"] input[type=text],
+  :root[data-theme="light"] input[type=password],
+  :root[data-theme="light"] input[type=search],
+  :root[data-theme="light"] input[type=url],
+  :root[data-theme="light"] input[type=number],
+  :root[data-theme="light"] select{border-width:var(--bw)}
+
+  /* DARK: the same C2 idea, tuned for a near-black field. A 6% wash disappears here, so the
+     hue sits at 14% over the surface with a 45% border. VIOLET IS DELIBERATELY ABSENT — in
+     dark it is reserved for the Partner's voice (see --violet/--editor above), so the cycle
+     runs teal/cyan/green/pink instead of borrowing it. */
+  :root:not([data-theme="light"]) .lp-grid .lp-card:nth-child(4n+1){--h:var(--teal)}
+  :root:not([data-theme="light"]) .lp-grid .lp-card:nth-child(4n+2){--h:var(--cyan)}
+  :root:not([data-theme="light"]) .lp-grid .lp-card:nth-child(4n+3){--h:var(--goblin)}
+  :root:not([data-theme="light"]) .lp-grid .lp-card:nth-child(4n+4){--h:var(--pink)}
+  :root:not([data-theme="light"]) .lp-sec .lp-link:nth-child(4n+1){--h:var(--teal)}
+  :root:not([data-theme="light"]) .lp-sec .lp-link:nth-child(4n+2){--h:var(--cyan)}
+  :root:not([data-theme="light"]) .lp-sec .lp-link:nth-child(4n+3){--h:var(--goblin)}
+  :root:not([data-theme="light"]) .lp-sec .lp-link:nth-child(4n+4){--h:var(--pink)}
+  :root:not([data-theme="light"]) .lp-ic{stroke:var(--h,var(--acc))}
+  :root:not([data-theme="light"]) .lp-t{color:var(--h,var(--acc))}
+
   /* dark-only hierarchy: task cards are the clear top layer (lp-primary keeps its
      gradient ring); the secondary row reads as one recessed navigation shelf */
   :root:not([data-theme="light"]) .lp-card:not(.lp-primary){
-    background:linear-gradient(180deg,#121d31,#0d1525);border-color:#273752;
+    background:color-mix(in srgb,var(--h,var(--acc)) 14%,#0d1525);
+    border:var(--bw) solid color-mix(in srgb,var(--h,var(--acc)) 45%,transparent);
     box-shadow:0 8px 20px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.025)}
-  :root:not([data-theme="light"]) .lp-card:not(.lp-primary):hover{border-color:#31456a;
+  :root:not([data-theme="light"]) .lp-card:not(.lp-primary):hover{border-color:var(--h,var(--acc));
     box-shadow:0 8px 20px rgba(0,0,0,.24),var(--glow),inset 0 1px 0 rgba(255,255,255,.025)}
   :root:not([data-theme="light"]) .lp-sec{padding:.35rem;background:#080f1b;
     border:1px solid #1d2a42;border-radius:14px}
@@ -645,6 +686,15 @@
   .cal-chip .cal-cdot.scheduled{background:#818cf8}
   .cal-chip .cal-cdot.draft{background:#fbbf24}
   .cal-more{font-size:.62rem;color:var(--faint);padding:0 .2rem}
+  /* Shared empty state. These views used to render one grey sentence at the top of a tall
+     blank view, which reads as "something failed to load" rather than "there is nothing
+     here yet". A bounded, centred card gives the emptiness an edge, and a place to say what
+     to do next. */
+  .empty-state{max-width:34rem;margin:1.4rem auto;padding:1.7rem 1.5rem;text-align:center;
+    background:var(--surface);border:var(--bw,1px) solid var(--line);border-radius:16px;
+    color:var(--mut);font-size:.92rem;line-height:1.55}
+  .empty-state b{display:block;margin-bottom:.35rem;color:var(--ink);
+    font:700 1.02rem var(--font-display)}
   .cal-empty-note{font-size:.78rem;color:var(--faint);text-align:center;padding:1.2rem 0}
   /* agenda fallback (rendered on narrow screens) — same contrast lift as the grid */
   .cal-agenda{display:flex;flex-direction:column;gap:.5rem}
@@ -6746,7 +6796,7 @@ window.loadInbox=loadInbox;
 function renderInbox(){
   const host=$('ideaList'), cnt=$('inboxCount');
   if(cnt) cnt.textContent=_ideas.length?`${_ideas.length} idea${_ideas.length===1?'':'s'} in the backlog`:'';
-  if(!_ideas.length){ host.innerHTML='<p class="sub">Nothing captured yet. Jot the first idea above.</p>'; return; }
+  if(!_ideas.length){ host.innerHTML='<div class="empty-state"><b>Nothing captured yet</b>Jot the first idea above and it will wait here until you are ready to write it.</div>'; return; }
   host.innerHTML='';
   for(const it of _ideas) host.appendChild(makeIdeaRow(it));
 }
@@ -7021,7 +7071,7 @@ async function loadQueue(){
 window.loadQueue=loadQueue;
 function renderQueue(){
   const host=$('queueList'); host.innerHTML='';
-  if(!_queue.length){ host.innerHTML='<p class="sub">Nothing in your Planner yet. Use "Save to Planner" from a social pack, a thread/carousel, or the Review screen.</p>'; return; }
+  if(!_queue.length){ host.innerHTML='<div class="empty-state"><b>Nothing in your Planner yet</b>Use \'Save to Planner\' from a social pack, a thread or carousel, or the Review screen.</div>'; return; }
   const today=_todayISO();
   const GROUPS=[['queued','Planned'],['idea','Ideas'],['shared','Shared']];
   // within a group: items WITH a date first (soonest first), then undated by recency
@@ -7175,8 +7225,8 @@ function renderPosts(){
   const vis=new Set(_postSelect.visible);
   for(const s of [..._postSelect.sel]) if(!vis.has(s)) _postSelect.sel.delete(s);
   if(cnt) cnt.textContent=_posts.length?`${rows.length} of ${_posts.length} post${_posts.length===1?'':'s'}`:'';
-  if(!_posts.length){ list.innerHTML='<p class="sub">No posts yet.</p>'; updateBulkUI(); return; }
-  if(!rows.length){ list.innerHTML='<p class="sub">No posts match.</p>'; updateBulkUI(); return; }
+  if(!_posts.length){ list.innerHTML='<div class="empty-state"><b>No posts yet</b>Everything you publish will appear here. Start one from Write.</div>'; updateBulkUI(); return; }
+  if(!rows.length){ list.innerHTML='<div class="empty-state"><b>No posts match</b>Try a different search, or clear the filters above.</div>'; updateBulkUI(); return; }
   list.innerHTML='';
   if(_postFilter.group==='topic'){
     // group each post under its primary topic (the first tag); posts with
