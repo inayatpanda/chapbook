@@ -14,3 +14,7 @@ src/studio.js
 src/darkroom-upload.js
 src/stt.js
 src/stt-worker.js
+
+# Cached multicolour emoji assets (staged into dist/ by scripts/stage-emoji.mjs,
+# fetched from a CDN at deploy time). Disposable, and far too big for git.
+vendor/emoji/

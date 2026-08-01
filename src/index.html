@@ -2689,6 +2689,12 @@
   .gp-tile{display:flex;flex-direction:column;align-items:center;gap:.3rem;padding:.7rem .3rem .45rem;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--mut);cursor:pointer;transition:color .15s,border-color .15s,background .15s}
   .gp-tile:hover{color:var(--acc);border-color:var(--acc);background:var(--surface)}
   .gp-tile svg{width:26px;height:26px}
+  /* Multicolour glyphs carry their own fills, so they must NOT inherit the accent
+     colour the line icons are tinted with, and must not take the drop-shadow glow
+     (.glyph-prev svg) — that treatment only reads correctly on a single-colour stroke.
+     Sized to match .gp-tile svg so the grid stays on one rhythm across modes. */
+  .gp-tile img.gp-colour{width:26px;height:26px;display:block}
+  .glyph-prev img.gp-colour{width:30px;height:30px;display:block;filter:none}
   .gp-tile .nm{font-size:.55rem;color:var(--faint);text-align:center;line-height:1.15;word-break:break-word}
   .gp-more{text-align:center;margin-top:.8rem}
   .preview-sheet .pv-note{font-size:.74rem;color:var(--faint);margin:0 0 .8rem 2px;line-height:1.4}
@@ -5244,6 +5250,7 @@
     <div id="glyphMode" class="gp-mode">
       <button class="chip on" type="button" data-mode="2d">2D flat</button>
       <button class="chip" type="button" data-mode="3d">3D wireframe</button>
+      <button class="chip" type="button" data-mode="colour">Colour</button>
     </div>
     <div id="glyphCount" class="gp-count">Loading…</div>
     <div id="glyphGrid" class="gp-grid"></div>
@@ -20655,7 +20662,9 @@ document.addEventListener('focusout', () => {
 /* ── glyph icon picker ─────────────────────────────────────────────────────── */
 const GLYPH_SPRITE = '/icons-sprite.svg';
 let _glyphManifest = null, _glyphFiltered = [], _glyphShown = 0, _glyphMode = '2d';
+let _emojiManifest = null;
 const GLYPH_PAGE = 120;
+const isColourMode = () => _glyphMode === 'colour';
 
 // A glyph name is always an icon id (word chars + hyphens). Validate before interpolating
 // into the <use href> so a crafted meta.glyph can't break out of the attribute / inject. (L5)
@@ -20664,10 +20673,20 @@ function glyphUse(name){
   return `<svg viewBox="0 0 24 24" aria-hidden="true"><use href="${GLYPH_SPRITE}#ti-${esc(name)}"></use></svg>`;
 }
 
+// Multicolour glyph. Cannot go through the sprite: these carry their OWN fills, so they
+// are separate files (staged by scripts/stage-emoji.mjs) referenced as an <img>. Same
+// name validation as glyphUse for the same reason — this interpolates into an attribute.
+// .gp-colour is what tells the CSS not to force the accent colour + glow onto it.
+function glyphImg(name){
+  if(!/^[\w-]+$/.test(String(name||''))) return '';
+  return `<img class="gp-colour" src="/emoji/${esc(name)}.svg" alt="" aria-hidden="true" loading="lazy">`;
+}
+
 function syncGlyphUI(){
   const g = meta.glyph || '';
   let html;
   if(g.startsWith('icon3d:')) html = glyphUse(g.slice(7)) + '<span class="gp-3d">3D</span>';
+  else if(g.startsWith('emoji:')) html = glyphImg(g.slice(6));
   else if(g.startsWith('icon:')) html = glyphUse(g.slice(5));
   else if(g && g !== 'none') html = `<span class="gp-none">${esc(g)}</span>`;   // a built-in 3D glyph name (L5)
   else html = `<span class="gp-none">default</span>`;
@@ -20682,32 +20701,45 @@ function openGlyphPicker(){
 }
 function closeGlyphPicker(){ $('glyphScrim').classList.remove('open'); $('glyphSheet').classList.remove('open'); }
 
+// Two catalogues behind one picker: the Tabler line icons (2D/3D modes) and the
+// multicolour set (colour mode). Each is fetched once, on first use of its mode, so
+// opening the picker never pays for the set you are not looking at.
 async function loadGlyphManifest(){
-  if(_glyphManifest) { applyGlyphSearch(); return; }
+  const colour = isColourMode();
+  if(colour ? _emojiManifest : _glyphManifest) { applyGlyphSearch(); return; }
   $('glyphCount').textContent = 'Loading…';
-  try{ _glyphManifest = await (await fetch('/icons-manifest.json')).json(); }
-  catch(e){ $('glyphCount').textContent = 'Could not load icons.'; return; }
+  try{
+    const data = await (await fetch(colour ? '/emoji-manifest.json' : '/icons-manifest.json')).json();
+    if(colour) _emojiManifest = data; else _glyphManifest = data;
+  }
+  catch(e){ $('glyphCount').textContent = colour ? 'Could not load colour icons.' : 'Could not load icons.'; return; }
   applyGlyphSearch();
 }
 function renderGlyphGrid(reset){
   const grid = $('glyphGrid');
   if(reset){ grid.innerHTML=''; _glyphShown=0; }
   const next = _glyphFiltered.slice(_glyphShown, _glyphShown+GLYPH_PAGE);
+  const art = isColourMode() ? glyphImg : glyphUse;
   grid.insertAdjacentHTML('beforeend', next.map(it =>
-    `<button class="gp-tile" type="button" data-n="${it.n}" title="${it.n}">${glyphUse(it.n)}<span class="nm">${it.n}</span></button>`).join(''));
+    `<button class="gp-tile" type="button" data-n="${it.n}" title="${esc(it.t||it.n)}">${art(it.n)}<span class="nm">${it.n.replace(/_/g,' ')}</span></button>`).join(''));
   _glyphShown += next.length;
-  $('glyphCount').textContent = `${_glyphFiltered.length.toLocaleString()} icon${_glyphFiltered.length===1?'':'s'}${_glyphShown<_glyphFiltered.length?` · showing ${_glyphShown}`:''}`;
+  // The colour set is Twemoji, which is CC-BY 4.0 — attribution has to travel with the
+  // artwork, so it sits here in the picker rather than only in a repo file nobody sees.
+  $('glyphCount').textContent = `${_glyphFiltered.length.toLocaleString()} icon${_glyphFiltered.length===1?'':'s'}${_glyphShown<_glyphFiltered.length?` · showing ${_glyphShown}`:''}${isColourMode()?' · colour art by Twemoji (CC-BY 4.0)':''}`;
   $('glyphMoreBtn').hidden = _glyphShown >= _glyphFiltered.length;
 }
 function applyGlyphSearch(){
   const q = ($('glyphSearch').value || '').trim().toLowerCase();
-  _glyphFiltered = (_glyphManifest || []).filter(it => !q || it.n.includes(q) || it.t.includes(q) || (it.c||'').toLowerCase().includes(q));
+  const src = (isColourMode() ? _emojiManifest : _glyphManifest) || [];
+  _glyphFiltered = src.filter(it => !q || it.n.includes(q) || (it.t||'').toLowerCase().includes(q) || (it.c||'').toLowerCase().includes(q));
   renderGlyphGrid(true);
 }
+const GLYPH_PREFIX = { '3d': 'icon3d:', colour: 'emoji:', '2d': 'icon:' };
+const GLYPH_MODE_LABEL = { '3d': '3D wireframe', colour: 'colour', '2d': '2D' };
 function pickGlyph(name){
-  meta.glyph = (_glyphMode === '3d' ? 'icon3d:' : 'icon:') + name;
+  meta.glyph = (GLYPH_PREFIX[_glyphMode] || 'icon:') + name;
   syncGlyphUI(); if(typeof markDirty==='function') markDirty();
-  closeGlyphPicker(); toast(`Glyph set ✓ (${_glyphMode === '3d' ? '3D wireframe' : '2D'})`);
+  closeGlyphPicker(); toast(`Glyph set ✓ (${GLYPH_MODE_LABEL[_glyphMode] || '2D'})`);
 }
 function clearGlyph(){ meta.glyph = ''; syncGlyphUI(); if(typeof markDirty==='function') markDirty(); }
 
@@ -20721,8 +20753,13 @@ $('glyphSearch')?.addEventListener('input', () => { clearTimeout(window._glyphT)
 $('glyphGrid')?.addEventListener('click', e => { const t = e.target.closest('.gp-tile'); if(t) pickGlyph(t.dataset.n); });
 $('glyphMode')?.addEventListener('click', e => {
   const b = e.target.closest('[data-mode]'); if(!b) return;
+  if(b.dataset.mode === _glyphMode) return;
   _glyphMode = b.dataset.mode;
   $('glyphMode').querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === b));
+  // 2D and 3D share the Tabler catalogue; colour has its own. Switching between the two
+  // FAMILIES has to reload and re-render, or the grid keeps showing the previous set.
+  $('glyphSearch').value = '';
+  loadGlyphManifest();
 });
 
 async function doPreview(){
