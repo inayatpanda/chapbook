@@ -671,7 +671,24 @@ async function main() {
     for (const f of failed) console.log(`  ✗ ${f.n}. ${f.name} — ${f.detail}`);
     process.exit(1);
   }
-  console.log('\nGATE: PASS (all runnable checks green)');
+  // A SKIP is not a pass. Previously the gate printed "GATE: PASS (all runnable checks
+  // green)" and exited 0 with mandatory browser checks unrun — so a machine without a
+  // headless browser produced a GREEN gate, and both CI and a human read exit 0 as "proven".
+  // A gate that goes green without running is worse than no gate: it manufactures confidence.
+  // Skips now exit non-zero under their own verdict — INCOMPLETE, not FAIL, because the
+  // checks did not fail, they did not run. Set GATE_ALLOW_SKIPS=1 to accept them knowingly
+  // (e.g. a deliberate static-only run); the skipped names are still printed either way.
+  if (skipped.length && process.env.GATE_ALLOW_SKIPS !== '1') {
+    console.log('\nGATE: INCOMPLETE — required checks did not run (see above).');
+    console.log('Install a headless browser (npm i -D playwright) and re-run, or set');
+    console.log('GATE_ALLOW_SKIPS=1 to accept the gap deliberately.');
+    process.exit(2);
+  }
+  if (skipped.length) {
+    console.log('\nGATE: PASS WITH SKIPS (GATE_ALLOW_SKIPS=1) — the checks above are NOT proven.');
+    process.exit(0);
+  }
+  console.log('\nGATE: PASS (every check ran and is green)');
   process.exit(0);
 }
 
