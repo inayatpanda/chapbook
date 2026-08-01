@@ -662,16 +662,24 @@
   .cal-wd{font:600 .62rem var(--font-display);letter-spacing:.06em;text-transform:uppercase;
     color:var(--mut);text-align:center;padding:.2rem 0}
   /* cells lifted for contrast: subtle surface, clearly visible borders, brighter numbers */
-  .cal-cell{position:relative;min-height:88px;background:var(--surface-2);border:1px solid var(--line-2);
+  /* Border matches the rest of the app's container weight (--bw), which the calendar was
+     left out of when that landed — cells read a full step lighter than every card. */
+  .cal-cell{position:relative;min-height:88px;background:var(--surface-2);border:var(--bw,1px) solid var(--line-2);
     border-radius:10px;padding:.3rem;display:flex;flex-direction:column;gap:.22rem;overflow:hidden;
     cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s}
   .cal-cell:hover{border-color:var(--acc);background:var(--surface-2)}
   .cal-cell:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
   .cal-cell.out{background:var(--bg-1);border-color:var(--line);opacity:.62}
-  .cal-cell.today{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc),0 0 14px rgba(34,211,238,.18)}
+  /* today / selected were hardcoded dark-theme cyan (rgba(34,211,238,…)) and a teal→cyan
+     fill. Those are the DARK brand brights: on the white editorial field they glowed a
+     colour nothing else in light mode uses. Derived from --acc now, so each theme gets its
+     own accent and the highlight stays legible on both fields. */
+  .cal-cell.today{border-color:var(--acc);
+    box-shadow:inset 0 0 0 1px var(--acc),0 0 14px color-mix(in srgb,var(--acc) 20%,transparent)}
   /* selected day: filled-in highlight, brand glow — distinct from today */
-  .cal-cell.sel{border-color:var(--acc);background:linear-gradient(160deg,rgba(45,212,191,.20),rgba(34,211,238,.14));
-    box-shadow:inset 0 0 0 1px var(--acc),0 0 16px rgba(34,211,238,.22)}
+  .cal-cell.sel{border-color:var(--acc);
+    background:color-mix(in srgb,var(--acc) 16%,var(--surface));
+    box-shadow:inset 0 0 0 1px var(--acc),0 0 16px color-mix(in srgb,var(--acc) 24%,transparent)}
   .cal-daynum{font:700 .8rem var(--font-display);color:var(--ink);align-self:flex-end;line-height:1}
   .cal-cell.out .cal-daynum{color:var(--faint);font-weight:600}
   .cal-cell.today .cal-daynum,.cal-cell.sel .cal-daynum{color:var(--acc)}
@@ -7641,7 +7649,7 @@ function renderPostCalendar(){
   // ── mobile agenda (this month's days that have posts) ──
   const agenda = CAL.agendaForMonth(byDay, _cal.ym.year, _cal.ym.month);
   let ag = '<div class="cal-agenda">';
-  if(!agenda.length){ ag += '<p class="cal-empty-note">No posts this month.</p>'; }
+  if(!agenda.length){ ag += '<div class="empty-state"><b>No posts this month</b>Nothing scheduled or published in this month. Use \u2039 and \u203a to look at another one.</div>'; }
   for(const d of agenda){
     const isToday = d.iso===todayISO;
     const isSel = d.iso===sel;
