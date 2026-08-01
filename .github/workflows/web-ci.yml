@@ -48,14 +48,15 @@ jobs:
       - name: npm run check
         run: npm run check
 
-      # dist/ is gitignored, but src/studio.js is a TRACKED build artifact bundled from
-      # src/app.js + src/core/ + src/lib/ + src/seams/. If the build rewrites it, the
-      # committed bundle disagrees with its own source — the app would ship code nobody
-      # reviewed. This is the check that catches a stale commit of the bundle.
-      - name: the committed bundle matches its source
+      # Tripwire, deliberately narrow: both build outputs (dist/ and src/studio.js) are
+      # gitignored, so a clean build must leave the working tree untouched. It fires only if
+      # a build step starts writing into TRACKED source — a generated file committed by
+      # accident, or a codegen step added without a matching .gitignore entry. It does NOT
+      # verify the bundle, which is never committed and is rebuilt on every deploy.
+      - name: the build does not write into tracked source
         run: |
           if ! git diff --quiet; then
-            echo "::error::npm run build rewrote tracked files — the committed bundle is stale; run npm run build and commit"
+            echo "::error::npm run build modified tracked files — a build output is being written into source"
             git diff --stat
             exit 1
           fi

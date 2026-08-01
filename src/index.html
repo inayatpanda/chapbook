@@ -3139,6 +3139,11 @@
   .storage-warn button{margin-left:auto;flex:none;background:none;border:0;color:var(--faint);
     cursor:pointer;font-size:1.1rem;line-height:1;padding:.1rem .3rem}
   .storage-warn button:hover{color:var(--ink)}
+  /* The backup reminder's inline action. Without this it inherits the rule above and
+     renders as a second ✕ shoved to the right edge by margin-left:auto. */
+  .storage-warn .sw-act{margin-left:0;display:inline;font-size:inherit;line-height:inherit;
+    padding:0;color:var(--ink);text-decoration:underline;text-underline-offset:2px}
+  .storage-warn .sw-act:hover,.storage-warn .sw-act:focus-visible{color:var(--ink);opacity:.75}
 
   /* Destructive Settings action (Forget this device). */
   .btn.danger{border-color:#c0433a;color:#e06a60}
@@ -5653,11 +5658,51 @@ function showStorageWarning(kind){
 }
 async function maybeWarnStorage(){
   try{ const p = window.__studioStorage && await window.__studioStorage.probe(); if(!p) return;
-    if(!p.ok) showStorageWarning('blocked');
-    else if(p.persistent===false) showStorageWarning('nonpersistent');
+    if(!p.ok){ showStorageWarning('blocked'); return; }
+    if(p.persistent===false){ showStorageWarning('nonpersistent'); return; }
+    // Storage is healthy — so the remaining risk isn't "can't save", it's "only saved HERE".
+    await maybeNudgeBackup();
   }catch{ showStorageWarning('blocked'); }
 }
-$('storageWarnClose') && $('storageWarnClose').addEventListener('click',()=>{ const el=$('storageWarn'); if(el) el.hidden=true; });
+
+/* ── Back-your-drafts-up reminder ─────────────────────────────────────────────
+   Settings already says drafts live only in this browser and offers Export — but only
+   to someone who goes looking. The buyer who most needs to hear it is the one who never
+   opens Settings, so say it unprompted once there is real work at stake. The decision
+   (how much, how stale, how recently dismissed) is pure and unit-tested in
+   lib/backupNudge.js; this half only counts records and paints the existing banner.
+   Both keys sit under the `chapbook.` prefix so "Forget this device" already wipes them
+   (lib/appReset.js CHAPBOOK_LS_PREFIXES). */
+const BACKUP_LAST_EXPORT_KEY='chapbook.backup.lastExportAt';
+const BACKUP_SNOOZE_KEY='chapbook.backup.snoozedAt';
+let _backupNudgeShown=false;
+async function maybeNudgeBackup(){
+  const S=window.__studioStorage, N=window.__studioBackupNudge, D=window.__studioDrafts;
+  if(!S||!N||!D) return;
+  let itemCount=0;
+  try{ for(const s of D.DRAFT_STORES) itemCount += (await S.all(s)||[]).length; }catch{ return; }
+  let lastExportAt=null, snoozedAt=null;
+  try{ lastExportAt=localStorage.getItem(BACKUP_LAST_EXPORT_KEY); snoozedAt=localStorage.getItem(BACKUP_SNOOZE_KEY); }catch{}
+  const r=N.shouldNudgeBackup({ itemCount, lastExportAt, snoozedAt });
+  if(!r.show) return;
+  const el=$('storageWarn'), txt=$('storageWarnTxt'); if(!el||!txt) return;
+  txt.innerHTML='<strong>Back up your drafts.</strong> '+esc(r.message)+' ';
+  const b=document.createElement('button');
+  b.type='button'; b.className='sw-act'; b.textContent='Export drafts now';
+  b.addEventListener('click',()=>{ el.hidden=true; try{ go('settings'); }catch{} try{ exportDrafts(); }catch{} });
+  txt.appendChild(b);
+  _backupNudgeShown=true;
+  el.hidden=false;
+}
+// Exposed like exportDrafts/openLegal above: boot() only reaches maybeWarnStorage after
+// activation + setup, so this is the handle the browser E2E drives to exercise the banner.
+window.maybeNudgeBackup=maybeNudgeBackup;
+// Dismissing the BACKUP reminder snoozes it (a week, per lib/backupNudge.js); dismissing
+// the storage-health warning stays a plain hide, because that condition is not time-based.
+$('storageWarnClose') && $('storageWarnClose').addEventListener('click',()=>{
+  const el=$('storageWarn'); if(el) el.hidden=true;
+  if(_backupNudgeShown){ _backupNudgeShown=false; try{ localStorage.setItem(BACKUP_SNOOZE_KEY,new Date().toISOString()); }catch{} }
+});
 
 /* H5 — background GitHub-token validation. Calls whoami (GET /user) with the stored token;
    ONLY a definitive dead-token failure (expired / revoked / bad credentials) interrupts to
@@ -6712,6 +6757,9 @@ async function exportDrafts(){
     a.download='chapbook-drafts-'+new Date().toISOString().slice(0,10)+'.json';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>{ try{ URL.revokeObjectURL(a.href); }catch{} },30000);
+    // Remember that the work IS backed up now, so the boot reminder goes quiet (and any
+    // outstanding snooze is irrelevant). Only counts if something was actually written.
+    if(env.count) try{ localStorage.setItem(BACKUP_LAST_EXPORT_KEY, new Date().toISOString()); localStorage.removeItem(BACKUP_SNOOZE_KEY); }catch{}
     msg('draftsMsg', env.count ? ('Exported '+env.count+' item'+(env.count===1?'':'s')+' to a JSON file.') : 'Nothing to export yet — no local drafts.','ok');
   }catch(e){ msg('draftsMsg','Export failed: '+((e&&e.message)||'unknown error'),'err'); }
 }
