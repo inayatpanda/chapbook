@@ -8,13 +8,14 @@
 // Requires a TEST-KEYED build (a production build cannot verify these licences, by design):
 //   npm run build:test && npm run e2e
 //
-// Deliberately NOT part of `npm test`: it needs a browser and a built dist/, and the file is
-// named .e2e.mjs so `node --test`'s discovery ignores it.
+// Deliberately NOT part of `npm test`: it needs a browser and a test-keyed dist/. It lives
+// OUTSIDE test/ because `node --test` discovers every file under a test/ directory whatever
+// it is named, so putting it there made `npm test` fail against a normal production build.
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { extname, join, normalize } from 'node:path';
-import { mintTestLicence, TEST_PUBLIC_KEY_HEX } from '../fixtures/testLicence.mjs';
+import { mintTestLicence, TEST_PUBLIC_KEY_HEX } from '../test/fixtures/testLicence.mjs';
 
 const ROOT = 'dist';
 const LIC_STORE = 'helm.studio.licence';
