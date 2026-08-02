@@ -395,9 +395,12 @@ console.log('fonts:', readdirSync(`${SRC}/fonts`).filter((f) => f.endsWith('.wof
 // The public product lives at chapbook.rqai.co.uk — send the retired hostname there (the
 // 301! forces the redirect even though the file exists). Deliberately NOT redirected:
 // chapbook-publishing-studio.netlify.app, which native builds call as HOSTED_ORIGIN for the
-// GitHub device-flow relay (src/app.js) — a 301 there would break native sign-in. It serves
-// the same site, and SITE above makes its canonicals point back here, so it is not indexed
-// as a duplicate. Plus an explicit /app rule so the app document is served without a
+// GitHub device-flow relay (src/app.js) — a 301 there would break native sign-in. NOTE: it
+// is a SEPARATE Netlify site, not an alias of this one — this comment used to claim they
+// were the same, and they are not: measured 2026-08-02, it served a build 20 KB smaller and
+// months behind, which is why installed desktop apps saw none of the shipped changes.
+// Desktop 1.0.8 points its window at chapbook.rqai.co.uk instead; this entry stays only for
+// the relay used by builds ≤1.0.7 already in the wild. Plus an explicit /app rule so the app document is served without a
 // trailing-slash bounce. No SPA catch-all: marketing/legal .html use Netlify pretty-URLs.
 writeFileSync(`${DIST}/_redirects`,
   'https://inayat-studio.netlify.app/* https://chapbook.rqai.co.uk/:splat 301!\n' +
