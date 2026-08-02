@@ -1,7 +1,6 @@
 name: Desktop release (Tauri)
 
-# Builds the REMOTE-LOADING Chapbook app: a signed shell whose window opens
-# chapbook.rqai.co.uk/app, so deployed changes reach installed apps with no rebuild.
+# Builds the complete bundle-local Chapbook app, including the private dictation model.
 #   • macOS  → universal .dmg (Intel + Apple Silicon), code-signed + notarized
 #   • Windows → NSIS .exe installer (unsigned unless a Windows cert is added)
 # Trigger by pushing a tag like `desktop-v1.0.0`, or run manually.
@@ -58,7 +57,7 @@ jobs:
         working-directory: desktop
         run: npm ci
 
-      - name: Build the web app (fallback page + staged assets)
+      - name: Build the bundle-local app and private dictation model
         run: |
           npm ci
           npm run build
@@ -106,13 +105,13 @@ jobs:
         with:
           projectPath: desktop
           tauriScript: npx tauri
-          # No --config override: build the DEFAULT tauri.conf.json, i.e. the
-          # remote-loading shell whose window opens chapbook.rqai.co.uk/app. That is what
-          # makes a site deploy reach installed apps without a new signed release.
-          # Switching back to --config src-tauri/tauri.bundle-local.conf.json produces the
-          # offline build instead (bundles dist/ + the dictation model), at the cost of
-          # needing a rebuild for every UI change.
-          args: ${{ matrix.args }}
+          # BUNDLE-LOCAL, chosen deliberately: dist/ and the Whisper dictation model are
+          # baked into the binary, so speech-to-text is preinstalled and works offline with
+          # no first-use download. The cost is that the UI is a SNAPSHOT — a site deploy
+          # does NOT reach installed apps, so every UI change needs a new signed release.
+          # Dropping this --config builds the remote-loading shell instead (window opens
+          # chapbook.rqai.co.uk/app, deploys land automatically, model downloads on first use).
+          args: --config src-tauri/tauri.bundle-local.conf.json ${{ matrix.args }}
           tagName: ${{ github.ref_name }}
           releaseName: "Chapbook Desktop ${{ github.ref_name }}"
           releaseDraft: true
