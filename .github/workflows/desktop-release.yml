@@ -62,6 +62,9 @@ jobs:
           npm ci
           npm run build
           npm run stage:stt
+          # colour glyphs: without this the bundle-local app's Colour picker 404s on
+          # /emoji-manifest.json ("Could not load colour icons") — graceful, but a gap.
+          npm run stage:emoji
 
       # Enable mac code-signing ONLY when the Apple secrets are present on this repo.
       # We must NOT export APPLE_SIGNING_IDENTITY at all when it's empty: an empty-but-
