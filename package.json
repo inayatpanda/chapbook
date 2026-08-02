@@ -8,7 +8,7 @@
   "scripts": {
     "build": "node build.mjs",
     "test": "node --test",
-    "check": "npm test && npm run build && node scripts/grep-gate.mjs",
+    "check": "npm run build && npm test && node scripts/grep-gate.mjs",
     "gate": "node scripts/release-gate.mjs",
     "stage:installers": "node scripts/stage-installers.mjs",
     "stage:stt": "node scripts/stage-stt.mjs",
