@@ -35,6 +35,18 @@ test("product:'studio' passes the allowlist (reaches the token/queue stage)", as
   }
 });
 
+test("product:'scribble' passes the allowlist (reaches the token/queue stage)", async () => {
+  const saved = process.env.GITHUB_QUEUE_TOKEN;
+  delete process.env.GITHUB_QUEUE_TOKEN;
+  try {
+    const res = await handler(post({ email: 'a@b.co', product: 'scribble' }));
+    assert.equal(res.status, 500);
+    assert.deepEqual(await res.json(), { ok: false, error: 'not_configured' });
+  } finally {
+    if (saved !== undefined) process.env.GITHUB_QUEUE_TOKEN = saved;
+  }
+});
+
 test('omitted product is still allowed (null ≠ unknown — no regression)', async () => {
   const saved = process.env.GITHUB_QUEUE_TOKEN;
   delete process.env.GITHUB_QUEUE_TOKEN;
