@@ -2330,6 +2330,12 @@
   .fig-sticker-ai{display:flex;gap:.5rem;align-items:stretch;flex-wrap:wrap;margin:.1rem 0 .5rem}
   .fig-sticker-ai .ai-input{flex:1 1 180px;width:auto;margin:0;font-size:.88rem}
   .fig-sticker-ai .btn{margin-top:0;flex:0 0 auto;width:auto;white-space:nowrap}
+  .sticker-genre-tabs{display:flex;gap:.4rem;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    padding:.1rem 0 .55rem;margin:0 0 .45rem;border-bottom:1px solid var(--line);scrollbar-width:thin}
+  .sticker-genre-tabs button{flex:none;margin:0;min-height:40px;padding:.45rem .7rem;border:1px solid var(--line);
+    border-radius:999px;background:var(--surface);color:var(--mut);font:600 .74rem system-ui;cursor:pointer}
+  .sticker-genre-tabs button.on,.sticker-genre-tabs button[aria-selected="true"]{
+    border-color:var(--acc);background:var(--acc);color:#042018}
   .fig-stickers-grid-wrap{display:flex;flex-direction:column;gap:.5rem;max-height:46vh;
     overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:2px}
   .fig-sticker-group-lbl{font:600 .68rem var(--font-display,system-ui);letter-spacing:.08em;
@@ -4260,6 +4266,7 @@
       <p class="sub" style="margin-top:-.3rem">Everything you can drop into a post — browse what's available.</p>
       <div class="seg" id="libSeg" style="margin-bottom:1rem">
         <button class="on" data-lib="interactives">Interactive templates</button>
+        <button data-lib="stickers">Stickers</button>
         <button data-lib="makers">Make</button>
         <button data-lib="saved">Saved</button>
         <button data-lib="icons">Icons</button>
@@ -4302,6 +4309,13 @@
       <div id="libInteractives" class="lib-pane">
         <p class="sub" id="libIxCount">Loading templates…</p>
         <div id="libIxGrid" class="lib-ix-grid"></div>
+      </div>
+
+      <div id="libStickers" class="lib-pane" style="display:none">
+        <p class="sub" style="margin-top:-.3rem">Browse Scribble's complete retro sticker collection. Pick one to preview, resize, place on an image, save, or insert into the post you have open.</p>
+        <input class="media-search" id="libStickerSearch" type="search" placeholder="Search this sticker genre…" autocomplete="off" />
+        <div class="sticker-genre-tabs" id="libStickerGenres" role="tablist" aria-label="Sticker genres"></div>
+        <div class="fig-sticker-grid" id="libStickerGrid"><p class="media-loading">Loading stickers…</p></div>
       </div>
 
       <div id="libIcons" class="lib-pane" style="display:none">
@@ -4890,6 +4904,7 @@
     <button class="ptile" data-type="playground"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-terminal-2"/></svg><span class="nm">Interactive code</span></button>
     <button class="ptile" id="tplLibTile" data-type="__tpllib"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-wand"/></svg><span class="nm">Interactive block</span></button>
     <button class="ptile" id="figTile" data-type="__figure"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-chart-dots"/></svg><span class="nm">Figure</span></button>
+    <button class="ptile" id="stickerTile" data-type="__sticker"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-sticker"/></svg><span class="nm">Stickers</span></button>
     <button class="ptile" data-type="divider"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-separator"/></svg><span class="nm">Divider</span></button>
   </div>
   </div><!-- /.surface-body -->
@@ -5140,8 +5155,9 @@
         <p class="fig-compose-lbl">Slap a sticker</p>
         <div class="fig-sticker-tools">
           <input class="ai-input fig-sticker-search" id="figStickerSearch" type="search"
-            placeholder="Search stickers — plane, atom, heart…" autocomplete="off" />
+            placeholder="Search this sticker genre…" autocomplete="off" />
         </div>
+        <div class="sticker-genre-tabs" id="figStickerGenres" role="tablist" aria-label="Sticker genres"></div>
         <!-- AI generate-a-sticker row -->
         <div class="fig-sticker-ai">
           <input class="ai-input" id="figStickerAiText" type="text"
@@ -14784,6 +14800,7 @@ $('pickerGrid').addEventListener('click', e => {
   closePicker();
   if(tile.dataset.type === '__tpllib'){ openTplLib(at); return; }
   if(tile.dataset.type === '__figure'){ openFigLib(at); return; }
+  if(tile.dataset.type === '__sticker'){ openStickerLibrary(at); return; }
   if(tile.dataset.type === '__video'){ startVideoInsert(at); return; }
   if(tile.dataset.type === '__illus'){ openIllusPicker({ insertAt: at }); return; }
   addBlock(tile.dataset.type, at);
@@ -14921,6 +14938,7 @@ const INSERT_ACTIONS = [
   { ic:'terminal-2',    label:'Interactive code',  key:'playground interactive code html css javascript',  insert:(at)=>addBlock('playground', at) },
   { ic:'wand',          label:'Interactive block', key:'interactive template block playground library', insert:(at)=>openTplLib(at) },
   { ic:'chart-dots',    label:'Figure',      key:'figure diagram svg drawing',   insert:(at)=>openFigLib(at) },
+  { ic:'sticker',       label:'Sticker',     key:'sticker retro decorative badge library', insert:(at)=>openStickerLibrary(at) },
 ];
 
 /* ─── Slash "/" insert menu ──────────────────────────────────────────────────
@@ -16936,6 +16954,8 @@ async function runFigInvent(description){
    Describe/Photo paths land on), so insert/placement/alt/caption work unchanged.
    ═══════════════════════════════════════════════════════════════════════════ */
 let _figStickers = null;        // cached catalogue from /figures/stickers
+let _figStickerGenre = 'travel';
+let _libStickerGenre = 'travel';
 
 const FIG_STICKER_GENRE_LABELS = {
   travel: 'Travel', monuments: 'Monuments', science: 'Science',
@@ -16948,8 +16968,18 @@ const FIG_STICKER_GENRE_LABELS = {
 /* Open + populate the sticker palette (fetch once, then render). */
 async function openFigStickers(){
   await ensureFigStickers();
+  renderStickerGenreTabs('figStickerGenres', _figStickerGenre);
   renderFigStickers($('figStickerSearch') ? $('figStickerSearch').value : '');
 }
+
+/* Direct entry used by Add block, slash search, and Library → Stickers. */
+async function openStickerLibrary(atIndex, stickerId){
+  await openFigLib(atIndex);
+  const t = $('figSheetTitle'); if(t) t.textContent = 'Insert sticker';
+  openFigCompose('sticker');
+  if(stickerId) placeFigSticker(stickerId);
+}
+window.openStickerLibrary = openStickerLibrary;
 
 /* Fetch + cache the sticker catalogue once. */
 async function ensureFigStickers(){
@@ -16969,30 +16999,45 @@ async function ensureFigStickers(){
 function renderFigStickers(query){
   const body = $('figStickerBody'); if(!body) return;
   const q = String(query || '').trim().toLowerCase();
-  const list = (_figStickers || []).filter(s => !q
+  const list = (_figStickers || []).filter(s => s.genre === _figStickerGenre && (!q
     || (s.name || '').toLowerCase().includes(q)
     || (s.id || '').toLowerCase().includes(q)
     || (s.genre || '').toLowerCase().includes(q)
-    || (FIG_STICKER_GENRE_LABELS[s.genre] || '').toLowerCase().includes(q));
+    || (FIG_STICKER_GENRE_LABELS[s.genre] || '').toLowerCase().includes(q)));
   if(!list.length){
     body.innerHTML = '<p class="fig-sticker-empty">' + (q ? 'No stickers match “' + esc(q) + '”.' : 'No stickers available.') + '</p>';
     return;
   }
-  // group by genre, preserving catalogue order of first appearance
-  const order = [], byGenre = new Map();
-  for(const s of list){
-    if(!byGenre.has(s.genre)){ byGenre.set(s.genre, []); order.push(s.genre); }
-    byGenre.get(s.genre).push(s);
-  }
-  body.innerHTML = order.map(g => {
-    const cells = byGenre.get(g).map(s =>
+  body.innerHTML = '<div class="fig-sticker-grid">' + list.map(s =>
       '<button type="button" class="fig-sticker-cell" data-sticker="' + esc(s.id) + '" title="' + esc(s.name) + '">'
       + (s.svg || '')
       + '<span class="lbl">' + esc(s.name) + '</span></button>'
-    ).join('');
-    return '<div class="fig-sticker-group-lbl">' + esc(FIG_STICKER_GENRE_LABELS[g] || g) + '</div>'
-      + '<div class="fig-sticker-grid">' + cells + '</div>';
-  }).join('');
+    ).join('') + '</div>';
+}
+
+function stickerGenres(){
+  return [...new Set((_figStickers || []).map(s => s.genre).filter(Boolean))];
+}
+
+function renderStickerGenreTabs(hostId, active){
+  const host = $(hostId); if(!host) return;
+  host.innerHTML = stickerGenres().map(g => '<button type="button" role="tab" data-sticker-genre="' + esc(g)
+    + '" aria-selected="' + (g === active ? 'true' : 'false') + '" class="' + (g === active ? 'on' : '') + '">'
+    + esc(FIG_STICKER_GENRE_LABELS[g] || g) + '</button>').join('');
+}
+
+async function renderLibStickers(){
+  await ensureFigStickers();
+  const genres = stickerGenres();
+  if(!genres.includes(_libStickerGenre)) _libStickerGenre = genres[0] || '';
+  renderStickerGenreTabs('libStickerGenres', _libStickerGenre);
+  const q = String($('libStickerSearch')?.value || '').trim().toLowerCase();
+  const list = (_figStickers || []).filter(s => s.genre === _libStickerGenre && (!q
+    || (s.name || '').toLowerCase().includes(q) || (s.id || '').toLowerCase().includes(q)));
+  const grid = $('libStickerGrid'); if(!grid) return;
+  grid.innerHTML = list.length ? list.map(s => '<button type="button" class="fig-sticker-cell" data-library-sticker="'
+    + esc(s.id) + '" title="' + esc(s.name) + '">' + (s.svg || '') + '<span class="lbl">'
+    + esc(s.name) + '</span></button>').join('') : '<p class="fig-sticker-empty">No stickers match this search.</p>';
 }
 
 /* Tap a sticker → place it as a figure block (lands on the build/preview step).
@@ -20129,6 +20174,12 @@ $('figRegenBtn').addEventListener('click', regenFig);
     const cell = e.target.closest('.fig-sticker-cell'); if(!cell) return;
     placeFigSticker(cell.dataset.sticker);
   });
+  $('figStickerGenres')?.addEventListener('click', e => {
+    const b = e.target.closest('[data-sticker-genre]'); if(!b) return;
+    _figStickerGenre = b.dataset.stickerGenre;
+    renderStickerGenreTabs('figStickerGenres', _figStickerGenre);
+    renderFigStickers($('figStickerSearch')?.value || '');
+  });
   const stAiText = $('figStickerAiText');
   if(stAiText){
     stAiText.addEventListener('click', e => e.stopPropagation());
@@ -22164,14 +22215,26 @@ $('libSeg')?.addEventListener('click',e=>{
   $('libSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
   const mode=b.dataset.lib;
   $('libInteractives').style.display = mode==='interactives'?'block':'none';
+  $('libStickers').style.display = mode==='stickers'?'block':'none';
   $('libMakers').style.display = mode==='makers'?'block':'none';
   $('libSaved').style.display = mode==='saved'?'block':'none';
   $('libIcons').style.display = mode==='icons'?'block':'none';
   $('libMedia').style.display = mode==='media'?'block':'none';
   if(mode==='saved' && !_libSavedInit){ _libSavedInit=true; }
+  if(mode==='stickers') renderLibStickers();
   if(mode==='saved') renderLibSaved();   // always refresh — new saves may have arrived
   if(mode==='icons' && !_libIconsInit){ _libIconsInit=true; loadLibIcons(); }
   if(mode==='media' && !_libMediaInit){ _libMediaInit=true; loadLibMedia(); }
+});
+
+$('libStickerSearch')?.addEventListener('input', renderLibStickers);
+$('libStickerGenres')?.addEventListener('click', e=>{
+  const b=e.target.closest('[data-sticker-genre]'); if(!b) return;
+  _libStickerGenre=b.dataset.stickerGenre; renderLibStickers();
+});
+$('libStickerGrid')?.addEventListener('click', e=>{
+  const b=e.target.closest('[data-library-sticker]'); if(!b) return;
+  openStickerLibrary(null, b.dataset.librarySticker);
 });
 
 let _libMediaInit=false;
