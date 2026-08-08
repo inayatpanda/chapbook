@@ -4897,7 +4897,7 @@
     <button class="ptile" data-type="image"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-photo"/></svg><span class="nm">Image</span></button>
     <button class="ptile" data-type="quote"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-quote"/></svg><span class="nm">Quote</span></button>
     <button class="ptile" data-type="gallery"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-library-photo"/></svg><span class="nm">Gallery</span></button>
-    <button class="ptile" id="illusTile" data-type="__illus"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-photo"/></svg><span class="nm">Illustrations</span></button>
+    <button class="ptile" id="illusTile" data-type="__illus"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-library-photo"/></svg><span class="nm">Illustration library</span></button>
     <button class="ptile" data-type="__video"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-video"/></svg><span class="nm">Video</span></button>
     <button class="ptile" data-type="embed"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-video"/></svg><span class="nm">Embed (YouTube/Vimeo)</span></button>
     <button class="ptile" data-type="table"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-table"/></svg><span class="nm">Table</span></button>
@@ -4960,7 +4960,7 @@
 <div class="picker-sheet surface surface--sheet" id="illusSheet" role="dialog" aria-modal="true" aria-labelledby="illusTitle">
   <div class="picker-grab"></div>
   <header class="surface-head">
-    <h2 class="surface-title" id="illusTitle">Illustrations</h2>
+    <h2 class="surface-title" id="illusTitle">Illustration library</h2>
     <button class="surface-close" id="illusClose" type="button" aria-label="Close">✕</button>
   </header>
   <div class="surface-body">
@@ -14931,6 +14931,7 @@ const INSERT_ACTIONS = [
   { ic:'separator',     label:'Divider',     key:'divider rule hr separator',    insert:(at)=>addBlock('divider', at) },
   { ic:'photo',         label:'Image',       key:'image photo picture',          insert:(at)=>addBlock('image', at) },
   { ic:'library-photo', label:'Gallery',     key:'gallery images grid',          insert:(at)=>addBlock('gallery', at) },
+  { ic:'library-photo', label:'Illustration library', key:'illustrations cloud gallery artwork r2 image library', insert:(at)=>openIllusPicker({ insertAt: at }) },
   { ic:'video',         label:'Video',       key:'video upload clip mp4 r2 self-hosted', insert:(at)=>startVideoInsert(at) },
   { ic:'video',         label:'Embed (YouTube/Vimeo)', key:'embed youtube vimeo video url', insert:(at)=>addBlock('embed', at) },
   { ic:'table',         label:'Table',       key:'table grid columns rows',      insert:(at)=>addBlock('table', at) },
@@ -17581,7 +17582,7 @@ async function openIllusPicker(ctx){
   // single-sheet guard (mirror openMediaPicker)
   [closePicker, closeCropEditor, closeTplLib, closeFigLib, closeMediaPicker].forEach(fn => { try{ fn && fn(); }catch{} });
   _illusCtx = ctx || {};
-  $('illusTitle').textContent = _illusCtx.mode === 'cover' ? 'Illustrations — set cover' : 'Illustrations';
+  $('illusTitle').textContent = _illusCtx.mode === 'cover' ? 'Illustration library — set cover' : 'Illustration library';
   $('illusScrim').classList.add('open');
   $('illusSheet').classList.add('open');
   const sc = $('illusSheet').querySelector('.surface-body');
