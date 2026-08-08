@@ -7,7 +7,7 @@ import { esc } from './index.js';
 export default {
   id: 'dataset-explorer',
   name: 'Dataset explorer',
-  category: 'Data',
+  category: 'data',
   description: 'Search, filter, sort and chart a small inline dataset. For comparisons, ranked lists and evidence-led posts.',
   paramsSchema: {
     type: 'object', additionalProperties: false, required: ['columns', 'rows'],

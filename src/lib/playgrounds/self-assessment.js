@@ -7,7 +7,7 @@ import { esc } from './index.js';
 export default {
   id: 'self-assessment',
   name: 'Self-assessment',
-  category: 'Game',
+  category: 'game',
   description: 'A profile or recommendation quiz — answers add to outcome bands, then the reader receives the closest result. For reflective and advisory posts.',
   paramsSchema: {
     type: 'object', additionalProperties: false,

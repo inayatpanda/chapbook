@@ -30,6 +30,28 @@ export function chatFieldFor(block) {
    (Parameter kept for signature stability — behaviour no longer differs by pointer.) */
 export function enterSends() { return false; }
 
+/* CHAT-04/05: calculate and apply one accessible reorder step. Keeping this
+   DOM-free makes pointer drag, keyboard controls and the visible up/down buttons
+   share the same boundary rules. The returned array is a copy so callers can
+   put one clean structural change on their undo stack. */
+export function chatMoveTargetIndex(blocks, id, delta) {
+  if (!Array.isArray(blocks) || !id) return -1;
+  const from = blocks.findIndex((block) => block && block.id === id);
+  const step = Number(delta) < 0 ? -1 : Number(delta) > 0 ? 1 : 0;
+  const to = from + step;
+  return from >= 0 && step && to >= 0 && to < blocks.length ? to : -1;
+}
+
+export function moveChatBlock(blocks, id, delta) {
+  const source = Array.isArray(blocks) ? blocks : [];
+  const from = source.findIndex((block) => block && block.id === id);
+  const to = chatMoveTargetIndex(source, id, delta);
+  if (to < 0) return { blocks: source, moved: false, index: from };
+  const next = source.slice();
+  [next[from], next[to]] = [next[to], next[from]];
+  return { blocks: next, moved: true, index: to };
+}
+
 /* The editing-state chip for a bound block: "Editing · Heading" (the bar's ✕ / Esc
    releases). With nothing bound the bar shows the plain write prompt instead. */
 export function stripLabel(block) {

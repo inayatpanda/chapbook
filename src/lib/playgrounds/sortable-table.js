@@ -7,7 +7,7 @@ import { esc } from './index.js';
 export default {
   id: 'sortable-table',
   name: 'Sortable table',
-  category: 'Data',
+  category: 'data',
   description: 'A table the reader can sort by any column (numbers sort numerically) and filter live — for evidence and comparison tables.',
   paramsSchema: {
     type: 'object', additionalProperties: false,

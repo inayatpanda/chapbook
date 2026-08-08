@@ -123,3 +123,47 @@ test('caps: error strings are friendly and carry no em-dash', () => {
     assert.ok(!r.error.includes('—'), 'no em-dash in user-facing error');
   }
 });
+
+// The envelope round-trip above is pure. This one drives the REAL storage seam, because
+// that is where a backup silently loses data: Settings exports with storage.all() and
+// imports with storage.put(), and parseDraftsFile drops any record without a string `id`.
+// If a store ever holds records keyed some other way, the export would "succeed" and the
+// import would quietly restore fewer items than it saved.
+test('a full export/import round-trips through the storage seam, losing nothing', async () => {
+  const { memoryBackend, STORES } = await import('../seams/storage.js');
+
+  // Populate every store, so adding a store to STORES without adding it to the envelope
+  // fails here rather than in someone's lost work.
+  const source = memoryBackend();
+  for (const s of STORES) {
+    await source.put(s, { id: `${s}-1`, note: `first ${s}` });
+    await source.put(s, { id: `${s}-2`, nested: { deep: [1, 2, { ok: true }] } });
+  }
+
+  const map = {};
+  for (const s of STORES) map[s] = await source.all(s);
+  const file = JSON.stringify(serialiseDrafts(map));
+
+  const parsed = parseDraftsFile(file);
+  assert.equal(parsed.ok, true, parsed.error);
+  assert.equal(parsed.count, STORES.length * 2, 'every record must survive the envelope');
+
+  // Restore into a FRESH browser, exactly as importDraftsFile() does.
+  const restored = memoryBackend();
+  for (const s of STORES) for (const rec of parsed.stores[s]) await restored.put(s, rec);
+
+  for (const s of STORES) {
+    assert.deepEqual(await restored.all(s), await source.all(s), `store "${s}" did not round-trip`);
+  }
+});
+
+test('import overwrites a same-id record instead of duplicating it', async () => {
+  const { memoryBackend } = await import('../seams/storage.js');
+  const store = memoryBackend();
+  await store.put('drafts', { id: 'd-1', body: 'old' });
+
+  const parsed = parseDraftsFile(JSON.stringify(serialiseDrafts({ drafts: [{ id: 'd-1', body: 'new' }] })));
+  for (const rec of parsed.stores.drafts) await store.put('drafts', rec);
+
+  assert.deepEqual(await store.all('drafts'), [{ id: 'd-1', body: 'new' }]);
+});

@@ -1,0 +1,125 @@
+name: Web CI
+
+# Runs the same gate a deploy runs: `npm run check` = tests -> build -> grep-gate.
+# Deliberately ONE command shared with deploy:draft / deploy:prod, so CI cannot drift
+# from what actually blocks a release.
+#
+# What this workflow CANNOT do: run scripts/release-gate.mjs. That gate asserts against a
+# live origin (function responses, security headers, service-worker activation, the
+# metrics counter), so it needs a deployed URL that does not exist on a push. It is wired
+# as a separate manually-dispatched job below — run it after a draft deploy, with the
+# draft URL. The gate exits 2 ("GATE: INCOMPLETE") if the mandatory browser checks cannot
+# run, so this workflow installs a browser rather than letting them silently skip.
+#
+# Installer/STT staging is intentionally NOT run here: it pulls ~197 MB of release assets
+# from GitHub and proves nothing the artifact checks do not.
+
+on:
+  push:
+    branches: [native-builds, main]
+  pull_request:
+    branches: [native-builds, main]
+  workflow_dispatch:
+    inputs:
+      gate_url:
+        description: 'Deployed origin to run the full release gate against (e.g. a draft deploy URL). Leave blank to run checks only.'
+        required: false
+        type: string
+
+# A newer push to the same branch/PR makes an in-flight run pointless.
+concurrency:
+  group: web-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: tests + build + grep-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: npm run check
+        run: npm run check
+
+      # Tripwire, deliberately narrow: both build outputs (dist/ and src/studio.js) are
+      # gitignored, so a clean build must leave the working tree untouched. It fires only if
+      # a build step starts writing into TRACKED source — a generated file committed by
+      # accident, or a codegen step added without a matching .gitignore entry. It does NOT
+      # verify the bundle, which is never committed and is rebuilt on every deploy.
+      - name: the build does not write into tracked source
+        run: |
+          if ! git diff --quiet; then
+            echo "::error::npm run build modified tracked files — a build output is being written into source"
+            git diff --stat
+            exit 1
+          fi
+
+  e2e:
+    name: authenticated E2E (test-keyed build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: install a headless browser
+        run: |
+          npm i --no-save playwright
+          npx playwright install --with-deps chromium
+
+      # Builds dist/ with the THROWAWAY licence key from test/fixtures/testLicence.mjs so the
+      # activation gate can be driven for real. That artifact is marked dist/TEST-BUILD and
+      # scripts/assert-deployable.mjs refuses to deploy it, so it cannot escape this job.
+      - name: build with the test licence key
+        run: npm run build:test
+
+      - name: the test build is refused by the deploy guard
+        run: |
+          if npm run --silent build:test >/dev/null && node scripts/assert-deployable.mjs; then
+            echo "::error::assert-deployable.mjs ACCEPTED a test-keyed build — the guard is broken"
+            exit 1
+          fi
+          echo "deploy guard correctly refused the test build"
+
+      - run: npm run e2e
+
+  gate:
+    name: release gate (manual, needs a deployed URL)
+    if: github.event_name == 'workflow_dispatch' && inputs.gate_url != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # check 5 greps the LOCAL dist/, so it has to exist before the gate runs.
+      - run: npm run build
+
+      # Without a browser the two mandatory checks (service-worker activation, XSS)
+      # SKIP and the gate exits 2. The gate resolves it with `await import('playwright')`,
+      # so the PACKAGE must be in node_modules — `npx playwright install` alone only
+      # downloads browser binaries and would still leave the import failing.
+      - name: install a headless browser for the mandatory checks
+        run: |
+          npm i --no-save playwright
+          npx playwright install --with-deps chromium
+
+      - name: release gate
+        run: node scripts/release-gate.mjs "${{ inputs.gate_url }}"

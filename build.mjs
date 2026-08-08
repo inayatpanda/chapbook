@@ -16,6 +16,29 @@ import { STT_VENDOR_FILES, STT_MODELS } from './scripts/stt-files.mjs';
 const SRC = 'src';
 const DIST = 'dist';
 
+// Weight of every Tabler icon stroke, applied to the sprite copy in dist/ (see below).
+// Tabler ships at 2; the UI reads too thin against the editorial light theme's 2px borders.
+const ICON_STROKE = '2.2';
+
+// TEST-ONLY licence key override. The licence gate blocks every authenticated E2E, and the
+// only safe way past it is a build that trusts a throwaway keypair (test/fixtures/
+// testLicence.mjs) instead of the production one. Requires BOTH env vars, so it can never
+// happen by accident, and a build that uses it is marked (dist/TEST-BUILD) and shouts about
+// it. A test-keyed build cannot verify a real licence, and a real build cannot verify a test
+// licence — the separation is cryptographic, not a flag someone has to remember.
+const TEST_LICENCE_PUBKEY = process.env.CHAPBOOK_TEST_BUILD === '1'
+  ? (process.env.CHAPBOOK_LICENCE_PUBKEY || '')
+  : '';
+if (process.env.CHAPBOOK_LICENCE_PUBKEY && process.env.CHAPBOOK_TEST_BUILD !== '1') {
+  throw new Error('build: CHAPBOOK_LICENCE_PUBKEY is a TEST-ONLY override and requires CHAPBOOK_TEST_BUILD=1. Refusing to bake a non-production licence key into a normal build.');
+}
+if (TEST_LICENCE_PUBKEY && !/^[0-9a-f]{64}$/.test(TEST_LICENCE_PUBKEY)) {
+  throw new Error('build: CHAPBOOK_LICENCE_PUBKEY must be 32 hex-encoded bytes.');
+}
+if (TEST_LICENCE_PUBKEY && TEST_LICENCE_PUBKEY === LICENCE_PUBLIC_KEY) {
+  throw new Error('build: CHAPBOOK_LICENCE_PUBKEY is the PRODUCTION key. The test override exists to avoid using it — mint against the test keypair instead.');
+}
+
 // Drift guard: the Studio's inline licence-gate key (window.__LICENCE_PUBLIC_KEY)
 // must match server/licence.js PUBLIC_KEY. `npm run licence:init` patches both;
 // this catches a hand-edit that touched only one. (Empty on both = unlicensed
@@ -26,7 +49,14 @@ const DIST = 'dist';
   if (!m) throw new Error('build: window.__LICENCE_PUBLIC_KEY not found in index.html');
   if (m[1] !== LICENCE_PUBLIC_KEY)
     throw new Error('build: Studio licence key drifted from server/licence.js — re-run `npm run licence:init` (or sync both).');
-  console.log(`licence verify key: ${LICENCE_PUBLIC_KEY ? 'baked ✓' : '(none — unlicensed build)'}`);
+  if (TEST_LICENCE_PUBKEY) {
+    console.log('');
+    console.log('  ⚠  TEST BUILD — licence gate keyed to a THROWAWAY keypair.');
+    console.log('     Real licences will NOT activate this build. NEVER deploy dist/ from here.');
+    console.log('');
+  } else {
+    console.log(`licence verify key: ${LICENCE_PUBLIC_KEY ? 'baked ✓' : '(none — unlicensed build)'}`);
+  }
 }
 
 // Sanity-check: the inline provider→default-model map in index.html must match the
@@ -152,10 +182,29 @@ html = html.replace('</head>', '  <script type="module" src="/studio.js"></scrip
 //     so no rewrite is needed here. Just sanity-check the client-router branch is present.
 if (!html.includes('if(window.__studioApi){')) throw new Error('build: api() no longer delegates to window.__studioApi — index.html changed?');
 
-// (c) The app now lives at /app. Assets stay root-relative at the dist root (studio.js,
+// (c) TEST-ONLY: swap the baked licence verify key so a fixture licence can open the gate.
+//     Applied to the EMITTED html only — src/index.html is never rewritten, so a test build
+//     cannot leave the test key behind in source for someone to commit by accident.
+if (TEST_LICENCE_PUBKEY) {
+  const before = html;
+  html = html.replace(
+    /window\.__LICENCE_PUBLIC_KEY='[^']*';/,
+    `window.__LICENCE_PUBLIC_KEY='${TEST_LICENCE_PUBKEY}';`,
+  );
+  if (html === before) throw new Error('build: failed to apply the test licence key override.');
+}
+
+// (d) The app now lives at /app. Assets stay root-relative at the dist root (studio.js,
 //     manifest.json, icons, fonts) so the app doc at /app/index.html loads them from '/'.
 mkdirSync(`${DIST}/app`, { recursive: true });
 writeFileSync(`${DIST}/app/index.html`, html);
+// Mark the artifact itself, so "is this dist/ safe to deploy?" is answerable by looking at
+// dist/ rather than by remembering which env vars the last build ran with.
+if (TEST_LICENCE_PUBKEY) {
+  writeFileSync(`${DIST}/TEST-BUILD`,
+    'This dist/ was built with a TEST licence key. Real licences cannot activate it.\n'
+    + 'It must never be deployed. Run `npm run build` (no CHAPBOOK_TEST_BUILD) to get a real one.\n');
+}
 
 // (c1) Illustrations library manifest → dist/app/illustrations-manifest.json. The
 //      Illustrations gallery picker fetches this once on open (same-origin, so CSP
@@ -219,12 +268,13 @@ for (const page of ['index.html', 'features.html', 'themes.html', 'pricing.html'
 }
 
 // ---- legal pages, single-sourced from index.html's legal modal (never re-typed) ----
-for (const kind of ['privacy', 'terms', 'refunds']) {
+const legalKinds = ['legal', 'privacy', 'terms', 'refunds', 'ai', 'storage', 'acceptable', 'accessibility'];
+for (const kind of legalKinds) {
   const inner = extractLegalBlock(idxSrc, kind);
   const page = renderLegalPage({ kind, title: LEGAL_TITLES[kind], inner, tpl: legalTpl, nav, footer, year: YEAR });
   writeFileSync(`${DIST}/${kind}.html`, page);
 }
-console.log('legal pages: privacy/terms/refunds extracted from index.html ✓');
+console.log(`legal pages: ${legalKinds.join('/')} extracted from index.html ✓`);
 
 // --- copy every other emitted file verbatim ---
 // Source paths are already root-relative, so manifest.json is a plain copy
@@ -233,6 +283,21 @@ console.log('legal pages: privacy/terms/refunds extracted from index.html ✓');
 // end of the build, once every SHELL asset (incl. fonts) exists in dist/.
 for (const f of ['manifest.json', 'studio.js', 'darkroom-upload.js', 'stt.js', 'stt-worker.js', 'preview.css', 'resize.js', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icons-manifest.json', 'icons-sprite.svg']) {
   copyFileSync(`${SRC}/${f}`, `${DIST}/${f}`);
+}
+
+// Icon stroke weight. Tabler bakes stroke-width="2" as a PRESENTATION ATTRIBUTE onto every
+// <symbol>, and an attribute on the symbol beats a CSS value inherited from the host <svg> —
+// verified in a browser: `.tico{stroke-width:3}` and even `use{stroke-width:3}` render
+// identically to the default. So the only way to weight the icons is to rewrite the sprite,
+// which is done HERE, on the copy in dist/, leaving src/icons-sprite.svg untouched.
+{
+  const p = `${DIST}/icons-sprite.svg`;
+  const before = readFileSync(p, 'utf8');
+  const after = before.replaceAll('stroke-width="2"', `stroke-width="${ICON_STROKE}"`);
+  const n = (before.match(/stroke-width="2"/g) || []).length;
+  if (!n) throw new Error('build: no stroke-width="2" found in icons-sprite.svg — did the sprite change?');
+  writeFileSync(p, after);
+  console.log(`icons-sprite: stroke-width 2 → ${ICON_STROKE} on ${n} symbols`);
 }
 
 // download.html is a marketing surface: run it through inject() (not a verbatim copy) so it
@@ -256,7 +321,8 @@ console.log('marketing shell: marketing.css + og-image.png → dist root');
 // private tool with no SEO value). robots allows the crawl, keeps /app out of the index
 // (advisory only — the app stays reachable), and points crawlers at the sitemap.
 const SITE = 'https://chapbook.rqai.co.uk';
-const pages = ['/', '/features', '/themes', '/pricing', '/tutorials', '/download', '/privacy', '/terms', '/refunds'];
+const pages = ['/', '/features', '/themes', '/pricing', '/tutorials', '/download',
+  '/legal', '/privacy', '/terms', '/refunds', '/ai', '/storage', '/acceptable', '/accessibility'];
 const today = new Date().toISOString().slice(0, 10);
 writeFileSync(`${DIST}/sitemap.xml`,
   '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
@@ -331,9 +397,12 @@ console.log('fonts:', readdirSync(`${SRC}/fonts`).filter((f) => f.endsWith('.wof
 // The public product lives at chapbook.rqai.co.uk — send the retired hostname there (the
 // 301! forces the redirect even though the file exists). Deliberately NOT redirected:
 // chapbook-publishing-studio.netlify.app, which native builds call as HOSTED_ORIGIN for the
-// GitHub device-flow relay (src/app.js) — a 301 there would break native sign-in. It serves
-// the same site, and SITE above makes its canonicals point back here, so it is not indexed
-// as a duplicate. Plus an explicit /app rule so the app document is served without a
+// GitHub device-flow relay (src/app.js) — a 301 there would break native sign-in. NOTE: it
+// is a SEPARATE Netlify site, not an alias of this one — this comment used to claim they
+// were the same, and they are not: measured 2026-08-02, it served a build 20 KB smaller and
+// months behind, which is why installed desktop apps saw none of the shipped changes.
+// Desktop 1.0.8 points its window at chapbook.rqai.co.uk instead; this entry stays only for
+// the relay used by builds ≤1.0.7 already in the wild. Plus an explicit /app rule so the app document is served without a
 // trailing-slash bounce. No SPA catch-all: marketing/legal .html use Netlify pretty-URLs.
 writeFileSync(`${DIST}/_redirects`,
   'https://inayat-studio.netlify.app/* https://chapbook.rqai.co.uk/:splat 301!\n' +

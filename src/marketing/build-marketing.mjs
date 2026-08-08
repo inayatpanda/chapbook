@@ -12,7 +12,16 @@ import { fileURLToPath } from 'node:url';
 
 // Mirrors the inline `titles` map in src/index.html (openLegal, ~line 5949). Kept in
 // sync by hand: if that map changes, update this too.
-export const LEGAL_TITLES = { privacy: 'Privacy', terms: 'Terms of use', refunds: 'Refund policy' };
+export const LEGAL_TITLES = {
+  legal: 'Legal centre',
+  privacy: 'Privacy notice',
+  terms: 'Terms of use',
+  refunds: 'Refund policy',
+  ai: 'AI transparency',
+  storage: 'Device storage & cookies',
+  acceptable: 'Acceptable use',
+  accessibility: 'Accessibility statement',
+};
 
 // The legal wrapper doc lives next to this module. Resolve it relative to the module
 // (not the cwd) so renderLegalPage's disk fallback works regardless of where it runs.

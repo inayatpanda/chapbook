@@ -7,6 +7,7 @@ import { makeAi } from './seams/ai.js';
 import { makeR2 } from './seams/r2.js';
 import { storage } from './seams/storage.js';
 import * as draftsIo from './lib/draftsIo.js';
+import * as backupNudge from './lib/backupNudge.js';
 import * as appReset from './lib/appReset.js';
 import { makePosts } from './core/posts.js';
 import * as partner from './core/partner.js';
@@ -802,6 +803,7 @@ if (typeof window !== 'undefined') {
   window.__studioConnection = connection; // pure blogUrl + dead-token/network classifiers for the boot gate (H5)
   window.__studioStorage = storage;       // H4: the IndexedDB seam for Settings → Export/Import drafts + the boot storage probe
   window.__studioDrafts = draftsIo;        // H4: pure draft export/import serialiser (serialiseDrafts / parseDraftsFile / DRAFT_STORES)
+  window.__studioBackupNudge = backupNudge; // pure "back your drafts up" decision for the boot banner (shouldNudgeBackup)
   window.__studioReset = appReset;         // M9: pure "Forget this device" enumerator (chapbookKeys / CHAPBOOK_IDB_NAME)
   window.__studioThemes = themeCatalogue;   // baked blog-theme registry + live-catalogue fetch + the shared picker renderer (Settings → Site mounts it)
   window.__studioThread = { parseTitleOptions, summarizeReactions }; // pure title-workshop parser + reaction-steering digest (the inline module can't import core/)

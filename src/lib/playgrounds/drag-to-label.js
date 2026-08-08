@@ -7,7 +7,7 @@ import { esc } from './index.js';
 export default {
   id: 'drag-to-label',
   name: 'Drag to label',
-  category: 'Game',
+  category: 'game',
   description: 'Place labels on an image or diagram, then check the answers. Works by drag, tap or keyboard.',
   paramsSchema: {
     type: 'object', additionalProperties: false, required: ['targets'],

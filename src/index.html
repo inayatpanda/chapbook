@@ -41,9 +41,12 @@
     --ink:      #f4f7fd;
     --mut:      #aebbd2;
     --faint:    #6f7e98;
-    --line:     rgba(140,160,200,.13);
-    --line-2:   rgba(140,160,200,.26);
+    /* Borders were near-invisible hairlines (.13 alpha at 1px). Dark now matches the light
+       theme's editorial weight: a 2px border needs a stronger line or it reads as a blur. */
+    --line:     rgba(140,160,200,.24);
+    --line-2:   rgba(140,160,200,.42);
     --acc:      #64c6d3;
+    --bw:2px;
     /* brand palette — desaturated for dark so violet reads as the Partner's alone */
     --teal:   #58bbae;
     --cyan:   #64c6d3;
@@ -72,13 +75,28 @@
     --partner-line:rgba(165,180,252,.22);
   }
   :root[data-theme="light"] {
-    --bg:#eef1f6; --bg-1:#e7ecf4; --surface:#ffffff; --surface-2:#f3f6fb;
+    /* LIGHT THEME — "high-contrast editorial" (direction B).
+       The old light field sat in one narrow pale band (#eef1f6 page, #f3f6fb nested,
+       #ffffff cards): everything within a few percent of everything else, so nothing read
+       as raised and the app looked washed out and dull. Deepening the band helped but kept
+       the same cold blue-grey character. This drops the tint entirely: a white page, near
+       black ink, and hierarchy carried by TYPE and RULES rather than by pale grey boxes.
+       Containers get their colour from a per-card hue instead (see .lp-card below). */
+    --bg:#ffffff; --bg-1:#f6f7f9; --surface:#ffffff; --surface-2:#f6f7f9;
     /* WCAG AA (a11y audit): --faint and --acc colour TEXT in light (bottom-nav labels,
        header subtitle, install/getting-started links) — the old #8a97a8 / #0ea5a3 sat at
        ~2.6:1 on the light field. These clear 4.5:1 on --bg, --bg-1 AND --surface.
        Dark theme is untouched (its values already pass on the near-black field). */
-    --ink:#1b2433; --mut:#5b6b80; --faint:#5f6b7c;
-    --line:#e4e9f0; --line-2:#d3dbe7; --acc:#0b7371;
+    /* Ink is near-black rather than blue-black so the page reads as print. --line is the
+       container border (drawn at 2px, see --bw) and --line-2 is the strong rule under a
+       page title. Re-measured against the lightest AND darkest fields text sits on
+       (#ffffff and --bg-1 #f6f7f9) — worst pair 4.62:1, so the whole palette clears AA. */
+    --ink:#0f1115; --mut:#4a505a; --faint:#4e545e;
+    /* --line-2 is the HOVER/emphasis border in 38 places, not just page rules, so it stays
+       a strong grey. Near-black here made every hover state slam. */
+    --line:#cbd1d9; --line-2:#98a1ae; --acc:#0a6b69;
+    /* Container border width. The old 1px hairlines disappeared against a white field. */
+    --bw:2px;
     --thread-canvas:#fbfaf7; --thread-canvas-line:#e4e1db;
     --thread-post:#e7edf6; --thread-post-line:#d1dae7;
     --partner-voice:#574fd6; --partner-wash:rgba(87,79,214,.07); --partner-line:rgba(87,79,214,.24);
@@ -137,7 +155,12 @@
     letter-spacing:.09em;text-transform:uppercase}
 
   /* ── FORM ELEMENTS ───────────────────────────────────────────────────────── */
-  textarea,input[type=text],input[type=password],input[type=search],select{
+  /* url/number were missing here, so every Settings → Site field (Site URL, the three
+     socials, both Formspree endpoints) and the two series-part inputs fell back to browser
+     defaults: 149x19 inline-block boxes with a 2px inset border, sitting three-to-a-line
+     instead of full width. Measured against a styled sibling in the same form: 940x53. */
+  textarea,input[type=text],input[type=password],input[type=search],
+  input[type=url],input[type=number],select{
     width:100%;background:var(--bg-1);border:1px solid var(--line);border-radius:12px;
     color:var(--ink);padding:.8em .9em;font:inherit;resize:vertical;
     transition:border-color .15s,box-shadow .15s,background .15s}
@@ -205,12 +228,83 @@
   .lp-link:hover{border-color:var(--acc);color:var(--ink);background:var(--surface)}
   .lp-link:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
   .lp-link svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2}
+  /* ── LIGHT: colour inside the containers (direction C2) ────────────────────────────
+     On a white editorial field a white card is invisible, so each container carries a soft
+     wash of its own hue, with the icon and title in that hue. Colours are the existing
+     light-theme brand stops (--teal/--cyan/--violet/--goblin/--pink), not new ones, so
+     they are already the AA-checked values; measured again as heading text on their own
+     6% wash: 4.63–5.51:1.
+     Scoped to [data-theme="light"] because dark has its own hierarchy rules below. */
+  :root[data-theme="light"] .lp-grid .lp-card:nth-child(5n+1){--h:var(--teal)}
+  :root[data-theme="light"] .lp-grid .lp-card:nth-child(5n+2){--h:var(--cyan)}
+  :root[data-theme="light"] .lp-grid .lp-card:nth-child(5n+3){--h:var(--violet)}
+  :root[data-theme="light"] .lp-grid .lp-card:nth-child(5n+4){--h:var(--goblin)}
+  :root[data-theme="light"] .lp-grid .lp-card:nth-child(5n+5){--h:var(--pink)}
+  :root[data-theme="light"] .lp-sec .lp-link:nth-child(5n+1){--h:var(--teal)}
+  :root[data-theme="light"] .lp-sec .lp-link:nth-child(5n+2){--h:var(--cyan)}
+  :root[data-theme="light"] .lp-sec .lp-link:nth-child(5n+3){--h:var(--violet)}
+  :root[data-theme="light"] .lp-sec .lp-link:nth-child(5n+4){--h:var(--goblin)}
+  :root[data-theme="light"] .lp-sec .lp-link:nth-child(5n+5){--h:var(--pink)}
+  :root[data-theme="light"] .lp-card{
+    background:color-mix(in srgb,var(--h,var(--acc)) 6%,#fff);
+    border:var(--bw) solid color-mix(in srgb,var(--h,var(--acc)) 32%,var(--line));
+    box-shadow:none}
+  :root[data-theme="light"] .lp-card:hover{
+    background:color-mix(in srgb,var(--h,var(--acc)) 10%,#fff);
+    border-color:var(--h,var(--acc));box-shadow:none}
+  :root[data-theme="light"] .lp-ic{stroke:var(--h,var(--acc))}
+  :root[data-theme="light"] .lp-t{color:var(--h,var(--acc))}
+  /* The primary card keeps its prominence without the gradient ring, which read as a
+     smudge once the cards themselves carried colour. */
+  :root[data-theme="light"] .lp-card.lp-primary{
+    border:var(--bw) solid var(--h,var(--acc));box-shadow:none}
+  :root[data-theme="light"] .lp-link{
+    background:color-mix(in srgb,var(--h,var(--acc)) 9%,#fff);
+    border:var(--bw) solid color-mix(in srgb,var(--h,var(--acc)) 32%,var(--line));
+    color:var(--h,var(--acc))}
+  :root[data-theme="light"] .lp-link:hover{
+    background:color-mix(in srgb,var(--h,var(--acc)) 14%,#fff);
+    border-color:var(--h,var(--acc));color:var(--h,var(--acc))}
+
+  /* LIGHT: the editorial treatment beyond the launchpad. REPEATING surfaces — a list of
+     posts, a column of settings rows — deliberately do NOT cycle hues: twenty posts in five
+     rotating colours is noise, not information. The launchpad tiles earn their hues because
+     each one is a distinct destination. Everything else just takes the 2px border and a flat
+     surface, so the whole app reads as one editorial system.
+     .card also drops its top-to-bottom gradient, which on a white field was a smudge. */
+  :root[data-theme="light"] .card{background:var(--surface);border-width:var(--bw)}
+  :root[data-theme="light"] .postCard,
+  :root[data-theme="light"] .set-row{border-width:var(--bw)}
+  :root[data-theme="light"] textarea,
+  :root[data-theme="light"] input[type=text],
+  :root[data-theme="light"] input[type=password],
+  :root[data-theme="light"] input[type=search],
+  :root[data-theme="light"] input[type=url],
+  :root[data-theme="light"] input[type=number],
+  :root[data-theme="light"] select{border-width:var(--bw)}
+
+  /* DARK: the same C2 idea, tuned for a near-black field. A 6% wash disappears here, so the
+     hue sits at 14% over the surface with a 45% border. VIOLET IS DELIBERATELY ABSENT — in
+     dark it is reserved for the Partner's voice (see --violet/--editor above), so the cycle
+     runs teal/cyan/green/pink instead of borrowing it. */
+  :root:not([data-theme="light"]) .lp-grid .lp-card:nth-child(4n+1){--h:var(--teal)}
+  :root:not([data-theme="light"]) .lp-grid .lp-card:nth-child(4n+2){--h:var(--cyan)}
+  :root:not([data-theme="light"]) .lp-grid .lp-card:nth-child(4n+3){--h:var(--goblin)}
+  :root:not([data-theme="light"]) .lp-grid .lp-card:nth-child(4n+4){--h:var(--pink)}
+  :root:not([data-theme="light"]) .lp-sec .lp-link:nth-child(4n+1){--h:var(--teal)}
+  :root:not([data-theme="light"]) .lp-sec .lp-link:nth-child(4n+2){--h:var(--cyan)}
+  :root:not([data-theme="light"]) .lp-sec .lp-link:nth-child(4n+3){--h:var(--goblin)}
+  :root:not([data-theme="light"]) .lp-sec .lp-link:nth-child(4n+4){--h:var(--pink)}
+  :root:not([data-theme="light"]) .lp-ic{stroke:var(--h,var(--acc))}
+  :root:not([data-theme="light"]) .lp-t{color:var(--h,var(--acc))}
+
   /* dark-only hierarchy: task cards are the clear top layer (lp-primary keeps its
      gradient ring); the secondary row reads as one recessed navigation shelf */
   :root:not([data-theme="light"]) .lp-card:not(.lp-primary){
-    background:linear-gradient(180deg,#121d31,#0d1525);border-color:#273752;
+    background:color-mix(in srgb,var(--h,var(--acc)) 14%,#0d1525);
+    border:var(--bw) solid color-mix(in srgb,var(--h,var(--acc)) 45%,transparent);
     box-shadow:0 8px 20px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.025)}
-  :root:not([data-theme="light"]) .lp-card:not(.lp-primary):hover{border-color:#31456a;
+  :root:not([data-theme="light"]) .lp-card:not(.lp-primary):hover{border-color:var(--h,var(--acc));
     box-shadow:0 8px 20px rgba(0,0,0,.24),var(--glow),inset 0 1px 0 rgba(255,255,255,.025)}
   :root:not([data-theme="light"]) .lp-sec{padding:.35rem;background:#080f1b;
     border:1px solid #1d2a42;border-radius:14px}
@@ -263,6 +357,9 @@
   .share-parked-name{flex:1 1 auto;font-size:.85rem;color:var(--ink)}
   .share-parked .btn{margin-top:0;width:auto}
   .share-img-grid:empty{display:none}
+  /* The empty note is injected INTO the grid, so it became a grid ITEM pinned to one
+     ~90px column and wrapped to a few words a line. Span every column instead. */
+  .share-img-note{grid-column:1/-1;margin:.2rem 0}
   .share-img{position:relative;padding:0;border:2px solid var(--line);border-radius:10px;overflow:hidden;
     background:var(--bg);cursor:pointer;aspect-ratio:1/1;transition:border-color .15s,box-shadow .15s}
   .share-img img{width:100%;height:100%;object-fit:cover;display:block}
@@ -377,9 +474,44 @@
   /* ── SECONDARY NAV (sub-views within a section) ───────────────────────────
      A scrollable pill bar shown under the section header when a section owns
      >1 view (Write, Media, Share, Settings). Single-view sections hide it. */
+  /* ── TOP BAR ─────────────────────────────────────────────────────────────
+     The section nav, given an actual bar to live in. .subnav used to be a
+     transparent pill strip floating straight on the page background, and it was
+     hidden ENTIRELY on single-view sections (Home, Posts) — so the top of the app
+     looked different on every tab and content started at a different y depending
+     on where you were. The bar is always present now; only the pills come and go.
+     The wash is mixed from --acc so it follows both themes instead of hard-coding
+     a teal that would fight the light palette. */
+  .topbar{position:sticky;top:0;z-index:30;
+    background:var(--bg-1);                                   /* fallback */
+    background:color-mix(in srgb, var(--acc) 7%, var(--bg));
+    border-bottom:1px solid var(--line);
+    -webkit-backdrop-filter:saturate(140%) blur(6px);
+    backdrop-filter:saturate(140%) blur(6px)}
+  .topbar[hidden]{display:none}
+  /* Light is the editorial direction: the bar is white and separated by its rule, not by a
+     wash. The accent tint above is kept for DARK, where a flat band would disappear. */
+  :root[data-theme="light"] .topbar{background:var(--surface);border-bottom-color:var(--line)}
+  /* min-height reserves the pill row even on single-view sections (Home, Posts), so the
+     bar is the same height everywhere and page content always starts at the same y.
+     Without it the bar collapses to just the caption and the whole page jumps when you
+     move between a section that has pills and one that doesn't. */
+  .topbar-inner{margin:0 auto;padding:.5rem 0 .45rem;
+    width:min(680px,calc(100vw - 1.6rem));min-height:3.9rem;
+    display:flex;flex-direction:column;justify-content:center;gap:.35rem}
+  /* The bar owns the app identity on every page: name left, theme + Install right, the
+     section's pills underneath. The section NAME is deliberately not here — it would just
+     repeat the page's own heading. */
+  .topbar-row{display:flex;align-items:center;justify-content:space-between;gap:1rem}
+  .topbar-row h1{font:700 1.25rem var(--font-display);color:var(--ink);margin:0;letter-spacing:-.01em}
+  .topbar-actions{display:flex;align-items:center;gap:.5rem;flex:0 0 auto}
+  /* The pill row keeps its height even when a section has no pills, so the bar is the same
+     height everywhere. Reserving it HERE rather than with a min-height on .topbar-inner is
+     what makes that reliable: under border-box a min-height on the inner box includes its
+     padding, so it only floors the bar and the pills still push it taller (76px vs 93px).
+     2rem is one pill (.5em padding + .82rem text). */
   .subnav{display:flex;gap:.4rem;overflow-x:auto;-webkit-overflow-scrolling:touch;
-    scrollbar-width:none;padding:.2rem 0 .1rem;margin:0 auto;
-    width:min(680px,calc(100vw - 1.6rem))}
+    scrollbar-width:none;padding:0;margin:0;width:auto;min-height:2rem}
   .subnav::-webkit-scrollbar{display:none}
   .subnav[hidden]{display:none}
   .subnav button{flex:0 0 auto;background:var(--bg-1);border:1px solid var(--line);
@@ -389,7 +521,8 @@
   .subnav button:hover{color:var(--ink);border-color:var(--line-2)}
   .subnav button.on{background:var(--grad-pub);color:#042018;border-color:transparent;box-shadow:var(--glow)}
   @media(min-width:900px){
-    .subnav{width:min(940px,calc(100vw - 88px - 3rem));padding-top:1.1rem}
+    /* match the content column so the bar's contents line up with the page below */
+    .topbar-inner{width:min(940px,calc(100vw - 88px - 3rem));padding:.7rem 0 .6rem;min-height:4.7rem}
   }
 
   /* ── VIEWS ───────────────────────────────────────────────────────────────── */
@@ -532,16 +665,24 @@
   .cal-wd{font:600 .62rem var(--font-display);letter-spacing:.06em;text-transform:uppercase;
     color:var(--mut);text-align:center;padding:.2rem 0}
   /* cells lifted for contrast: subtle surface, clearly visible borders, brighter numbers */
-  .cal-cell{position:relative;min-height:88px;background:var(--surface-2);border:1px solid var(--line-2);
+  /* Border matches the rest of the app's container weight (--bw), which the calendar was
+     left out of when that landed — cells read a full step lighter than every card. */
+  .cal-cell{position:relative;min-height:88px;background:var(--surface-2);border:var(--bw,1px) solid var(--line-2);
     border-radius:10px;padding:.3rem;display:flex;flex-direction:column;gap:.22rem;overflow:hidden;
     cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s}
   .cal-cell:hover{border-color:var(--acc);background:var(--surface-2)}
   .cal-cell:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
   .cal-cell.out{background:var(--bg-1);border-color:var(--line);opacity:.62}
-  .cal-cell.today{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc),0 0 14px rgba(34,211,238,.18)}
+  /* today / selected were hardcoded dark-theme cyan (rgba(34,211,238,…)) and a teal→cyan
+     fill. Those are the DARK brand brights: on the white editorial field they glowed a
+     colour nothing else in light mode uses. Derived from --acc now, so each theme gets its
+     own accent and the highlight stays legible on both fields. */
+  .cal-cell.today{border-color:var(--acc);
+    box-shadow:inset 0 0 0 1px var(--acc),0 0 14px color-mix(in srgb,var(--acc) 20%,transparent)}
   /* selected day: filled-in highlight, brand glow — distinct from today */
-  .cal-cell.sel{border-color:var(--acc);background:linear-gradient(160deg,rgba(45,212,191,.20),rgba(34,211,238,.14));
-    box-shadow:inset 0 0 0 1px var(--acc),0 0 16px rgba(34,211,238,.22)}
+  .cal-cell.sel{border-color:var(--acc);
+    background:color-mix(in srgb,var(--acc) 16%,var(--surface));
+    box-shadow:inset 0 0 0 1px var(--acc),0 0 16px color-mix(in srgb,var(--acc) 24%,transparent)}
   .cal-daynum{font:700 .8rem var(--font-display);color:var(--ink);align-self:flex-end;line-height:1}
   .cal-cell.out .cal-daynum{color:var(--faint);font-weight:600}
   .cal-cell.today .cal-daynum,.cal-cell.sel .cal-daynum{color:var(--acc)}
@@ -556,6 +697,32 @@
   .cal-chip .cal-cdot.scheduled{background:#818cf8}
   .cal-chip .cal-cdot.draft{background:#fbbf24}
   .cal-more{font-size:.62rem;color:var(--faint);padding:0 .2rem}
+  /* Shared empty state. These views used to render one grey sentence at the top of a tall
+     blank view, which reads as "something failed to load" rather than "there is nothing
+     here yet". A bounded, centred card gives the emptiness an edge, and a place to say what
+     to do next. */
+  .empty-state{max-width:34rem;margin:1.4rem auto;padding:1.7rem 1.5rem;text-align:center;
+    background:var(--surface);border:var(--bw,1px) solid var(--line);border-radius:16px;
+    color:var(--mut);font-size:.92rem;line-height:1.55}
+  .empty-state b{display:block;margin-bottom:.35rem;color:var(--ink);
+    font:700 1.02rem var(--font-display)}
+  /* Partner's chat column is ~788px tall with nothing in it until you speak. It DOES have a
+     starters block, but it floated as loose text at the top of the void; bounding it gives
+     the emptiness an edge, same as every other empty view. */
+  .pt-starters{max-width:34rem;margin:1.4rem auto;padding:1.5rem 1.4rem;
+    background:var(--surface);border:var(--bw,1px) solid var(--line);border-radius:16px}
+  .pt-starters[hidden]{display:none}
+  .pt-starters-intro{color:var(--mut);font-size:.9rem;line-height:1.55;margin:0 0 .9rem}
+  .pt-starters-intro b{color:var(--ink);font:700 1.02rem var(--font-display)}
+  /* "Expand into blog post" and "Social pack" wrapped to two lines at 390px (49px vs the
+     44px every other control renders at). Tighten the label, not the tap target. */
+  @media(max-width:430px){
+    /* .btn.ghost is (0,2,0); a bare .rv-sec loses to it, so match the specificity. */
+    /* min-height keeps the tap target once the label stops wrapping — shrinking the text
+       alone took these from 49px to 29px, which is a worse problem than the wrap. */
+    .btn.rv-sec{font-size:.74rem;letter-spacing:-.01em;padding-left:.4em;padding-right:.4em;
+      white-space:nowrap;min-height:40px}
+  }
   .cal-empty-note{font-size:.78rem;color:var(--faint);text-align:center;padding:1.2rem 0}
   /* agenda fallback (rendered on narrow screens) — same contrast lift as the grid */
   .cal-agenda{display:flex;flex-direction:column;gap:.5rem}
@@ -2056,6 +2223,8 @@
   .fig-frames{margin-top:.55rem;padding:.5rem .55rem;border:1px solid var(--line);
     border-radius:12px;background:var(--surface);display:flex;flex-direction:column;gap:.45rem}
   .fig-frames-row{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap}
+  .fig-frame-nav-row .fig-frame-label{flex:1 1 auto}
+  .fig-frame-actions{align-items:stretch}
   .fig-frame-nav,.fig-frame-act{margin-top:0;flex:0 0 auto;width:auto;
     padding:.5em .7em;min-height:42px;white-space:nowrap;font-size:.82rem}
   .fig-frame-nav{min-width:46px;font-size:1rem}
@@ -2089,11 +2258,16 @@
     #figDrawBox .fig-draw-width{flex:1 1 7rem}
     #figDrawBox .fig-draw-swatches{order:10;flex-basis:100%;justify-content:flex-start}
     #figDrawBox .fig-draw-tool{padding:.4rem .6rem}
+    #figDrawBox .fig-frame-actions .fig-frame-act{flex:1 1 auto}
   }
   /* pen colours + fill/text tools + floating text editor */
   .fig-draw-swatches{display:inline-flex;gap:.3rem;align-items:center;flex-wrap:wrap}
   .fig-sw{width:26px;height:26px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
   .fig-sw.on{border-color:#fff;box-shadow:0 0 0 2px var(--acc)}
+  .fig-custom-colour{width:30px;height:30px;flex:0 0 30px;border-radius:50%;border:2px solid var(--line);
+    overflow:hidden;position:relative;cursor:pointer;background:conic-gradient(#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)}
+  .fig-custom-colour.on{border-color:#fff;box-shadow:0 0 0 2px var(--acc)}
+  .fig-custom-colour input{position:absolute;inset:-8px;width:46px;height:46px;opacity:0;cursor:pointer}
   .fig-draw-tool.on{border-color:var(--acc);color:var(--acc);background:rgba(45,212,191,.1)}
   .fig-text-input{position:absolute;z-index:5;min-width:9rem;background:var(--bg);border:1px solid var(--acc);
     border-radius:8px;color:var(--ink);padding:.35rem .55rem;font:600 .9rem var(--font-display);outline:none}
@@ -2336,6 +2510,7 @@
   .chat-acts button{min-width:42px;min-height:38px;border:1px solid var(--line);border-radius:9px;
     background:rgba(140,160,200,.06);color:var(--ink);cursor:pointer;font-size:.9rem}
   .chat-acts button:hover{border-color:var(--acc)}
+  .chat-acts button:disabled{opacity:.38;cursor:not-allowed;border-color:var(--line)}
   #chatSheet{position:fixed;inset:0;z-index:70;background:rgba(2,4,10,.6)}
   .chat-sheet-card{position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);
     border-radius:16px 16px 0 0;padding:1rem .9rem calc(1rem + env(safe-area-inset-bottom));
@@ -2496,27 +2671,27 @@
      element made an AI_PARSE / no-provider failure completely silent. */
   #v-editor.thread-mode #importDocMsg.show{display:block}
   #v-editor.thread-mode .thread-canvas{min-height:clamp(360px,58vh,680px);padding:2.5rem 1.25rem 2rem}
-  /* chat-mode Preview: docked top-right ON the thread canvas, always visible (sticky
-     under the sticky editor bar), invoking the SAME live preview as the toolbar
-     button. Doc mode hides it entirely (the toolbar button covers Doc). The dock is
+  /* CHAT-10 review: docked top-right on the compose canvas, always visible (sticky
+     under the sticky editor bar), invoking the SAME final-note preview as the toolbar
+     button. The dock is
      zero-height so the canvas below keeps its geometry; the button drops into the
      canvas's (deepened) top padding. */
-  #threadPreviewDock{display:none}
-  #v-editor.thread-mode #threadPreviewDock{display:flex;justify-content:flex-end;
+  #chatReviewDock{display:none}
+  #v-editor.chat-on #chatReviewDock{display:flex;justify-content:flex-end;
     position:sticky;top:3.6rem;z-index:8;height:0;overflow:visible;padding:0 .6rem}
-  #threadPreviewBtn{display:inline-flex;align-items:center;gap:.4em;margin-top:.55rem;
+  #chatReviewBtn{display:inline-flex;align-items:center;gap:.4em;margin-top:.55rem;
     border:1px solid var(--thread-canvas-line);border-radius:999px;cursor:pointer;
     background:var(--thread-canvas);color:var(--mut);font:600 .78rem var(--font-display);
     padding:.42em .9em;box-shadow:0 4px 14px rgba(0,0,0,.18)}
-  :root[data-theme="light"] #threadPreviewBtn{box-shadow:0 4px 14px rgba(30,41,59,.12)}
-  #threadPreviewBtn:hover{border-color:var(--acc);color:var(--acc)}
-  #threadPreviewBtn:disabled{opacity:.5;cursor:default}
-  #threadPreviewBtn .tico{width:15px;height:15px}
+  :root[data-theme="light"] #chatReviewBtn{box-shadow:0 4px 14px rgba(30,41,59,.12)}
+  #chatReviewBtn:hover{border-color:var(--acc);color:var(--acc)}
+  #chatReviewBtn:disabled{opacity:.5;cursor:default}
+  #chatReviewBtn .tico{width:15px;height:15px}
   @media(max-width:640px){
     /* two-row phone header is taller; collapse to icon-only like the toolbar idiom */
-    #v-editor.thread-mode #threadPreviewDock{top:6.2rem}
-    #threadPreviewBtn .tpv-lbl{display:none}
-    #threadPreviewBtn{padding:.5em;min-width:34px;min-height:34px;justify-content:center}
+    #v-editor.chat-on #chatReviewDock{top:6.2rem}
+    #chatReviewBtn .tpv-lbl{display:none}
+    #chatReviewBtn{padding:.5em;min-width:34px;min-height:34px;justify-content:center}
   }
 
   .tpllib-preview{max-width:620px;margin:0 auto}
@@ -2665,6 +2840,12 @@
   .gp-tile{display:flex;flex-direction:column;align-items:center;gap:.3rem;padding:.7rem .3rem .45rem;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--mut);cursor:pointer;transition:color .15s,border-color .15s,background .15s}
   .gp-tile:hover{color:var(--acc);border-color:var(--acc);background:var(--surface)}
   .gp-tile svg{width:26px;height:26px}
+  /* Multicolour glyphs carry their own fills, so they must NOT inherit the accent
+     colour the line icons are tinted with, and must not take the drop-shadow glow
+     (.glyph-prev svg) — that treatment only reads correctly on a single-colour stroke.
+     Sized to match .gp-tile svg so the grid stays on one rhythm across modes. */
+  .gp-tile img.gp-colour{width:26px;height:26px;display:block}
+  .glyph-prev img.gp-colour{width:30px;height:30px;display:block;filter:none}
   .gp-tile .nm{font-size:.55rem;color:var(--faint);text-align:center;line-height:1.15;word-break:break-word}
   .gp-more{text-align:center;margin-top:.8rem}
   .preview-sheet .pv-note{font-size:.74rem;color:var(--faint);margin:0 0 .8rem 2px;line-height:1.4}
@@ -3139,6 +3320,11 @@
   .storage-warn button{margin-left:auto;flex:none;background:none;border:0;color:var(--faint);
     cursor:pointer;font-size:1.1rem;line-height:1;padding:.1rem .3rem}
   .storage-warn button:hover{color:var(--ink)}
+  /* The backup reminder's inline action. Without this it inherits the rule above and
+     renders as a second ✕ shoved to the right edge by margin-left:auto. */
+  .storage-warn .sw-act{margin-left:0;display:inline;font-size:inherit;line-height:inherit;
+    padding:0;color:var(--ink);text-decoration:underline;text-underline-offset:2px}
+  .storage-warn .sw-act:hover,.storage-warn .sw-act:focus-visible{color:var(--ink);opacity:.75}
 
   /* Destructive Settings action (Forget this device). */
   .btn.danger{border-color:#c0433a;color:#e06a60}
@@ -3223,6 +3409,70 @@
 </head>
 <body>
 
+<!-- Mandatory, versioned clickwrap. This sits before both activation and the app so
+     neither route can be used until the current Terms are accepted. Privacy/AI are
+     acknowledged separately: acknowledgement is not bundled GDPR consent. -->
+<div id="legalConsentGate" class="legal-consent-gate" role="dialog" aria-modal="true" aria-labelledby="legalConsentTitle">
+  <style>
+    .legal-consent-gate{position:fixed;inset:0;z-index:30000;display:grid;place-items:start center;overflow:auto;
+      padding:max(1.25rem,env(safe-area-inset-top)) 1rem max(1.5rem,env(safe-area-inset-bottom));
+      background:var(--bg,#080c16);color:var(--ink,#f4f7fd)}
+    .legal-consent-gate[hidden]{display:none}
+    .legal-consent-card{width:min(560px,100%);margin:auto;padding:clamp(1.1rem,4vw,1.65rem);border:1px solid var(--line,#1c2433);
+      border-radius:18px;background:var(--panel,#0b1120);box-shadow:0 24px 70px rgba(0,0,0,.55)}
+    .legal-consent-card h1{font:700 clamp(1.45rem,5vw,1.85rem)/1.18 var(--font-display,'Space Grotesk');margin:.2rem 0 .55rem}
+    .legal-consent-card .lc-kicker{margin:0;color:var(--teal,#2dd4bf);font:700 .68rem var(--font-display,'Space Grotesk');letter-spacing:.09em;text-transform:uppercase}
+    .legal-consent-card .lc-copy{color:var(--faint,#aebbd2);font-size:.88rem;line-height:1.55}
+    .legal-consent-card .lc-ai{padding:.8rem .9rem;border-left:3px solid var(--teal,#2dd4bf);background:var(--surface-2,#101827);font-size:.83rem;line-height:1.5}
+    .legal-consent-card label{display:grid;grid-template-columns:1.3rem 1fr;gap:.7rem;align-items:start;margin:.65rem 0;padding:.8rem;
+      border:1px solid var(--line,#1c2433);border-radius:12px;background:var(--bg,#080c16);font-size:.85rem;line-height:1.5;cursor:pointer}
+    .legal-consent-card input{width:1.1rem;height:1.1rem;margin-top:.15rem;accent-color:var(--teal,#2dd4bf)}
+    .legal-consent-card a{color:var(--cyan,#22d3ee);font-weight:650;text-underline-offset:.15em}
+    .legal-consent-card .lc-accept{width:100%;min-height:48px;margin-top:.5rem;border:0;border-radius:12px;
+      color:#042018;background:linear-gradient(95deg,var(--teal,#2dd4bf),var(--cyan,#22d3ee));font:700 .95rem var(--font-display,'Space Grotesk');cursor:pointer}
+    .legal-consent-card .lc-accept:disabled{opacity:.42;cursor:not-allowed}
+    .legal-consent-card .lc-error{min-height:1.1rem;margin:.5rem 0 0;color:#fb7185;font-size:.8rem}
+  </style>
+  <div class="legal-consent-card">
+    <p class="lc-kicker">Before you begin</p>
+    <h1 id="legalConsentTitle">Your choices and Chapbook's terms</h1>
+    <p class="lc-copy">Chapbook is local-first. Drafts stay on this device unless you deliberately connect GitHub, AI or media storage. Review the launch documents below; acceptance is stored on this device with version <code>2026-08-08</code> and a timestamp.</p>
+    <p class="lc-ai"><strong>AI is optional and labelled.</strong> Generated replies, edits, images and figures may be inaccurate. Your chosen provider receives the material needed for a request. Keep a human responsible for every final post.</p>
+    <label><input id="lcTerms" type="checkbox"><span>I have read and agree to the <a href="/terms" target="_blank" rel="noopener">Terms of Use</a> and <a href="/acceptable" target="_blank" rel="noopener">Acceptable Use Policy</a>.</span></label>
+    <label><input id="lcNotices" type="checkbox"><span>I acknowledge the <a href="/privacy" target="_blank" rel="noopener">Privacy Notice</a>, <a href="/ai" target="_blank" rel="noopener">AI Transparency Notice</a> and <a href="/storage" target="_blank" rel="noopener">Device Storage Notice</a>. This is not blanket consent to optional AI or marketing.</span></label>
+    <label><input id="lcAge" type="checkbox"><span>I am at least 16, or a parent/legal guardian is accepting for me and supervising my use. If I am under 18, I have that adult's permission.</span></label>
+    <p class="lc-copy">Selecting “Agree and continue” is electronic acceptance. If you do not agree, do not use Chapbook.</p>
+    <button class="lc-accept" id="lcAccept" type="button" disabled>Agree and continue</button>
+    <p id="lcError" class="lc-error" role="alert"></p>
+  </div>
+</div>
+<script>
+(function(){
+  const VERSION='2026-08-08', KEY='chapbook.legalConsent.v1';
+  window.__CHAPBOOK_LEGAL_VERSION=VERSION;
+  const valid=v=>!!(v&&v.version===VERSION&&v.termsAccepted===true&&v.noticesAcknowledged===true&&v.ageConfirmed===true&&typeof v.acceptedAt==='string'&&!Number.isNaN(Date.parse(v.acceptedAt)));
+  let accepted=false;
+  try{ accepted=valid(JSON.parse(localStorage.getItem(KEY)||'null')); }catch{}
+  const gate=document.getElementById('legalConsentGate');
+  if(accepted){ gate.hidden=true; return; }
+  const ids=['lcTerms','lcNotices','lcAge'];
+  const refresh=()=>{ document.getElementById('lcAccept').disabled=!ids.every(id=>document.getElementById(id).checked); };
+  ids.forEach(id=>document.getElementById(id).addEventListener('change',refresh));
+  document.getElementById('lcAccept').addEventListener('click',()=>{
+    if(!ids.every(id=>document.getElementById(id).checked)) return;
+    const record={version:VERSION,acceptedAt:new Date().toISOString(),method:'clickwrap',termsAccepted:true,noticesAcknowledged:true,ageConfirmed:true};
+    try{
+      localStorage.setItem(KEY,JSON.stringify(record));
+      gate.hidden=true;
+      ['licence','app'].forEach(id=>{ const el=document.getElementById(id); if(el) el.removeAttribute('inert'); });
+    }catch{
+      document.getElementById('lcError').textContent='Chapbook could not save your acceptance on this device. Check that site storage is available, then try again.';
+    }
+  });
+  document.addEventListener('DOMContentLoaded',()=>{ ['licence','app'].forEach(id=>{ const el=document.getElementById(id); if(el) el.setAttribute('inert',''); }); },{once:true});
+})();
+</script>
+
 <!-- ===== LICENCE GATE (shown before everything when no valid key is stored) ===== -->
 <div id="licence" class="wrap" style="display:none">
   <h1>Activate Chapbook</h1>
@@ -3235,30 +3485,35 @@
   <nav class="legal-foot" aria-label="Support and legal">
     <a href="/download">Apps</a>
     <a href="mailto:support@rqai.co.uk">Support</a>
+    <a href="/legal">Legal centre</a>
     <a href="#" onclick="openLegal('privacy');return false">Privacy</a>
-    <a href="#" onclick="openLegal('terms');return false">Terms</a>
+    <a href="#" onclick="openLegal('ai');return false">AI</a>
     <a href="#" onclick="openLegal('refunds');return false">Refunds</a>
   </nav>
 </div>
 
 <!-- ===== MAIN APP ===== -->
 <div id="app" style="display:none">
-<!-- Section sub-navigation: a pill bar that switches between the views WITHIN the
-     active section (e.g. Write → Compose/Partner/Inbox). Populated by renderSubnav().
-     Lives directly in #app (before .wrap) so it shows for views inside AND outside .wrap
-     (Partner & Library sit outside .wrap). Hidden for single-view sections. -->
-<div class="subnav" id="subnav" hidden></div>
-<div class="wrap">
-  <header>
-    <div>
+<!-- Section navigation bar. Carries the section name and, when the section has more than
+     one view, the sub-view pills (e.g. Write → New post/Partner/Inbox). Populated by
+     renderSubnav(). Lives directly in #app (before .wrap) so it shows for views inside AND
+     outside .wrap (Partner & Library sit outside .wrap).
+     The BAR itself is shown for every section — including single-view ones — so the top of
+     the app is identical on every tab and content always starts at the same y. Only the
+     pills come and go. -->
+<div class="topbar" id="topbar" hidden>
+  <div class="topbar-inner">
+    <div class="topbar-row">
       <h1 id="appHeaderTitle">Chapbook</h1>
-      <div class="sub" id="appHeaderSub" style="margin:0">draft · approve · share</div>
+      <div class="topbar-actions">
+        <button class="themeBtn" id="themeToggleMain" title="Toggle theme" onclick="toggleTheme()">☀️</button>
+        <button class="install" id="installBtn">⤓ Install</button>
+      </div>
     </div>
-    <div style="display:flex;align-items:center;gap:.5rem">
-      <button class="themeBtn" id="themeToggleMain" title="Toggle theme" onclick="toggleTheme()">☀️</button>
-      <button class="install" id="installBtn">⤓ Install</button>
-    </div>
-  </header>
+    <div class="subnav" id="subnav"></div>
+  </div>
+</div>
+<div class="wrap">
 
   <!-- H4: shown by the boot storage probe when this browser blocks local storage
        (Safari private mode / ITP eviction) or can't persist drafts. Dismissible. -->
@@ -3381,11 +3636,11 @@
             <button data-s="link" type="button">Link</button>
           </div>
           <div class="card-maker-accents" id="cardAccent">
-            <button type="button" class="fig-sw on" data-c="#2dd4bf" style="background:#2dd4bf" title="Teal"></button>
-            <button type="button" class="fig-sw" data-c="#22d3ee" style="background:#22d3ee" title="Cyan"></button>
-            <button type="button" class="fig-sw" data-c="#818cf8" style="background:#818cf8" title="Violet"></button>
-            <button type="button" class="fig-sw" data-c="#f59e0b" style="background:#f59e0b" title="Amber"></button>
-            <button type="button" class="fig-sw" data-c="#fb7185" style="background:#fb7185" title="Rose"></button>
+            <button type="button" class="fig-sw on" data-c="#2dd4bf" style="background:#2dd4bf" title="Teal" aria-label="Card colour: Teal"></button>
+            <button type="button" class="fig-sw" data-c="#22d3ee" style="background:#22d3ee" title="Cyan" aria-label="Card colour: Cyan"></button>
+            <button type="button" class="fig-sw" data-c="#818cf8" style="background:#818cf8" title="Violet" aria-label="Card colour: Violet"></button>
+            <button type="button" class="fig-sw" data-c="#f59e0b" style="background:#f59e0b" title="Amber" aria-label="Card colour: Amber"></button>
+            <button type="button" class="fig-sw" data-c="#fb7185" style="background:#fb7185" title="Rose" aria-label="Card colour: Rose"></button>
           </div>
         </div>
         <input id="cardMain" type="text" placeholder="The line that carries it — quote, number, or title" autocomplete="off" />
@@ -3745,8 +4000,9 @@
     <nav class="legal-foot in-app" aria-label="Support and legal">
       <a href="/download">Apps</a>
       <a href="mailto:support@rqai.co.uk">Support</a>
+      <a href="/legal">Legal centre</a>
       <a href="#" onclick="openLegal('privacy');return false">Privacy</a>
-      <a href="#" onclick="openLegal('terms');return false">Terms</a>
+      <a href="#" onclick="openLegal('ai');return false">AI</a>
       <a href="#" onclick="openLegal('refunds');return false">Refunds</a>
     </nav>
 
@@ -3978,6 +4234,7 @@
   <section class="view" id="v-partner">
     <div class="wrap">
       <div class="bar"><h1>Partner</h1><button class="iconBtn" id="ptNew" title="Start a new post">＋ New</button><button class="iconBtn" id="ptPreviewToggle" title="Preview"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-eye"/></svg></button></div>
+      <p role="note" class="sub" style="margin:-.35rem 0 .8rem;padding:.55rem .7rem;border-left:3px solid var(--partner-voice);background:var(--partner-wash)"><b style="color:var(--ink)">AI writing partner.</b> Replies and draft changes are generated by your chosen provider and may be inaccurate. Review every claim and edit before publishing.</p>
       <div id="ptSplit" class="pt-split">
         <div class="pt-chat" id="ptChat">
           <!-- Quick-starts: shown on a fresh/empty session, hidden once the conversation begins -->
@@ -4424,13 +4681,13 @@
         <input class="title-in" id="editorTitle" placeholder="Post title…" aria-label="Post title" />
         <button id="titleAskBtn" type="button" title="Ask the Partner for a title variation" aria-label="Ask the Partner for a title variation">✦</button>
       </div>
-      <!-- Chat-mode Preview — docked top-right of the thread canvas (thread mode only,
-           CSS-gated). Invokes the SAME live preview as the toolbar button: blocks are
+      <!-- CHAT-10 Review note — docked top-right of the compose canvas. Invokes the
+           SAME live preview as the toolbar button: blocks are
            the source of truth, so the rendered page is identical from either mode.
            Sticky, so it stays visible while a long thread scrolls; narrow screens
            collapse it to icon-only (the title attribute still names it). -->
-      <div id="threadPreviewDock">
-        <button id="threadPreviewBtn" type="button" title="Preview the rendered page" aria-label="Preview the rendered page"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-eye"/></svg><span class="tpv-lbl">Preview</span></button>
+      <div id="chatReviewDock">
+        <button id="chatReviewBtn" type="button" title="Review the final note" aria-label="Review the final note"><svg class="tico" aria-hidden="true"><use href="/icons-sprite.svg#ti-eye"/></svg><span class="tpv-lbl">Review note</span></button>
       </div>
       <div id="blockList"></div>
       <div id="editorActions">
@@ -4914,13 +5171,16 @@
           <input id="figDrawWidth" type="range" min="1" max="14" step="1" value="3" />
         </label>
         <span class="fig-draw-swatches" id="figDrawSwatches" role="group" aria-label="Pen colour">
-          <button type="button" class="fig-sw on" data-c="#1b2433" title="Ink (default)" style="background:#1b2433"></button>
-          <button type="button" class="fig-sw" data-c="#9fb3c8" title="Grey" style="background:#9fb3c8"></button>
-          <button type="button" class="fig-sw" data-c="#2dd4bf" title="Teal" style="background:#2dd4bf"></button>
-          <button type="button" class="fig-sw" data-c="#22d3ee" title="Cyan" style="background:#22d3ee"></button>
-          <button type="button" class="fig-sw" data-c="#818cf8" title="Violet" style="background:#818cf8"></button>
-          <button type="button" class="fig-sw" data-c="#f59e0b" title="Amber" style="background:#f59e0b"></button>
-          <button type="button" class="fig-sw" data-c="#fb7185" title="Rose" style="background:#fb7185"></button>
+          <button type="button" class="fig-sw on" data-c="#1b2433" title="Ink (default)" aria-label="Card colour: Ink (default)" style="background:#1b2433"></button>
+          <button type="button" class="fig-sw" data-c="#9fb3c8" title="Grey" aria-label="Card colour: Grey" style="background:#9fb3c8"></button>
+          <button type="button" class="fig-sw" data-c="#2dd4bf" title="Teal" aria-label="Card colour: Teal" style="background:#2dd4bf"></button>
+          <button type="button" class="fig-sw" data-c="#22d3ee" title="Cyan" aria-label="Card colour: Cyan" style="background:#22d3ee"></button>
+          <button type="button" class="fig-sw" data-c="#818cf8" title="Violet" aria-label="Card colour: Violet" style="background:#818cf8"></button>
+          <button type="button" class="fig-sw" data-c="#f59e0b" title="Amber" aria-label="Card colour: Amber" style="background:#f59e0b"></button>
+          <button type="button" class="fig-sw" data-c="#fb7185" title="Rose" aria-label="Card colour: Rose" style="background:#fb7185"></button>
+          <label class="fig-custom-colour" title="Custom colour">
+            <input id="figCustomColour" type="color" value="#1b2433" aria-label="Custom colour" />
+          </label>
         </span>
         <button class="btn ghost fig-draw-tool" id="figFillMode" type="button" aria-pressed="false" title="Fill: your next stroke closes into a filled shape">◧ Fill</button>
         <button class="btn ghost fig-draw-tool" id="figTextMode" type="button" aria-pressed="false" title="Text: tap to place a label, tap a label to edit, drag to move">T Text</button>
@@ -4978,10 +5238,12 @@
       </div>
       <!-- Flipbook frame controls: navigate / add / duplicate / delete frames, onion skin, playback -->
       <div class="fig-frames" id="figFrames">
-        <div class="fig-frames-row">
+        <div class="fig-frames-row fig-frame-nav-row">
           <button class="btn ghost fig-frame-nav" id="figFramePrev" type="button" title="Previous frame" aria-label="Previous frame">◀</button>
           <span class="fig-frame-label" id="figFrameLabel" aria-live="polite">Frame 1 / 1</span>
           <button class="btn ghost fig-frame-nav" id="figFrameNext" type="button" title="Next frame" aria-label="Next frame">▶</button>
+        </div>
+        <div class="fig-frames-row fig-frame-actions">
           <button class="btn ghost fig-frame-act" id="figFrameAdd" type="button" title="Add a blank frame">+ Frame</button>
           <button class="btn ghost fig-frame-act" id="figFrameDup" type="button" title="Duplicate this frame">⧉ Duplicate</button>
           <button class="btn ghost fig-frame-act" id="figFrameDel" type="button" title="Delete this frame">🗑 Delete</button>
@@ -5208,6 +5470,7 @@
     <div id="glyphMode" class="gp-mode">
       <button class="chip on" type="button" data-mode="2d">2D flat</button>
       <button class="chip" type="button" data-mode="3d">3D wireframe</button>
+      <button class="chip" type="button" data-mode="colour">Colour</button>
     </div>
     <div id="glyphCount" class="gp-count">Loading…</div>
     <div id="glyphGrid" class="gp-grid"></div>
@@ -5256,82 +5519,122 @@
 </div>
 
 <!-- Legal content sources (hidden; cloned into the modal on demand). -->
-<div id="legal-privacy" hidden>
-  <p class="meta">How Chapbook handles your information. Last reviewed: 15 July 2026.</p>
-  <p>Chapbook is <b>local-first</b>. It runs entirely in your browser and talks directly to the services you connect it to. There is no Chapbook server sitting between you and your data.</p>
-
-  <h4>What stays in your browser — and only your browser</h4>
-  <p>Your GitHub token, your AI provider key(s) and your optional Cloudflare R2 keys are stored in this browser's local storage (under <code>helm.studio.config.v1</code>). Your drafts, writing-partner sessions, version snapshots and saved ideas are stored in this browser's IndexedDB database. None of this is ever sent to us — each key is used only to reach the service it belongs to.</p>
-
-  <h4>Publishing to GitHub</h4>
-  <p>When you sign in with GitHub, Chapbook requests the <code>public_repo</code> scope — enough to commit to your public blog repository, and nothing more. Publishing commits straight from your browser to <b>your own</b> GitHub repository using your token. If you use the device-flow sign-in, the login handshake is passed through a small relay so your browser can reach GitHub's login endpoints; that relay holds no secret and stores nothing.</p>
-
-  <h4>AI features (bring your own key)</h4>
-  <p>If you add an AI key (Anthropic, OpenAI or Google), AI requests go <b>directly from your browser to that provider</b> using your key. They do not pass through us. Your chosen provider's own privacy terms apply to those requests.</p>
-
-  <h4>Video and large media (optional Cloudflare R2)</h4>
-  <p>If you connect a Cloudflare R2 bucket, media uploads go straight from your browser to <b>your own</b> bucket (signed in your browser, or via a small upload Worker you deploy). We never receive or store your media.</p>
-
-  <h4>What we receive</h4>
-  <p>The only information that reaches us is what's needed to sell you a licence and let you trial the product:</p>
+<div id="legal-legal" hidden>
+  <p class="meta">Launch documents · Version 2026-08-08 · Effective 8 August 2026.</p>
+  <p>Chapbook is local-first: drafts remain on this device unless you deliberately connect GitHub, an AI provider or media storage. These documents explain the contract, the limited information RQAI receives, optional third parties and the safeguards expected when AI assists a publication.</p>
+  <h4>Documents</h4>
   <ul>
-    <li>If you <b>buy a licence</b> through Stripe, we receive your name and email so we can create your licence key and email it to you. The key is signed on the owner's own machine — the signing key never touches a public server.</li>
-    <li>If you <b>request a free trial</b>, your email address is stored in a private queue so a 7-day key can be minted and emailed to you.</li>
-    <li><b>Anonymous usage counts:</b> Chapbook increments a per-day total when a licence is activated or the app is installed. These are counts only — no IP address, no licence key, no identifying information — stored in Netlify Blobs.</li>
+    <li><a href="/terms">Terms of Use</a> — the user contract, licence, ownership, availability and liability.</li>
+    <li><a href="/privacy">Privacy Notice</a> — UK/EU GDPR purposes, lawful bases, recipients, retention and rights.</li>
+    <li><a href="/ai">AI Transparency Notice</a> — provider roles, limitations, EU AI Act disclosures and publication duties.</li>
+    <li><a href="/storage">Device Storage &amp; Cookies</a> — IndexedDB, local storage, credentials and service-worker caching.</li>
+    <li><a href="/acceptable">Acceptable Use Policy</a> — unlawful, deceptive, abusive and high-impact uses.</li>
+    <li><a href="/accessibility">Accessibility Statement</a> — current support, limitations and feedback.</li>
+    <li><a href="/refunds">Refund Policy</a> — the 14-day voluntary refund process and statutory rights.</li>
+  </ul>
+  <h4>Electronic acceptance</h4>
+  <p>Before activation or first use, Chapbook requires a positive clickwrap. The user agrees to the Terms and separately acknowledges the Privacy and AI notices. The document version and timestamp are stored on that device. A material legal update changes the version and asks again.</p>
+  <h4>Contact</h4>
+  <p>Chapbook is provided by <b>RQAI Ltd</b>, United Kingdom. Email <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a> for support, privacy rights, accessibility or legal notices.</p>
+</div>
+
+<div id="legal-privacy" hidden>
+  <p class="meta">Privacy Notice · Version 2026-08-08 · Effective 8 August 2026.</p>
+  <p><b>Core promise:</b> RQAI does not receive your local draft library by default, use it to train AI, sell it or monitor your writing. Content leaves your device only when you choose a connected feature.</p>
+
+  <h4>Controller and scope</h4>
+  <p><b>RQAI Ltd</b>, United Kingdom, is controller for personal information it actually receives through Chapbook sales, trials, support, website operations and RQAI-operated functions. Contact <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a> with “Chapbook privacy” in the subject. A provider you connect may be an independent controller under its own notice. If you use Chapbook for an organisation or process other people's information, you may be a controller and are responsible for your own lawful basis and notices.</p>
+
+  <h4>What stays on this device</h4>
+  <p>Drafts, writing-partner sessions, snapshots, saved ideas and profile data are stored in IndexedDB. Provider configuration, your GitHub token, AI keys, optional R2 credentials, licence and legal-acceptance record are stored in browser local storage (including <code>helm.studio.config.v1</code>) or equivalent app storage. RQAI cannot retrieve local-only data. On a shared or compromised device, browser storage can be exposed; use device access controls and least-privilege tokens.</p>
+
+  <h4>Optional data flows you control</h4>
+  <ul>
+    <li><b>GitHub:</b> publishing and repository operations go from your browser to your repository. The device-login relay forwards the GitHub handshake, applies abuse-rate limiting and stores no token or draft.</li>
+    <li><b>AI:</b> prompts, relevant draft/profile context, images or requested source material go directly to the active Anthropic, OpenAI, Google Gemini or Groq account using your key. Provider retention, training controls, locations and terms apply.</li>
+    <li><b>Private dictation:</b> recorded audio is transcribed by a self-hosted Whisper model on this device after the model download. Live dictation instead uses the browser/operating-system speech service, which may send audio to its vendor.</li>
+    <li><b>Cloudflare R2:</b> optional media goes to your bucket, directly or through a Worker you configure. RQAI does not operate your bucket.</li>
+    <li><b>Crossref and external media:</b> DOI lookups and assets you deliberately fetch reveal normal request metadata to the destination.</li>
   </ul>
 
-  <h4>What we do NOT collect</h4>
-  <p>We do not collect or receive your drafts, posts, media, GitHub token, AI keys, R2 keys or your author profile. We don't track your writing, we don't use tracking cookies or third-party analytics, and we never sell or share your information.</p>
+  <h4>Information RQAI receives, purpose and lawful basis</h4>
+  <ul>
+    <li><b>Purchase/licence details:</b> name, email, Stripe event/customer/payment references, product and licence status — to perform the contract, deliver and support a licence, meet accounting/legal obligations and prevent fraud.</li>
+    <li><b>Trial request:</b> typed email, product and request time in a private GitHub queue; a one-way canonical-email hash prevents repeat trials. The function temporarily uses an IP address for rate limiting — contract steps and legitimate interests in abuse prevention.</li>
+    <li><b>Operational request data:</b> Netlify and its infrastructure may process IP address, URL, time, browser and security metadata to deliver and secure the site — contract and legitimate interests in reliability/security.</li>
+    <li><b>Support:</b> email address, message and attachments you send — contract steps, legitimate interests in support/claims and legal obligation where applicable.</li>
+    <li><b>Anonymous totals:</b> per-day visit/install/activation counters in Netlify Blobs contain no IP, token, licence or user identifier — service measurement and legitimate interests.</li>
+    <li><b>Optional consent:</b> only where specifically requested for future non-essential storage or marketing. Consent can be withdrawn as easily as given.</li>
+  </ul>
+  <p>Accepting the Terms is contractual. Acknowledging this notice is not consent to all processing and does not activate AI or publishing.</p>
 
-  <h4>Deleting your data</h4>
-  <p>Everything Chapbook stores locally can be wiped at any time from <b>Settings → “Sign out / forget this device”</b> (or by clearing this browser's site data). Your published posts and uploaded media live in your own GitHub repository and R2 bucket and stay entirely under your control. To have your sales or trial email removed from our records, email <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a>.</p>
+  <h4>Recipients and international transfers</h4>
+  <p>RQAI's relevant supplier categories are Netlify (hosting/functions/blobs), GitHub (private fulfilment queue and optional user publishing), Stripe (payments), email/communications suppliers and professional advisers or authorities where legally required. Optional AI, GitHub and Cloudflare recipients are selected by you. Providers may process outside the UK/EEA; their adequacy mechanism, UK IDTA/Addendum or standard contractual clauses and transfer-risk controls should be reviewed before confidential/personal data is sent. We do not sell personal information or share it for behavioural advertising.</p>
 
-  <h4>Contact</h4>
-  <p>Questions about privacy? Email <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a>.</p>
+  <h4>Retention</h4>
+  <ul>
+    <li>Local data: until you delete it, clear site/app data or uninstall; remote copies follow the destination's retention.</li>
+    <li>Trial queue and fulfilment records: for the trial/anti-abuse period and then only as needed for support, fraud prevention or legal claims.</li>
+    <li>Purchase, licence and accounting records: for the applicable tax and limitation periods (commonly up to six years after the relationship ends in the UK).</li>
+    <li>Support correspondence: normally up to 24 months after closure, longer for an unresolved dispute or legal duty.</li>
+    <li>Hosting/security logs: for Netlify's configured operational/security period; incident extracts may be retained while an investigation or claim is active.</li>
+    <li>Anonymous daily counters: may be retained for longitudinal product measurement because they contain no user identifier.</li>
+  </ul>
+
+  <h4>Sensitive information and children</h4>
+  <p>Chapbook does not ask for special-category data. Avoid sending health, biometric, political, religious, sexual-orientation or other sensitive information to AI unless you have an Article 6 basis and, where applicable, an Article 9 condition. Do not record people covertly. Chapbook is not directed to children under 16; younger use requires parent/legal-guardian acceptance and supervision.</p>
+
+  <h4>Your rights</h4>
+  <p>Subject to legal conditions, UK/EU rights may include access, correction, erasure, restriction, portability, objection, withdrawal of consent and safeguards for significant solely automated decisions. Chapbook does not make such decisions about users. Most drafts are only on your device, so use Export or <b>Settings → Sign out &amp; forget this device</b>. For information RQAI holds, email support. We may verify identity and respond within the statutory period.</p>
+  <p><b>Right to object:</b> you may object to processing based on legitimate interests. You have an absolute right to object to direct marketing; Chapbook performs no behavioural advertising.</p>
+  <p>You may complain to the UK Information Commissioner's Office at <a href="https://ico.org.uk/make-a-complaint/" target="_blank" rel="noopener">ico.org.uk</a> or, where EU GDPR applies, your local supervisory authority.</p>
+
+  <h4>Security, deletion and changes</h4>
+  <p>Controls include HTTPS/HSTS, restrictive CSP, local-first storage, sandboxing/sanitisation, self-hosted local transcription, scoped provider calls, rate limits and signed licences. No system is perfectly secure. Revoke provider tokens if a device is lost. A material notice change receives a new version and renewed acknowledgement where appropriate.</p>
 </div>
 
 <div id="legal-terms" hidden>
-  <p class="meta">Terms of use. Last reviewed: 15 July 2026.</p>
+  <p class="meta">Terms of Use · Version 2026-08-08 · Effective 8 August 2026.</p>
+  <p><b>Plain-language summary:</b> Chapbook is a local-first writing/publishing tool. You own your work. Optional accounts have separate terms and costs. AI can be wrong and is not professional advice. Nothing below removes mandatory consumer rights.</p>
 
-  <h4>Who we are</h4>
-  <p>Chapbook is sold by <b>RQAI Ltd</b>, United Kingdom. Contact: <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a>.</p>
+  <h4>Who we are and agreement</h4>
+  <p>These Terms are between you and <b>RQAI Ltd</b>, United Kingdom (“RQAI”, “we”), for the Chapbook web, PWA and desktop applications. Contact <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a>. Selecting “Agree and continue” is electronic acceptance; the current version and timestamp are stored on your device. The Privacy Notice is information, not blanket consent.</p>
 
-  <h4>Your licence</h4>
-  <p>A Chapbook licence is a <b>yearly subscription</b> for one person. After purchase we email you a licence key; entering it unlocks Chapbook in your browser, on any of your own devices. The key is valid for your paid year and is non-transferable — please don't share or resell it. Your subscription renews automatically through Stripe each year, and each renewal issues you a fresh key by email. If you cancel, or a renewal payment fails, Chapbook keeps working until the end of the period you've paid for.</p>
+  <h4>Eligibility</h4>
+  <p>You must be at least 16 to use Chapbook independently. A user under 18 must have parent/legal-guardian permission. A guardian accepting for a younger user is responsible for supervision, especially public publishing and connected AI.</p>
 
-  <h4>Free trials</h4>
-  <p>Trial keys unlock Chapbook for 7 days, free, with no payment details taken. One trial per person.</p>
+  <h4>Licence, price and renewal</h4>
+  <p>Unless a checkout clearly says otherwise, a Chapbook purchase is a yearly, personal, non-transferable subscription covering the purchaser's own devices. Stripe shows the price, billing interval, taxes and renewal before purchase. The emailed signed key remains valid for the paid period. Do not share, resell or circumvent it. An automatic renewal issues a fresh key; a cancellation or failed payment stops future access after the paid period.</p>
+  <p>Trial keys last 7 days, require no card and are limited to one per person. Any promotional or free-access programme will state its dates and conditions. Third-party AI, GitHub, hosting, domain, Cloudflare or connectivity costs are not included.</p>
 
-  <h4>Your content and accounts</h4>
-  <p>You are responsible for your own GitHub, AI-provider and Cloudflare accounts and for everything you publish with them. You keep all rights to your content; Chapbook claims no ownership of it — and by design, never even receives it.</p>
+  <h4>Cancellation, digital supply and refunds</h4>
+  <p>Cancel renewal from the Stripe receipt/customer link or by emailing support. Our voluntary <a href="/refunds">Refund Policy</a> gives a full refund when requested within 14 days of purchase or an unintended renewal. Where law gives a cooling-off or conformity remedy, that right also applies. If you expressly request immediate digital supply during a statutory cancellation period, the checkout may ask for the legally required acknowledgement; it will not silently waive a right.</p>
 
-  <h4>Third-party services</h4>
-  <p>Chapbook works with GitHub, your chosen AI provider and (optionally) Cloudflare. Their terms govern your use of them, and their availability, pricing and behaviour are outside our control.</p>
+  <h4>Your content, accounts and publishing</h4>
+  <p>You retain rights in drafts, posts, recordings, images and prompts. RQAI receives no ownership and only the limited technical permission needed for an action you request. You are responsible for rights, confidentiality, accuracy, backups and the lawfulness of publication. GitHub repositories, domains, AI accounts and R2 buckets are controlled by you; deleting Chapbook does not delete remote copies.</p>
 
-  <h4>Cancelling</h4>
-  <p>Cancel your renewal any time from your Stripe receipt email, or by emailing <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a>. Cancelling stops future charges; your key keeps working until your paid year ends.</p>
+  <h4>AI and third-party services</h4>
+  <p>GitHub, Stripe, Cloudflare and your selected AI provider operate under their own terms, privacy rules, limits and prices. AI output is probabilistic and may be false, biased, incomplete, offensive, infringing or fabricated. It is assistance, not legal, medical, financial, employment or other professional advice. Verify claims, citations, code, permissions and provenance. Keep a human editor responsible for the final post and comply with synthetic-content disclosures described in the <a href="/ai">AI Transparency Notice</a>.</p>
 
   <h4>Acceptable use</h4>
-  <p>Don't use Chapbook for unlawful purposes, and don't attempt to share, resell, redistribute or circumvent the licence.</p>
+  <p>You must follow the <a href="/acceptable">Acceptable Use Policy</a>. Do not use Chapbook for unlawful exploitation, non-consensual intimate material, deceptive impersonation, fraud, harassment, rights infringement, malicious access or prohibited/high-impact automated decisions. We may restrict RQAI-operated access where reasonably necessary for security, abuse prevention, law or protection of others.</p>
 
-  <h4>Provided “as is”</h4>
-  <p>Chapbook is provided “as is”, without warranties of any kind. To the fullest extent permitted by law, we are not liable for loss arising from its use — including loss of drafts or content — and our total liability to you is limited to the amount you paid us in the 12 months before the claim arose. Please keep your own backups (see <b>Settings → Export drafts</b>).</p>
+  <h4>Software and supplied assets</h4>
+  <p>RQAI and its licensors own Chapbook's software, branding, interface and supplied assets, excluding your content and third-party/open-source components. We grant a personal, revocable, non-exclusive, non-transferable right to use the app under these Terms. Open-source components retain their licences. You may not sell access, remove notices, bypass controls or conduct abusive automated extraction, except where law expressly permits.</p>
 
-  <h4>Your statutory rights</h4>
-  <p>Nothing in these terms affects your statutory rights as a consumer.</p>
+  <h4>Availability, changes and termination</h4>
+  <p>We use reasonable care but cannot promise uninterrupted operation, every-device compatibility or permanent third-party APIs/models. Export and back up important drafts. We may change features. Material legal/privacy changes receive a new version and renewed acceptance where appropriate. You can stop and erase local data at any time. We may suspend RQAI-operated access for material breach, security risk or legal requirement, with notice where practical.</p>
 
-  <h4>Changes</h4>
-  <p>We may update these terms; material changes will be reflected here with a new “last reviewed” date.</p>
+  <h4>Consumer rights, warranties and liability</h4>
+  <p>Chapbook will be provided with reasonable care and skill. Nothing excludes liability that law does not allow us to exclude, including death/personal injury caused by negligence, fraud, data-protection duties and statutory consumer rights. If digital content is faulty, consumers may have repair, replacement, price-reduction or refund remedies.</p>
+  <p>Subject to those rights, RQAI is not responsible for loss caused by your publication, failure to back up, credentials/configuration, third-party outages, AI inaccuracies or use outside the documented purpose where the loss was not reasonably foreseeable. Chapbook is not an emergency, health-diagnosis, legal-decision, credit, recruitment or safety-critical system. For business users, to the maximum permitted by law, indirect/consequential loss, lost profit/opportunity and lost data are excluded, and aggregate liability is limited to fees paid for Chapbook in the 12 months before the event giving rise to the claim.</p>
 
-  <h4>Governing law</h4>
-  <p>These terms are governed by the law of England and Wales.</p>
-
-  <h4>Contact</h4>
-  <p>Questions? Email <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a>.</p>
+  <h4>Law, complaints and contact</h4>
+  <p>These Terms are governed by the law of England and Wales. Consumers retain mandatory local protections and access to courts available under the law where they live. Email <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a> first so we can try to resolve a complaint.</p>
 </div>
 
 <div id="legal-refunds" hidden>
-  <p class="meta">Refund policy. Last reviewed: 15 July 2026.</p>
+  <p class="meta">Refund Policy · Version 2026-08-08 · Effective 8 August 2026.</p>
 
   <p>We want you to be happy with Chapbook. If it isn't right for you, email <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a> within <b>14 days</b> of your purchase for a full refund — no questions asked. The same applies to a renewal charge: if you didn't mean to renew, email us within 14 days of the charge.</p>
 
@@ -5349,6 +5652,91 @@
 
   <h4>How to request one</h4>
   <p>Email <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a> from, or quoting, the email address you purchased with.</p>
+
+  <h4>Statutory rights</h4>
+  <p>This voluntary policy is in addition to rights you may have where digital content or a service is faulty, misdescribed or not supplied with reasonable care and skill. It does not shorten or waive mandatory cancellation or consumer remedies.</p>
+</div>
+
+<div id="legal-ai" hidden>
+  <p class="meta">AI Transparency &amp; Responsible Use Notice · Version 2026-08-08 · Effective 8 August 2026.</p>
+  <p><b>You are interacting with AI whenever Chapbook shows an AI/✦ label.</b> Partner replies, draft assistance, editorial passes, generated images, figures, stickers, vector clean-up, PDF/vision import and similar results may be synthetic or inaccurate. Chapbook keeps a human in control of insertion, editing and publication.</p>
+
+  <h4>How it works</h4>
+  <p>RQAI does not train a general-purpose model on your drafts. You connect Anthropic, OpenAI, Google Gemini or Groq with your own key and choose the active model. A request may include the prompt, conversation history, relevant draft/profile text, an image or source material needed for the selected feature. Requests go directly to the provider. Free image generation, where configured, uses a Cloudflare Worker/Workers AI binding. Private Whisper dictation is local and is not generative AI; browser Live dictation may use a browser-vendor speech service.</p>
+
+  <h4>Roles under the EU AI Act</h4>
+  <p>The model company is generally the general-purpose AI/model provider. RQAI provides the Chapbook AI interface/system under the Chapbook name. A person or organisation applying output in a professional activity may also be a deployer. This is a current product assessment, not a regulatory certification or a determination for every use case.</p>
+
+  <h4>Article 50 transparency controls</h4>
+  <ul>
+    <li><b>Direct interaction:</b> the Partner and AI entry points identify AI from the beginning; replies are labelled and never impersonate a human contributor.</li>
+    <li><b>Human review:</b> output is a suggestion. The user decides whether to insert, modify, discard or publish it.</li>
+    <li><b>Synthetic content:</b> generation surfaces disclose their AI nature. Users must preserve/add disclosures required by law or platform rules.</li>
+    <li><b>Machine-readable marking:</b> provider capabilities and legal exceptions vary. Chapbook does not promise that every model embeds a durable provenance mark in every text/image export. Applicability and provider/export support must be assessed by model and format.</li>
+    <li><b>Accessibility:</b> notices use visible words and are not communicated only by colour.</li>
+  </ul>
+  <p>EU AI Act Article 50 transparency duties apply from 2 August 2026. The limited 2 December 2026 grace period concerns certain pre-existing systems' machine-readable marking, not the obligation to tell people when they are interacting with AI.</p>
+
+  <h4>Public-interest text, deepfakes and disclosure</h4>
+  <p>If AI-generated/manipulated text is published to inform the public on a matter of public interest, EU law may require clear disclosure unless it received human review/editorial control and a person or organisation holds editorial responsibility. Realistic generated/manipulated image, audio or video may require disclosure as synthetic/deepfake content. Artistic, fictional or satirical context can change how disclosure is displayed but does not automatically excuse deception. The publisher is responsible for the final label.</p>
+
+  <h4>Limitations and human oversight</h4>
+  <ul>
+    <li>Models can invent facts, quotations, sources, citations, code or events and can reproduce bias.</li>
+    <li>Safety filters can fail or over-block; model availability and terms can change.</li>
+    <li>Generated interactives/code can contain bugs. Chapbook sanitises and sandboxes previews, but exported work must be tested.</li>
+    <li>AI cannot determine copyright ownership, consent, confidentiality, defamation or legal compliance for you.</li>
+    <li>Do not use Chapbook as the sole/decisive basis for employment, education, credit, insurance, benefits, policing, migration, justice, healthcare, emergency or other legal/similarly significant decisions.</li>
+  </ul>
+
+  <h4>Privacy, AI literacy and reporting</h4>
+  <p>Minimise personal data, remove identifiers where practical, review the provider's API retention/training and transfer terms, and complete a DPIA where processing is likely to create high risk. Organisations should train users on privacy, security, bias, model limitations, provenance and fact-checking. Report harmful or incorrectly labelled behaviour to <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a> without including keys or unnecessary confidential content.</p>
+</div>
+
+<div id="legal-storage" hidden>
+  <p class="meta">Device Storage &amp; Cookies Notice · Version 2026-08-08 · Effective 8 August 2026.</p>
+  <p><b>No advertising trackers:</b> Chapbook does not use behavioural advertising, third-party analytics pixels or social tracking cookies. It uses first-party device storage to provide the local/offline application you request.</p>
+  <h4>What is stored</h4>
+  <ul>
+    <li><b>IndexedDB:</b> drafts, Partner sessions, snapshots, ideas and profile records — until deleted, forgotten or browser data is cleared.</li>
+    <li><b>Local storage:</b> licence, GitHub/AI/R2 settings and credentials, theme, onboarding, dictation choice and versioned legal acceptance — until disconnected/cleared.</li>
+    <li><b>Cache Storage/service worker:</b> application shell, scripts, fonts, icons and the local Whisper model for installation/offline use — replaced by updates or cleared by the browser/user.</li>
+    <li><b>Memory/session data:</b> temporary streams, recordings and unsaved UI state — released after the task/page closes unless saved.</li>
+  </ul>
+  <h4>Why no cookie banner appears</h4>
+  <p>These stores are required to provide the requested local/offline app, remember user-requested choices, authenticate an optional connection or secure a session. They are not used for cross-site tracking. Where storage law treats them as strictly necessary, a separate opt-in is not required, but this notice remains available. Any future non-essential analytics/advertising storage must stay off until valid consent is obtained.</p>
+  <h4>Control and deletion</h4>
+  <p>Export before clearing data. Use <b>Settings → Sign out &amp; forget this device</b>, clear browser site data or uninstall. Revoke credentials at GitHub, the AI provider or Cloudflare after a lost/shared device. Clearing Chapbook does not delete published repositories/R2 media or necessarily revoke a remote token.</p>
+</div>
+
+<div id="legal-acceptable" hidden>
+  <p class="meta">Acceptable Use Policy · Version 2026-08-08 · Effective 8 August 2026.</p>
+  <p>Use Chapbook creatively, lawfully and with respect for other people. This policy covers the app, RQAI-operated functions and content processed or published through connected services.</p>
+  <h4>You must not</h4>
+  <ul>
+    <li>break law, court orders, sanctions or another person's privacy, confidence, intellectual-property or publicity rights;</li>
+    <li>create, solicit, possess or distribute child sexual abuse material, exploitation/grooming content or non-consensual intimate imagery;</li>
+    <li>use deceptive impersonation, phishing, fraud, malware, credential theft, covert surveillance or synthetic media to mislead or harm;</li>
+    <li>harass, threaten, incite violence/discrimination or expose sensitive personal data without authority;</li>
+    <li>bypass licences/access controls, probe systems without permission, send abusive automated traffic or distribute malicious code;</li>
+    <li>use AI for prohibited/high-impact automated decisions or present unverified output as professional advice or established fact;</li>
+    <li>conceal legally required AI/synthetic-content disclosures, fabricate evidence/citations/provenance, or send spam/unlawful marketing.</li>
+  </ul>
+  <h4>Safety and enforcement</h4>
+  <p>Most content remains local and RQAI does not proactively inspect drafts. We may proportionately restrict RQAI-operated services, preserve evidence where legally required or report imminent harm/unlawful material after a credible report. Challenge an action by emailing support.</p>
+  <h4>Before publishing</h4>
+  <p>Verify facts, sources, quotations and permissions; remove confidential/unnecessary personal data; add AI disclosures; check alt text/captions/contrast; and keep a human editor responsible for the final post.</p>
+</div>
+
+<div id="legal-accessibility" hidden>
+  <p class="meta">Accessibility Statement · Prepared 8 August 2026.</p>
+  <p>RQAI wants Chapbook to work with different devices, input methods and assistive technologies. We aim towards WCAG 2.2 AA principles, but this launch statement is not a claim that every screen, creative tool or user-generated post already conforms.</p>
+  <h4>Current support</h4>
+  <ul><li>Semantic labels/native controls and visible keyboard focus across core journeys;</li><li>keyboard-operable navigation and mobile-sized touch targets;</li><li>light/dark themes and reduced-motion support in key surfaces;</li><li>alt-text editing and a pre-publication accessibility check;</li><li>visible AI disclosures that do not rely only on colour.</li></ul>
+  <h4>Known limitations</h4>
+  <ul><li>Drawing, flipbook timelines, diagram/figure builders, drag/reorder and photo editing may not have an equivalent experience for every keyboard/screen-reader user.</li><li>User-created themes, interactives and media can fail contrast, caption, motion or alt-text requirements.</li><li>Third-party sign-in, speech and provider pages vary in accessibility.</li><li>High zoom/small screens can require additional scrolling in dense creative controls.</li></ul>
+  <h4>Feedback and alternatives</h4>
+  <p>Email <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a> with “Chapbook accessibility”, the affected screen, device/browser, assistive technology and adjustment/format needed. Do not include credentials. We will acknowledge the report, seek a reasonable alternative and prioritise verified barriers.</p>
 </div>
 
 <!-- ===== PRIMARY NAV — 5 sections + Home =====================================
@@ -5653,11 +6041,51 @@ function showStorageWarning(kind){
 }
 async function maybeWarnStorage(){
   try{ const p = window.__studioStorage && await window.__studioStorage.probe(); if(!p) return;
-    if(!p.ok) showStorageWarning('blocked');
-    else if(p.persistent===false) showStorageWarning('nonpersistent');
+    if(!p.ok){ showStorageWarning('blocked'); return; }
+    if(p.persistent===false){ showStorageWarning('nonpersistent'); return; }
+    // Storage is healthy — so the remaining risk isn't "can't save", it's "only saved HERE".
+    await maybeNudgeBackup();
   }catch{ showStorageWarning('blocked'); }
 }
-$('storageWarnClose') && $('storageWarnClose').addEventListener('click',()=>{ const el=$('storageWarn'); if(el) el.hidden=true; });
+
+/* ── Back-your-drafts-up reminder ─────────────────────────────────────────────
+   Settings already says drafts live only in this browser and offers Export — but only
+   to someone who goes looking. The buyer who most needs to hear it is the one who never
+   opens Settings, so say it unprompted once there is real work at stake. The decision
+   (how much, how stale, how recently dismissed) is pure and unit-tested in
+   lib/backupNudge.js; this half only counts records and paints the existing banner.
+   Both keys sit under the `chapbook.` prefix so "Forget this device" already wipes them
+   (lib/appReset.js CHAPBOOK_LS_PREFIXES). */
+const BACKUP_LAST_EXPORT_KEY='chapbook.backup.lastExportAt';
+const BACKUP_SNOOZE_KEY='chapbook.backup.snoozedAt';
+let _backupNudgeShown=false;
+async function maybeNudgeBackup(){
+  const S=window.__studioStorage, N=window.__studioBackupNudge, D=window.__studioDrafts;
+  if(!S||!N||!D) return;
+  let itemCount=0;
+  try{ for(const s of D.DRAFT_STORES) itemCount += (await S.all(s)||[]).length; }catch{ return; }
+  let lastExportAt=null, snoozedAt=null;
+  try{ lastExportAt=localStorage.getItem(BACKUP_LAST_EXPORT_KEY); snoozedAt=localStorage.getItem(BACKUP_SNOOZE_KEY); }catch{}
+  const r=N.shouldNudgeBackup({ itemCount, lastExportAt, snoozedAt });
+  if(!r.show) return;
+  const el=$('storageWarn'), txt=$('storageWarnTxt'); if(!el||!txt) return;
+  txt.innerHTML='<strong>Back up your drafts.</strong> '+esc(r.message)+' ';
+  const b=document.createElement('button');
+  b.type='button'; b.className='sw-act'; b.textContent='Export drafts now';
+  b.addEventListener('click',()=>{ el.hidden=true; try{ go('settings'); }catch{} try{ exportDrafts(); }catch{} });
+  txt.appendChild(b);
+  _backupNudgeShown=true;
+  el.hidden=false;
+}
+// Exposed like exportDrafts/openLegal above: boot() only reaches maybeWarnStorage after
+// activation + setup, so this is the handle the browser E2E drives to exercise the banner.
+window.maybeNudgeBackup=maybeNudgeBackup;
+// Dismissing the BACKUP reminder snoozes it (a week, per lib/backupNudge.js); dismissing
+// the storage-health warning stays a plain hide, because that condition is not time-based.
+$('storageWarnClose') && $('storageWarnClose').addEventListener('click',()=>{
+  const el=$('storageWarn'); if(el) el.hidden=true;
+  if(_backupNudgeShown){ _backupNudgeShown=false; try{ localStorage.setItem(BACKUP_SNOOZE_KEY,new Date().toISOString()); }catch{} }
+});
 
 /* H5 — background GitHub-token validation. Calls whoami (GET /user) with the stored token;
    ONLY a definitive dead-token failure (expired / revoked / bad credentials) interrupts to
@@ -5784,15 +6212,25 @@ window.goSection=goSection;
 
 // Secondary nav: render the pill bar for the section that owns `view`.
 function renderSubnav(view){
-  const sub=$('subnav'); if(!sub) return;
+  const bar=$('topbar'), sub=$('subnav');
+  if(!bar || !sub) return;
   const sectionId=VIEW_SECTION[view];
   const def=sectionId && SECTIONS[sectionId];
-  // hide for unknown views, single-view sections, and the full-screen editor.
-  if(!def || def.views.length<2 || view==='editor'){ sub.hidden=true; sub.innerHTML=''; return; }
-  sub.hidden=false;
-  sub.innerHTML = def.views.map(o=>
+  // The full-screen editor owns the whole viewport, so it gets no app chrome above it.
+  // An unknown view has no section to name, so there is nothing to put in the bar.
+  if(!def || view==='editor'){ bar.hidden=true; sub.innerHTML=''; return; }
+  // Otherwise the bar ALWAYS shows — a single-view section still gets its name, which is
+  // what keeps the top of every tab identical instead of collapsing to nothing on Home.
+  bar.hidden=false;
+  // No section caption here any more: it duplicated the view's own heading word for word
+  // ("HOME" in the bar, "Home" below it). The bar carries the app identity — name, theme,
+  // Install — and the page carries its own title.
+  // Left in flow even with no pills — .subnav reserves the row's height so the bar does not
+  // change height between sections. Hiding it is what made Home/Posts 76px and the rest 93px.
+  const multi = def.views.length>1;
+  sub.innerHTML = multi ? def.views.map(o=>
     `<button type="button" class="${o.v===view?'on':''}" data-subv="${o.v}">${o.label}</button>`
-  ).join('');
+  ).join('') : '';
 }
 // delegated click — switch sub-view within the active section.
 $('subnav').addEventListener('click',e=>{
@@ -5834,9 +6272,6 @@ function go(v){
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on', b.dataset.section===sectionId));
   if(isEditor) syncEditorBack();
   renderSubnav(v);
-  // drop the always-on "draft → approve → share" banner away from Home — it's only
-  // a meaningful welcome on the dashboard; elsewhere the section header carries context.
-  const sub=$('appHeaderSub'); if(sub) sub.style.display = (v==='getting-started') ? '' : 'none';
   window.scrollTo(0,0);
 }
 window.go=go;
@@ -6044,7 +6479,7 @@ const _share = { images: [], fresh: [] };   // images:[{url,label,sel,fresh?}]
 function _renderShareImages(){
   const host=$('shareImgGrid'); if(!host) return;
   const all=_share.images;
-  if(!all.length){ host.innerHTML='<p class="sub" style="margin:.2rem 0">No images on this post yet — add one to include it.</p>'; return; }
+  if(!all.length){ host.innerHTML='<p class="sub share-img-note">No images on this post yet — add one to include it.</p>'; return; }
   host.innerHTML=all.map((im,i)=>
     `<button type="button" class="share-img${im.sel?' on':''}" data-i="${i}" title="${im.sel?'Tap to exclude':'Tap to include'}">`
     +`<img src="${esc(im.url)}" alt="" loading="lazy" onerror="this.closest('.share-img').classList.add('bad')">`
@@ -6594,7 +7029,7 @@ window.loadInbox=loadInbox;
 function renderInbox(){
   const host=$('ideaList'), cnt=$('inboxCount');
   if(cnt) cnt.textContent=_ideas.length?`${_ideas.length} idea${_ideas.length===1?'':'s'} in the backlog`:'';
-  if(!_ideas.length){ host.innerHTML='<p class="sub">Nothing captured yet. Jot the first idea above.</p>'; return; }
+  if(!_ideas.length){ host.innerHTML='<div class="empty-state"><b>Nothing captured yet</b>Jot the first idea above and it will wait here until you are ready to write it.</div>'; return; }
   host.innerHTML='';
   for(const it of _ideas) host.appendChild(makeIdeaRow(it));
 }
@@ -6679,7 +7114,7 @@ $('goblinScrim').addEventListener('click',closeGoblin);
 /* B6 — legal/support modal. openLegal(kind) clones #legal-<kind> into the sheet. */
 function openLegal(kind){
   const src=$('legal-'+kind); if(!src) return;
-  const titles={privacy:'Privacy',terms:'Terms of use',refunds:'Refund policy'};
+  const titles={legal:'Legal centre',privacy:'Privacy notice',terms:'Terms of use',refunds:'Refund policy',ai:'AI transparency',storage:'Device storage & cookies',acceptable:'Acceptable use',accessibility:'Accessibility statement'};
   $('legalTitle').textContent = titles[kind] || 'Chapbook';
   $('legalBody').innerHTML = src.innerHTML;
   $('legalBody').scrollTop = 0;
@@ -6712,6 +7147,9 @@ async function exportDrafts(){
     a.download='chapbook-drafts-'+new Date().toISOString().slice(0,10)+'.json';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>{ try{ URL.revokeObjectURL(a.href); }catch{} },30000);
+    // Remember that the work IS backed up now, so the boot reminder goes quiet (and any
+    // outstanding snooze is irrelevant). Only counts if something was actually written.
+    if(env.count) try{ localStorage.setItem(BACKUP_LAST_EXPORT_KEY, new Date().toISOString()); localStorage.removeItem(BACKUP_SNOOZE_KEY); }catch{}
     msg('draftsMsg', env.count ? ('Exported '+env.count+' item'+(env.count===1?'':'s')+' to a JSON file.') : 'Nothing to export yet — no local drafts.','ok');
   }catch(e){ msg('draftsMsg','Export failed: '+((e&&e.message)||'unknown error'),'err'); }
 }
@@ -6866,7 +7304,7 @@ async function loadQueue(){
 window.loadQueue=loadQueue;
 function renderQueue(){
   const host=$('queueList'); host.innerHTML='';
-  if(!_queue.length){ host.innerHTML='<p class="sub">Nothing in your Planner yet. Use "Save to Planner" from a social pack, a thread/carousel, or the Review screen.</p>'; return; }
+  if(!_queue.length){ host.innerHTML='<div class="empty-state"><b>Nothing in your Planner yet</b>Use \'Save to Planner\' from a social pack, a thread or carousel, or the Review screen.</div>'; return; }
   const today=_todayISO();
   const GROUPS=[['queued','Planned'],['idea','Ideas'],['shared','Shared']];
   // within a group: items WITH a date first (soonest first), then undated by recency
@@ -7020,8 +7458,8 @@ function renderPosts(){
   const vis=new Set(_postSelect.visible);
   for(const s of [..._postSelect.sel]) if(!vis.has(s)) _postSelect.sel.delete(s);
   if(cnt) cnt.textContent=_posts.length?`${rows.length} of ${_posts.length} post${_posts.length===1?'':'s'}`:'';
-  if(!_posts.length){ list.innerHTML='<p class="sub">No posts yet.</p>'; updateBulkUI(); return; }
-  if(!rows.length){ list.innerHTML='<p class="sub">No posts match.</p>'; updateBulkUI(); return; }
+  if(!_posts.length){ list.innerHTML='<div class="empty-state"><b>No posts yet</b>Everything you publish will appear here. Start one from Write.</div>'; updateBulkUI(); return; }
+  if(!rows.length){ list.innerHTML='<div class="empty-state"><b>No posts match</b>Try a different search, or clear the filters above.</div>'; updateBulkUI(); return; }
   list.innerHTML='';
   if(_postFilter.group==='topic'){
     // group each post under its primary topic (the first tag); posts with
@@ -7419,7 +7857,7 @@ function renderPostCalendar(){
   // ── mobile agenda (this month's days that have posts) ──
   const agenda = CAL.agendaForMonth(byDay, _cal.ym.year, _cal.ym.month);
   let ag = '<div class="cal-agenda">';
-  if(!agenda.length){ ag += '<p class="cal-empty-note">No posts this month.</p>'; }
+  if(!agenda.length){ ag += '<div class="empty-state"><b>No posts this month</b>Nothing scheduled or published in this month. Use \u2039 and \u203a to look at another one.</div>'; }
   for(const d of agenda){
     const isToday = d.iso===todayISO;
     const isSel = d.iso===sel;
@@ -8368,13 +8806,13 @@ function renderTopicsEditor() {
   if (!wrap) return;
   wrap.innerHTML = '';
   if (!_topics.length) {
-    const p = document.createElement('p'); p.className = 'sub';
-    p.textContent = 'No topics found in this repo (src/data/topics.json).';
+    const p = document.createElement('div'); p.className = 'empty-state';
+    p.innerHTML = '<b>No topics yet</b>Topics come from <code>src/data/topics.json</code> in your repo. Add one there and it will show up here to rename and recolour.';
     wrap.appendChild(p); return;
   }
   _topics.forEach((t) => {
     const card = document.createElement('div');
-    card.style.cssText = 'border:1px solid var(--line,#1b2540);border-radius:12px;padding:.9rem;margin-bottom:.8rem';
+    card.style.cssText = 'border:var(--bw,1px) solid var(--line);border-radius:12px;padding:.9rem;margin-bottom:.8rem;background:var(--surface)';
     const head = document.createElement('div');
     head.style.cssText = 'display:flex;align-items:center;gap:.6rem;margin-bottom:.7rem';
     const colour = document.createElement('input');
@@ -9584,6 +10022,22 @@ function chatIsPlainParagraph(text){
   if(!t || /\n/.test(t)) return false;
   return !/^(#{1,6} |> |[-*] |\d+\. |```)/.test(t);
 }
+function chatMoveTargetIndex(blocks, id, delta){
+  if(!Array.isArray(blocks) || !id) return -1;
+  const from = blocks.findIndex(block => block && block.id === id);
+  const step = Number(delta) < 0 ? -1 : Number(delta) > 0 ? 1 : 0;
+  const to = from + step;
+  return from >= 0 && step && to >= 0 && to < blocks.length ? to : -1;
+}
+function moveChatBlock(blocks, id, delta){
+  const source = Array.isArray(blocks) ? blocks : [];
+  const from = source.findIndex(block => block && block.id === id);
+  const to = chatMoveTargetIndex(source, id, delta);
+  if(to < 0) return { blocks:source, moved:false, index:from };
+  const next = source.slice();
+  [next[from], next[to]] = [next[to], next[from]];
+  return { blocks:next, moved:true, index:to };
+}
 function chatHtmlToText(html){
   let s = String(html == null ? '' : html);
   s = s.replace(/<br\s*\/?>(?=.)/gi, '\n').replace(/<br\s*\/?>/gi, '');
@@ -9784,14 +10238,15 @@ function chatDecorate(){
   card.classList.add('chat-bound');
   const row = document.createElement('div');
   row.className = 'chat-acts';
-  const mk = (icon, title, fn) => {
+  const mk = (icon, title, fn, disabled) => {
     const b = document.createElement('button');
     b.type = 'button'; b.innerHTML = tico(icon); b.title = title; b.setAttribute('aria-label', title);
+    b.disabled = !!disabled;
     b.addEventListener('click', e => { e.stopPropagation(); fn(); });
     row.appendChild(b);
   };
-  mk('arrow-up', 'Move up', () => chatMoveBound(-1));
-  mk('arrow-down', 'Move down', () => chatMoveBound(1));
+  mk('arrow-up', 'Move up', () => chatMoveBound(-1), chatMoveTargetIndex(doc.blocks, _chatBound, -1) < 0);
+  mk('arrow-down', 'Move down', () => chatMoveBound(1), chatMoveTargetIndex(doc.blocks, _chatBound, 1) < 0);
   mk('trash', 'Delete block', chatDeleteBound);
   if(_threadMode){
     // thread mode: the bubble's Partner affordances (spec 4.2) - each is a deliberate tap
@@ -9803,11 +10258,10 @@ function chatDecorate(){
   card.appendChild(row);
 }
 function chatMoveBound(d){
-  const i = doc.blocks.findIndex(x => x.id === _chatBound);
-  const j = i + d;
-  if(i < 0 || j < 0 || j >= doc.blocks.length) return;
+  const moved = moveChatBlock(doc.blocks, _chatBound, d);
+  if(!moved.moved) return;
   pushHistory();   // a reorder is a structural change — put it on the ⌘Z stack (moveBlock/deleteBlock do)
-  [doc.blocks[i], doc.blocks[j]] = [doc.blocks[j], doc.blocks[i]];
+  doc.blocks = moved.blocks;
   markDirty(); chatPaint();
 }
 async function chatDeleteBound(){
@@ -14982,6 +15436,18 @@ $('tplLibSearch').addEventListener('input', () => {
 });
 
 /* STEP 1 — family browser, grouped by category (★ Recent row first when browsing) */
+/* Category grouping for the picker. `category` is hand-typed in each family module
+   (src/lib/playgrounds/*.js) and HAS drifted in case: 'Game' and 'game' both existed, and
+   since headings sort as plain strings, ASCII uppercase put 'Game' near the top of the
+   sheet and 'game' far below it — one category shown as two, with nothing to say they
+   were the same. Grouping on a normalised key makes that unreachable from a single stray
+   file; playgrounds/categories.test.mjs keeps the source data itself clean. The label is
+   derived here so the modules can stay lowercase without the sheet looking untitled. */
+const TPLLIB_CAT_LABELS = { ui:'UI' };   // acronym — naive capitalisation reads "Ui"
+const tplLibCatKey = (c) => String(c == null ? '' : c).trim().toLowerCase() || 'other';
+const tplLibCatLabel = (k) => k.startsWith('★') ? k
+  : (TPLLIB_CAT_LABELS[k] || k.charAt(0).toUpperCase() + k.slice(1));
+
 function renderTplLibFamilies(list, opts = {}){
   const host = $('tplLibFamilies');
   host.innerHTML = '';
@@ -14992,11 +15458,11 @@ function renderTplLibFamilies(list, opts = {}){
     const rec = tplLibRecents().map(id => list.find(f => f.id === id)).filter(Boolean);
     if(rec.length) byCat['★ Recently used'] = rec;
   }
-  for(const f of list){ const c = f.category || 'other'; (byCat[c] = byCat[c] || []).push(f); }
+  for(const f of list){ const c = tplLibCatKey(f.category); (byCat[c] = byCat[c] || []).push(f); }
   Object.keys(byCat).sort((a, b) => a.startsWith('★') ? -1 : b.startsWith('★') ? 1 : (a < b ? -1 : a > b ? 1 : 0)).forEach(cat => {
     const h = document.createElement('div');
     h.className = 'tpllib-cat';
-    h.textContent = cat;
+    h.textContent = tplLibCatLabel(cat);
     host.appendChild(h);
     const grid = document.createElement('div');
     grid.className = 'tpllib-grid';
@@ -18338,6 +18804,12 @@ function syncFigFrameUi(){
   if(eraseBtn){ const on = _figDraw.tool === 'erase'; eraseBtn.classList.toggle('on', on); eraseBtn.setAttribute('aria-pressed', on ? 'true' : 'false'); }
   const sws = $('figDrawSwatches');
   if(sws) sws.querySelectorAll('.fig-sw').forEach(s => s.classList.toggle('on', s.dataset.c === _figDraw.colour));
+  const customColour = $('figCustomColour');
+  if(customColour){
+    customColour.value = _figDraw.colour;
+    const presetSelected = !!sws && Array.from(sws.querySelectorAll('.fig-sw')).some(s => s.dataset.c === _figDraw.colour);
+    customColour.closest('.fig-custom-colour')?.classList.toggle('on', !presetSelected);
+  }
   const onion = $('figOnion'); if(onion) onion.checked = _figDraw.onion;
   // continuity toggles — only meaningful with a flipbook (≥2 included frames)
   const opts = $('figFlipOpts'); if(opts) opts.style.display = inclN < 2 ? 'none' : '';
@@ -19175,6 +19647,11 @@ function figDrawNote(msg){ const n = $('figDrawNote'); if(n) n.textContent = msg
   if(sws) sws.addEventListener('click', e => {
     const b = e.target.closest('.fig-sw'); if(!b) return;
     _figDraw.colour = b.dataset.c || FIG_DRAW_INK;
+    syncFigFrameUi();
+  });
+  const customColour = $('figCustomColour');
+  if(customColour) customColour.addEventListener('input', () => {
+    _figDraw.colour = customColour.value || FIG_DRAW_INK;
     syncFigFrameUi();
   });
   const fillB = $('figFillMode'); if(fillB) fillB.addEventListener('click', () => { _figDraw.fillMode = !_figDraw.fillMode; syncFigFrameUi(); });
@@ -20560,7 +21037,9 @@ document.addEventListener('focusout', () => {
 /* ── glyph icon picker ─────────────────────────────────────────────────────── */
 const GLYPH_SPRITE = '/icons-sprite.svg';
 let _glyphManifest = null, _glyphFiltered = [], _glyphShown = 0, _glyphMode = '2d';
+let _emojiManifest = null;
 const GLYPH_PAGE = 120;
+const isColourMode = () => _glyphMode === 'colour';
 
 // A glyph name is always an icon id (word chars + hyphens). Validate before interpolating
 // into the <use href> so a crafted meta.glyph can't break out of the attribute / inject. (L5)
@@ -20569,10 +21048,20 @@ function glyphUse(name){
   return `<svg viewBox="0 0 24 24" aria-hidden="true"><use href="${GLYPH_SPRITE}#ti-${esc(name)}"></use></svg>`;
 }
 
+// Multicolour glyph. Cannot go through the sprite: these carry their OWN fills, so they
+// are separate files (staged by scripts/stage-emoji.mjs) referenced as an <img>. Same
+// name validation as glyphUse for the same reason — this interpolates into an attribute.
+// .gp-colour is what tells the CSS not to force the accent colour + glow onto it.
+function glyphImg(name){
+  if(!/^[\w-]+$/.test(String(name||''))) return '';
+  return `<img class="gp-colour" src="/emoji/${esc(name)}.svg" alt="" aria-hidden="true" loading="lazy">`;
+}
+
 function syncGlyphUI(){
   const g = meta.glyph || '';
   let html;
   if(g.startsWith('icon3d:')) html = glyphUse(g.slice(7)) + '<span class="gp-3d">3D</span>';
+  else if(g.startsWith('emoji:')) html = glyphImg(g.slice(6));
   else if(g.startsWith('icon:')) html = glyphUse(g.slice(5));
   else if(g && g !== 'none') html = `<span class="gp-none">${esc(g)}</span>`;   // a built-in 3D glyph name (L5)
   else html = `<span class="gp-none">default</span>`;
@@ -20587,32 +21076,45 @@ function openGlyphPicker(){
 }
 function closeGlyphPicker(){ $('glyphScrim').classList.remove('open'); $('glyphSheet').classList.remove('open'); }
 
+// Two catalogues behind one picker: the Tabler line icons (2D/3D modes) and the
+// multicolour set (colour mode). Each is fetched once, on first use of its mode, so
+// opening the picker never pays for the set you are not looking at.
 async function loadGlyphManifest(){
-  if(_glyphManifest) { applyGlyphSearch(); return; }
+  const colour = isColourMode();
+  if(colour ? _emojiManifest : _glyphManifest) { applyGlyphSearch(); return; }
   $('glyphCount').textContent = 'Loading…';
-  try{ _glyphManifest = await (await fetch('/icons-manifest.json')).json(); }
-  catch(e){ $('glyphCount').textContent = 'Could not load icons.'; return; }
+  try{
+    const data = await (await fetch(colour ? '/emoji-manifest.json' : '/icons-manifest.json')).json();
+    if(colour) _emojiManifest = data; else _glyphManifest = data;
+  }
+  catch(e){ $('glyphCount').textContent = colour ? 'Could not load colour icons.' : 'Could not load icons.'; return; }
   applyGlyphSearch();
 }
 function renderGlyphGrid(reset){
   const grid = $('glyphGrid');
   if(reset){ grid.innerHTML=''; _glyphShown=0; }
   const next = _glyphFiltered.slice(_glyphShown, _glyphShown+GLYPH_PAGE);
+  const art = isColourMode() ? glyphImg : glyphUse;
   grid.insertAdjacentHTML('beforeend', next.map(it =>
-    `<button class="gp-tile" type="button" data-n="${it.n}" title="${it.n}">${glyphUse(it.n)}<span class="nm">${it.n}</span></button>`).join(''));
+    `<button class="gp-tile" type="button" data-n="${it.n}" title="${esc(it.t||it.n)}">${art(it.n)}<span class="nm">${it.n.replace(/_/g,' ')}</span></button>`).join(''));
   _glyphShown += next.length;
-  $('glyphCount').textContent = `${_glyphFiltered.length.toLocaleString()} icon${_glyphFiltered.length===1?'':'s'}${_glyphShown<_glyphFiltered.length?` · showing ${_glyphShown}`:''}`;
+  // The colour set is Twemoji, which is CC-BY 4.0 — attribution has to travel with the
+  // artwork, so it sits here in the picker rather than only in a repo file nobody sees.
+  $('glyphCount').textContent = `${_glyphFiltered.length.toLocaleString()} icon${_glyphFiltered.length===1?'':'s'}${_glyphShown<_glyphFiltered.length?` · showing ${_glyphShown}`:''}${isColourMode()?' · colour art by Twemoji (CC-BY 4.0)':''}`;
   $('glyphMoreBtn').hidden = _glyphShown >= _glyphFiltered.length;
 }
 function applyGlyphSearch(){
   const q = ($('glyphSearch').value || '').trim().toLowerCase();
-  _glyphFiltered = (_glyphManifest || []).filter(it => !q || it.n.includes(q) || it.t.includes(q) || (it.c||'').toLowerCase().includes(q));
+  const src = (isColourMode() ? _emojiManifest : _glyphManifest) || [];
+  _glyphFiltered = src.filter(it => !q || it.n.includes(q) || (it.t||'').toLowerCase().includes(q) || (it.c||'').toLowerCase().includes(q));
   renderGlyphGrid(true);
 }
+const GLYPH_PREFIX = { '3d': 'icon3d:', colour: 'emoji:', '2d': 'icon:' };
+const GLYPH_MODE_LABEL = { '3d': '3D wireframe', colour: 'colour', '2d': '2D' };
 function pickGlyph(name){
-  meta.glyph = (_glyphMode === '3d' ? 'icon3d:' : 'icon:') + name;
+  meta.glyph = (GLYPH_PREFIX[_glyphMode] || 'icon:') + name;
   syncGlyphUI(); if(typeof markDirty==='function') markDirty();
-  closeGlyphPicker(); toast(`Glyph set ✓ (${_glyphMode === '3d' ? '3D wireframe' : '2D'})`);
+  closeGlyphPicker(); toast(`Glyph set ✓ (${GLYPH_MODE_LABEL[_glyphMode] || '2D'})`);
 }
 function clearGlyph(){ meta.glyph = ''; syncGlyphUI(); if(typeof markDirty==='function') markDirty(); }
 
@@ -20626,15 +21128,20 @@ $('glyphSearch')?.addEventListener('input', () => { clearTimeout(window._glyphT)
 $('glyphGrid')?.addEventListener('click', e => { const t = e.target.closest('.gp-tile'); if(t) pickGlyph(t.dataset.n); });
 $('glyphMode')?.addEventListener('click', e => {
   const b = e.target.closest('[data-mode]'); if(!b) return;
+  if(b.dataset.mode === _glyphMode) return;
   _glyphMode = b.dataset.mode;
   $('glyphMode').querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === b));
+  // 2D and 3D share the Tabler catalogue; colour has its own. Switching between the two
+  // FAMILIES has to reload and re-render, or the grid keeps showing the previous set.
+  $('glyphSearch').value = '';
+  loadGlyphManifest();
 });
 
 async function doPreview(){
   // two entry points, one preview: the toolbar button and the chat-mode canvas
   // button both disable while a build is in flight (blocks are the source of
   // truth, so the rendered page is identical whichever mode invoked it)
-  const btns = [$('previewBtn'), $('threadPreviewBtn')].filter(Boolean);
+  const btns = [$('previewBtn'), $('chatReviewBtn')].filter(Boolean);
   for(const b of btns) b.disabled = true;
   toast('Building preview…');
   try{
@@ -20654,7 +21161,7 @@ $('previewScrim').addEventListener('click', closePreviewSheet);
 $('previewCloseBtn').addEventListener('click', closePreviewSheet);
 const _previewBtn = $('previewBtn');
 if(_previewBtn) _previewBtn.addEventListener('click', doPreview);
-$('threadPreviewBtn')?.addEventListener('click', doPreview);   // chat-mode canvas dock → same live preview
+$('chatReviewBtn')?.addEventListener('click', doPreview);   // chat-mode canvas dock → same final-note preview
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SHARE & SEO PREVIEW — search/social card mocks, featured image, readability

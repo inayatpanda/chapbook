@@ -62,6 +62,9 @@ jobs:
           npm ci
           npm run build
           npm run stage:stt
+          # colour glyphs: without this the bundle-local app's Colour picker 404s on
+          # /emoji-manifest.json ("Could not load colour icons") — graceful, but a gap.
+          npm run stage:emoji
 
       # Enable mac code-signing ONLY when the Apple secrets are present on this repo.
       # We must NOT export APPLE_SIGNING_IDENTITY at all when it's empty: an empty-but-
@@ -105,6 +108,12 @@ jobs:
         with:
           projectPath: desktop
           tauriScript: npx tauri
+          # BUNDLE-LOCAL, chosen deliberately: dist/ and the Whisper dictation model are
+          # baked into the binary, so speech-to-text is preinstalled and works offline with
+          # no first-use download. The cost is that the UI is a SNAPSHOT — a site deploy
+          # does NOT reach installed apps, so every UI change needs a new signed release.
+          # Dropping this --config builds the remote-loading shell instead (window opens
+          # chapbook.rqai.co.uk/app, deploys land automatically, model downloads on first use).
           args: --config src-tauri/tauri.bundle-local.conf.json ${{ matrix.args }}
           tagName: ${{ github.ref_name }}
           releaseName: "Chapbook Desktop ${{ github.ref_name }}"
