@@ -268,12 +268,13 @@ for (const page of ['index.html', 'features.html', 'themes.html', 'pricing.html'
 }
 
 // ---- legal pages, single-sourced from index.html's legal modal (never re-typed) ----
-for (const kind of ['privacy', 'terms', 'refunds']) {
+const legalKinds = ['legal', 'privacy', 'terms', 'refunds', 'ai', 'storage', 'acceptable', 'accessibility'];
+for (const kind of legalKinds) {
   const inner = extractLegalBlock(idxSrc, kind);
   const page = renderLegalPage({ kind, title: LEGAL_TITLES[kind], inner, tpl: legalTpl, nav, footer, year: YEAR });
   writeFileSync(`${DIST}/${kind}.html`, page);
 }
-console.log('legal pages: privacy/terms/refunds extracted from index.html ✓');
+console.log(`legal pages: ${legalKinds.join('/')} extracted from index.html ✓`);
 
 // --- copy every other emitted file verbatim ---
 // Source paths are already root-relative, so manifest.json is a plain copy
@@ -320,7 +321,8 @@ console.log('marketing shell: marketing.css + og-image.png → dist root');
 // private tool with no SEO value). robots allows the crawl, keeps /app out of the index
 // (advisory only — the app stays reachable), and points crawlers at the sitemap.
 const SITE = 'https://chapbook.rqai.co.uk';
-const pages = ['/', '/features', '/themes', '/pricing', '/tutorials', '/download', '/privacy', '/terms', '/refunds'];
+const pages = ['/', '/features', '/themes', '/pricing', '/tutorials', '/download',
+  '/legal', '/privacy', '/terms', '/refunds', '/ai', '/storage', '/acceptable', '/accessibility'];
 const today = new Date().toISOString().slice(0, 10);
 writeFileSync(`${DIST}/sitemap.xml`,
   '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +

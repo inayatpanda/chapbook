@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chatFieldFor, enterSends, stripLabel, isPlainParagraph, htmlToChatText, isEmptyGuideBlock, dropEmptyGuides } from './chatCompose.js';
+import { readFileSync } from 'node:fs';
+import { chatFieldFor, enterSends, chatMoveTargetIndex, moveChatBlock, stripLabel, isPlainParagraph, htmlToChatText, isEmptyGuideBlock, dropEmptyGuides } from './chatCompose.js';
 
 test('chatFieldFor maps every wordy block type', () => {
   assert.deepEqual(chatFieldFor({ type: 'text' }), { field: 'html', label: 'paragraph', md: true });
@@ -27,6 +28,38 @@ test('chatFieldFor: wordless blocks are select-only', () => {
 test('enterSends: Enter never sends — new paragraph everywhere, ➤ commits', () => {
   assert.equal(enterSends(false), false);
   assert.equal(enterSends(true), false);
+});
+
+test('CHAT-04/05: reorder uses one-step boundaries and never mutates the source', () => {
+  const source = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+  assert.equal(chatMoveTargetIndex(source, 'b', -1), 0);
+  assert.equal(chatMoveTargetIndex(source, 'b', 1), 2);
+  assert.equal(chatMoveTargetIndex(source, 'a', -1), -1);
+  assert.equal(chatMoveTargetIndex(source, 'c', 1), -1);
+  const moved = moveChatBlock(source, 'b', 1);
+  assert.equal(moved.moved, true);
+  assert.equal(moved.index, 2);
+  assert.deepEqual(moved.blocks.map((block) => block.id), ['a', 'c', 'b']);
+  assert.deepEqual(source.map((block) => block.id), ['a', 'b', 'c']);
+  assert.deepEqual(moveChatBlock(source, 'missing', 1), { blocks: source, moved: false, index: -1 });
+});
+
+test('inline chat mirror has the same editable fields and reorder behaviour', () => {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.match(html, /id="chatReviewBtn"[^>]*aria-label="Review the final note"/);
+  assert.match(html, /\$\('chatReviewBtn'\)\?\.addEventListener\('click', doPreview\)/);
+  assert.match(html, /b\.disabled = !!disabled/);
+  const mirror = html.match(/\/\* ── mirror of core\/chatCompose\.js — keep in lockstep ── \*\/([\s\S]*?)\/\* ── the unified surface ──/);
+  assert.ok(mirror, 'inline chatCompose mirror is present');
+  const inline = Function(`${mirror[1]}; return { chatFieldFor, chatMoveTargetIndex, moveChatBlock };`)();
+  for (const block of [{ type: 'text' }, { type: 'video' }, { type: 'divider' }]) {
+    assert.deepEqual(inline.chatFieldFor(block), chatFieldFor(block));
+  }
+  const blocks = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+  for (const [id, delta] of [['a', -1], ['b', -1], ['b', 1], ['c', 1]]) {
+    assert.equal(inline.chatMoveTargetIndex(blocks, id, delta), chatMoveTargetIndex(blocks, id, delta));
+    assert.deepEqual(inline.moveChatBlock(blocks, id, delta), moveChatBlock(blocks, id, delta));
+  }
 });
 
 test('stripLabel names the bound block or points at its own controls', () => {
