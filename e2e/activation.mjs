@@ -19,6 +19,7 @@ import { mintTestLicence, TEST_PUBLIC_KEY_HEX } from '../test/fixtures/testLicen
 
 const ROOT = 'dist';
 const LIC_STORE = 'helm.studio.licence';
+const LEGAL_STORE = 'chapbook.legalConsent.v1';
 
 if (!existsSync(`${ROOT}/TEST-BUILD`)) {
   console.error('\nThis suite needs a test-keyed build. Run:  npm run build:test\n');
@@ -48,14 +49,28 @@ const check = (name, ok, detail = '') => {
   console.log(`${ok ? '  PASS' : '  FAIL'}  ${name}${detail ? ` — ${detail}` : ''}`);
 };
 
-async function freshPage() {
+async function freshPage({ acceptLegal = true } = {}) {
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.goto(`${base}/app/`, { waitUntil: 'load' });
+  if (acceptLegal) await acceptLegalConsent(page);
   await settle(page);
   return { ctx, page, errors };
+}
+
+// The launch build intentionally places its versioned clickwrap before both activation
+// and the app. Exercise the three independent affirmative checks through the real UI so
+// licence tests cannot silently bypass the legal gate or flake behind its modal.
+async function acceptLegalConsent(page) {
+  const gate = page.locator('#legalConsentGate');
+  if (await gate.isHidden()) return;
+  await page.check('#lcTerms');
+  await page.check('#lcNotices');
+  await page.check('#lcAge');
+  await page.click('#lcAccept');
+  await gate.waitFor({ state: 'hidden' });
 }
 
 // #licence starts as style="display:none" and is only SHOWN once boot decides to challenge.
@@ -95,14 +110,27 @@ async function activate(page, key) {
 
 console.log(`\nActivation E2E (test key ${TEST_PUBLIC_KEY_HEX.slice(0, 12)}…)\n`);
 
-// 1. The gate is actually in the way to begin with.
+// 1. Legal acceptance is the first gate, persists a versioned record, and only then
+//    reveals the licence challenge.
 {
-  const { ctx, page } = await freshPage();
-  const gate = await page.evaluate(() => ({
-    visible: getComputedStyle(document.getElementById('licence')).display !== 'none',
+  const { ctx, page } = await freshPage({ acceptLegal: false });
+  const firstGate = await page.evaluate(() => ({
+    legalVisible: !document.getElementById('legalConsentGate').hidden,
     appHidden: getComputedStyle(document.getElementById('app')).display === 'none',
   }));
-  check('a fresh browser is stopped by the licence gate', gate.visible && gate.appHidden);
+  check('a fresh browser is stopped by the legal consent gate', firstGate.legalVisible && firstGate.appHidden);
+  await acceptLegalConsent(page);
+  const accepted = await page.evaluate((key) => {
+    try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch { return null; }
+  }, LEGAL_STORE);
+  check('legal consent records the current version and three affirmative choices',
+    accepted?.version === '2026-08-08'
+      && accepted?.termsAccepted === true
+      && accepted?.noticesAcknowledged === true
+      && accepted?.ageConfirmed === true
+      && !Number.isNaN(Date.parse(accepted?.acceptedAt || '')));
+  const licenceVisible = await page.evaluate(() => getComputedStyle(document.getElementById('licence')).display !== 'none');
+  check('licence gate follows legal acceptance', licenceVisible);
   await ctx.close();
 }
 
