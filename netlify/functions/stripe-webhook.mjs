@@ -1,14 +1,13 @@
-// Stripe → Studio-access purchase notifier.  MANUAL-WITH-ASSIST.  STATELESS.
+// Stripe → RQAI licence fulfilment queue. STATELESS.
 //
 // On a Stripe `checkout.session.completed`, this verifies the webhook signature,
-// extracts the buyer's name/email, and NOTIFIES THE OWNER (by email, if a
-// provider is configured — otherwise just logs it) with a pre-filled
-// `licence:mint` command. It NEVER mints and NEVER holds the licence signing key.
+// extracts the buyer's name/email, and writes an idempotent record to a private
+// queue. The owner's Helm consumes that record, mints locally and emails the key.
+// This function NEVER mints and NEVER holds the licence signing key.
 //
-// This is the deliberate choice (see STRIPE-SEAM.md): the Ed25519 signing key —
-// the crown jewel of the paid product — stays on the owner's own machine, OFF
-// public hosts, consistent with the rest of the architecture. The owner runs the
-// printed command locally and emails the buyer their IPL1.… key.
+// This is deliberate: the Ed25519 signing key stays on the owner's machine, OFF
+// public hosts. Queue failure returns 503 so Stripe retries the event; a paid
+// event must never receive a successful acknowledgement before it is durable.
 //
 // It sits beside the device-flow relay (gh-device.mjs) and shares no state.
 // It imports ONLY node:crypto — no code outside studio-app/ — so Netlify bundles
@@ -232,19 +231,33 @@ export async function handleStripeWebhook({ rawBody, signature, env = {}, deps =
   const queueRepo = env.QUEUE_REPO || DEFAULT_QUEUE_REPO;
   const pushQueue = deps.pushQueue || pushToQueue;
 
+  const queueOrRetry = async ({ label, path, record }) => {
+    if (!queueToken) {
+      console.error(`[stripe-webhook] ${label} queue unavailable: GITHUB_QUEUE_TOKEN is not set`);
+      return { ok: false, response: { status: 503, body: { received: false, error: 'queue_unavailable' } } };
+    }
+    try {
+      const result = await pushQueue({ path, record, token: queueToken, repo: queueRepo, fetchImpl });
+      if (result && result.ok) return { ok: true, already: !!result.already };
+      console.error(`[stripe-webhook] ${label} queue returned not-ok:`, result && result.status);
+    } catch (error) {
+      console.error(`[stripe-webhook] ${label} queue threw:`, error && error.message);
+    }
+    return { ok: false, response: { status: 503, body: { received: false, error: 'queue_unavailable' } } };
+  };
+
   // Refunds → queue a revocation for the Helm to apply (auto-revoke on refund).
   if (event && event.type === 'charge.refunded') {
     const rec = refundRecord((event.data && event.data.object) || {}, { now });
     if (!rec.paymentIntent) return { status: 200, body: { received: true, refundQueued: false, reason: 'no_payment_intent' } };
-    let refundQueued = false;
-    if (queueToken) {
-      try {
-        const q = await pushQueue({ path: `queue/refund-${rec.paymentIntent}.json`, record: rec, token: queueToken, repo: queueRepo, fetchImpl });
-        refundQueued = !!q.ok;
-      } catch (e) { console.error('[stripe-webhook] refund queue threw:', e && e.message); }
-    }
-    console.log(`[stripe-webhook] refund ${rec.paymentIntent} queued=${refundQueued}`);
-    return { status: 200, body: { received: true, refundQueued } };
+    const queued = await queueOrRetry({
+      label: `refund ${rec.paymentIntent}`,
+      path: `queue/refund-${rec.paymentIntent}.json`,
+      record: rec,
+    });
+    if (!queued.ok) return queued.response;
+    console.log(`[stripe-webhook] refund ${rec.paymentIntent} queued=true`);
+    return { status: 200, body: { received: true, refundQueued: true } };
   }
 
   // Subscription invoices. The FIRST invoice (billing_reason 'subscription_create')
@@ -260,15 +273,14 @@ export async function handleStripeWebhook({ rawBody, signature, env = {}, deps =
       if (!rec.invoiceId || !rec.paymentIntent || !rec.subscription) {
         return { status: 200, body: { received: true, ignored: 'invoice.paid:subscription_create' } };
       }
-      let linkQueued = false;
-      if (queueToken) {
-        try {
-          const q = await pushQueue({ path: `queue/link-${rec.invoiceId}.json`, record: rec, token: queueToken, repo: queueRepo, fetchImpl });
-          linkQueued = !!q.ok;
-        } catch (e) { console.error('[stripe-webhook] link queue threw:', e && e.message); }
-      }
-      console.log(`[stripe-webhook] link ${rec.invoiceId} (first-period pi ${rec.paymentIntent}) queued=${linkQueued}`);
-      return { status: 200, body: { received: true, linkQueued } };
+      const queued = await queueOrRetry({
+        label: `link ${rec.invoiceId}`,
+        path: `queue/link-${rec.invoiceId}.json`,
+        record: rec,
+      });
+      if (!queued.ok) return queued.response;
+      console.log(`[stripe-webhook] link ${rec.invoiceId} (first-period pi ${rec.paymentIntent}) queued=true`);
+      return { status: 200, body: { received: true, linkQueued: true } };
     }
     if (reason !== 'subscription_cycle' && reason !== 'subscription_update') {
       return { status: 200, body: { received: true, ignored: `invoice.paid:${reason || 'unknown'}` } };
@@ -277,15 +289,14 @@ export async function handleStripeWebhook({ rawBody, signature, env = {}, deps =
     if (!rec.invoiceId || !rec.subscription) {
       return { status: 200, body: { received: true, renewalQueued: false, reason: 'missing_ids' } };
     }
-    let renewalQueued = false;
-    if (queueToken) {
-      try {
-        const q = await pushQueue({ path: `queue/renewal-${rec.invoiceId}.json`, record: rec, token: queueToken, repo: queueRepo, fetchImpl });
-        renewalQueued = !!q.ok;
-      } catch (e) { console.error('[stripe-webhook] renewal queue threw:', e && e.message); }
-    }
-    console.log(`[stripe-webhook] renewal ${rec.invoiceId} (${reason}) queued=${renewalQueued}`);
-    return { status: 200, body: { received: true, renewalQueued } };
+    const queued = await queueOrRetry({
+      label: `renewal ${rec.invoiceId}`,
+      path: `queue/renewal-${rec.invoiceId}.json`,
+      record: rec,
+    });
+    if (!queued.ok) return queued.response;
+    console.log(`[stripe-webhook] renewal ${rec.invoiceId} (${reason}) queued=true`);
+    return { status: 200, body: { received: true, renewalQueued: true } };
   }
 
   if (!event || event.type !== 'checkout.session.completed') {
@@ -296,14 +307,27 @@ export async function handleStripeWebhook({ rawBody, signature, env = {}, deps =
   const { name, email } = extractBuyer(session);
   if (!email) return { status: 400, body: { error: 'no_buyer_email' } };
 
-  const cmd = mintCommand({ name, email });
-  // Always log — the owner can read the Netlify function log even with no email set.
-  console.log(`[stripe-webhook] purchase <${email}> (${name || 'no name'}). Mint: ${cmd}`);
+  // Keep buyer PII out of provider logs. The durable private queue contains the
+  // delivery address; operational logs need only the Stripe session identifier.
+  console.log(`[stripe-webhook] verified purchase session ${session.id || '(missing id)'}`);
 
+  // Queue the sale for the Helm's fulfilment worker (auto-mint on the owner's
+  // hardware). Stripe receives 503 if durability cannot be established.
+  const rec = saleRecord(session, { now });
+  if (!rec.sessionId) return { status: 400, body: { error: 'missing_session_id' } };
+  const queued = await queueOrRetry({
+    label: `sale ${rec.sessionId}`,
+    path: `queue/sale-${rec.sessionId}.json`,
+    record: rec,
+  });
+  if (!queued.ok) return queued.response;
+
+  // Owner notification is best-effort and only sent for a newly-created queue
+  // record. Stripe retries/idempotent replays must not produce duplicate email.
   const resendKey = env.RESEND_API_KEY;
   const to = env.LICENCE_EMAIL_TO || env.LICENCE_EMAIL_FROM;
   let notified = false;
-  if (resendKey && to) {
+  if (!queued.already && resendKey && to) {
     try {
       const r = await notify({ to, from: env.LICENCE_EMAIL_FROM, name, email, apiKey: resendKey, fetchImpl });
       notified = !!(r && r.ok);
@@ -313,22 +337,9 @@ export async function handleStripeWebhook({ rawBody, signature, env = {}, deps =
     }
   }
 
-  // Queue the sale for the Helm's fulfilment worker (auto-mint on the owner's
-  // hardware). Without GITHUB_QUEUE_TOKEN this stays pure manual-with-assist.
-  let queued = false;
-  if (queueToken) {
-    const rec = saleRecord(session, { now });
-    if (rec.sessionId) {
-      try {
-        const q = await pushQueue({ path: `queue/sale-${rec.sessionId}.json`, record: rec, token: queueToken, repo: queueRepo, fetchImpl });
-        queued = !!q.ok;
-      } catch (e) { console.error('[stripe-webhook] sale queue threw:', e && e.message); }
-    }
-  }
-
   // Never mints; never echoes a key. Minting happens on the owner's Helm (queued)
   // or by hand (manual fallback) — the signing key never exists here either way.
-  return { status: 200, body: { received: true, minted: false, mode: queued ? 'queued' : 'manual', notified, queued } };
+  return { status: 200, body: { received: true, minted: false, mode: 'queued', notified, queued: true } };
 }
 
 // ── Netlify Functions v2 entry — (Request) => Response ────────────────────────

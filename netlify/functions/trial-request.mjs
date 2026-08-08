@@ -58,7 +58,7 @@ const _rlNow = () => Date.now();
 // Only products we actually fulfil may be queued. An omitted product (null) is
 // still allowed — it means "no product", not an unknown one. Anything else is
 // rejected up front, before it is ever written to the queue or logged.
-const ALLOWED_PRODUCTS = new Set(['studio']);
+const ALLOWED_PRODUCTS = new Set(['studio', 'scribble']);
 
 // The paid apps' public origins may call this from the browser.
 const ALLOWED_ORIGINS = new Set([
