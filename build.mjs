@@ -281,7 +281,7 @@ console.log(`legal pages: ${legalKinds.join('/')} extracted from index.html ✓`
 // (no more /studio/ → / rewriting). index.html is written above with config injected.
 // sw.js is NOT copied here — it is stamped with a content-hashed CACHE name at the
 // end of the build, once every SHELL asset (incl. fonts) exists in dist/.
-for (const f of ['manifest.json', 'studio.js', 'darkroom-upload.js', 'stt.js', 'stt-worker.js', 'preview.css', 'resize.js', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icons-manifest.json', 'icons-sprite.svg']) {
+for (const f of ['manifest.json', 'studio.js', 'darkroom-upload.js', 'stt.js', 'stt-worker.js', 'preview.css', 'premium.css', 'resize.js', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icons-manifest.json', 'icons-sprite.svg']) {
   copyFileSync(`${SRC}/${f}`, `${DIST}/${f}`);
 }
 

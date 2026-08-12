@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-product="chapbook">
 <head>
 <meta charset="utf-8" />
 <!-- APP viewport (the #app document, NOT a marketing page). The zoom lock (maximum-scale=1 +
@@ -2208,6 +2208,24 @@
     background:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
   .fig-draw-actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem}
   .fig-draw-actions .btn{margin-top:0;flex:1 1 auto;width:auto;white-space:nowrap}
+  .fig-canvas-format{display:flex;align-items:center;justify-content:center;gap:.65rem;flex-wrap:wrap;
+    margin:.15rem 0 .75rem;padding:.55rem .7rem;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+  .fig-canvas-format>.lbl{font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+  .fig-canvas-format .hint{font-size:.74rem;color:var(--mut)}
+  .fig-canvas-zoom{display:flex;align-items:center;justify-content:center;gap:.4rem;margin:-.25rem 0 .55rem}
+  .fig-canvas-zoom .btn{margin:0;width:auto;min-width:42px;min-height:38px;padding:.42rem .7rem}
+  .fig-canvas-zoom output{min-width:64px;text-align:center;font-size:.78rem;font-weight:700;color:var(--ink)}
+  .fig-canvas-zoom .pan-on{background:var(--acc)!important;border-color:var(--acc)!important;color:#07111a!important}
+  .fig-canvas-viewport{max-height:min(60vh,600px);overflow:auto;overscroll-behavior:contain;
+    padding:.2rem;border-radius:16px;scrollbar-gutter:stable both-edges;background:color-mix(in srgb,var(--bg) 72%,transparent)}
+  .fig-canvas-stage{position:relative;margin-inline:auto}
+  .fig-canvas-stage .fig-draw-surface{transform-origin:top left;will-change:transform;
+    transition:transform .18s cubic-bezier(.2,.8,.2,1)}
+  .fig-canvas-viewport.is-panning #figCanvas{cursor:grab}
+  .fig-canvas-viewport.is-panning.is-dragging #figCanvas{cursor:grabbing}
+  @media(prefers-reduced-motion:reduce){
+    .fig-canvas-stage .fig-draw-surface{transition:none}
+  }
   /* Standalone makers (no open post): the sheet gets .maker-standalone, which hides the
      post-only actions (insert-a-block / placement) so only Save-to-Library + Export remain.
      display:none !important beats both the `hidden` attribute toggling and inline display. */
@@ -2359,13 +2377,13 @@
   .fig-flip-opts{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap}
   .fig-flip-seg{display:inline-flex;align-items:center;gap:.42rem;font-size:.74rem;color:var(--mut)}
   .fig-flip-seg>.lbl{flex:0 0 auto}
-  .fig-flip-seg .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;
+  .fig-flip-seg .seg,.fig-canvas-format .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;
     overflow:hidden;background:var(--surface)}
-  .fig-flip-seg .seg>button{margin:0;border:0;border-radius:0;background:transparent;
+  .fig-flip-seg .seg>button,.fig-canvas-format .seg>button{margin:0;border:0;border-radius:0;background:transparent;
     color:var(--mut);font:600 .76rem system-ui;padding:.5em .7em;min-height:40px;
     cursor:pointer;white-space:nowrap;-webkit-appearance:none;appearance:none}
-  .fig-flip-seg .seg>button+button{border-left:1px solid var(--line)}
-  .fig-flip-seg .seg>button[aria-pressed="true"]{background:var(--acc);color:#042018}
+  .fig-flip-seg .seg>button+button,.fig-canvas-format .seg>button+button{border-left:1px solid var(--line)}
+  .fig-flip-seg .seg>button[aria-pressed="true"],.fig-canvas-format .seg>button[aria-pressed="true"]{background:var(--acc);color:#042018}
   .btn.is-loading{position:relative;color:transparent !important}
   .btn.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:16px;height:16px;
     margin:-8px 0 0 -8px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;
@@ -3408,6 +3426,7 @@
       border-bottom:1px solid var(--line)}
   }
 </style>
+<link rel="stylesheet" href="/premium.css" />
 <!-- Baked-in licence verify key (hex Ed25519 public key). Patched by `npm run licence:init`
      and carried through to the hosted build. Empty until init runs → gate stays open
      (no key configured) so a fresh checkout still loads. -->
@@ -4123,6 +4142,21 @@
     <div id="tsMsg" class="msg"></div>
   </section>
 
+  <!-- ===== MORE: publishing, connection and preferences ===== -->
+  <section class="view" id="v-more">
+    <div class="bar"><h1>More</h1></div>
+    <div class="premium-kicker">CHAPBOOK TOOLS</div>
+    <p class="sub" style="margin:.55rem 0 0">Publishing, site setup and private connections live here, away from the everyday writing flow.</p>
+    <div class="premium-grid">
+      <button class="premium-destination" type="button" onclick="go('review');initShareReview()"><strong>Publish &amp; share</strong><small>Review finished work and choose where it goes.</small></button>
+      <button class="premium-destination" type="button" onclick="go('queue');loadQueue()"><strong>Social planner</strong><small>Prepare and track social posts.</small></button>
+      <button class="premium-destination" type="button" onclick="go('site-settings');loadSiteSettings()"><strong>Site configuration</strong><small>Identity, navigation, social links and forms.</small></button>
+      <button class="premium-destination" type="button" onclick="go('topics-settings');loadTopicsSettings()"><strong>Topics</strong><small>Name and organise the sections of your publication.</small></button>
+      <button class="premium-destination" type="button" onclick="go('connect');loadConnect()"><strong>Connections &amp; sync</strong><small>Repository, publishing and cloud status.</small></button>
+      <button class="premium-destination" type="button" onclick="go('settings');loadSettings()"><strong>AI &amp; preferences</strong><small>Private keys, dictation, appearance and backups.</small></button>
+    </div>
+  </section>
+
   <!-- ===== HOME (launchpad) =====
        Home is a LAUNCHPAD for everyone: friendly, tappable action cards → the main
        tabs (each just calls goSection()). Onboarding no longer lives here; it moved
@@ -4148,17 +4182,27 @@
         <span class="lp-t">Posts</span>
         <span class="lp-s">Manage everything you've written.</span>
       </button>
+      <button class="lp-card lp-creative lp-flipbook" type="button" onclick="go('create-flipbook');openFlipbookWorkspace()">
+        <svg class="lp-ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 20h10"/><path d="M9 8l6 3.5L9 15z"/></svg>
+        <span class="lp-t">Make a flipbook</span>
+        <span class="lp-s">Draw frame by frame, animate it, then export a GIF or video.</span>
+      </button>
+      <button class="lp-card lp-creative lp-interactive" type="button" onclick="go('create-interactive');openInteractiveWorkspace()">
+        <svg class="lp-ic" viewBox="0 0 24 24"><path d="M12 3l2.5 5 5.5.8-4 3.9.95 5.5L12 21l-4.9-2.8L8 12.7l-4-3.9L9.5 8z"/></svg>
+        <span class="lp-t">Make an interactive</span>
+        <span class="lp-s">Build a live widget, save it, and export a standalone page.</span>
+      </button>
     </div>
 
     <div class="lp-sec">
       <button class="lp-link" type="button" onclick="goSection('media')">
         <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.6"/><path d="M21 16l-5-5-9 8"/></svg>Media
       </button>
-      <button class="lp-link" type="button" onclick="goSection('share')">
+      <button class="lp-link" type="button" onclick="go('review');initShareReview()">
         <svg viewBox="0 0 24 24"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.6"/></svg>Share
       </button>
-      <button class="lp-link" type="button" onclick="goSection('settings')">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3.5v3M12 17.5v3M4.6 7.8l2.6 1.5M16.8 14.7l2.6 1.5M4.6 16.2l2.6-1.5M16.8 9.3l2.6-1.5"/></svg>Settings
+      <button class="lp-link" type="button" onclick="goSection('more')">
+        <svg viewBox="0 0 24 24"><circle cx="5" cy="5" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="19" cy="5" r="1"/><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="19" r="1"/><circle cx="12" cy="19" r="1"/><circle cx="19" cy="19" r="1"/></svg>More
       </button>
     </div>
 
@@ -4215,6 +4259,43 @@
     <button class="btn" style="margin-top:1.25rem;width:100%" type="button" onclick="dismissGettingStarted()">Done — don't show again</button>
   </section>
 
+  <!-- ===== CREATE: first-class standalone creative tools ================= -->
+  <section class="view create-view" id="v-create-flipbook">
+    <div class="bar"><h1>Flipbook studio</h1></div>
+    <div class="create-hero create-hero--flipbook">
+      <div class="create-art" aria-hidden="true">
+        <span class="create-frame create-frame--1"></span><span class="create-frame create-frame--2"></span><span class="create-frame create-frame--3"></span>
+        <svg viewBox="0 0 24 24"><path d="M9 7l7 5-7 5z"/></svg>
+      </div>
+      <div class="create-copy">
+        <span class="create-kicker">Draw · animate · export</span>
+        <h2>Bring a sketch to life.</h2>
+        <p>Draw one frame at a time with onion skinning, preview the movement, then keep it in your Library or export a GIF or video.</p>
+        <button class="btn create-launch" type="button" onclick="openFlipbookWorkspace()">Open the flipbook canvas</button>
+        <div class="create-features"><span>Onion skin</span><span>Frame controls</span><span>GIF / video</span><span>Saved locally</span></div>
+      </div>
+    </div>
+    <div class="create-inline-host" id="flipbookInlineHost" aria-live="polite"></div>
+  </section>
+
+  <section class="view create-view" id="v-create-interactive">
+    <div class="bar"><h1>Interactive studio</h1></div>
+    <div class="create-hero create-hero--interactive">
+      <div class="create-art create-art--interactive" aria-hidden="true">
+        <span class="create-orbit"></span><span class="create-dot create-dot--1"></span><span class="create-dot create-dot--2"></span><span class="create-dot create-dot--3"></span>
+        <svg viewBox="0 0 24 24"><path d="M12 3l2.5 5 5.5.8-4 3.9.95 5.5L12 21l-4.9-2.8L8 12.7l-4-3.9L9.5 8z"/></svg>
+      </div>
+      <div class="create-copy">
+        <span class="create-kicker">Describe · build · explore</span>
+        <h2>Turn an idea into something people can use.</h2>
+        <p>Start from a proven template or describe your own widget. Test it live, save it to your Library, or export a standalone HTML file.</p>
+        <button class="btn create-launch" type="button" onclick="openInteractiveWorkspace()">Open the interactive builder</button>
+        <div class="create-features"><span>80 templates</span><span>Live preview</span><span>AI-assisted</span><span>HTML export</span></div>
+      </div>
+    </div>
+    <div class="create-inline-host" id="interactiveInlineHost" aria-live="polite"></div>
+  </section>
+
 </div><!-- /.wrap -->
 
 <!-- ===== First-run "write your first post" tour (coach card) =====
@@ -4254,7 +4335,11 @@
             <button class="btn" id="ptSend">Send</button></div>
           <div class="btn-row" style="margin-top:.5rem"><button class="btn ghost" id="ptUndo">Undo turn</button><button class="btn" id="ptPublish">Publish</button></div>
         </div>
-        <div class="pt-preview" id="ptPreview"><iframe id="ptFrame" title="Post preview" sandbox="allow-scripts"></iframe></div>
+        <div class="pt-preview" id="ptPreview">
+          <div class="pt-preview-head"><div><strong>Live draft</strong><span>Updates as the Partner shapes your post.</span></div><span class="pt-preview-live">Preview</span></div>
+          <div class="pt-preview-empty" id="ptPreviewEmpty"><span>✦</span><strong>Your post will take shape here.</strong><p>Choose a prompt or send an idea. The preview updates with every turn.</p></div>
+          <iframe id="ptFrame" title="Post preview" sandbox="allow-scripts"></iframe>
+        </div>
       </div>
     </div>
   </section>
@@ -4267,7 +4352,6 @@
       <div class="seg" id="libSeg" style="margin-bottom:1rem">
         <button class="on" data-lib="interactives">Interactive templates</button>
         <button data-lib="stickers">Stickers</button>
-        <button data-lib="makers">Make</button>
         <button data-lib="saved">Saved</button>
         <button data-lib="icons">Icons</button>
         <button data-lib="media">Images</button>
@@ -5058,29 +5142,44 @@
         <pre id="tplLibCode" class="tpllib-codebox"></pre>
       </details>
     </div>
-    <p class="tpllib-lbl" id="tplLibPresetLbl">Preset</p>
-    <div class="chips" id="tplLibPresets"></div>
-    <p class="tpllib-lbl" id="tplLibSettingsLbl">Settings</p>
-    <div class="tpllib-form" id="tplLibForm"></div>
-    <p class="tpllib-lbl">Preview</p>
-    <div class="tpllib-preview" id="tplLibPreview"></div>
-    <!-- Maker-only: iterate on the current interactive with AI (also the duplicate-and-
-         modify path — a saved interactive is loaded here, then re-described). -->
-    <div class="tpllib-modify tpllib-maker-only" id="tplLibModifyBox">
-      <p class="tpllib-lbl" style="margin-top:0">✨ Modify with AI</p>
-      <p class="tpllib-fam-desc" style="color:var(--mut);margin:0">Describe a change and AI rebuilds the widget above. Then Save to Library (as a new entry) or Export.</p>
-      <textarea class="ai-input" id="tplLibModifyText" rows="2" placeholder="e.g. add a reset button and make the slider go to 100"></textarea>
-      <div style="margin-top:.4rem"><button class="btn" id="tplLibModifyBtn" type="button">✦ Apply change</button></div>
-      <p class="tpllib-suggest-msg" id="tplLibModifyMsg"></p>
+    <div class="tpllib-build-top">
+      <p class="tpllib-lbl" id="tplLibPresetLbl">Preset</p>
+      <div class="chips" id="tplLibPresets"></div>
     </div>
-    <p class="tpllib-lbl" id="tplLibPlacementLbl">Placement</p>
-    <div id="tplLibPlacement"></div>
-    <p class="tpllib-err" id="tplLibErr"></p>
-    <div class="tpllib-actions">
-      <button class="btn" id="tplLibInsertBtn" type="button">Insert</button>
-      <button class="btn ghost" id="tplLibSaveLibBtn" type="button" title="Save this interactive to your Library to reuse in any post">💾 Save to Library</button>
-      <button class="btn ghost tpllib-maker-only" id="tplLibExportHtmlBtn" type="button" title="Download this interactive as a standalone .html file you can open in any browser">⬇ Export .html</button>
-      <button class="btn ghost" id="tplLibCancelBtn" type="button">Cancel</button>
+    <div class="tpllib-mobile-switch" role="tablist" aria-label="Interactive builder view">
+      <button type="button" id="tplLibEditTab" role="tab" aria-selected="true">Edit</button>
+      <button type="button" id="tplLibPreviewTab" role="tab" aria-selected="false">Preview</button>
+    </div>
+    <div class="tpllib-workspace" id="tplLibWorkspace" data-panel="edit">
+      <div class="tpllib-editor-pane" id="tplLibEditorPane">
+        <p class="tpllib-lbl" id="tplLibSettingsLbl">Settings</p>
+        <div class="tpllib-form" id="tplLibForm"></div>
+        <!-- Maker-only: iterate on the current interactive with AI (also the duplicate-and-
+             modify path — a saved interactive is loaded here, then re-described). -->
+        <div class="tpllib-modify tpllib-maker-only" id="tplLibModifyBox">
+          <p class="tpllib-lbl" style="margin-top:0">✨ Modify with AI</p>
+          <p class="tpllib-fam-desc" style="color:var(--mut);margin:0">Describe a change and AI rebuilds the widget above. Then Save to Library (as a new entry) or Export.</p>
+          <textarea class="ai-input" id="tplLibModifyText" rows="2" placeholder="e.g. add a reset button and make the slider go to 100"></textarea>
+          <div style="margin-top:.4rem"><button class="btn" id="tplLibModifyBtn" type="button">✦ Apply change</button></div>
+          <p class="tpllib-suggest-msg" id="tplLibModifyMsg"></p>
+        </div>
+        <p class="tpllib-lbl" id="tplLibPlacementLbl">Placement</p>
+        <div id="tplLibPlacement"></div>
+      </div>
+      <aside class="tpllib-preview-pane" id="tplLibPreviewPane" aria-label="Live interactive preview">
+        <div class="tpllib-preview-head">
+          <div><strong>Live preview</strong><span>Updates as you edit</span></div>
+          <span class="tpllib-preview-status" id="tplLibPreviewStatus" role="status" aria-live="polite">Preparing…</span>
+        </div>
+        <div class="tpllib-preview" id="tplLibPreview"></div>
+        <p class="tpllib-err" id="tplLibErr" role="alert"></p>
+        <div class="tpllib-actions">
+          <button class="btn" id="tplLibInsertBtn" type="button">Insert</button>
+          <button class="btn ghost" id="tplLibSaveLibBtn" type="button" title="Save this interactive to your Library to reuse in any post">💾 Save to Library</button>
+          <button class="btn ghost tpllib-maker-only" id="tplLibExportHtmlBtn" type="button" title="Download this interactive as a standalone .html file you can open in any browser">⬇ Export .html</button>
+          <button class="btn ghost" id="tplLibCancelBtn" type="button">Cancel</button>
+        </div>
+      </aside>
     </div>
   </div>
   </div><!-- /.surface-body -->
@@ -5249,8 +5348,27 @@
         </span>
         <button class="btn ghost fig-draw-tool" id="figImgRemove" type="button" title="Remove the image">✕ Remove image</button>
       </div>
-      <div class="fig-draw-surface" id="figDrawSurface">
-        <canvas id="figCanvas"></canvas>
+      <div class="fig-canvas-format" aria-label="Canvas and export format">
+        <span class="lbl">Canvas &amp; export</span>
+        <span class="seg" id="figFlipAspect" role="group" aria-label="Canvas and export format">
+          <button type="button" data-a="16:9" aria-pressed="true">▭ Landscape</button>
+          <button type="button" data-a="1:1" aria-pressed="false">□ Square</button>
+          <button type="button" data-a="9:16" aria-pressed="false">▯ Portrait</button>
+        </span>
+        <span class="hint" id="figAspectHint">16:9 video</span>
+      </div>
+      <div class="fig-canvas-zoom" role="group" aria-label="Canvas zoom">
+        <button class="btn ghost" id="figZoomOut" type="button" title="Zoom out" aria-label="Zoom out">−</button>
+        <button class="btn ghost" id="figZoomReset" type="button" title="Reset zoom to 100%"><output id="figZoomOutVal">100%</output></button>
+        <button class="btn ghost" id="figZoomIn" type="button" title="Zoom in" aria-label="Zoom in">＋</button>
+        <button class="btn ghost" id="figPanMode" type="button" title="Pan around a zoomed canvas" aria-pressed="false">✋ Pan</button>
+      </div>
+      <div class="fig-canvas-viewport" id="figCanvasViewport" tabindex="0" aria-label="Scrollable drawing canvas">
+        <div class="fig-canvas-stage" id="figCanvasStage">
+          <div class="fig-draw-surface" id="figDrawSurface">
+            <canvas id="figCanvas"></canvas>
+          </div>
+        </div>
       </div>
       <!-- Flipbook frame controls: navigate / add / duplicate / delete frames, onion skin, playback -->
       <div class="fig-frames" id="figFrames">
@@ -5293,14 +5411,6 @@
             <span class="seg" id="figFlipLoop" role="group" aria-label="Loop">
               <button type="button" data-loop="loop" aria-pressed="true">Loop</button>
               <button type="button" data-loop="pingpong" aria-pressed="false">Ping-pong</button>
-            </span>
-          </span>
-          <span class="fig-flip-seg" title="Shape of the exported GIF / video (square feed, portrait feed, story)">
-            <span class="lbl">Export</span>
-            <span class="seg" id="figFlipAspect" role="group" aria-label="Export shape">
-              <button type="button" data-a="1:1" aria-pressed="true">1:1</button>
-              <button type="button" data-a="4:5" aria-pressed="false">4:5</button>
-              <button type="button" data-a="9:16" aria-pressed="false">9:16</button>
             </span>
           </span>
         </div>
@@ -5755,7 +5865,7 @@
   <p>Email <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a> with “Chapbook accessibility”, the affected screen, device/browser, assistive technology and adjustment/format needed. Do not include credentials. We will acknowledge the report, seek a reasonable alternative and prioritise verified barriers.</p>
 </div>
 
-<!-- ===== PRIMARY NAV — 5 sections + Home =====================================
+<!-- ===== PRIMARY NAV — focused destinations ==================================
      Bottom tab bar on phones, fixed left rail on desktop (see nav.bottom CSS).
      Each button lands on its section's DEFAULT view via goSection(); the secondary
      #subnav pills switch between the views within a multi-view section. -->
@@ -5766,16 +5876,19 @@
   <button data-section="write" onclick="goSection('write')">
     <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Write
   </button>
+  <button data-section="create" onclick="goSection('create')">
+    <svg viewBox="0 0 24 24"><path d="M12 3l2.2 4.6L19 9.8l-3.5 3.5.8 5L12 16l-4.3 2.3.8-5L5 9.8l4.8-2.2z"/><path d="M19 3v4M17 5h4"/></svg>Create
+  </button>
   <button data-section="posts" onclick="goSection('posts')">
     <svg viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h12"/></svg>Posts
   </button>
   <button data-section="media" onclick="goSection('media')">
     <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.6"/><path d="M21 16l-5-5-9 8"/></svg>Media
   </button>
-  <button data-section="share" onclick="goSection('share')">
-    <svg viewBox="0 0 24 24"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.6"/></svg>Share
+  <button data-section="more" onclick="goSection('more')">
+    <svg viewBox="0 0 24 24"><circle cx="5" cy="5" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="19" cy="5" r="1"/><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="19" r="1"/><circle cx="12" cy="19" r="1"/><circle cx="19" cy="19" r="1"/></svg>More
   </button>
-  <button data-section="settings" onclick="goSection('settings')">
+  <button data-section="settings" onclick="go('settings');loadSettings()">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings
   </button>
 </nav>
@@ -5813,11 +5926,16 @@ function setTheme(t, persist){
   // a dark band around fixed bottom bars on phones)
   const mc = document.querySelector('meta[name="theme-color"]');
   if(mc) mc.content = light ? '#eef1f6' : '#04060c';
-  const icon = tico(light ? 'sun' : 'moon');
+  // The control describes the action it will take, instead of showing an
+  // ambiguous icon for the current state.
+  const nextThemeLabel = light ? 'Dark' : 'Light';
+  const icon = tico(light ? 'moon' : 'sun');
   const t1=$('themeToggleMain'), t2=$('themeToggleEditor'), t3=$('themeToggleSettings');
-  if(t1) t1.innerHTML=icon;
-  if(t2) t2.innerHTML=icon;
-  if(t3) t3.innerHTML=icon;
+  [t1,t2,t3].filter(Boolean).forEach(btn=>{
+    btn.innerHTML=`${icon}<span>${nextThemeLabel}</span>`;
+    btn.title=`Switch to ${nextThemeLabel.toLowerCase()} theme`;
+    btn.setAttribute('aria-label',btn.title);
+  });
 }
 function toggleTheme(){
   const cur=document.documentElement.dataset.theme;
@@ -6169,7 +6287,7 @@ function closeFirstPostTour(done){
 window.closeFirstPostTour=closeFirstPostTour;
 
 /* ── nav / view switching ─────────────────────────────────────────────────
-   Two-level IA: 5 sections + Home (primary nav) → each owns one or more views.
+   Two-level IA: 5 focused primary destinations → each owns one or more views.
    The flat list of view ids is preserved; sections are a routing layer over them.
    • goSection(id)  — primary nav entry point: lands on the section's default view.
    • renderSubnav() — draws the secondary pill bar for multi-view sections.
@@ -6182,6 +6300,8 @@ const SECTIONS = {
   write:    { label:'Write',    views:[ {v:'newpost',         label:'New post',       run:'enterNewPost'},
                                         {v:'partner',         label:'Partner',        run:'initPartner'},
                                         {v:'inbox',           label:'Inbox',          run:'loadInbox'} ] },
+  create:   { label:'Create',   views:[ {v:'create-flipbook', label:'Flipbook',       run:'openFlipbookWorkspace'},
+                                        {v:'create-interactive',label:'Interactive',   run:'openInteractiveWorkspace'} ] },
   posts:    { label:'Posts',    views:[ {v:'posts',           label:'Posts',          run:'loadPosts'} ] },
   // Media = Darkroom (photo uploader) · Library (browse droppables) · Video
   // (browse uploaded videos). Images inside a post are handled by the block editor,
@@ -6189,20 +6309,14 @@ const SECTIONS = {
   media:    { label:'Media',    views:[ {v:'darkroom',        label:'Darkroom',       run:'__darkroom'},
                                         {v:'library',         label:'Library',        run:'initLibrary'},
                                         {v:'video',           label:'Video',          run:'initVideoLibrary'} ] },
-  // Share = review/queue + the social Compose (moved here from Write).
-  share:    { label:'Share',    views:[ {v:'review',          label:'Review',         run:'initShareReview'},
-                                        {v:'queue',           label:'Social Planner', run:'loadQueue'},
-                                        {v:'compose',          label:'Compose',        run:null} ] },
-  settings: { label:'Settings', views:[ {v:'site-settings',   label:'Site',           run:'loadSiteSettings'},
-                                        {v:'topics-settings', label:'Topics',         run:'loadTopicsSettings'},
-                                        {v:'connect',          label:'Connect',        run:'loadConnect'},
-                                        {v:'settings',         label:'Keys',           run:'loadSettings'} ] },
+  more:     { label:'More',     views:[ {v:'more',             label:'Tools & settings', run:null} ] },
 };
 // reverse map: view id → section id (every reachable view resolves to a primary tab).
 // drafts/editor have no own tab — they highlight a sensible parent.
 const VIEW_SECTION = (()=>{ const m={}; for(const [s,def] of Object.entries(SECTIONS)) for(const v of def.views) m[v.v]=s; return m; })();
 VIEW_SECTION['drafts']   = 'posts';   // standalone saved-drafts list → grouped under Posts
 VIEW_SECTION['setup']    = 'home';    // "Getting started" onboarding → highlights Home (no own tab)
+for(const view of ['review','queue','compose','site-settings','topics-settings','connect','settings']) VIEW_SECTION[view] = 'more';
 // The block editor has no tab of its own; which primary tab it highlights depends
 // on HOW it was opened: a brand-new post belongs to Write, editing an existing
 // post belongs to Posts. `editorSection` is set by the two entry points
@@ -6260,6 +6374,11 @@ $('subnav').addEventListener('click',e=>{
 function go(v){
   // editor is outside #app so handle specially
   const isEditor = v==='editor';
+  // Standalone creative workspaces are mounted into their Create pages. When the
+  // user leaves that page, restore the shared sheet to body so post insertion can
+  // still use its normal modal presentation later.
+  if(v!=='create-flipbook' && $('figSheet')?.classList.contains('maker-inline')) closeFigLib();
+  if(v!=='create-interactive' && $('tplLibSheet')?.classList.contains('maker-inline')) closeTplLib();
   // LEAVING the editor ends the post-session: mint a fresh token no in-flight AI
   // request holds, so a completion after close takes the discard path - never a
   // stored write. This is the single choke point where editor-open toggles, so
@@ -15138,6 +15257,8 @@ function cmdkActions(){
     ['queue','Social Planner','queue scheduled planner share'],
     ['review','Review','draft share approve'],
     ['partner','Writing partner','ai chat assistant write'],
+    ['create-flipbook','Flipbook studio','draw animate frames onion skin gif video create'],
+    ['create-interactive','Interactive studio','widget playground template build create'],
     ['darkroom','Darkroom','photos upload gallery media'],
     ['library','Library','catalogue interactive figures media images'],
     ['video','Video','video library clips media uploads'],
@@ -15336,10 +15457,12 @@ let _tplLibStandalone = false;  // true when the sheet is the standalone Interac
 function closeTplLib(){
   $('tplLibScrim').classList.remove('open');
   $('tplLibSheet').classList.remove('open');
+  unmountMakerInline('tplLibSheet','v-create-interactive');
   clearTimeout(_tplLibDebounce);
 }
 
 async function openTplLib(atIndex){
+  unmountMakerInline('tplLibSheet','v-create-interactive');
   // single-sheet guard — close any other open sheet first
   closePicker(); closeAiDraft(); closeStructure(); closePreviewSheet(); closeFigLib();
   _activeForm = _tplLibFormCtx;
@@ -15386,6 +15509,7 @@ function renderTplLibPlacement(){
    template-built block, prefilled with its params. Update (not Insert) mode. */
 async function openTplLibForEdit(block){
   if(!block || !block.template || !block.template.familyId) return;
+  unmountMakerInline('tplLibSheet','v-create-interactive');
   closePicker(); closeAiDraft(); closeStructure(); closePreviewSheet(); closeFigLib();
   _activeForm = _tplLibFormCtx;
   _tplLibMode = 'update'; _tplLibEditId = block.id;
@@ -16015,6 +16139,14 @@ function renderSchemaNode(schema, parent, key){
     input.value = (cur == null ? '' : cur);
     input.addEventListener('input', () => { setVal(parent, key, input.value); _activeForm.preview(); });
   }
+  // Associate every native field with its visible label. Besides improving
+  // screen-reader navigation, this makes the long builder much easier to drive
+  // by voice control and automated accessibility tooling.
+  if(input && /^(INPUT|TEXTAREA|SELECT)$/.test(input.tagName)){
+    const id = 'tlf-' + (++_tlfUid);
+    input.id = id;
+    lab.setAttribute('for', id);
+  }
   field.appendChild(input);
   if(schema['x-help']){ const h = document.createElement('div'); h.className = 'tlf-help'; h.textContent = schema['x-help']; field.appendChild(h); }
   return field;
@@ -16170,7 +16302,15 @@ function setVal(parent, key, v){
 /* ── live preview (debounced POST /playgrounds/build → sandboxed iframe) ──── */
 function schedulePreview(){
   clearTimeout(_tplLibDebounce);
+  setTplLibPreviewStatus('Updating…', 'busy');
   _tplLibDebounce = setTimeout(runTplLibPreview, 300);
+}
+
+function setTplLibPreviewStatus(text, state){
+  const el = $('tplLibPreviewStatus');
+  if(!el) return;
+  el.textContent = text || '';
+  el.dataset.state = state || '';
 }
 
 async function runTplLibPreview(){
@@ -16192,6 +16332,7 @@ async function runTplLibPreview(){
     if(seq !== _tplLibSeq) return;
     _tplLibBuilt = null;
     $('tplLibInsertBtn').disabled = true;
+    setTplLibPreviewStatus('Needs attention', 'error');
     errEl.textContent = 'Build error: ' + (e.message || e);
     errEl.classList.add('show');
   }
@@ -16224,11 +16365,16 @@ function tplLibSrcdoc(block){
 }
 function renderTplLibPreviewFrame(block){
   const host = $('tplLibPreview');
-  host.innerHTML = '';
+  const oldFrames = Array.from(host.querySelectorAll('.tpllib-frame'));
   const frame = document.createElement('iframe');
-  frame.className = 'tpllib-frame';
+  frame.className = 'tpllib-frame tpllib-frame-incoming';
   frame.setAttribute('sandbox', 'allow-scripts');   // opaque origin; srcdoc CSP meta blocks network
   frame.title = 'Interactive preview';
+  frame.addEventListener('load', () => {
+    frame.classList.add('is-ready');
+    setTplLibPreviewStatus('Up to date', 'ready');
+    window.setTimeout(() => oldFrames.forEach(old => old.remove()), 180);
+  }, { once:true });
   frame.srcdoc = tplLibSrcdoc(block);
   host.appendChild(frame);
 }
@@ -16292,6 +16438,18 @@ $('tplLibBackBtn').addEventListener('click', () => {
 });
 $('tplLibCancelBtn').addEventListener('click', closeTplLib);
 $('tplLibInsertBtn').addEventListener('click', insertTplLibBlock);
+$('tplLibEditTab')?.addEventListener('click', () => setTplLibMobilePanel('edit'));
+$('tplLibPreviewTab')?.addEventListener('click', () => setTplLibMobilePanel('preview'));
+function setTplLibMobilePanel(panel){
+  const workspace = $('tplLibWorkspace');
+  if(!workspace) return;
+  const next = panel === 'preview' ? 'preview' : 'edit';
+  workspace.dataset.panel = next;
+  const edit = $('tplLibEditTab'), preview = $('tplLibPreviewTab');
+  if(edit) edit.setAttribute('aria-selected', String(next === 'edit'));
+  if(preview) preview.setAttribute('aria-selected', String(next === 'preview'));
+  if(next === 'preview') $('tplLibPreviewPane')?.scrollIntoView({ block:'start', behavior:'smooth' });
+}
 window.closeTplLib = closeTplLib;
 
 /* ── Standalone Custom-interactive maker (Media → Library → Make) ────────────
@@ -16307,6 +16465,37 @@ function openInteractiveMaker(){
   const inp = $('tplLibSuggestInput'); if(inp) setTimeout(() => { try{ inp.focus(); }catch(_){ } }, 60);
 }
 window.openInteractiveMaker = openInteractiveMaker;
+
+/* The Create tab mounts the same production builder in normal document flow.
+   Post insertion still uses the modal presentation; only standalone creation is inline. */
+function mountMakerInline(sheetId, hostId, viewId){
+  const sheet=$(sheetId), host=$(hostId), view=$(viewId);
+  if(!sheet || !host || !view) return;
+  host.replaceChildren(sheet);
+  sheet.classList.add('maker-inline','open');
+  sheet.setAttribute('role','region');
+  sheet.removeAttribute('aria-modal');
+  const close=sheet.querySelector('.surface-close'); if(close) close.hidden=true;
+  const grab=sheet.querySelector('.picker-grab'); if(grab) grab.hidden=true;
+  view.classList.add('builder-open');
+  const scrim=$(sheetId==='figSheet'?'figScrim':'tplLibScrim'); if(scrim) scrim.classList.remove('open');
+}
+function unmountMakerInline(sheetId, viewId){
+  const sheet=$(sheetId); if(!sheet || !sheet.classList.contains('maker-inline')) return;
+  sheet.classList.remove('maker-inline','open');
+  sheet.setAttribute('role','dialog'); sheet.setAttribute('aria-modal','true');
+  const close=sheet.querySelector('.surface-close'); if(close) close.hidden=false;
+  const grab=sheet.querySelector('.picker-grab'); if(grab) grab.hidden=false;
+  document.body.appendChild(sheet);
+  const view=$(viewId); if(view) view.classList.remove('builder-open');
+}
+function openInteractiveWorkspace(){
+  const sh=$('tplLibSheet'), host=$('interactiveInlineHost');
+  if(sh && host && sh.parentElement===host && sh.classList.contains('maker-inline')) return;
+  openInteractiveMaker();
+  mountMakerInline('tplLibSheet','interactiveInlineHost','v-create-interactive');
+}
+window.openInteractiveWorkspace=openInteractiveWorkspace;
 
 /* Duplicate-and-modify: open the maker on the build step showing a SAVED
    interactive's built code, ready to re-describe. Save-to-Library then mints a
@@ -16423,6 +16612,7 @@ function closeFigLib(){
   const s = $('figScrim'), sh = $('figSheet');
   if(s) s.classList.remove('open');
   if(sh) sh.classList.remove('open');
+  unmountMakerInline('figSheet','v-create-flipbook');
   clearTimeout(_figDebounce);
   if(typeof stopFigDictation === 'function') stopFigDictation();
   if(typeof resetFigRefine === 'function') resetFigRefine();
@@ -16430,6 +16620,7 @@ function closeFigLib(){
 window.closeFigLib = closeFigLib;
 
 async function openFigLib(atIndex){
+  unmountMakerInline('figSheet','v-create-flipbook');
   // single-sheet guard
   closePicker(); closeAiDraft(); closeStructure(); closePreviewSheet(); closeTplLib();
   _activeForm = _figFormCtx;
@@ -16478,6 +16669,7 @@ function renderFigPlacement(){
    template-built figure, prefilled with its params. Update (not Insert) mode. */
 async function openFigLibForEdit(block){
   if(!block || !block.figure || !block.figure.familyId) return;
+  unmountMakerInline('figSheet','v-create-flipbook');
   closePicker(); closeAiDraft(); closeStructure(); closePreviewSheet(); closeTplLib();
   _activeForm = _figFormCtx;
   _figMode = 'update'; _figEditId = block.id;
@@ -17696,7 +17888,11 @@ const _figDraw = {
   tool: 'pen',               // 'pen' | 'text' | 'erase'
   textDrag: null,            // in-progress label drag: { frame, idx, dx, dy } | null
   eraseAction: null,         // in-progress erase gesture (one undoable action)
-  exportAspect: '1:1',       // GIF/video export shape: '1:1' | '4:5' | '9:16'
+  exportAspect: '16:9',      // canvas + GIF/video shape: landscape | square | portrait
+  zoom: 1,                   // editor-only magnification; never changes saved/export dimensions
+  displayBase: { w: 0, h: 0 },
+  panMode: false,
+  panDrag: null,
 };
 // `strokes` aliases the active frame's stroke list — existing handlers read/write
 // it (incl. `_figDraw.strokes = []` in figDrawClear) and stay on the current frame.
@@ -17762,6 +17958,8 @@ function openFigDraw(){
   box.hidden = false;
   _figDraw.open = true;
   _figDraw.frames = [{ strokes: [], included: true }]; _figDraw.frame = 0; _figDraw.cur = null;
+  _figDraw.size = { w: 0, h: 0 }; _figDraw.displayBase = { w: 0, h: 0 };
+  _figDraw.exportAspect = '16:9'; _figDraw.zoom = 1; _figDraw.panMode = false; _figDraw.panDrag = null;
   migrateFigFrames();
   _figDraw.blend = 'dissolve'; _figDraw.loop = 'loop';   // continuity defaults
   _figDraw.bg = null; _figDraw.bgImg = null; _figDraw.bgMode = 'trace';   // no reference image
@@ -17777,6 +17975,7 @@ function openFigDraw(){
     ? 'Restored your last drawing — carry on, or ✕ All to start fresh.'
     : 'Sketch with your finger, an Apple Pencil or a mouse. Strokes are smoothed when you lift off.';
   syncFigFrameUi();
+  setFigPanMode(false);
   syncFigImgUi();
   syncFigAidsUi();
   // size after layout settles so clientWidth is correct
@@ -17808,6 +18007,17 @@ function openFlipbookMaker(){
   if(note) note.textContent = 'Draw a frame, tap “+ Frame” for the next, then use onion-skin and ▶ Play. With 2+ frames you can 💾 Save to Library or export a GIF / video.';
 }
 window.openFlipbookMaker = openFlipbookMaker;
+function openFlipbookWorkspace(){
+  const sh=$('figSheet'), host=$('flipbookInlineHost');
+  if(sh && host && sh.parentElement===host && sh.classList.contains('maker-inline')){
+    requestAnimationFrame(() => { sizeFigCanvas(); redrawFigCanvas(); });
+    return;
+  }
+  openFlipbookMaker();
+  mountMakerInline('figSheet','flipbookInlineHost','v-create-flipbook');
+  requestAnimationFrame(() => { sizeFigCanvas(); redrawFigCanvas(); });
+}
+window.openFlipbookWorkspace=openFlipbookWorkspace;
 
 /* Close the Draw step + restore the entry tiles / family grid. Guarded so it is
    safe to call from resetFigEntry() (which openFigDraw() also calls). */
@@ -17824,17 +18034,91 @@ function closeFigDraw(){
   const fams = $('figFamilies'); if(fams) fams.style.display = '';
 }
 
-/* Size the canvas to the surface width at a fixed 4:3 ratio, high-DPI via
-   devicePixelRatio. Re-scales the backing store and the 2D context. */
-function sizeFigCanvas(){
+function figAspectRatio(aspect){
+  return aspect === '9:16' ? 9 / 16 : aspect === '1:1' ? 1 : 16 / 9;
+}
+function figScaleModel(oldSize, nextSize){
+  if(!oldSize || !oldSize.w || !oldSize.h || !nextSize.w || !nextSize.h) return;
+  if(oldSize.w === nextSize.w && oldSize.h === nextSize.h) return;
+  const scale = Math.min(nextSize.w / oldSize.w, nextSize.h / oldSize.h);
+  const offsetX = (nextSize.w - oldSize.w * scale) / 2;
+  const offsetY = (nextSize.h - oldSize.h * scale) / 2;
+  for(const fr of _figDraw.frames){
+    for(const st of (fr.strokes || [])){
+      for(const p of (st.points || [])){ p.x = p.x * scale + offsetX; p.y = p.y * scale + offsetY; }
+      if(st.width) st.width *= scale;
+    }
+    for(const t of (fr.texts || [])){
+      t.x = t.x * scale + offsetX; t.y = t.y * scale + offsetY;
+      if(t.size) t.size *= scale;
+    }
+  }
+}
+const FIG_ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
+function applyFigCanvasZoom(keepCentre = false){
+  const cv = $('figCanvas'), surface = $('figDrawSurface'), stage = $('figCanvasStage'), viewport = $('figCanvasViewport');
+  if(!cv || !surface || !stage) return;
+  const base = _figDraw.displayBase;
+  if(!base || !base.w || !base.h) return;
+  let cx = .5, cy = .5;
+  if(keepCentre && viewport){
+    cx = (viewport.scrollLeft + viewport.clientWidth / 2) / Math.max(1, viewport.scrollWidth);
+    cy = (viewport.scrollTop + viewport.clientHeight / 2) / Math.max(1, viewport.scrollHeight);
+  }
+  const w = Math.round(base.w * _figDraw.zoom), h = Math.round(base.h * _figDraw.zoom);
+  stage.style.width = w + 'px'; stage.style.height = h + 'px';
+  surface.style.width = base.w + 'px'; surface.style.marginInline = '0';
+  surface.style.transform = `scale(${_figDraw.zoom})`;
+  cv.style.width = base.w + 'px'; cv.style.height = base.h + 'px';
+  const out = $('figZoomOutVal'); if(out) out.textContent = Math.round(_figDraw.zoom * 100) + '%';
+  const minus = $('figZoomOut'), plus = $('figZoomIn');
+  if(minus) minus.disabled = _figDraw.zoom <= FIG_ZOOM_LEVELS[0];
+  if(plus) plus.disabled = _figDraw.zoom >= FIG_ZOOM_LEVELS[FIG_ZOOM_LEVELS.length - 1];
+  if(keepCentre && viewport) requestAnimationFrame(() => {
+    viewport.scrollTo({
+      left:Math.max(0, cx * viewport.scrollWidth - viewport.clientWidth / 2),
+      top:Math.max(0, cy * viewport.scrollHeight - viewport.clientHeight / 2),
+      behavior:'smooth',
+    });
+  });
+}
+function setFigCanvasZoom(next){
+  _figDraw.zoom = Math.max(FIG_ZOOM_LEVELS[0], Math.min(FIG_ZOOM_LEVELS[FIG_ZOOM_LEVELS.length - 1], next));
+  applyFigCanvasZoom(true);
+}
+function stepFigCanvasZoom(dir){
+  const current = _figDraw.zoom;
+  const idx = dir > 0
+    ? FIG_ZOOM_LEVELS.findIndex(v => v > current + .001)
+    : (() => { for(let i = FIG_ZOOM_LEVELS.length - 1; i >= 0; i--) if(FIG_ZOOM_LEVELS[i] < current - .001) return i; return -1; })();
+  if(idx < 0) return;
+  setFigCanvasZoom(FIG_ZOOM_LEVELS[idx]);
+}
+function setFigPanMode(on){
+  _figDraw.panMode = !!on;
+  _figDraw.panDrag = null;
+  const viewport = $('figCanvasViewport'), btn = $('figPanMode');
+  if(viewport){ viewport.classList.toggle('is-panning', _figDraw.panMode); viewport.classList.remove('is-dragging'); }
+  if(btn){ btn.classList.toggle('pan-on', _figDraw.panMode); btn.setAttribute('aria-pressed', _figDraw.panMode ? 'true' : 'false'); }
+}
+/* Keep the visible board comfortably inside the viewport. Its aspect is also
+   the export aspect, so the editor is a truthful preview of the GIF/video. */
+function sizeFigCanvas(rescaleModel = true){
   const cv = $('figCanvas'); if(!cv) return;
   const surface = $('figDrawSurface');
-  const cssW = Math.max(160, Math.round((surface || cv).clientWidth || 320));
-  const cssH = Math.round(cssW * 3 / 4);   // 4:3
+  const box = $('figDrawBox');
+  const availableW = Math.max(160, Math.round((box || surface || cv).clientWidth || 320));
+  const ratio = figAspectRatio(_figDraw.exportAspect);
+  const maxH = Math.max(280, Math.min(520, Math.round((window.innerHeight || 800) * 0.55)));
+  const cssW = Math.max(160, Math.min(availableW, Math.round(maxH * ratio)));
+  const cssH = Math.round(cssW / ratio);
+  const oldSize = _figDraw.size;
+  const nextSize = { w: cssW, h: cssH };
+  if(rescaleModel) figScaleModel(oldSize, nextSize);
   const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
-  _figDraw.size = { w: cssW, h: cssH };
+  _figDraw.size = nextSize;
+  _figDraw.displayBase = nextSize;
   _figDraw.dpr = dpr;
-  cv.style.height = cssH + 'px';
   cv.width = Math.round(cssW * dpr);
   cv.height = Math.round(cssH * dpr);
   const ctx = cv.getContext('2d');
@@ -17842,6 +18126,7 @@ function sizeFigCanvas(){
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   _figDraw.ctx = ctx;
+  applyFigCanvasZoom(false);
 }
 
 /* the visible ink colour for the raster preview: dark ink on the light paper board + light
@@ -18286,6 +18571,14 @@ function figCanvasPoint(e){
 function figPointerDown(e){
   if(!_figDraw.open) return;
   if(e.button != null && e.button > 0) return;   // ignore non-primary mouse buttons
+  if(_figDraw.panMode){
+    e.preventDefault();
+    const viewport = $('figCanvasViewport'), cv = $('figCanvas'); if(!viewport || !cv) return;
+    _figDraw.panDrag = { pointerId:e.pointerId, x:e.clientX, y:e.clientY, left:viewport.scrollLeft, top:viewport.scrollTop };
+    viewport.classList.add('is-dragging');
+    try{ cv.setPointerCapture(e.pointerId); }catch(_){}
+    return;
+  }
   if(_figDraw.playTimer) stopFigPlay();           // drawing interrupts playback
   e.preventDefault();
   const cv = $('figCanvas');
@@ -18417,6 +18710,13 @@ function figTextEditor(idx, x, y){
 
 function figPointerMove(e){
   if(!_figDraw.open) return;
+  if(_figDraw.panDrag && _figDraw.panDrag.pointerId === e.pointerId){
+    e.preventDefault();
+    const viewport = $('figCanvasViewport'), d = _figDraw.panDrag; if(!viewport) return;
+    viewport.scrollLeft = d.left - (e.clientX - d.x);
+    viewport.scrollTop = d.top - (e.clientY - d.y);
+    return;
+  }
   // erase drag: keep erasing along the pointer path
   if(_figDraw.eraseAction){
     e.preventDefault();
@@ -18454,6 +18754,12 @@ function figPointerMove(e){
 
 function figPointerUp(e){
   if(!_figDraw.open) return;
+  if(_figDraw.panDrag && _figDraw.panDrag.pointerId === e.pointerId){
+    _figDraw.panDrag = null;
+    $('figCanvasViewport')?.classList.remove('is-dragging');
+    try{ $('figCanvas').releasePointerCapture(e.pointerId); }catch(_){}
+    return;
+  }
   // finish an erase gesture: log it as ONE undoable action (if anything was erased)
   if(_figDraw.eraseAction){
     const act = _figDraw.eraseAction;
@@ -18521,6 +18827,10 @@ function mirrorStroke(stroke){
 
 function figPointerCancel(e){
   if(!_figDraw.open) return;
+  if(_figDraw.panDrag && _figDraw.panDrag.pointerId === e.pointerId){
+    _figDraw.panDrag = null;
+    $('figCanvasViewport')?.classList.remove('is-dragging');
+  }
   // discard the in-progress stroke
   _figDraw.cur = null;
   redrawFigCanvas();
@@ -18865,6 +19175,12 @@ function syncFigFrameUi(){
   const loopGrp = $('figFlipLoop');
   if(loopGrp) loopGrp.querySelectorAll('button').forEach(b =>
     b.setAttribute('aria-pressed', b.dataset.loop === _figDraw.loop ? 'true' : 'false'));
+  const aspectGrp = $('figFlipAspect');
+  if(aspectGrp) aspectGrp.querySelectorAll('button').forEach(b =>
+    b.setAttribute('aria-pressed', b.dataset.a === _figDraw.exportAspect ? 'true' : 'false'));
+  const aspectHint = $('figAspectHint');
+  if(aspectHint) aspectHint.textContent = _figDraw.exportAspect === '9:16' ? '9:16 vertical video'
+    : _figDraw.exportAspect === '1:1' ? '1:1 square video' : '16:9 widescreen video';
   const play = $('figFramePlay');
   if(play){
     const on = !!_figDraw.playTimer;
@@ -18908,7 +19224,7 @@ function figAutosave(){
       if(!hasContent){ localStorage.removeItem(FIG_AUTOSAVE_KEY); return; }
       localStorage.setItem(FIG_AUTOSAVE_KEY, JSON.stringify({
         v: 1, at: Date.now(), size: _figDraw.size,
-        blend: _figDraw.blend, loop: _figDraw.loop,
+        blend: _figDraw.blend, loop: _figDraw.loop, exportAspect: _figDraw.exportAspect,
         frames: _figDraw.frames.map(fr => ({
           strokes: fr.strokes, texts: fr.texts || [], included: fr.included !== false, dur: fr.dur || 1,
         })),
@@ -18936,8 +19252,10 @@ function figRestoreAutosave(){
     }
     _figDraw.frames = s.frames;
     _figDraw.frame = 0;
+    if(s.size && s.size.w && s.size.h) _figDraw.size = s.size;
     if(s.blend === 'cut' || s.blend === 'dissolve') _figDraw.blend = s.blend;
     if(s.loop === 'loop' || s.loop === 'pingpong') _figDraw.loop = s.loop;
+    if(['16:9','1:1','9:16'].includes(s.exportAspect)) _figDraw.exportAspect = s.exportAspect;
     migrateFigFrames();
     return _figDraw.frames.some(fr => (fr.strokes && fr.strokes.length) || (fr.texts && fr.texts.length));
   }catch(_){ return false; }
@@ -18961,7 +19279,8 @@ async function figSaveFlipbook(){
   if(inc.length < 2){ figDrawNote('Include at least two frames first.'); return; }
   const svg = buildFlipbookSvg();
   const model = {
-    v: 1, size: { ..._figDraw.size }, blend: _figDraw.blend, loop: _figDraw.loop, fps: figCurrentFps(),
+    v: 1, size: { ..._figDraw.size }, blend: _figDraw.blend, loop: _figDraw.loop,
+    exportAspect: _figDraw.exportAspect, fps: figCurrentFps(),
     frames: _figDraw.frames.map(fr => ({
       strokes: fr.strokes, texts: fr.texts || [], included: fr.included !== false, dur: fr.dur || 1,
     })),
@@ -18985,7 +19304,10 @@ function figLoadFlipbookModel(model){
   _figDraw.frame = 0;
   if(model.blend === 'cut' || model.blend === 'dissolve') _figDraw.blend = model.blend;
   if(model.loop === 'loop' || model.loop === 'pingpong') _figDraw.loop = model.loop;
+  if(['16:9','1:1','9:16'].includes(model.exportAspect)) _figDraw.exportAspect = model.exportAspect;
+  if(model.size && model.size.w && model.size.h) _figDraw.size = model.size;
   migrateFigFrames();
+  sizeFigCanvas(true);
   figAutosave();
   syncFigFrameUi();
   redrawFigCanvas();
@@ -19517,7 +19839,7 @@ async function figExportFlipbook(kind){
   const order = seq.slice();
   if(_figDraw.loop === 'pingpong') for(let i = seq.length - 2; i >= 1; i--) order.push(seq[i]);
   const W = kind === 'gif' ? 720 : 1080;
-  const H = _figDraw.exportAspect === '4:5' ? Math.round(W * 1.25)
+  const H = _figDraw.exportAspect === '16:9' ? Math.round(W * 9 / 16)
     : _figDraw.exportAspect === '9:16' ? Math.round(W * 16 / 9) : W;
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d');
@@ -19729,9 +20051,24 @@ function figDrawNote(msg){ const n = $('figDrawNote'); if(n) n.textContent = msg
   const aspectGrp = $('figFlipAspect');
   if(aspectGrp) aspectGrp.addEventListener('click', e => {
     const b = e.target.closest('button'); if(!b) return;
-    _figDraw.exportAspect = ['1:1','4:5','9:16'].includes(b.dataset.a) ? b.dataset.a : '1:1';
-    aspectGrp.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+    const next = ['16:9','1:1','9:16'].includes(b.dataset.a) ? b.dataset.a : '16:9';
+    if(next === _figDraw.exportAspect) return;
+    _figDraw.exportAspect = next;
+    sizeFigCanvas(true);
+    syncFigFrameUi();
+    redrawFigCanvas();
+    figDrawNote(`Canvas changed to ${next === '16:9' ? 'Landscape (16:9)' : next === '9:16' ? 'Portrait (9:16)' : 'Square (1:1)'}. GIF and video exports will use this format.`);
   });
+  const zoomOut = $('figZoomOut'); if(zoomOut) zoomOut.addEventListener('click', () => stepFigCanvasZoom(-1));
+  const zoomIn = $('figZoomIn'); if(zoomIn) zoomIn.addEventListener('click', () => stepFigCanvasZoom(1));
+  const zoomReset = $('figZoomReset'); if(zoomReset) zoomReset.addEventListener('click', () => setFigCanvasZoom(1));
+  const panMode = $('figPanMode'); if(panMode) panMode.addEventListener('click', () => setFigPanMode(!_figDraw.panMode));
+  const canvasViewport = $('figCanvasViewport');
+  if(canvasViewport) canvasViewport.addEventListener('wheel', e => {
+    if(!(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault();
+    setFigCanvasZoom(_figDraw.zoom * Math.exp(-e.deltaY * 0.0025));
+  }, { passive:false });
   const fps = $('figFrameFps');
   if(fps) fps.addEventListener('input', () => {
     const out = $('figFrameFpsOut'); if(out) out.textContent = String(figCurrentFps());
@@ -19741,7 +20078,7 @@ function figDrawNote(msg){ const n = $('figDrawNote'); if(n) n.textContent = msg
   // keep the canvas crisp when the panel width changes (rotation / resize)
   window.addEventListener('resize', () => {
     if(!_figDraw.open) return;
-    sizeFigCanvas(); redrawFigCanvas();
+    sizeFigCanvas(true); redrawFigCanvas();
   });
 })();
 
@@ -21567,6 +21904,7 @@ async function ptRender(html){
   const css = await getPreviewCss();
   // Capture a plain-text version for the announce seed (the sandboxed frame is unreadable).
   _ptLastText = String(html||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+  const empty=$('ptPreviewEmpty'); if(empty) empty.hidden=!!_ptLastText;
   $('ptFrame').srcdoc = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+css+'</style></head>'
     + '<body><article data-post-theme="dark"><div class="pv-frame"><div class="article-body">'+(html||'')+'</div></div></article></body></html>';
 }

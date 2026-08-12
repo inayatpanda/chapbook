@@ -21,13 +21,14 @@
   "dependencies": {
     "@netlify/blobs": "^8",
     "aws4fetch": "^1.0.20",
-    "dompurify": "^3"
+    "dompurify": "3.4.13"
   },
   "devDependencies": {
     "@tauri-apps/plugin-clipboard-manager": "^2.3.2",
     "@tauri-apps/plugin-dialog": "^2.7.2",
     "@tauri-apps/plugin-fs": "^2.5.1",
     "@tauri-apps/plugin-http": "^2.5.9",
-    "esbuild": "^0.23"
+    "esbuild": "^0.23",
+    "playwright": "^1.62.1"
   }
 }
