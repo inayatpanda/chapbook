@@ -1,0 +1,54 @@
+[
+  {
+    "name": "GitHub service and permission errors give the correct recovery advice",
+    "status": "PASS"
+  },
+  {
+    "name": "manual token path validates the chosen repository before saving",
+    "status": "PASS"
+  },
+  {
+    "name": "publish confirmation distinguishes GitHub save from website deployment",
+    "status": "PASS"
+  },
+  {
+    "name": "saved sign-in restores searchable repository picker on mobile",
+    "status": "PASS"
+  },
+  {
+    "name": "repository list failure is visible and retry does not reauthenticate",
+    "status": "PASS"
+  },
+  {
+    "name": "rejects wrong repository without replacing current connection",
+    "status": "PASS"
+  },
+  {
+    "name": "rejects readonly repository without replacing current connection",
+    "status": "PASS"
+  },
+  {
+    "name": "rejects branch repository without replacing current connection",
+    "status": "PASS"
+  },
+  {
+    "name": "repository choice validates then preserves its actual default branch",
+    "status": "PASS"
+  },
+  {
+    "name": "closing setup cancels polling and retains the existing connection",
+    "status": "PASS"
+  },
+  {
+    "name": "cancelling device sign-in prevents a late token from changing the connection",
+    "status": "PASS"
+  },
+  {
+    "name": "switching accounts stages credentials until the new website is chosen",
+    "status": "PASS"
+  },
+  {
+    "name": "retry after partial website creation resumes the same repository",
+    "status": "PASS"
+  }
+]

@@ -10,12 +10,72 @@
     "status": "PASS"
   },
   {
+    "theme": "practice",
+    "width": 1440,
+    "status": "PASS"
+  },
+  {
+    "theme": "practice",
+    "width": 390,
+    "status": "PASS"
+  },
+  {
     "theme": "petal",
     "width": 1440,
     "status": "PASS"
   },
   {
     "theme": "petal",
+    "width": 390,
+    "status": "PASS"
+  },
+  {
+    "theme": "contour",
+    "width": 1440,
+    "status": "PASS"
+  },
+  {
+    "theme": "contour",
+    "width": 390,
+    "status": "PASS"
+  },
+  {
+    "theme": "cut",
+    "width": 1440,
+    "status": "PASS"
+  },
+  {
+    "theme": "cut",
+    "width": 390,
+    "status": "PASS"
+  },
+  {
+    "theme": "still",
+    "width": 1440,
+    "status": "PASS"
+  },
+  {
+    "theme": "still",
+    "width": 390,
+    "status": "PASS"
+  },
+  {
+    "theme": "office",
+    "width": 1440,
+    "status": "PASS"
+  },
+  {
+    "theme": "office",
+    "width": 390,
+    "status": "PASS"
+  },
+  {
+    "theme": "portrait",
+    "width": 1440,
+    "status": "PASS"
+  },
+  {
+    "theme": "portrait",
     "width": 390,
     "status": "PASS"
   },
@@ -25,6 +85,66 @@
     "status": "PASS"
   },
   {
+    "theme": "observatory",
+    "width": 1440,
+    "status": "PASS"
+  },
+  {
+    "theme": "observatory",
+    "width": 390,
+    "status": "PASS"
+  },
+  {
+    "theme": "ledger",
+    "width": 1440,
+    "status": "PASS"
+  },
+  {
+    "theme": "ledger",
+    "width": 390,
+    "status": "PASS"
+  },
+  {
+    "theme": "air",
+    "width": 1440,
+    "status": "PASS"
+  },
+  {
+    "theme": "air",
+    "width": 390,
+    "status": "PASS"
+  },
+  {
+    "theme": "blueprint-workshop",
+    "width": 1440,
+    "status": "PASS"
+  },
+  {
+    "theme": "blueprint-workshop",
+    "width": 390,
+    "status": "PASS"
+  },
+  {
+    "theme": "broadsheet",
+    "width": 1440,
+    "status": "PASS"
+  },
+  {
+    "theme": "broadsheet",
+    "width": 390,
+    "status": "PASS"
+  },
+  {
+    "theme": "journal",
+    "width": 1440,
+    "status": "PASS"
+  },
+  {
+    "theme": "journal",
+    "width": 390,
+    "status": "PASS"
+  },
+  {
     "theme": "kiosk",
     "width": 1440,
     "status": "PASS"
@@ -35,12 +155,102 @@
     "status": "PASS"
   },
   {
+    "theme": "desert-archive",
+    "width": 1440,
+    "status": "PASS"
+  },
+  {
+    "theme": "desert-archive",
+    "width": 390,
+    "status": "PASS"
+  },
+  {
+    "theme": "neon",
+    "width": 1440,
+    "status": "PASS"
+  },
+  {
+    "theme": "neon",
+    "width": 390,
+    "status": "PASS"
+  },
+  {
+    "theme": "zine",
+    "width": 1440,
+    "status": "PASS"
+  },
+  {
+    "theme": "zine",
+    "width": 390,
+    "status": "PASS"
+  },
+  {
     "theme": "scrapbook",
     "width": 1440,
     "status": "PASS"
   },
   {
     "theme": "scrapbook",
+    "width": 390,
+    "status": "PASS"
+  },
+  {
+    "theme": "woodland-chronicle",
+    "width": 1440,
+    "status": "PASS"
+  },
+  {
+    "theme": "woodland-chronicle",
+    "width": 390,
+    "status": "PASS"
+  },
+  {
+    "theme": "doodle",
+    "width": 1440,
+    "status": "PASS"
+  },
+  {
+    "theme": "doodle",
+    "width": 390,
+    "status": "PASS"
+  },
+  {
+    "theme": "rocket",
+    "width": 1440,
+    "status": "PASS"
+  },
+  {
+    "theme": "rocket",
+    "width": 390,
+    "status": "PASS"
+  },
+  {
+    "theme": "pixel",
+    "width": 1440,
+    "status": "PASS"
+  },
+  {
+    "theme": "pixel",
+    "width": 390,
+    "status": "PASS"
+  },
+  {
+    "theme": "comic",
+    "width": 1440,
+    "status": "PASS"
+  },
+  {
+    "theme": "comic",
+    "width": 390,
+    "status": "PASS"
+  },
+  {
+    "theme": "field-atlas",
+    "width": 1440,
+    "status": "PASS"
+  },
+  {
+    "theme": "field-atlas",
     "width": 390,
     "status": "PASS"
   },

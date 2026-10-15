@@ -188,6 +188,8 @@
     @keyframes rise{to{opacity:1;transform:none}}
     .card:hover{transform:translateY(-2px)}
   }
+
+.walkthroughs{padding:1rem 0 3rem;scroll-margin-top:7rem}.walkthroughs>p{color:var(--mist);max-width:48rem;margin:.6rem 0 1.5rem}.walkthrough-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;align-items:start}.walkthrough-grid details{border:1px solid var(--hairline);border-radius:10px;padding:1.2rem;background:rgba(255,255,255,.025)}.walkthrough-grid summary{font-weight:600;cursor:pointer;line-height:1.5}.walkthrough-grid ol{padding-left:1.3rem;margin:1rem 0 .5rem;font-size:.9rem}.walkthrough-grid li{padding-left:.2rem;margin:.65rem 0}.walkthrough-grid p{font-size:.85rem;color:var(--mist);margin:.8rem 0 0}.walkthrough-grid a{overflow-wrap:anywhere}@media(max-width:640px){.walkthrough-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -199,7 +201,7 @@
 
     <div class="hero">
       <h1><span class="brand">Chapbook</span> tutorials</h1>
-      <p class="sub">Learn every feature in about a minute. Fifteen short videos take you from connecting GitHub to publishing your post live on the web — plus a deep dive on building and modifying interactive blocks.</p>
+      <p class="sub">Start with a written walkthrough for the current app, or watch a video below. The written guides include the updated GitHub connection flow, website themes and appointment setup.</p>
       <div class="herolinks">
         <a class="herobtn" href="https://chapbook.rqai.co.uk/app">Open Chapbook</a>
         <a class="herobtn ghost" href="/download">Download the app</a>
@@ -207,9 +209,51 @@
       </div>
     </div>
 
+<section class="walkthroughs" id="walkthroughs" aria-labelledby="walkthrough-title">
+<h2 id="walkthrough-title">Follow a complete workflow</h2>
+<p>Current instructions for setup, writing and website updates. Drafts stay on this device until you publish or export them.</p>
+<div class="walkthrough-grid">
+<details id="connect-github"><summary>1. Connect or reconnect GitHub</summary><ol>
+<li>Open connection setup and choose <b>Sign in with GitHub</b>. Copy the code, open GitHub, approve access and return here.</li>
+<li>Search your repositories, select your website and choose <b>Connect this website</b>. The app checks the branch and website settings before changing your connection.</li>
+<li>Returning users see their saved account. Use <b>Refresh repositories</b> after a failed request. Temporary outages do not require a new sign-in.</li>
+<li>For a private repository, open <b>Advanced</b>. Enter its owner, name, branch and a token with Contents read and write access, then choose <b>Connect with this token</b>.</li>
+</ol><p>Cancel or close setup to keep the existing connection. Expired access needs a new sign-in; permission errors need the correct repository access or organisation approval.</p></details>
+<details id="choose-theme"><summary>2. Create a website and choose a theme</summary><ol>
+<li>After signing in, expand <b>Create a new website</b>. Enter its name and choose a theme. Compare desktop and phone layouts in the <a href="/themes">theme gallery</a>.</li>
+<li>Choose <b>Create my blog</b>. Follow any GitHub Pages setup instruction in the result panel.</li>
+<li>In <b>Site settings</b>, add your name, description, links and professional details. Existing sites show the themes installed in their own repository.</li>
+<li>Save, wait for the website build, then check the public site on desktop and phone. Review navigation and long headings.</li>
+</ol><p>If creation stops after the repository was made, retry with the same name to resume that repository. You can change its theme later.</p></details>
+<details id="first-post"><summary>3. Write, preview and publish</summary><ol>
+<li>Open <b>Write</b>, start a post and choose a template or blank page. Add a title and text.</li>
+<li>Add images or a gallery with useful alt text and captions. Preview an interactive block and try its controls.</li>
+<li>Preview the post and run the pre-publish check. Fix blocking errors, confirm its status and choose <b>Publish</b>.</li>
+<li><b>Saved · website updating</b> means GitHub received the files. Use <b>Check website build</b>, then open the website after the build succeeds.</li>
+</ol><p>A successful save and a finished deployment are separate steps. If the build fails, read its log before repeatedly publishing. Local drafts remain available in the editor.</p></details>
+<details id="revise-schedule"><summary>4. Revise or schedule a post</summary><ol>
+<li>Open the existing post from <b>Posts</b>, edit it, preview and publish to update the same post.</li>
+<li>For a future release, choose <b>Schedule</b>, select a future date and time, and complete the pre-publish checks.</li>
+<li>Confirm its scheduled status. The site's scheduled-publishing and deployment workflows must be enabled and working.</li>
+<li>Check the public URL after deployment. Use the takedown action to return published work to draft.</li>
+</ol><p>The template checks schedules hourly. Publication happens on a workflow run after the due time, rather than at an exact minute.</p></details>
+<details id="appointments"><summary>5. Set up business appointments</summary><ol>
+<li>Choose a theme such as Practice, Petal, Contour, Cut or Still. Add real business details and services in <b>Site settings</b>.</li>
+<li>Configure availability, event types and confirmation emails with your booking provider. Paste its HTTPS event link into your website's booking field.</li>
+<li>A Cal.com event link supports a visitor-loaded calendar on the Appointments page. Other providers open through their booking link. Services can have separate links.</li>
+<li>Test the published booking flow using your own test details. Check the saved appointment, calendar entry and confirmation delivery.</li>
+</ol><p>For paid appointments, connect a supported payment account in the provider and use its test mode first. A displayed price does not activate payments. The provider stores appointments and handles emails and payments.</p></details>
+<details id="safe-recovery"><summary>6. Recover from connection or save failures</summary><ol>
+<li>Keep the editor open and read the error. Network outages, rate limits and expired tokens need different fixes.</li>
+<li>Wait and retry an outage or rate limit. Reconnect expired access. Correct a wrong repository or branch in setup.</li>
+<li>After publishing, check the website build before expecting the new page. Repository access alone does not prove every token or branch permits writes.</li>
+<li>Export drafts before changing devices, clearing browser data or forgetting a device. Keep the backup somewhere you control.</li>
+</ol><p>Refreshing the repository list does not erase drafts. Clearing browser storage can erase work that has not been published or exported.</p></details>
+</div></section>
+
     <div class="sectionhead">
       <h2>Every feature, about a minute each</h2>
-      <p>Ten short walkthroughs — from connecting GitHub to publishing your post live on the web.</p>
+      <p>Short demonstrations of writing, media, interactive blocks and publishing. Some recordings show an earlier interface; use the written guides above for current setup steps.</p>
     </div>
 
     <section class="grid" aria-label="Chapbook tutorials">

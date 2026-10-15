@@ -39,6 +39,36 @@ The pre-existing Blueprint Workshop writing theme remains a separate creative op
 
 The public gallery has category filters and desktop/phone previews. The old flat `themes.html` hosting route and new directory route now serve identical gallery content; a browser test checks the public result.
 
+## GitHub integration follow-up
+
+The user reported erratic and cumbersome GitHub setup. Both apps now use the same setup controller:
+
+- Reopening setup validates the saved sign-in and restores the repository picker. A failed list request is visible and retryable rather than being silently presented as an empty account.
+- Repository discovery follows pagination and includes editable collaboration/organisation repositories. Search narrows the list. Archived/read-only repositories are excluded; selecting a repository verifies its branch and `src/data/site.json` before changing the connection.
+- A replacement account/token remains staged until its website is explicitly selected and checked. Cancelling sign-in or closing setup leaves the existing connection intact and prevents late approval from replacing credentials.
+- Setup messages are visible. A global `.msg { display:none }` previously hid errors written by the onboarding flow. Authentication, permission, throttling and service failures now give distinct recovery instructions.
+- Device polling respects slow-down responses, tolerates bounded transient network/5xx failures and cancels on close. Code copying has explicit success/failure feedback.
+- Manual tokens follow the same repository checks. Metadata checks cannot prove every fine-grained token/branch write policy without a write; actual write denials remain explicit when publishing.
+- Retrying interrupted website creation resumes its recorded repository instead of creating another copy. Atelier uses the canonical public template and its current 28-theme catalogue.
+- Existing websites appear first. New-site creation is a disclosure; manual token controls are under Advanced. Atelier now has a close-setup control.
+- Publishing reports that GitHub saved the content and the website is updating, with a direct build-status link. A successful commit is no longer described as proof the website is already live. Atelier also preserves scheduled timestamps on republish and surfaces slug-reservation failures accurately.
+
+Verification: **13 browser scenarios passed per app**, including manual tokens, account changes, failed repository fetches, incompatible/read-only/missing-branch repositories, cancellation, partial creation recovery and publish feedback. The existing **245 browser checks per app** also passed. Live read-only account checks returned **22 editable repositories** and validated both the personal site and synthetic QA site. Fresh human OAuth consent remains an account-owner step; device flow was exercised with isolated transport fixtures.
+
+GitHub reference: [device authorization](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow) and [repository discovery](https://docs.github.com/en/rest/repos/repos#list-repositories-for-the-authenticated-user).
+
+## Written walkthroughs and tutorial videos
+
+The public [tutorials page](https://chapbook.rqai.co.uk/tutorials#walkthroughs) now has six current written walkthroughs: GitHub connection/reconnection, creating a site and choosing a theme, first-post publication, revisions/scheduling, business appointment setup and recovery/backup. The gallery links directly to these guides.
+
+The six disclosure guides were checked at desktop and phone widths. All **15 existing tutorial videos loaded and played** in the browser. They were not re-recorded; the page explicitly notes that older recordings can show an earlier interface and directs users to the written guides for current setup instructions.
+
+## Header and opening-layout follow-up
+
+Themes now have different navigation compositions: literary columns, newspaper rules, a numbered portfolio index, centered salon wordmarks, gallery menu controls, a consulting directory and expressive labels/tabs. Darkroom places its opening photograph beside a caption column instead of another centered masthead. The existing desert/blueprint compositions remain intact, and the personal site's Dune/Blueprint palette controls are retained.
+
+All **28 themes at 1440 and 390 pixels** passed overflow, active navigation and menu/Escape checks. Hidden mobile menus no longer remain keyboard-focusable. Active links work on GitHub Pages project subpaths, and professional pages have one main landmark. Gallery screenshots include content revealed on scroll and have been refreshed. The personal-site deployment succeeded, and all eight live published-post checks passed after the template update.
+
 ## Booking and payments
 
 Cal.com event links offer a click-to-load calendar on the Appointments page. Other HTTPS providers work as external booking links. Individual services can have separate booking links. A direct link remains available if the embedded provider fails to load.
@@ -53,8 +83,8 @@ See [booking setup](booking-and-business-sites.md) for the owner steps and offic
 
 | Area | Result | Scope |
 |---|---|---|
-| Chapbook automated tests | 1,100 passed | Final source/build, including gallery route consistency |
-| Atelier automated tests | 687 passed | Final editor and portable engine |
+| Chapbook automated tests | 1,107 passed | Final source/build, including gallery route consistency |
+| Atelier automated tests | 691 passed | Final editor and portable engine |
 | Helm automated tests | 1,339 passed | Backend, shared engine and owner features |
 | Website template tests | 78 passed | Theme registry, booking links, cover resolution and existing site logic |
 | Personal-site tests | 63 passed | Existing site logic plus new booking/image helpers |
@@ -85,13 +115,13 @@ Raw credential-free results and screenshots are in [readiness evidence](readines
 
 ## Release identities
 
-- Chapbook source commit: `2b993f2`.
+- Chapbook source commit: `67c9e1a`.
 - Chapbook production Netlify deploy: `6ad11287a3d390f751496b90`.
-- Atelier deployed Pages commit: `73c28dabd63489a69cec19f934e13cb7aa42c3be`.
-- Atelier source commit: `1b196d6`.
-- Helm source commit: `112936f`.
-- Public template commits: `f16c3be` (themes), `b340a76` (published-media subpaths).
-- Personal website commits: `2939c0e` (themes; Hostinger deployment succeeded), `88f5a45` (shared media URL handling; Hostinger deployment succeeded).
+- Atelier deployed Pages commit: `61c45bf`.
+- Atelier source commit: `3ec07b7` (source), `6227dd1` (built assets).
+- Helm source commit: `3debed2`.
+- Public template latest header commit: `b4c7b6f`. Earlier commits: `f16c3be` (themes), `b340a76` (published-media subpaths).
+- Personal website latest header commit: `338ade3` (Hostinger deployment succeeded). Earlier commits: `2939c0e` (themes; Hostinger deployment succeeded), `88f5a45` (shared media URL handling; Hostinger deployment succeeded).
 
 ## Remaining limits
 
