@@ -57,7 +57,7 @@ test('formula calculator exposes synchronised range/number inputs and multiple o
   assert.match(b.html, /type="range"/);
   assert.match(b.html, /type="number"/);
   assert.ok((b.html.match(/data-role="out"/g) || []).length >= 2);
-  assert.match(b.js, /new Function/);
+  assert.match(b.js, /compileMathExpression/);
   assert.match(b.js, /days \* rate/);
 });
 

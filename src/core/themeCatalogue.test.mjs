@@ -9,9 +9,9 @@ import {
 const b64 = (s) => Buffer.from(s, 'utf8').toString('base64');
 
 // --- BAKED registry -------------------------------------------------------
-test('BAKED_CATALOGUE has 20 themes across 5 categories', () => {
-  assert.equal(BAKED_CATALOGUE.themes.length, 20);
-  assert.equal(BAKED_CATALOGUE.categories.length, 5);
+test('BAKED_CATALOGUE has 28 themes across 6 categories', () => {
+  assert.equal(BAKED_CATALOGUE.themes.length, 28);
+  assert.equal(BAKED_CATALOGUE.categories.length, 6);
 });
 test('BAKED_CATALOGUE default theme "observatory" is present and is the default', () => {
   assert.equal(DEFAULT_THEME, 'observatory');
@@ -40,20 +40,20 @@ test('every baked theme has id/name/category/preview{bg,ink,accent}', () => {
 // --- parseCatalogue -------------------------------------------------------
 test('parseCatalogue parses a raw JSON string', () => {
   const out = parseCatalogue(JSON.stringify(BAKED_CATALOGUE));
-  assert.equal(out.themes.length, 20);
-  assert.equal(out.categories.length, 5);
+  assert.equal(out.themes.length, 28);
+  assert.equal(out.categories.length, 6);
 });
 test('parseCatalogue decodes a GitHub contents API base64 payload', () => {
   const payload = { content: b64(JSON.stringify(BAKED_CATALOGUE)), encoding: 'base64' };
   const out = parseCatalogue(payload);
-  assert.equal(out.themes.length, 20);
-  assert.equal(out.themes[0].id, 'observatory');
+  assert.equal(out.themes.length, 28);
+  assert.equal(out.themes[0].id, 'folio');
 });
 test('parseCatalogue survives newline-wrapped base64 (as GitHub returns it)', () => {
   const raw = b64(JSON.stringify(BAKED_CATALOGUE));
   const wrapped = raw.replace(/(.{60})/g, '$1\n'); // GitHub wraps at 60 cols
   const out = parseCatalogue({ content: wrapped, encoding: 'base64' });
-  assert.equal(out.themes.length, 20);
+  assert.equal(out.themes.length, 28);
 });
 test('parseCatalogue decodes multibyte UTF-8 (em dash) intact', () => {
   const one = { categories: [{ id: 'c', name: 'C' }], themes: [
@@ -64,7 +64,7 @@ test('parseCatalogue decodes multibyte UTF-8 (em dash) intact', () => {
 });
 test('parseCatalogue accepts an already-parsed object', () => {
   const out = parseCatalogue(BAKED_CATALOGUE);
-  assert.equal(out.themes.length, 20);
+  assert.equal(out.themes.length, 28);
 });
 test('parseCatalogue drops malformed themes but keeps valid ones', () => {
   const mixed = { categories: [{ id: 'c', name: 'C' }], themes: [
@@ -127,8 +127,8 @@ test('fetchLiveCatalogue falls back to BAKED when no fetch is available', async 
 // --- groupByCategory ------------------------------------------------------
 test('groupByCategory groups in category order, only non-empty groups', () => {
   const groups = groupByCategory(BAKED_CATALOGUE);
-  assert.deepEqual(groups.map((g) => g.id), ['clean', 'editorial', 'creative', 'kids', 'photo']);
-  assert.equal(groups.reduce((n, g) => n + g.themes.length, 0), 20);
+  assert.deepEqual(groups.map((g) => g.id), ['professional', 'clean', 'editorial', 'creative', 'kids', 'photo']);
+  assert.equal(groups.reduce((n, g) => n + g.themes.length, 0), 28);
 });
 test('groupByCategory collects unknown-category themes under a trailing "More"', () => {
   const cat = { categories: [{ id: 'a', name: 'A' }], themes: [
@@ -188,9 +188,9 @@ test('pickerBodyHTML marks exactly the requested theme selected', () => {
   const body = pickerBodyHTML(BAKED_CATALOGUE, 'darkroom');
   assert.equal((body.match(/aria-checked="true"/g) || []).length, 1);
   assert.deepEqual(checkedId(body), ['darkroom']);
-  assert.equal((body.match(/data-theme=/g) || []).length, 20);
+  assert.equal((body.match(/data-theme=/g) || []).length, 28);
 });
-test('pickerBodyHTML falls back to the first theme for an unknown selection', () => {
+test('pickerBodyHTML falls back to the default theme for an unknown selection', () => {
   const body = pickerBodyHTML(BAKED_CATALOGUE, 'does-not-exist');
   assert.equal((body.match(/aria-checked="true"/g) || []).length, 1);
   assert.deepEqual(checkedId(body), ['observatory']);

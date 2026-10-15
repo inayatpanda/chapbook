@@ -473,9 +473,10 @@ async function commit() {
 // links exactly. PURE (no DOM/network). Used to absolutise the success-card href below.
 export function normaliseSiteOrigin(url) {
   const raw = String(url == null ? '' : url).trim();
-  if (!raw) return '';
+  if (!raw || (/^[a-z][a-z0-9+.-]*:/i.test(raw) && !/^https?:\/\//i.test(raw))) return '';
   let u; try { u = new URL(/^https?:\/\//i.test(raw) ? raw : 'https://' + raw); } catch { return ''; }
-  return (u.origin && u.origin !== 'null') ? u.origin : '';
+  if (!/^https?:$/.test(u.protocol) || !u.origin || u.origin === 'null') return '';
+  return u.origin + u.pathname.replace(/\/+$/, '');
 }
 
 // Build the "Open your blog's Darkroom" href. M4/P2: do NOT guess an `<owner>.github.io/<repo>/`

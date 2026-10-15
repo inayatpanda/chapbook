@@ -7,6 +7,7 @@
 // so the real risks are (a) hand-pasted `raw` blocks and (b) playground JS with a
 // syntax error — JS isn't sanitised and a broken script just silently never runs.
 import { serialiseBlocks } from './blocks.js';
+import { parse } from 'acorn';
 import { SAFE_IMAGE_DATA_URL } from './figures/svg.js';
 
 // Classify a string as an IP literal: 4 = IPv4, 6 = IPv6, 0 = neither. A pure-JS
@@ -25,7 +26,7 @@ function isIP(s) {
 function jsSyntaxError(js) {
   const src = String(js || '').trim();
   if (!src) return null;
-  try { new Function(src); return null; }
+  try { parse(src, { ecmaVersion: 'latest', allowReturnOutsideFunction: true }); return null; }
   catch (e) { return e.message; }
 }
 

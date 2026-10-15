@@ -1,3 +1,4 @@
+import { expressionRuntime } from './expression-runtime.js';
 /* Family: function explorer — 1–3 sliders drive a live curve + a headline readout +
    a colour-coded verdict. The workhorse: covers a hollow-beam stiffness curve, an
    adoption S-curve, savings with compound interest, a projectile arc, and similar.
@@ -98,10 +99,11 @@ export default {
       `@media(max-width:620px){#${domId} .pg-fx-grid{grid-template-columns:1fr}}`,
     ].join('\n');
     const jsBody = `
+${expressionRuntime([(params.curve&&params.curve.yExpr)||'t',(params.curve&&params.curve.markerExpr)||'0',params.output.expr])}
 var inputs=$$('input[type=range]'),out=$('[data-role=out]'),verdict=$('[data-role=verdict]'),path=$('[data-role=curve]'),dot=$('[data-role=dot]');
 if(!inputs.length)return;
 var KEYS=(CONFIG.sliders||[]).map(function(s){return s.key;}).filter(function(k){return /^[A-Za-z_$][\\w$]*$/.test(k);});
-function mk(expr,args){try{var pre=KEYS.map(function(k){return 'var '+k+'=V['+JSON.stringify(k)+'];';}).join('');return new Function(args.join(','),'Math',pre+'return ('+(expr||'0')+');');}catch(e){return function(){return 0;};}}
+function mk(expr,args){return compileMathExpression(expr)||function(){return 0;};}
 var fnY=mk((CONFIG.curve&&CONFIG.curve.yExpr)||'t',['V','t']);
 var fnM=mk((CONFIG.curve&&CONFIG.curve.markerExpr)||'0',['V']);
 var fnO=mk(CONFIG.output.expr,['V']);

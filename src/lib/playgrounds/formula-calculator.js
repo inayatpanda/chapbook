@@ -1,5 +1,6 @@
+import { expressionRuntime } from './expression-runtime.js';
 /* Family: formula-calculator — author-defined numeric inputs drive one or more
-   outputs. Expressions use the same deliberately sandboxed new Function pattern
+   outputs. Expressions use the same CSP-safe expression interpreter
    as function-explorer: the interactive frame has an opaque origin and no network
    or storage. Range + number controls stay synchronised for touch and precision. */
 import { esc } from './index.js';
@@ -92,10 +93,11 @@ export default {
       `@media(max-width:620px){#${domId} .pg-fc-grid{grid-template-columns:1fr}#${domId} .pg-fc-inputs{align-items:flex-start;flex-direction:column}#${domId} .pg-fc-numwrap input{width:7rem}}`,
     ].join('\n');
     const jsBody = `
+${expressionRuntime((params.outputs||[]).map(o=>o.expr))}
 var INS=(CONFIG.inputs||[]).slice(0,5),OUTS=(CONFIG.outputs||[]).slice(0,4);
 var ranges=$$('[data-role=range]'),nums=$$('[data-role=number]'),cards=$$('[data-role=out]'),status=$('[data-role=status]');
 var KEYS=INS.map(function(it,i){return String((it&&it.key)||('v'+i)).replace(/[^\\w$]/g,'_');}).filter(function(k){return /^[A-Za-z_$][\\w$]*$/.test(k);});
-function compile(expr){try{var pre=KEYS.map(function(k){return 'var '+k+'=V['+JSON.stringify(k)+'];';}).join('');return new Function('V','Math',pre+'return ('+(expr||'0')+');');}catch(e){return null;}}
+function compile(expr){return compileMathExpression(expr);}
 var fns=OUTS.map(function(o){return compile(o&&o.expr);});
 function clamp(v,el){var lo=parseFloat(el.min),hi=parseFloat(el.max);if(isNaN(v))v=lo||0;return Math.max(lo,Math.min(hi,v));}
 function values(){var V={};nums.forEach(function(n){V[n.getAttribute('data-key')]=parseFloat(n.value)||0;});return V;}

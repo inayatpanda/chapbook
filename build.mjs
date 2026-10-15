@@ -4,6 +4,7 @@
 //     ('/'), so the build only injects runtime config, bundles the engine, and copies
 //     assets verbatim — it does NO path rewriting.
 import { build } from 'esbuild';
+import {buildThemeGallery} from './scripts/build-theme-gallery.mjs';
 import { readFileSync, writeFileSync, copyFileSync, mkdirSync, rmSync, readdirSync } from 'node:fs';
 import { AI_DEFAULT_MODELS } from './src/core/aiDefaults.js';
 import { PUBLIC_KEY as LICENCE_PUBLIC_KEY } from './src/lib/licence-pubkey.js';
@@ -409,3 +410,6 @@ writeFileSync(`${DIST}/_redirects`,
   '/app /app/index.html 200\n');
 console.log('canonical-host redirect: inayat-studio.netlify.app → chapbook.rqai.co.uk');
 console.log('emitted', DIST, '(deployable static site)');
+
+// Publish the reviewed desktop/phone catalogue alongside the product.
+buildThemeGallery();

@@ -1,0 +1,16 @@
+{"theme":"folio","width":1440,"status":"PASS"}
+{"theme":"folio","width":390,"status":"PASS"}
+{"theme":"folio","workflow":"booking/contact","status":"PASS"}
+{"theme":"petal","width":1440,"status":"PASS"}
+{"theme":"petal","width":390,"status":"PASS"}
+{"theme":"petal","workflow":"booking/contact","status":"PASS"}
+{"theme":"kiosk","width":1440,"status":"PASS"}
+{"theme":"kiosk","width":390,"status":"PASS"}
+{"theme":"scrapbook","width":1440,"status":"PASS"}
+{"theme":"scrapbook","width":390,"status":"PASS"}
+{"theme":"darkroom","width":1440,"status":"PASS"}
+{"theme":"darkroom","width":390,"status":"PASS"}
+{"theme":"contact-sheet","width":1440,"status":"PASS"}
+{"theme":"contact-sheet","width":390,"status":"PASS"}
+{"theme":"polaroid","width":1440,"status":"PASS"}
+{"theme":"polaroid","width":390,"status":"PASS"}

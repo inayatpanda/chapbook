@@ -1,3 +1,4 @@
+import { parse as parseJavaScript } from 'acorn';
 import { validateDoc } from './blocks.js';
 import { listFamilies, getFamily, buildInstance } from './playgrounds/index.js';
 import { listFamilies as listFigureFamilies, build as buildFigure } from './figures/registry.js';
@@ -687,7 +688,7 @@ Apply this change: "${desc.slice(0, 800)}". Return the complete updated widget.`
   });
   const out = (r && r.json) || {};
   let jsError = null;
-  try { if (String(out.js || '').trim()) new Function(String(out.js)); }
+  try { if (String(out.js || '').trim()) parseJavaScript(String(out.js), { ecmaVersion: 'latest', allowReturnOutsideFunction: true }); }
   catch (e) { jsError = e.message; }
   return {
     block: { domId, title: out.title || 'Interactive', html: out.html || '', css: out.css || '', js: out.js || '' },

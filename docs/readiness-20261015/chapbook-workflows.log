@@ -1,0 +1,246 @@
+PASS app boots without runtime errors
+PASS 1440px navigation getting-started
+PASS 1440px navigation newpost
+PASS 1440px navigation posts
+PASS 1440px navigation inbox
+PASS 1440px navigation drafts
+PASS 1440px navigation compose
+PASS 1440px navigation review
+PASS 1440px navigation queue
+PASS 1440px navigation settings
+PASS 1440px navigation site-settings
+PASS 1440px navigation topics-settings
+PASS 1440px navigation connect
+PASS 1440px navigation more
+PASS 1440px navigation partner
+PASS 1440px navigation library
+PASS 1440px navigation video
+PASS 820px navigation getting-started
+PASS 820px navigation newpost
+PASS 820px navigation posts
+PASS 820px navigation inbox
+PASS 820px navigation drafts
+PASS 820px navigation compose
+PASS 820px navigation review
+PASS 820px navigation queue
+PASS 820px navigation settings
+PASS 820px navigation site-settings
+PASS 820px navigation topics-settings
+PASS 820px navigation connect
+PASS 820px navigation more
+PASS 820px navigation partner
+PASS 820px navigation library
+PASS 820px navigation video
+PASS 390px navigation getting-started
+PASS 390px navigation newpost
+PASS 390px navigation posts
+PASS 390px navigation inbox
+PASS 390px navigation drafts
+PASS 390px navigation compose
+PASS 390px navigation review
+PASS 390px navigation queue
+PASS 390px navigation settings
+PASS 390px navigation site-settings
+PASS 390px navigation topics-settings
+PASS 390px navigation connect
+PASS 390px navigation more
+PASS 390px navigation partner
+PASS 390px navigation library
+PASS 390px navigation video
+PASS idea inbox create, update, delete
+PASS social draft create, edit, persist across reload, delete
+PASS block draft and version history survive reload
+PASS chat thread persists in IndexedDB
+PASS templates open in the actual block editor
+PASS untrusted imported text and quotes cannot execute
+PASS typing without a title survives reload, recovery and naming
+PASS draft backup downloads valid portable JSON without credentials
+PASS portable backup imports through the file picker and restores an idea
+PASS malformed backup is rejected without erasing existing drafts
+PASS site details save services and a booking link without losing existing settings
+PASS publish writes markdown and editable sidecar atomically
+PASS schedule stays a hidden draft until due
+PASS take down, republish, duplicate, delete
+PASS preview preserves formatting
+PASS darkroom uploads photo and metadata to the selected post
+PASS unsafe image path cannot publish
+PASS strict-CSP function-explorer responds to slider input
+PASS strict-CSP formula-calculator responds to slider input
+PASS strict-CSP mixer responds to slider input
+PASS interactive toggle-ab/Cloud vs on-device
+PASS interactive toggle-ab/Film vs digital
+PASS interactive function-explorer/Power curve (hollow beam)
+PASS interactive function-explorer/Logistic (adoption curve)
+PASS interactive stepper-timeline/Eras of an idea
+PASS interactive stepper-timeline/Case walkthrough
+PASS interactive scatter-sim/p-hacking (p<0.05)
+PASS interactive scatter-sim/rare-event counter
+PASS interactive tappable-meter/What makes a meeting work
+PASS interactive tappable-meter/Pre-flight readiness
+PASS interactive mixer/RGB additive mixer
+PASS interactive mixer/Drake equation
+PASS interactive stopwatch/Dinner, two ways
+PASS interactive stopwatch/Sprint vs marathon pace
+PASS interactive lever-geometry/Spanner on a bolt
+PASS interactive lever-geometry/Door hinge
+PASS interactive sortable-priority/What matters on a hard day
+PASS interactive sortable-priority/Rank the priorities
+PASS interactive quiz-reveal/Spot the error
+PASS interactive quiz-reveal/Test yourself
+PASS interactive chart-data/Bar chart
+PASS interactive chart-data/Line trend
+PASS interactive before-after/Solid vs hollow
+PASS interactive before-after/Before / after
+PASS interactive hotspots/Labelled diagram
+PASS interactive hotspots/Parts of a flower
+PASS interactive risk-grid/Left-handers in a room
+PASS interactive risk-grid/1 in 1000
+PASS interactive gauge-dial/Trail grade
+PASS interactive gauge-dial/Battery charge
+PASS interactive flip-cards/Myth-buster
+PASS interactive flip-cards/Term → meaning
+PASS interactive layer-peel/Forest layers
+PASS interactive layer-peel/Software stack
+PASS interactive dice-roller/Two dice — why 7 wins
+PASS interactive dice-roller/One d20
+PASS interactive reaction-timer/Test your reflexes
+PASS interactive reaction-timer/Faster than average?
+PASS interactive tip-split/Splitting dinner
+PASS interactive tip-split/Coffee round
+PASS interactive compound-growth/A coffee a week, invested
+PASS interactive compound-growth/Tenner a month from age 20
+PASS interactive countdown/Countdown to 2030
+PASS interactive countdown/New Year
+PASS interactive bpm-tap/Find the tempo
+PASS interactive bpm-tap/Is it really 120 BPM?
+PASS interactive word-stats/How long is your speech?
+PASS interactive word-stats/Tweet length check
+PASS interactive wheel-spinner/What's for dinner?
+PASS interactive wheel-spinner/Yes / No / Ask again
+PASS interactive memory-match/Match the emoji
+PASS interactive memory-match/Planets
+PASS interactive star-rating/Rate this film
+PASS interactive star-rating/How was the coffee?
+PASS interactive emoji-slider/How spicy can you handle?
+PASS interactive emoji-slider/Monday mood
+PASS interactive odometer/Seconds in a day
+PASS interactive odometer/Heartbeats in a year
+PASS interactive word-scramble/Unscramble the capitals
+PASS interactive word-scramble/Fruit bowl
+PASS interactive colour-palette/A Starry Night, in five colours
+PASS interactive colour-palette/Sunset over the sea
+PASS interactive world-clocks/Around the world right now
+PASS interactive world-clocks/When can I call home?
+PASS interactive book-shelf/Three that changed how I think
+PASS interactive book-shelf/Holiday reading
+PASS interactive map-route/A weekend in Rome
+PASS interactive map-route/The coast road
+PASS interactive recipe-scaler/American pancakes
+PASS interactive recipe-scaler/Negroni
+PASS interactive spectrum-scale/The pH scale
+PASS interactive spectrum-scale/How spicy? (Scoville, roughly)
+PASS interactive guess-slider/When was the first public film screening?
+PASS interactive guess-slider/How far is the Moon?
+PASS interactive bracket/Best pizza topping
+PASS interactive bracket/Greatest sci-fi film
+PASS interactive chord-diagram/First chords to learn
+PASS interactive chord-diagram/Three-chord songs
+PASS interactive budget-donut/The 50/30/20 rule
+PASS interactive budget-donut/Where the salary goes
+PASS interactive moon-phase/A month of moons
+PASS interactive moon-phase/Where's the moon tonight?
+PASS interactive morse-code/Type a message
+PASS interactive morse-code/SOS
+PASS interactive timeline-scrubber/A short history of flight
+PASS interactive timeline-scrubber/The personal computer
+PASS interactive higher-lower/Which country has more people?
+PASS interactive higher-lower/Higher box office? ($m)
+PASS interactive forecast-strip/A British week
+PASS interactive forecast-strip/Four seasons in a day
+PASS interactive quadrant-plot/The Eisenhower matrix
+PASS interactive quadrant-plot/Effort vs reward
+PASS interactive checklist/Morning routine
+PASS interactive checklist/Weekend trip packing
+PASS interactive toggle-switches/What makes a good holiday?
+PASS interactive toggle-switches/Dealbreakers
+PASS interactive tabs-panel/Three ways to look at it
+PASS interactive tabs-panel/Tea vs coffee vs neither
+PASS interactive gradient-maker/Sunset
+PASS interactive gradient-maker/Aurora
+PASS interactive colour-harmony/Find a palette
+PASS interactive colour-harmony/Warm start
+PASS interactive beat-sequencer/Four on the floor
+PASS interactive beat-sequencer/Basic backbeat
+PASS interactive keyboard-notes/A C major chord
+PASS interactive keyboard-notes/The C major scale
+PASS interactive caesar-cipher/Shift by three (Caesar's own)
+PASS interactive caesar-cipher/Crack the code
+PASS interactive nato-phonetic/Spell your name
+PASS interactive nato-phonetic/Read out a postcode
+PASS interactive chronology-game/Order these inventions
+PASS interactive chronology-game/When did they happen?
+PASS interactive time-since/Since the Moon landing
+PASS interactive time-since/Since the Web went public
+PASS interactive temp-converter/How hot is that?
+PASS interactive temp-converter/Around freezing
+PASS interactive weather-scene/Four kinds of British day
+PASS interactive weather-scene/Winter
+PASS interactive pros-cons/Should I get a dog?
+PASS interactive pros-cons/Remote vs office
+PASS interactive accordion/Common questions
+PASS interactive accordion/Myth or fact
+PASS interactive decision-tree/Should you send that text?
+PASS interactive decision-tree/What to cook
+PASS interactive poll/Reader opinion (pick only)
+PASS interactive poll/Survey result (bars)
+PASS interactive scratch-reveal/Reveal the answer
+PASS interactive scratch-reveal/Spoiler
+PASS interactive swipe-carousel/Three quick tips
+PASS interactive swipe-carousel/Card set (looping)
+PASS interactive keyboard-layout/The pangram
+PASS interactive keyboard-layout/A tongue-twister
+PASS interactive doneness/Maillard at the pan
+PASS interactive doneness/Steak, by internal temperature
+PASS interactive key-change/The classic lift
+PASS interactive easing-curves/Four easings
+PASS interactive image-annotator/Parts of a guitar
+PASS interactive image-annotator/Annotated photo
+PASS interactive step-explainer/How bread rises
+PASS interactive step-explainer/Make a case in four steps
+PASS interactive scored-quiz/Everyday science quiz
+PASS interactive sortable-table/Coffee brewing methods
+PASS interactive sortable-table/Comparison grid
+PASS interactive self-assessment/Your working rhythm
+PASS interactive formula-calculator/Freelance project estimate
+PASS interactive branching-scenario/A difficult project conversation
+PASS interactive dataset-explorer/City weekend comparison
+PASS interactive drag-to-label/Parts of a plant
+PASS interactive algorithm-builder/Find the largest number
+PASS interactive relationship-network/A small creative project
+PASS figure labelled-diagram
+PASS figure step-flow
+PASS figure cross-section
+PASS figure annotation-arrows
+PASS figure timeline
+PASS figure cycle
+PASS figure flow-decision
+PASS figure before-after
+PASS figure comparison-matrix
+PASS figure venn-overlap
+PASS figure hierarchy
+PASS figure bar-compare
+PASS figure part-to-whole
+PASS figure range-scale
+PASS figure small-multiples
+PASS figure pulse
+PASS figure rotate
+PASS figure oscillate
+PASS figure flow
+PASS figure wave
+PASS figure fill
+PASS figure morph
+PASS figure stages
+PASS sticker and stencil libraries are populated
+PASS all exercised UI paths remained free of uncaught errors
+PASS installed service worker reopens the editor offline
+chapbook: 245 passed, 0 failed. /tmp/chapbook-readiness-20261015/results.json

@@ -30,7 +30,7 @@ test('pricing: one price card carries the price token, the feature list and both
   const html = src();
   assert.match(html, /class="card price-card"/, 'a single price card');
   assert.match(html, /%%PRICE%% a year/, 'the price is the %%PRICE%% token, never hardcoded');
-  for (const item of ['All twenty themes and every update', 'Every device with one key',
+  for (const item of ['All 28 themes and every update', 'Every device with one key',
     'Bring your own AI keys', '14-day refunds']) {
     assert.ok(html.includes(item), `price list missing "${item}"`);
   }

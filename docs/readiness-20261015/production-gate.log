@@ -1,0 +1,22 @@
+
+Release gate → https://chapbook.rqai.co.uk
+────────────────────────────────────────────────────────────────────────
+(A) HTTP / content checks
+[PASS] 1. SW shell URLs return 200 — 22/22 → 200
+[PASS] 2. Security headers on / and /sw.js — all 5 present on / and /sw.js
+[PASS] 3. gh-device OPTIONS preflight → 204 — status 204
+[PASS] 4. metrics visit → 204 + count — POST 204; GET 2026-10-15 visit=6 (≥1) after 1 attempt(s); consistency=strong
+[PASS] 5. grep-gate over dist/ is clean — grep-gate: clean ✓ — 1966 file(s) scanned, 1 allowlisted reference(s) skipped
+[PASS] 6. Stripe: live link on / and /pricing, no test link — live link present on / and /pricing; no test link on either
+[PASS] 7. templates pass validateDoc — exit 0
+[PASS] 10. Marketing pages: 200 + headers + sitemap + trial CTA — 8 pages OK
+[PASS] 11. No em-dash in visible marketing copy — 5 pages clean
+[PASS] 12. /app + /app/index.html → 200 text/html — both serve text/html (200) [/app via /app/]
+(B) Browser checks
+[PASS] 8. SW activation + 'chapbook-6b65c60c' cache — active worker; caches includes 'chapbook-6b65c60c'
+[PASS] 9. XSS: onerror/onload neutralised (MANDATORY) — 4 payloads → no live event-handler / js: URI (neutralised via DOMPurify)
+     (browser checks ran via playwright)
+────────────────────────────────────────────────────────────────────────
+SUMMARY: 12 PASS · 0 FAIL · 0 SKIP  (of 12)
+
+GATE: PASS (every check ran and is green)

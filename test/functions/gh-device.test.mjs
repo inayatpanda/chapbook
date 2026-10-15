@@ -19,6 +19,12 @@ test('preflight(allowedOrigin) is also 204 and reflects that origin', () => {
   assert.equal(res.headers.get('access-control-allow-origin'), 'https://chapbook.rqai.co.uk');
 });
 
+test('Atelier can use the hosted OAuth relay with an explicit CORS origin', () => {
+  const res=preflight('https://studio.inayatpanda.com');
+  assert.equal(res.headers.get('access-control-allow-origin'),'https://studio.inayatpanda.com');
+  assert.equal(preflight('https://evil.example').headers.get('access-control-allow-origin'),null);
+});
+
 test('regression witness: the old new Response("",{status:204}) form throws', () => {
   assert.throws(() => new Response('', { status: 204 }), /Invalid response status code 204/);
 });

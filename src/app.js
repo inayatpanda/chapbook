@@ -1,3 +1,5 @@
+import * as professionalForm from './core/professionalForm.js';
+if(typeof window!=='undefined') window.__studioProfessional = professionalForm;
 // Entry — wires the browser seams + portable core into the client-side router and exposes
 // window.__studioApi for the inline UI's api() shim. No server.
 import { config } from './seams/config.js';

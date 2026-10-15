@@ -1,0 +1,7 @@
+PASS genuine one-day test licence available (no activation bypass)
+PASS chapbook hosted activation and GitHub connection
+{"project":"chapbook","title":"Release test - a small writing ritual","slug":"release-test-a-small-writing-ritual-2","url":"https://inayatpanda.github.io/chapbook-readiness-20261015/blog/release-test-a-small-writing-ritual-2/","status":"PASS"}
+{"project":"chapbook","title":"Release test - an interactive comparison","slug":"release-test-an-interactive-comparison","url":"https://inayatpanda.github.io/chapbook-readiness-20261015/blog/release-test-an-interactive-comparison/","status":"PASS"}
+PASS atelier hosted activation and GitHub connection
+{"project":"atelier","title":"Release test - a visual notebook","slug":"release-test-a-visual-notebook","url":"https://inayatpanda.github.io/chapbook-readiness-20261015/blog/release-test-a-visual-notebook/","status":"PASS"}
+{"project":"atelier","title":"Release test - Atelier editing roundtrip","slug":"release-test-atelier-editing-roundtrip","url":"https://inayatpanda.github.io/chapbook-readiness-20261015/blog/release-test-atelier-editing-roundtrip/","status":"PASS"}

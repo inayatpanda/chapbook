@@ -1,0 +1,9 @@
+import assert from 'node:assert/strict';import {chromium} from 'playwright';import {readFile,writeFile,mkdir} from 'node:fs/promises';
+const posts=JSON.parse(await readFile('/tmp/chapbook-live-publishing-20261015/results.json','utf8'));assert.equal(posts.length,4);
+const out='docs/readiness-20261015/published';await mkdir(out,{recursive:true});const browser=await chromium.launch();const results=[];
+try{const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));for(const post of posts){for(const width of [1440,390]){await page.setViewportSize({width,height:1000});const response=await page.goto(post.url);assert.equal(response.status(),200);await page.getByRole('heading',{level:1}).filter({hasText:post.title}).waitFor();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2));
+if(post.slug.includes('interactive-comparison')){const frame=page.frameLocator('iframe');const b=frame.locator('.pg-ab-btn[data-role=b]');await b.click();assert.equal(await b.getAttribute('aria-pressed'),'true');assert.equal(await frame.locator('.pg-ab-btn[data-role=a]').getAttribute('aria-pressed'),'false');}
+if(post.slug.includes('visual-notebook')){const images=page.locator('main img');assert.ok(await images.count()>=3);for(const img of await images.all()){await img.scrollIntoViewIfNeeded();await img.evaluate(i=>i.decode());}await page.evaluate(()=>scrollTo(0,0));}
+if(post.slug.includes('roundtrip')||post.slug.includes('writing-ritual'))assert.ok(await page.locator('main svg').count()>0);
+assert.deepEqual(errors,[],'published page has no uncaught script errors');await page.screenshot({path:`${out}/${post.slug}-${width}.png`,fullPage:true});results.push({...post,width});console.log('PASS published '+post.slug+' '+width);}}
+}finally{await browser.close();await writeFile(out+'/results.json',JSON.stringify(results,null,2));}

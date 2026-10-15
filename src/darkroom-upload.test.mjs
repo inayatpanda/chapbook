@@ -101,10 +101,10 @@ test('existingImageNames returns the basenames minus meta.json on success', asyn
 });
 
 // --- Fix 5 (P2): the success-card link resolves against the BLOG origin ------
-test('normaliseSiteOrigin returns a bare scheme+host, adds https, drops trailing slash/path', () => {
+test('normaliseSiteOrigin preserves project paths, adds https and drops trailing slashes', () => {
   assert.equal(normaliseSiteOrigin('https://blog.example.com/'), 'https://blog.example.com');
   assert.equal(normaliseSiteOrigin('blog.example.com'), 'https://blog.example.com'); // scheme added
-  assert.equal(normaliseSiteOrigin('https://blog.example.com/darkroom/'), 'https://blog.example.com');
+  assert.equal(normaliseSiteOrigin('https://writer.github.io/notebook/'), 'https://writer.github.io/notebook');
   assert.equal(normaliseSiteOrigin('  https://blog.example.com  '), 'https://blog.example.com');
 });
 test('normaliseSiteOrigin returns empty for missing/junk input', () => {
@@ -113,6 +113,8 @@ test('normaliseSiteOrigin returns empty for missing/junk input', () => {
   assert.equal(normaliseSiteOrigin(undefined), '');
 });
 test('darkroomHref absolutises against a known blog origin, else stays relative', () => {
+  assert.equal(darkroomHref('https://writer.github.io/notebook/'), 'https://writer.github.io/notebook/darkroom/');
+  assert.equal(normaliseSiteOrigin('javascript:alert(1)'), '');
   assert.equal(darkroomHref('https://blog.example.com'), 'https://blog.example.com/darkroom/');
   assert.equal(darkroomHref('blog.example.com/'), 'https://blog.example.com/darkroom/');
   assert.equal(darkroomHref(''), '/darkroom/');       // same-origin / unknown → relative

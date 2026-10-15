@@ -1,0 +1,19 @@
+PASS owner PIN unlock
+PASS authenticated /admin/api/health
+PASS authenticated /studio/api/drafts
+PASS authenticated /studio/api/ideas
+PASS authenticated /studio/api/posts
+PASS authenticated /studio/api/templates
+PASS authenticated /studio/api/playgrounds
+PASS authenticated /studio/api/figures
+PASS authenticated /studio/api/settings/ai
+PASS local Atelier view newpost
+PASS local Atelier view posts
+PASS local Atelier view inbox
+PASS local Atelier view drafts
+PASS local Atelier view settings
+PASS local Atelier view connect
+PASS local Atelier view more
+PASS local Atelier view library
+PASS local Atelier view video
+PASS local Atelier no uncaught browser errors

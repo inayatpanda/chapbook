@@ -1,3 +1,4 @@
+import { getThemesConfig } from './core/themesConfig.js';
 // Client-side router — re-implements the /studio/api/* surface against the portable core
 // + browser seams, so the existing UI's api() shim works with no server.
 // deps: { posts, partner, ai, storage, studio, playgrounds, figures, stencils, stickers, blocks, prepublish, templates, config, gh }
@@ -338,6 +339,8 @@ export function makeRouter(deps) {
       if (method === 'PUT') { const p = config && config.saveProfile ? config.saveProfile(body.profile || body || {}) : { profile: studio.normaliseProfile ? studio.normaliseProfile(body.profile || body) : (body.profile || body) }; return { ok: true, profile: p.profile }; }
       return { profile: (config && config.getProfile) ? config.getProfile() : null, questions: studio.ONBOARDING_QUESTIONS };
     }
+
+    if (a === 'settings' && b === 'themes') return getThemesConfig(gh);
 
     // ---- settings/site (github seam; read/write src/data/site.json) ----
     if (a === 'settings' && b === 'site') {

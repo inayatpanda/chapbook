@@ -156,20 +156,16 @@ test('themes: netlify.toml scopes SAMEORIGIN framing to the sample post only', (
   assert.ok(!/SAMEORIGIN/.test(globalBlock), 'the wildcard block never relaxes to SAMEORIGIN');
 });
 
-// ---- dist: the build emits themes.html, copies the sample post, resolves tokens --
-test('themes (dist): the build emits the page, the sample post and resolves tokens', (t) => {
-  if (!existsSync('dist/themes.html')) return t.skip('dist not built — run `node build.mjs` first');
-  const html = readFileSync('dist/themes.html', 'utf8');
-  assert.ok(!html.includes('%%'), 'every %%TOKEN%% is resolved');
-  assert.ok(!html.includes('<!-- MKT:'), 'every shell marker is resolved');
-  assert.ok(!html.includes('—'), 'no em-dash survived into the built page');
-  assert.equal((html.match(/data-theme="[a-z-]+"/g) || []).filter((s, i, a) => a.indexOf(s) === i).length, 20,
-    'twenty distinct data-theme chips in the built page');
-  assert.equal((html.match(/id="theme-frame"/g) || []).length, 1, 'exactly one live frame');
-  assert.equal((html.match(/class="mkt-nav"/g) || []).length, 1, 'exactly one shared nav');
-  // the iframed sample post + its listener travel to dist
-  assert.ok(existsSync('dist/themes-css/sample-post.html'), 'the sample post is copied to dist');
-  const sample = readFileSync('dist/themes-css/sample-post.html', 'utf8');
-  assert.match(sample, /addEventListener\('message'/, 'the sample post carries the postMessage listener');
-  assert.match(sample, /data-blog-theme/, 'the listener sets data-blog-theme');
+// The published catalogue previews real homepage layouts, including mobile versions.
+test('themes (dist): all 28 layouts have desktop and phone previews at both canonical paths', (t) => {
+ if(!existsSync('dist/themes.html'))return t.skip('dist not built');
+ const html=readFileSync('dist/themes.html','utf8');
+ assert.equal(html,readFileSync('dist/themes/index.html','utf8'),'pretty URL and directory URL serve the same catalogue');
+ assert.ok(!html.includes('%%')&&!html.includes('<!-- MKT:'));
+ assert.ok(!html.includes('—'));
+ const ids=[...html.matchAll(/data-theme-id="([a-z-]+)"/g)].map(m=>m[1]);
+ assert.equal(ids.length,28);assert.equal(new Set(ids).size,28);
+ for(const id of ids)for(const width of [1440,390])assert.ok(existsSync(`dist/themes/previews/${id}-${width}.png`),`${id} ${width} preview`);
+ assert.match(html,/id="category"/);assert.match(html,/id="width"/);assert.match(html,/Postcards/);
+ assert.ok(existsSync('dist/themes/gallery.js'));assert.ok(existsSync('dist/themes/gallery.css'));
 });

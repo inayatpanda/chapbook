@@ -37,7 +37,7 @@ export function buildText({ system, prompt, maxTokens, model, key, json, baseUrl
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
     generationConfig: {
-      maxOutputTokens: maxTokens ?? 4000,
+      maxOutputTokens: (maxTokens ?? 4000) + GEMINI_THINKING_BUDGET,
       // Gemini 2.5 / flash-latest are "thinking" models — hidden reasoning tokens are billed
       // against maxOutputTokens FIRST. With -1 (dynamic) the model over-thinks on "complex"
       // creative tasks (social pack, thread, carousel) and spends the WHOLE low output ceiling
@@ -58,7 +58,7 @@ export function buildVision({ system, prompt, imageBase64, mimeType, maxTokens, 
       { inlineData: { mimeType: mimeType || 'image/jpeg', data: imageBase64 } },
       { text: prompt },
     ] }],
-    generationConfig: { maxOutputTokens: maxTokens ?? 300, thinkingConfig: { thinkingBudget: GEMINI_THINKING_BUDGET } },
+    generationConfig: { maxOutputTokens: (maxTokens ?? 300) + GEMINI_THINKING_BUDGET, thinkingConfig: { thinkingBudget: GEMINI_THINKING_BUDGET } },
   };
   return { url, headers: headers(key), body: JSON.stringify(body) };
 }
@@ -70,7 +70,9 @@ export function parseText(json) {
   if (reason && reason !== 'STOP' && reason !== 'MAX_TOKENS') {
     throw Object.assign(new Error(`Gemini declined this request (${reason}).`), { code: 'AI_REFUSAL' });
   }
-  return (json?.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('').trim();
+  const text = (json?.candidates?.[0]?.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join('').trim();
+  if (!text) throw Object.assign(new Error(reason === 'MAX_TOKENS' ? 'Gemini reached its response limit before returning text. Try again.' : 'Gemini returned no text. Try again.'), { code: 'AI_PARSE' });
+  return text;
 }
 
 async function call(built, fetchImpl = fetch) {
@@ -94,7 +96,7 @@ export async function readDocument({ system, instruction, fileBase64, mimeType, 
     ] }],
     ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
     generationConfig: {
-      maxOutputTokens: 4000,
+      maxOutputTokens: 4000 + GEMINI_THINKING_BUDGET,
       thinkingConfig: { thinkingBudget: GEMINI_THINKING_BUDGET },
       ...(json ? { responseMimeType: 'application/json', responseSchema: stripAdditionalProps(json) } : {}),
     },
@@ -107,17 +109,25 @@ export async function readDocument({ system, instruction, fileBase64, mimeType, 
   catch { throw Object.assign(new Error(`AI returned non-JSON output: ${text.slice(0, 120)}`), { code: 'AI_PARSE', text }); }
 }
 
-export async function generateImage({ prompt, size, model, key, baseUrl }, fetchImpl = fetch) {
-  // Imagen lives at a separate model id from the configured TEXT model — never POST :predict
-  // against a gemini text model (it 404s). Only honour `model` if it's actually an Imagen id.
-  const imageModel = (model && /imagen/i.test(model)) ? model : 'imagen-3.0-generate-002';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${imageModel}:predict`;
-  const body = { instances: [{ prompt }], parameters: { sampleCount: 1 } };
-  const built = { url, headers: headers(key), body: JSON.stringify(body) };
-  const json = await call(built, fetchImpl);
-  const b64 = json?.predictions?.[0]?.bytesBase64Encoded;
-  if (!b64) throw Object.assign(new Error('Google Imagen response had no bytesBase64Encoded'), { code: 'AI_PARSE' });
-  return { base64: b64, mimeType: 'image/png' };
+export async function generateImage({ prompt, size, model, key }, fetchImpl = fetch) {
+  // Use the supported native image API. Never send a chat model to an image endpoint.
+  // Explicit Imagen models remain supported for callers with access to those models.
+  if (model && /^imagen-/.test(model)) {
+    const json = await call({ url: `${BASE}/${model}:predict`, headers: headers(key),
+      body: JSON.stringify({ instances: [{ prompt }], parameters: { sampleCount: 1 } }) }, fetchImpl);
+    const image = json?.predictions?.[0];
+    if (!image?.bytesBase64Encoded) throw Object.assign(new Error('Google returned no image.'), { code: 'AI_PARSE' });
+    return { base64: image.bytesBase64Encoded, mimeType: image.mimeType || 'image/png' };
+  }
+  const imageModel = model && /^gemini-.*-image(?:$|-)/.test(model) ? model : 'gemini-3.1-flash-image';
+  const aspectRatio = ({ '1024x1024':'1:1', '1024x1536':'2:3', '1536x1024':'3:2', '1024x1792':'9:16', '1792x1024':'16:9' })[size] || '1:1';
+  const json = await call({ url: `${BASE}/${imageModel}:generateContent`, headers: headers(key), body: JSON.stringify({
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: { responseModalities: ['TEXT', 'IMAGE'], imageConfig: { aspectRatio } },
+  }) }, fetchImpl);
+  const image = json?.candidates?.[0]?.content?.parts?.find(p => p.inlineData?.data && !p.thought)?.inlineData;
+  if (!image) throw Object.assign(new Error('Gemini returned no image. Try a different description.'), { code: 'AI_PARSE' });
+  return { base64: image.data, mimeType: image.mimeType || 'image/png' };
 }
 
 export async function generateText(opts, fetchImpl) {

@@ -1,3 +1,4 @@
+import { expressionRuntime } from './expression-runtime.js';
 /* Family: mixer — N slider inputs combine via one formula into a single output:
    a number (with optional verdict band) and/or a colour swatch + hex. Models the
    shipped RGB additive mixer (three channels → a live colour) and the Drake-equation
@@ -116,11 +117,12 @@ export default {
       `@media(max-width:620px){#${domId} .pg-mx-grid{grid-template-columns:1fr}}`,
     ].join('\n');
     const jsBody = `
+${expressionRuntime([params.expr||'0',params.swatchExpr?('('+params.swatchExpr+')'):"'#000'"])}
 var inputs=$$('input[type=range]'),out=$('[data-role=out]'),swatch=$('[data-role=swatch]'),verdict=$('[data-role=verdict]');
 if(!inputs.length)return;
 var mode=CONFIG.mode==='colour'?'colour':'number';
 var MKEYS=(CONFIG.inputs||[]).map(function(s){return s.key;}).filter(function(k){return /^[A-Za-z_$][\\w$]*$/.test(k);});
-function mk(expr){try{var pre=MKEYS.map(function(k){return 'var '+k+'=V['+JSON.stringify(k)+'];';}).join('');return new Function('V','Math',pre+'return ('+(expr||'0')+');');}catch(e){return function(){return 0;};}}
+function mk(expr){return compileMathExpression(expr)||function(){return 0;};}
 var fnN=mk(CONFIG.expr||'0');
 var fnC=mk(CONFIG.swatchExpr?('('+CONFIG.swatchExpr+')'):"'#000'");
 function vars(){var V={};inputs.forEach(function(i){var k=i.getAttribute('data-key');V[k]=parseFloat(i.value);var b=$('[data-val="'+k+'"]');if(b)b.textContent=i.value+(i.getAttribute('data-unit')||'');});return V;}
