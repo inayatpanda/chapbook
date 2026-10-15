@@ -12,7 +12,7 @@ export function blogUrl({ owner, repo } = {}) {
   const o = String(owner || '').trim().toLowerCase();
   const r = String(repo || '').trim();
   if (!o || !r) return '';
-  return `https://${o}.github.io/${encodeURIComponent(r)}/`;
+  return r.toLowerCase() === `${o}.github.io` ? `https://${o}.github.io/` : `https://${o}.github.io/${encodeURIComponent(r)}/`;
 }
 
 // True iff a failure looks like a NETWORK problem (offline, DNS, CORS, blocked) rather than
@@ -40,4 +40,15 @@ export function isDeadToken(err) {
   if (status === 401) return true; // Bad credentials — always dead
   if (/bad credentials|requires authentication|token expired|token has expired|token.*revoked/.test(msg)) return true;
   return false;
+}
+
+// Keep authentication, permission and service failures distinct in setup/recovery.
+export function githubErrorMessage(err) {
+  if (isDeadToken(err)) return 'GitHub sign-in has expired or was revoked. Sign in again, or replace the token under Advanced. Your saved work is still here.';
+  if (isNetworkError(err) || err?.kind === 'network' || err?.name === 'TimeoutError') return 'Could not reach GitHub. Check your connection, then retry. Your current connection has not been changed.';
+  if (/rate limit|secondary rate|abuse detection/i.test(err?.message || '') || err?.status === 429) return 'GitHub is temporarily limiting requests. Wait a few minutes, then retry. You do not need to sign in again.';
+  if (err?.status === 403) return 'GitHub refused access. Check repository permissions and any organisation SSO approval. A manual token needs Contents: read and write for this repository.';
+  if (err?.status === 404) return 'GitHub could not find this repository, or your token cannot access it. Check its owner and name, and include it in the token’s repository access.';
+  if (err?.status >= 500) return 'GitHub is temporarily unavailable. Please retry in a moment; your current connection has not been changed.';
+  return err?.message || 'Could not connect to GitHub. Please retry.';
 }

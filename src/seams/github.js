@@ -30,7 +30,7 @@ export function makeGithub(gh, fetchImpl = fetch) {
   const headers = () => ({ Authorization: `Bearer ${gh.token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' });
   const repoBase = `${API}/repos/${gh.owner}/${gh.repo}`;
   const base = `${repoBase}/contents`;
-  async function err(res) { let m = `GitHub ${res.status}`; try { const j = await res.json(); m = j.message || m; } catch {} return Object.assign(new Error(m), { status: res.status }); }
+  async function err(res) { let m = `GitHub ${res.status}`; try { const j = await res.json(); m = j.message || m; } catch {} return Object.assign(new Error(m), { status: res.status, code: 'GITHUB_HTTP' }); }
   // cache:'no-store' on EVERY call: GitHub's REST API sends Cache-Control: max-age=60,
   // so a default-mode browser fetch of e.g. git/ref/heads/<branch> is served the
   // PRE-COMMIT sha from the HTTP cache for up to a minute after a publish. That made
@@ -39,7 +39,7 @@ export function makeGithub(gh, fetchImpl = fetch) {
   async function gj(url, opts) { const res = await fetchImpl(url, { cache: 'no-store', ...opts, headers: headers() }); if (!res.ok) throw await err(res); return res.json(); }
   return {
     async getFile(path) {
-      const res = await fetchImpl(`${base}/${enc(path)}?ref=${gh.branch}`, { cache: 'no-store', headers: headers() });
+      const res = await fetchImpl(`${base}/${enc(path)}?ref=${encodeURIComponent(gh.branch || 'HEAD')}`, { cache: 'no-store', headers: headers() });
       if (res.status === 404) return null;
       if (!res.ok) throw await err(res);
       const j = await res.json();
@@ -64,14 +64,14 @@ export function makeGithub(gh, fetchImpl = fetch) {
       return true;
     },
     async listDir(path) {
-      const res = await fetchImpl(`${base}/${enc(path)}?ref=${gh.branch}`, { cache: 'no-store', headers: headers() });
+      const res = await fetchImpl(`${base}/${enc(path)}?ref=${encodeURIComponent(gh.branch || 'HEAD')}`, { cache: 'no-store', headers: headers() });
       if (res.status === 404) return [];
       if (!res.ok) throw await err(res);
       const j = await res.json();
       return Array.isArray(j) ? j.map(e => ({ name: e.name, path: e.path, sha: e.sha, type: e.type })) : [];
     },
     async getBinary(path) {
-      const res = await fetchImpl(`${base}/${enc(path)}?ref=${gh.branch}`, { cache: 'no-store', headers: headers() });
+      const res = await fetchImpl(`${base}/${enc(path)}?ref=${encodeURIComponent(gh.branch || 'HEAD')}`, { cache: 'no-store', headers: headers() });
       if (res.status === 404) return null;
       if (!res.ok) throw await err(res);
       const j = await res.json();
@@ -125,14 +125,34 @@ export function makeGithub(gh, fetchImpl = fetch) {
       try { return await attempt(); }
       catch (e) { if (!isFastForwardConflict(e)) throw e; return attempt(); }
     },
-    // The signed-in user's OWN repos, newest first — for the device-flow repo picker.
-    // Uses only the token (owner/repo not needed). Browser-direct (api.github.com sends CORS).
+    // Include writable collaboration/organisation repos, and follow every page. Never
+    // turn an API failure into an apparently empty account.
     async listRepos() {
-      const j = await gj(`${API}/user/repos?per_page=100&affiliation=owner&sort=updated`);
-      return (Array.isArray(j) ? j : []).map((r) => ({
-        fullName: r.full_name, name: r.name, owner: r.owner && r.owner.login,
-        branch: r.default_branch || 'main', private: !!r.private,
-      }));
+      const repos = [];
+      for (let page = 1; ; page++) {
+        const batch = await gj(`${API}/user/repos?per_page=100&affiliation=owner,collaborator,organization_member&sort=updated&page=${page}`);
+        if (!Array.isArray(batch)) throw new Error('GitHub returned an unreadable repository list. Please retry.');
+        repos.push(...batch.filter(r => !r.archived && !r.disabled && r.permissions?.push !== false).map(r => ({
+          fullName: r.full_name, name: r.name, owner: r.owner?.login,
+          branch: r.default_branch || 'main', private: !!r.private,
+        })));
+        if (batch.length < 100) break;
+      }
+      return repos;
+    },
+    async checkRepository() {
+      const repo = await gj(repoBase);
+      if (repo.archived || repo.disabled) throw new Error('This repository is archived or disabled. Choose an active website repository.');
+      if (repo.permissions?.push === false) throw new Error('Your GitHub account has read-only access to this repository. Ask its owner for write access.');
+      const branch = gh.branch || repo.default_branch || 'main';
+      try { await gj(`${repoBase}/branches/${encodeURIComponent(branch)}`); }
+      catch (e) { if (e.status === 404) throw new Error(`The branch “${branch}” was not found. Check the branch name under Advanced.`); throw e; }
+      const file = await this.getFile('src/data/site.json');
+      if (!file) throw new Error('This is not a compatible website repository: src/data/site.json is missing. Choose your blog repository, or create a new site below.');
+      let site;
+      try { site = JSON.parse(file.content); } catch { throw new Error('The website settings file is not valid JSON. Repair src/data/site.json before connecting.'); }
+      if (!site || typeof site !== 'object' || Array.isArray(site)) throw new Error('The website settings file must contain a settings object.');
+      return { branch, name: site.name || repo.name };
     },
     // Who the current token belongs to — for "Signed in as @login".
     async whoami() {
@@ -194,7 +214,7 @@ export function makeGithub(gh, fetchImpl = fetch) {
     // parsed JSON (incl. { cname, status, https_enforced, https_certificate }) or null when
     // Pages isn't enabled yet (404). The pure interpreter is core/domain.js pagesDomainStatus.
     async getPages({ owner, repo }) {
-      const res = await fetchImpl(`${API}/repos/${enc(owner)}/${enc(repo)}/pages`, { headers: headers() });
+      const res = await fetchImpl(`${API}/repos/${enc(owner)}/${enc(repo)}/pages`, { cache: 'no-store', headers: headers() });
       if (res.status === 404) return null;
       if (!res.ok) throw await err(res);
       return res.json();

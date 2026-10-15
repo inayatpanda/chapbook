@@ -62,3 +62,7 @@ test('isDeadToken false for null/undefined', () => {
   assert.equal(isDeadToken(null), false);
   assert.equal(isDeadToken(undefined), false);
 });
+
+test('account Pages repositories live at the domain root', () => {
+ assert.equal(blogUrl({owner:'Jane',repo:'Jane.github.io'}),'https://jane.github.io/');
+});

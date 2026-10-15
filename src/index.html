@@ -5975,6 +5975,12 @@ function classifyError({ status, payload, raw } = {}){
   e.detail = String(rawMsg || (status ? 'HTTP '+status : '') || '').slice(0,400);
   // keep the source's typed code (e.g. AI_NO_KEY) so callers can branch on it (isNoKeyErr)
   const srcCode=String((payload&&payload.code)||(raw&&raw.code)||''); if(srcCode) e.code=srcCode;
+  if (srcCode === 'GITHUB_HTTP' && window.__studioConnection?.githubErrorMessage) {
+    e.kind = e.status === 401 ? 'auth' : 'github';
+    e.message = window.__studioConnection.githubErrorMessage({status:e.status,message:rawMsg});
+    e.retry = e.status >= 500 || e.status === 429 || /rate limit/.test(low);
+    return e;
+  }
   // AI adapter errors (src/lib/ai) carry an AI_* code. AI_PARSE (output truncated before the
   // JSON closed) and AI_REFUSAL come through with NO HTTP status, so without this they'd fall
   // into the status-0 branch below and masquerade as "Could not reach GitHub". Surface the real
@@ -6088,6 +6094,10 @@ function showError(err, { onRetry, title } = {}){
   $('errTitle').textContent = title || ({network:'Connection problem',auth:'Sign-in / key problem',github:'GitHub problem',ai:'AI problem',server:'Something went wrong'}[e.kind] || 'Something went wrong');
   $('errIco').textContent = _errIco[e.kind] || '⚠️';
   $('errMsg').textContent = e.message;
+  let reconnect=$('errReconnect');
+  if(!reconnect){ reconnect=document.createElement('button'); reconnect.id='errReconnect'; reconnect.type='button'; reconnect.className='ghost'; reconnect.textContent='Reconnect GitHub'; $('errRetry').before(reconnect); }
+  reconnect.hidden=!(e.code==='GITHUB_HTTP' && e.status===401);
+  reconnect.onclick=()=>{ closeError(); window.__studioOnboard?.(); };
   const det=$('errDetail');
   if(e.detail && e.detail !== e.message){ det.textContent = e.detail; det.hidden=false; }
   else det.hidden=true;
@@ -6237,7 +6247,6 @@ async function validateGithubConnection(){
   try{ await gh.whoami(); }
   catch(err){
     if(!C.isDeadToken(err)) return;   // transient / offline — leave the valid session alone
-    $('app').style.display='none'; $('nav').style.display='none'; if($('camFab')) $('camFab').style.display='none';
     toast('Your GitHub connection expired — reconnect to keep publishing.');
     if(window.__studioOnboard) window.__studioOnboard();
   }
@@ -7065,19 +7074,21 @@ function showPublishBar(url, source){
     : (u.startsWith('/') ? (o ? o+u : '') : SHARE.shareableUrl(u));
   // Only show "View live" when we could build an absolute link (needs the site URL).
   const viewLive = /^https?:\/\//i.test(live)
-    ? '<a class="pb-btn" href="'+esc(live)+'" target="_blank" rel="noopener">View live '+tico('external-link')+'</a>'
+    ? '<a class="pb-btn" href="'+esc(live)+'" target="_blank" rel="noopener">Open website '+tico('external-link')+'</a>'
     : '';
+  const repo = window.__studioGh?.repo?.();
+  const buildLink = repo?.owner && repo?.repo ? '<a class="pb-btn" href="https://github.com/'+encodeURIComponent(repo.owner)+'/'+encodeURIComponent(repo.repo)+'/actions" target="_blank" rel="noopener">Check website build '+tico('external-link')+'</a>' : '';
   const bar=document.createElement('div');
   bar.id='pubBar'; bar.setAttribute('role','status');
   bar.innerHTML =
-    '<span class="pb-msg">'+tico('circle-check')+'Published live</span>'
-    +viewLive
+    '<span class="pb-msg">'+tico('circle-check')+'Saved · website updating</span>'
+    +buildLink+viewLive
     +'<button type="button" class="pb-btn" id="pubBarSocial">Draft social posts</button>'
     +'<button type="button" class="pb-x" aria-label="Dismiss">'+tico('x')+'</button>';
   bar.querySelector('#pubBarSocial').addEventListener('click',()=>{ dismissPublishBar(); announceFlow(url, source||''); });
   bar.querySelector('.pb-x').addEventListener('click',dismissPublishBar);
   document.body.appendChild(bar);
-  _pubBarTimer=setTimeout(dismissPublishBar,15000);
+  // Keep build guidance available until dismissed or another publish replaces it.
 }
 window.dismissPublishBar=dismissPublishBar;
 // Offer to announce right after a publish. url/source optional; no url → a gentle toast.
@@ -7086,7 +7097,7 @@ async function offerAnnounce(url, source){
   if(url){
     try{ await ensureSiteCfg(); }catch{}   // warm the live-site origin for the View-live link
     showPublishBar(url, source||'');
-  } else { toast('Published live ✓'); }
+  } else { toast('Saved to GitHub. Your website will update after its build finishes.'); }
 }
 window.offerAnnounce=offerAnnounce;
 $('sharePostPick')?.addEventListener('focus',loadSharePicks,{once:true});
@@ -14597,7 +14608,7 @@ async function doPublish(){
     // Honest wording: Status=Draft commits draft:true, which is in the repo but NOT live
     // on the site — never label that "Published". Scheduled posts commit as hidden drafts
     // too (the site's Action flips them live), so they get their own wording.
-    const committedLabel = meta.publishAt ? 'Scheduled' : meta.draft ? 'Saved as draft' : 'Published live';
+    const committedLabel = meta.publishAt ? 'Scheduled' : meta.draft ? 'Saved as draft' : 'Sent to website';
     setSaveState('saved', committedLabel); _dirty=false; _lastLocalSaveTs = Date.now();
     syncActionBtns();
     // snapshot the just-committed state — never lose work.
@@ -14605,7 +14616,7 @@ async function doPublish(){
     if(!meta.draft && !meta.publishAt && r.url){ await offerAnnounce(r.url, ((meta.title?meta.title+'\n\n':'')+docToText(doc)).slice(0,1500)); }
     else if(meta.publishAt) toast('Scheduled. It goes live automatically on the date.');
     else if(meta.draft) toast('Saved as draft (not yet live on your site).');
-    else toast('Published live → ' + (r.url || currentSlug));
+    else toast('Saved to GitHub; website updating → ' + (r.url || currentSlug));
   }catch(e){
     setSaveState('error','Publish failed');
     showError(e, { title:'Couldn’t publish', onRetry: doPublish });

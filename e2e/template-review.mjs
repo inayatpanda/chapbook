@@ -25,6 +25,23 @@ for(const [theme,name,label,heading] of [
 }
 const server=spawn(process.execPath,[root+'node_modules/astro/astro.js','dev','--host','127.0.0.1','--port','4329'],{cwd:root,stdio:'ignore'});
 const browser=await chromium.launch();const results=[];const selected=process.env.THEMES?.split(',');
+async function prepareScreenshot(page){
+ const height=await page.evaluate(()=>document.documentElement.scrollHeight);
+ for(let y=0;y<height;y+=700){await page.evaluate(y=>window.scrollTo(0,y),y);await page.waitForTimeout(65);}
+ await page.evaluate(()=>{window.scrollTo(0,0);document.activeElement?.blur();});await page.waitForTimeout(450);
+}
+async function checkNavigation(page,width){
+ const toggle=page.locator('#nav-toggle');
+ if(await toggle.isVisible()){
+  await toggle.click(); assert.equal(await toggle.getAttribute('aria-expanded'),'true');
+  assert.ok(await page.locator('#site-nav a').first().isVisible());
+  await toggle.press('Escape'); assert.equal(await toggle.getAttribute('aria-expanded'),'false');
+  assert.equal(await page.locator('#site-nav a').first().isVisible(),false);
+ }
+ assert.equal(await page.locator('#site-nav a[aria-current="page"]').count(),1,'Home nav must match');
+ assert.equal(await page.locator('main main').count(),0,'Only one main landmark');
+}
+
 try{
  for(let i=0;i<60;i++){try{if((await fetch('http://127.0.0.1:4329')).ok)break;}catch{}await new Promise(r=>setTimeout(r,500));}
  const page=await browser.newPage();
@@ -40,6 +57,8 @@ try{
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),theme+' overflows at '+width);
    const result={theme,width,status:'PASS'};results.push(result);console.log(JSON.stringify(result));
    await page.addStyleTag({content:'astro-dev-toolbar{display:none!important}'});
+   await checkNavigation(page,width);
+   await prepareScreenshot(page);
    await page.screenshot({path:out+theme+'-'+width+'.png',fullPage:true});
   }
   await page.goto('http://127.0.0.1:4329/appointments/');
@@ -83,6 +102,8 @@ try{
     await page.getByRole('searchbox',{name:'Search posts'}).fill('Kyoto');assert.equal(await page.locator('.nw-card:visible').count(),1);
     await page.getByRole('searchbox',{name:'Search posts'}).fill('');assert.ok(await page.locator('.nw-card:visible').count()>1);
    }
+   await checkNavigation(page,width);
+   await prepareScreenshot(page);
    await page.screenshot({path:out+theme.id+'-'+width+'.png',fullPage:true});
    results.push({theme:theme.id,width,status:'PASS'});console.log(JSON.stringify(results.at(-1)));
   }

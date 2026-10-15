@@ -4,7 +4,7 @@ if(typeof window!=='undefined') window.__studioProfessional = professionalForm;
 // window.__studioApi for the inline UI's api() shim. No server.
 import { config } from './seams/config.js';
 import { makeGithub } from './seams/github.js';
-import { makeDeviceAuth } from './seams/deviceAuth.js';
+import { installGithubSetup } from './core/githubSetup.js';
 import { makeAi } from './seams/ai.js';
 import { makeR2 } from './seams/r2.js';
 import { storage } from './seams/storage.js';
@@ -121,9 +121,9 @@ export function renderOnboarding() {
   // once: inside the sign-in disclosure when a Client ID is injected, else directly.
   const manualFields = `
       <label>GitHub owner / repo</label>
-      <div class="row"><input id="byok-owner" placeholder="owner" value="${c.ghOwner || ''}"><input id="byok-repo" placeholder="repo" value="${c.ghRepo || ''}"></div>
-      <label>Branch</label><input id="byok-branch" placeholder="main" value="${c.ghBranch || 'main'}">
-      <label>GitHub token (fine-grained, contents: read & write)</label><input id="byok-token" type="password" placeholder="github_pat_…" value="${c.ghToken || ''}">`;
+      <div class="row"><input id="byok-owner" placeholder="owner" value="${escHtml(c.ghOwner || '')}"><input id="byok-repo" placeholder="repo" value="${escHtml(c.ghRepo || '')}"></div>
+      <label>Branch</label><input id="byok-branch" placeholder="main" value="${escHtml(c.ghBranch || 'main')}">
+      <label>GitHub token (fine-grained, contents: read & write)</label><input id="byok-token" type="password" placeholder="github_pat_…" value="${escHtml(c.ghToken || '')}">`;
 
   // Device-Flow sign-in block — only when a public OAuth Client ID was injected at build.
   // Manual fields collapse into the "Advanced" disclosure beneath it.
@@ -236,7 +236,7 @@ export function renderOnboarding() {
       color:#042018;background:var(--grad-pub,linear-gradient(95deg,#2dd4bf,#22d3ee));cursor:pointer}
     #byok-overlay button.ghost{margin-top:.6rem;background:transparent;border:1px solid var(--line-2,rgba(140,160,200,.3));color:var(--ink,#aebbd2)}
     #byok-overlay .hint{font-size:.74rem;color:var(--faint,#6f7e98);margin-top:.6rem}
-    #byok-overlay .msg{font-size:.8rem;margin-top:.6rem;min-height:1em}
+    #byok-overlay .msg{display:block;font-size:.8rem;margin-top:.6rem;min-height:1em}
     #byok-overlay #gh-create{border:1px solid var(--line,rgba(140,160,200,.18));border-radius:14px;padding:.9rem 1rem;background:var(--bg-1,rgba(8,12,22,.5))}
     #byok-overlay .cb-head{font:700 1rem 'Space Grotesk',system-ui;color:var(--ink,#f4f7fd)}
     #byok-overlay .cb-or{display:flex;align-items:center;gap:.6rem;margin:1rem 0 .2rem;font-size:.72rem;color:var(--faint,#6f7e98);text-transform:uppercase;letter-spacing:.08em}
@@ -266,7 +266,7 @@ export function renderOnboarding() {
         <option value="openai"${c.aiProvider === 'openai' ? ' selected' : ''}>OpenAI</option>
         <option value="google"${c.aiProvider === 'google' ? ' selected' : ''}>Google (Gemini)</option>
       </select>
-      <label>AI key <span style="opacity:.6">(optional)</span></label><input id="byok-key" type="password" placeholder="sk-… (only needed for AI drafting)" value="${c.aiKey || ''}">
+      <label>AI key <span style="opacity:.6">(optional)</span></label><input id="byok-key" type="password" placeholder="sk-… (only needed for AI drafting)" value="${escHtml(c.aiKey || '')}">
       <button id="byok-save">Save &amp; start</button>
       <div class="msg" id="byok-msg" role="alert" aria-live="polite"></div>
     </div>
@@ -312,136 +312,14 @@ export function renderOnboarding() {
   const _closeX = $('byok-close');
   if (_closeX) _closeX.addEventListener('click', closeOnboarding);
 
-  // BYOK save
-  $('byok-save').addEventListener('click', async () => {
-    const msg = $('byok-msg');
-    const btn = $('byok-save');
-    // "Save & start" completes the manual (owner + repo + token) path. Without those
-    // three it cannot proceed — so tell the user why instead of returning silently.
-    // In device-flow mode the primary path is "Sign in with GitHub" above and the
-    // manual fields live under Advanced, so point the user there.
-    if (!v('byok-owner') || !v('byok-repo') || !v('byok-token')) {
-      msg.style.color = '#f472b6';
-      msg.textContent = GH_CLIENT_ID
-        ? 'Connect GitHub first — sign in above, or add owner, repo and a token under Advanced.'
-        : 'Fill in owner, repo and GitHub token.';
-      return;
-    }
-    // M6 — validate the pasted token BEFORE saving. A wrong/expired PAT (or one lacking the
-    // contents scope) would otherwise save cleanly and only fail later at Publish, after the
-    // user has written a post. A `whoami` (GET /user) is the cheapest live check.
-    btn.disabled = true;
-    msg.style.color = '#aebbd2'; msg.textContent = 'Checking your token…';
-    try {
-      await makeGithub({ token: v('byok-token') }).whoami();
-    } catch (e) {
-      msg.style.color = '#f472b6';
-      msg.textContent = connection.isNetworkError(e)
-        ? 'Couldn’t reach GitHub to check your token — check your connection, then try again.'
-        : 'That GitHub token didn’t work — check it’s correct and has contents read & write, then try again.';
-      btn.disabled = false;
-      return;
-    }
-    config.save({ mode: 'byok', ghOwner: v('byok-owner'), ghRepo: v('byok-repo'), ghBranch: v('byok-branch') || 'main', ghToken: v('byok-token'), aiProvider: v('byok-prov'), aiKey: v('byok-key') });
-    refresh();
-    msg.textContent = 'Saved. Loading…'; msg.style.color = '#2dd4bf';
-    setTimeout(() => location.reload(), 400);
-  });
-
-  // --- Device-Flow sign-in (only present when a Client ID was injected) ---
+  const githubSetup = installGithubSetup({ overlay: ov, config, refresh, clientId: GH_CLIENT_ID, relayBase: RELAY_BASE });
   if (GH_CLIENT_ID && $('gh-start')) {
-    // Once we hold a token, the "Sign in with GitHub" CTA (button + account help) is
-    // stale — collapse it to a compact "✓ Signed in as @who" chip so the create/pick
-    // panels below don't sit stacked under a redundant sign-in prompt. The create/pick
-    // panels live INSIDE #gh-signin, so we only hide the CTA sub-block, never the whole
-    // block. Shared by the live device-flow success path and by re-opening onboarding
-    // when a device sign-in is already on record.
-    const showSignedIn = (login) => {
-      const cta = $('gh-signin-cta'); if (cta) cta.style.display = 'none';
-      const box = $('gh-codebox'); if (box) box.style.display = 'none';
-      const chip = $('gh-signedin');
-      if (chip) {
-        chip.innerHTML = `<span class="gh-si-dot" aria-hidden="true">✓</span> <span>Signed in${login ? ` as <b>@${escHtml(login)}</b>` : ''}</span>`;
-        chip.style.display = 'flex';
-      }
-    };
-    // Re-opening onboarding while a device sign-in is already on record (e.g. Settings →
-    // Change, or a reload before a repo was chosen): open in the signed-in state instead
-    // of showing "Sign in with GitHub" to someone already authenticated. If no repo is
-    // wired up yet, reveal the create/pick step so there's still a way forward (cb-go
-    // falls back to the persisted token).
-    const priorUser = config.getGithubUser();
-    if (priorUser && priorUser.login) {
-      showSignedIn(priorUser.login);
-      if (!config.isConfigured()) { const gc = $('gh-create'); if (gc) gc.style.display = 'block'; }
-    }
-    // "I've got one — continue": the user already has an account, so take them
-    // straight into sign-in — scroll the button into view and start the flow.
-    // (Just focusing it was a no-op when the button was already on screen.)
-    const haveAcct = $('gh-have-account');
-    if (haveAcct) haveAcct.addEventListener('click', (e) => {
-      e.preventDefault();
-      const b = $('gh-start');
-      if (b && !b.disabled) { try { b.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch {} b.click(); }
-    });
-    // The signed-in user's token, captured on success and shared by the create + picker
-    // paths below. Falls back to config.getGithub().token (saveDeviceAuth persisted it).
-    let sessionToken = '';
-    $('gh-start').addEventListener('click', async () => {
-      const btn = $('gh-start'); const poll = $('gh-poll'); const msg = $('byok-msg');
-      btn.disabled = true; msg.textContent = '';
-      $('gh-codebox').style.display = 'block';
-      const da = makeDeviceAuth({ clientId: GH_CLIENT_ID, relayBase: RELAY_BASE });
-      try {
-        const { token } = await da.authorize({
-          onCode: ({ userCode, verificationUri }) => {
-            $('gh-code').textContent = userCode;
-            $('gh-open').href = verificationUri;
-            try { navigator.clipboard.writeText(userCode); } catch {}
-          },
-        });
-        poll.textContent = 'Authorised ✓ Loading your account…';
-        sessionToken = token;
-        const gh = makeGithub({ token });
-        const me = await gh.whoami().catch(() => ({ login: '' }));
-        config.saveDeviceAuth({ token, login: me.login });
-        // Collapse the sign-in CTA to the confirmation chip now that we're authenticated.
-        showSignedIn(me.login);
-        const repos = (await gh.listRepos().catch(() => [])).filter((r) => !r.private);
-        const sel = $('gh-repo-select');
-        // Primary path: create a brand-new blog — always available, even with no repos yet.
-        $('gh-codebox').style.display = 'none';
-        $('gh-create').style.display = 'block';
-        // Secondary path: only surface the existing-repo picker when there's something to pick.
-        if (repos.length) {
-          sel.innerHTML = repos.map((r) => `<option value="${r.fullName}" data-branch="${r.branch}">${r.fullName}</option>`).join('');
-          $('gh-picker').style.display = 'block';
-        } else {
-          $('gh-picker').style.display = 'none';
-        }
-      } catch (e) {
-        $('gh-codebox').style.display = 'none';
-        msg.style.color = '#f472b6'; msg.textContent = e.message || 'Sign-in failed.';
-        btn.disabled = false;
-      }
-    });
-
-    $('gh-repo-use').addEventListener('click', () => {
-      const opt = $('gh-repo-select').selectedOptions[0];
-      if (!opt) return;
-      const [owner, repo] = opt.value.split('/');
-      config.saveRepo({ owner, repo, branch: opt.dataset.branch || 'main' });
-      refresh();
-      const msg = $('byok-msg'); msg.style.color = '#2dd4bf'; msg.textContent = 'Saved. Loading…';
-      setTimeout(() => location.reload(), 400);
-    });
-
     // --- Create a new blog: generate a repo from the template, set its look, enable Pages, boot.
     $('cb-go').addEventListener('click', async () => {
       const st = $('cb-status');
       const set = (t, ok) => { st.textContent = t; st.style.color = ok ? '#2dd4bf' : (ok === false ? '#f472b6' : '#aebbd2'); };
       const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-      const token = sessionToken || config.getGithub().token;
+      const { token, login, method } = githubSetup.getAuth();
       if (!token) { set('Sign in with GitHub first.', false); return; }
 
       const name = (($('cb-name').value) || '').trim();
@@ -463,17 +341,20 @@ export function renderOnboarding() {
         const templateOwner = _tpl.owner || 'RQAI-projects';
         const templateRepo = _tpl.repo || 'chapbook-template';
         set('Creating your blog…');
-        let repo = null;
-        for (let i = 0; i < 5; i++) {
+        const pending = config.all().pendingBlog;
+        let repo = pending?.owner === owner && pending?.name === name ? pending.repo : null;
+        if (repo) slug = repo.name;
+        for (let i = 0; !repo && i < 5; i++) {
           const tryName = i ? `${slug}-${i + 1}` : slug;
           try {
             repo = await gh.generateFromTemplate({ templateOwner, templateRepo, owner, name: tryName, description: name });
             slug = tryName; break;
           } catch (e) {
-            if (!/name already exists|already exists|422/i.test(e.message || '')) throw e;
+            if (!/name already exists|already exists/i.test(e.message || '')) throw e;
           }
         }
         if (!repo) { set('Could not find a free name — try another.', false); go.disabled = false; return; }
+        config.save({ pendingBlog: { owner, name, repo } });
         const branch = repo.branch || 'main';
 
         // M5 — write the chosen name/theme/hero into site.json. The template content lags a
@@ -506,7 +387,8 @@ export function renderOnboarding() {
         try { await gh.enablePages({ owner, repo: slug }); pagesEnabled = true; }
         catch (e) { console.warn('enablePages (non-fatal):', e && e.message); }
 
-        config.saveRepo({ owner, repo: slug, branch });
+        githubSetup.activate({ owner, repo: slug, branch, token, login, method });
+        config.save({ pendingBlog: null });
         refresh();
         // Flag the first-run "write your first post" tour to auto-open once after the reload.
         try { tour.markPending(); } catch {}
@@ -517,7 +399,7 @@ export function renderOnboarding() {
         const picker = $('gh-picker'); if (picker) picker.style.display = 'none';
         const repoPagesSettings = `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(slug)}/settings/pages`;
         const pagesBlock = pagesEnabled
-          ? `<div class="hint">Your first build is running — it'll be live in about 1–2 minutes. Bookmark the link above.</div>`
+          ? `<div class="hint">GitHub Pages is enabled. Your site will appear after a successful build — it'll be live in about 1–2 minutes. Bookmark the link above.</div>`
           : `<div class="hint" style="color:#f4c06f;line-height:1.6">One quick step to switch your blog on:<br>
                1. Open <a href="${repoPagesSettings}" target="_blank" rel="noopener" style="color:#22d3ee;text-decoration:underline">your repo → Settings → Pages</a><br>
                2. Under <b>Source</b>, choose <b>GitHub Actions</b>.<br>
@@ -525,7 +407,7 @@ export function renderOnboarding() {
         const notApplied = lookApplied ? ''
           : `<div class="hint" style="color:#f4c06f">GitHub was still setting up, so your name/theme weren't applied yet — set them any time in Settings → Site settings once you're in.</div>`;
         gc.innerHTML =
-          `<div class="cb-head">✓ Your blog “${escHtml(name)}” is ready</div>
+          `<div class="cb-head">✓ Your website repository “${escHtml(name)}” is connected</div>
            <div class="hint" style="margin-top:.5rem">Your blog's address:</div>
            <div style="margin-top:.2rem"><a href="${escHtml(liveUrl)}" target="_blank" rel="noopener" style="color:#22d3ee;text-decoration:underline;word-break:break-all;font-weight:700">${escHtml(liveUrl)}</a></div>
            ${pagesBlock}

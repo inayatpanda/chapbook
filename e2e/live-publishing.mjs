@@ -69,7 +69,7 @@ for(const project of ['chapbook','atelier']){
     await page.locator('#prepublishPanel').waitFor({state:'visible'});
     assert.ok(await page.locator('#ppPublish').isVisible(),await page.locator('#ppBody').innerText());
     await page.locator('#ppPublish').click();
-    await page.waitForFunction(()=>document.querySelector('#editorStatus')?.textContent.includes('Published live'),null,{timeout:120000});
+    await page.waitForFunction(()=>document.querySelector('#editorStatus')?.textContent.includes('Sent to website'),null,{timeout:120000});
     const candidates=(await api('/posts')).filter(p=>p.title===sample.title);
     const slug=candidates.sort((a,b)=>b.slug.length-a.slug.length)[0]?.slug;
     assert.ok(slug,'Published post must appear in the real repository list');

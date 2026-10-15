@@ -199,3 +199,25 @@ test('commitMany: a NON-conflict failure is thrown immediately — no retry', as
   assert.equal(calls.filter((c) => c.method === 'PATCH').length, 1, 'a 401 never triggers the conflict retry');
   assert.equal(calls.filter((c) => c.url.includes('/git/ref/heads/')).length, 1, 'no second HEAD fetch on auth failure');
 });
+
+test('repository picker follows pagination and includes editable collaboration repos', async () => {
+  let calls = 0;
+  const gh = makeGithub(GH, async url => {
+    calls++; assert.match(url, /collaborator,organization_member/);
+    if (calls === 1) return res(200, Array.from({length:100},(_,i)=>({full_name:`me/site-${i}`,name:`site-${i}`,owner:{login:'me'},permissions:{push:true}})));
+    assert.match(url, /page=2/);
+    return res(200, [{full_name:'team/blog',permissions:{push:true}}, {full_name:'team/readonly',permissions:{push:false}}, {full_name:'me/archive',archived:true}]);
+  });
+  const repos = await gh.listRepos(); assert.equal(calls,2); assert.equal(repos.length,101); assert.equal(repos.at(-1).fullName,'team/blog');
+});
+test('repository validation rejects wrong repos, read-only access and missing branches', async () => {
+  const check = async (payload, branchStatus, fileStatus) => {
+    const gh = makeGithub(GH, async url => url.includes('/branches/') ? res(branchStatus,{}) : url.includes('/contents/') ? res(fileStatus,{content:to64('{}')}) : res(200,payload));
+    return gh.checkRepository();
+  };
+  const to64 = s => Buffer.from(s).toString('base64');
+  await assert.rejects(check({permissions:{push:false}},200,200),/read-only/);
+  await assert.rejects(check({},404,200),/branch.*not found/);
+  await assert.rejects(check({},200,404),/not a compatible/);
+  assert.equal((await check({},200,200)).branch,'main');
+});
