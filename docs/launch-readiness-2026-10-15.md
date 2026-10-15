@@ -115,8 +115,8 @@ Raw credential-free results and screenshots are in [readiness evidence](readines
 
 ## Release identities
 
-- Chapbook source commit: `67c9e1a`.
-- Chapbook production Netlify deploy: `6ad11287a3d390f751496b90`.
+- Chapbook source commits: `67c9e1a` (GitHub recovery), `2d03ae0` (gallery and written walkthroughs).
+- Chapbook production Netlify deploy: `6ad11b1fe8383488f1a5311a`.
 - Atelier deployed Pages commit: `61c45bf`.
 - Atelier source commit: `3ec07b7` (source), `6227dd1` (built assets).
 - Helm source commit: `3debed2`.

@@ -5,7 +5,7 @@ Release gate → https://chapbook.rqai.co.uk
 [PASS] 1. SW shell URLs return 200 — 22/22 → 200
 [PASS] 2. Security headers on / and /sw.js — all 5 present on / and /sw.js
 [PASS] 3. gh-device OPTIONS preflight → 204 — status 204
-[PASS] 4. metrics visit → 204 + count — POST 204; GET 2026-10-15 visit=7 (≥1) after 1 attempt(s); consistency=strong
+[PASS] 4. metrics visit → 204 + count — POST 204; GET 2026-10-15 visit=8 (≥1) after 1 attempt(s); consistency=strong
 [PASS] 5. grep-gate over dist/ is clean — grep-gate: clean ✓ — 1966 file(s) scanned, 1 allowlisted reference(s) skipped
 [PASS] 6. Stripe: live link on / and /pricing, no test link — live link present on / and /pricing; no test link on either
 [PASS] 7. templates pass validateDoc — exit 0
