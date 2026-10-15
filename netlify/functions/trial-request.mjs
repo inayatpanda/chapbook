@@ -1,7 +1,7 @@
 // Public trial-request endpoint — the front door of the 7-day, email-gated trial.
 // STATELESS. Never mints, never holds the licence signing key (same seam as
 // stripe-webhook.mjs): it only pushes a `trial` record onto the private sales
-// queue repo, which the owner's Helm fulfilment worker picks up to mint a
+// queue repo, which the private cloud worker picks up to mint a
 // product:'trial' key (7 days) and email it to the visitor.
 //
 //   POST { email, product? }  →  { ok:true, message:'Check your email for your 7-day key.' }
@@ -20,7 +20,7 @@
 // With GITHUB_QUEUE_TOKEN absent the function is INERT (500 not_configured).
 
 import { createHash } from 'node:crypto';
-import { pushToQueue } from './stripe-webhook.mjs';
+import { pushToQueue, canonicalTrialEmail } from './stripe-webhook.mjs';
 
 const DEFAULT_QUEUE_REPO = 'inayatpanda/rqai-sales';
 // Deliberately simple: a token, an @, a token, a dot, a token. Real validation is
@@ -31,14 +31,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Without this, one inbox yields unlimited rolling 7-day trials via sub-addressing:
 // you+1@…, you+2@… and (on Gmail) y.o.u@… all reach the same mailbox but hash differently.
 // Collapse +tag on any domain and dots on gmail/googlemail so the per-address 422 dedup holds.
-export function canonicalEmail(e) {
-  const m = /^([^@]+)@(.+)$/.exec(String(e || ''));
-  if (!m) return String(e || '');
-  let local = m[1]; const domain = m[2];
-  const plus = local.indexOf('+'); if (plus >= 0) local = local.slice(0, plus);
-  if (domain === 'gmail.com' || domain === 'googlemail.com') local = local.replace(/\./g, '');
-  return local + '@' + domain;
-}
+export const canonicalEmail = canonicalTrialEmail;
 
 // Best-effort in-memory throttle (per warm instance). Netlify spins many instances so this is
 // NOT a hard limit — the real abuse control is the canonical-email dedup above and the Helm
@@ -77,7 +70,7 @@ function isAllowedOrigin(origin) {
   if (!origin) return false;
   if (ALLOWED_ORIGINS.has(origin)) return true;
   // Netlify preview subdomains: https://<alphanumeric-and-hyphens>--inayat-studio.netlify.app
-  if (/^https:\/\/[a-z0-9-]+--inayat-studio\.netlify\.app$/.test(origin)) return true;
+  if (/^https:\/\/[a-z0-9-]+--(?:inayat-studio|chapbook-publishing-studio)\.netlify\.app$/.test(origin)) return true;
   return false;
 }
 

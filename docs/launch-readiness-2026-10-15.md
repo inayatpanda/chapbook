@@ -2,6 +2,39 @@
 
 The tested web workflows are deployed. This is a record of verified behavior and remaining account/device checks, not a promise that every possible feature and environment is issue-free.
 
+## Launch decision — cloud delivery follow-up
+
+**Cloud trial and paid-licence delivery are operational without the owner's Mac. A broad public launch still has owner and first-use checks outstanding.**
+
+Remaining:
+
+1. Finish the fresh-browser activation → GitHub authorization → new-site publication walkthrough. The live browser reached the first-run Terms/AUP acceptance screen; per-action owner approval is pending. Existing real publication tests and isolated device-flow tests passed, but do not replace this fresh human-consent check.
+2. Add the exact registered company name, company number and registered address to the public legal pages. The owner confirmed `rqai.co.uk` and will supply the remaining details at the end of the week. No company details have been invented. Other owner/legal decisions in the existing compliance checklist remain owner responsibilities.
+3. If native installers are promoted, rebuild the wrappers with the final web changes and complete physical-platform installation and permission tests. This report verifies the web release; it does not certify all native devices.
+
+## Cloud licence delivery — verified 15 October
+
+- Confirmed the correct Resend account is `inayatpanda1@gmail.com`; `send.rqai.co.uk` is verified. The existing sending-only key works. A restricted domain-list API response was initially misread as an invalid key; no unnecessary rotation was performed.
+- Migrated 41 existing licences and 16 products into an authenticated encrypted cloud ledger in the private sales repository. Cloud processing now owns fulfilment. Helm's existing timer imports support records and never competes to mint or email while the shared control is `cloud`.
+- Hosted trial, real Stripe sandbox Checkout, annual renewal advanced with a test clock, partial/full refunds, retry/idempotency and signed revocations passed. The partial refund retained access; the completed refund revoked the renewed key. Test subscriptions were cancelled.
+- Verified a genuine production trial through the public endpoint, Resend's **delivered** receipt, the shipped signature verifier and Helm's authenticated support ledger. The cloud ledger now contains 42 licences. The production receipt is `01a14155-0aba-7205-aa9c-e88e7bc654e5`; no key is included in this report.
+- Concurrent repeat requests reused that trial and original delivery ID, with no duplicate email or key; hosted run `38806018596` finished with an empty queue and no errors. Emails link directly to activation and report the original trial's actual expiry, including on resend. The follow-up hosted check `38806720794` passed.
+- The existing live Stripe signing secret verifies against the deployed function. Its destination now subscribes to all five required events, including delayed-payment success and current invoice-payment events. No live card was charged.
+- Opened the live hosted checkout and verified Chapbook at £49 per year. The public privacy notice now describes the hosted worker, encrypted ledger, local support copy and Resend email delivery.
+- The real tests exposed missing current invoice fields, partial-to-full refund collisions and concurrent GitHub commit conflicts. These were fixed and tested. Durable failures return 503, so Stripe can retry instead of silently losing a purchase.
+- Failed delivery attempts retain their order and original key, with bounded retry and an owner support notice. Resend acceptance IDs are recorded; actual delivery and bounce status remain visible in Resend.
+- Local Helm was gracefully reloaded and verified healthy. Its local support import contains the new cloud trial and preserves existing local keys/revocations. Cloud and local revocation publishers preserve the union of the signed list.
+
+Evidence: [production delivery](readiness-20261015/cloud/production-trial-delivered.jpg), [live webhook event setup](readiness-20261015/cloud/live-webhook-events.jpg), [live checkout](readiness-20261015/cloud/live-checkout.jpg), [first-use terms screen](readiness-20261015/cloud/first-run-terms.jpg), and the private [production workflow](https://github.com/inayatpanda/rqai-sales/actions/workflows/fulfil.yml).
+
+Representative successful hosted runs: trial `38801018874`, paid Checkout `38803751352`, annual renewal follow-up `38804652638`, full renewal refund `38804990747`, production trial follow-up `38805228913`.
+
+The sandbox payment test used Stripe's official CLI with an existing sandbox-only key and a temporary local relay. Signing/email ran on hosted Actions. Netlify's live signature and public trial route were checked separately. The broad Stripe CLI authorization and broadly scoped new Netlify secret were rejected by automatic approval review; neither was applied, and the isolated test route avoided both. No additional Netlify test secret was saved.
+
+The half-hour fallback schedule can be delayed by GitHub; delivery is normally triggered immediately by queue commits. This removes the Mac dependency but is not a guarantee against provider outages. New product-registry changes must also be reflected in the cloud ledger; support import is currently one-way. See [operations and recovery](STRIPE-SEAM.md).
+
+Business calendar/payment connections are optional integrations. Each business must configure and validate its own provider before accepting bookings or payments; these are not demonstrated by the core writing/publishing checks.
+
 ## Live destinations
 
 - [Chapbook](https://chapbook.rqai.co.uk/app/)
@@ -83,9 +116,9 @@ See [booking setup](booking-and-business-sites.md) for the owner steps and offic
 
 | Area | Result | Scope |
 |---|---|---|
-| Chapbook automated tests | 1,107 passed | Final source/build, including gallery route consistency |
+| Chapbook automated tests | 1,118 passed | Final source/build, including gallery route consistency |
 | Atelier automated tests | 691 passed | Final editor and portable engine |
-| Helm automated tests | 1,339 passed | Backend, shared engine and owner features |
+| Helm automated tests | 1,359 passed | Backend, shared engine and owner features |
 | Website template tests | 78 passed | Theme registry, booking links, cover resolution and existing site logic |
 | Personal-site tests | 63 passed | Existing site logic plus new booking/image helpers |
 | Chapbook browser workflows | 245 passed | Production bundles with disposable in-memory test activation and mocked GitHub transport |
@@ -116,10 +149,11 @@ Raw credential-free results and screenshots are in [readiness evidence](readines
 ## Release identities
 
 - Chapbook source commits: `67c9e1a` (GitHub recovery), `2d03ae0` (gallery and written walkthroughs).
-- Chapbook production Netlify deploy: `6ad11b1fe8383488f1a5311a`.
+- Chapbook final cloud-delivery/notice production Netlify deploy: `6ad13f59f840889d33b3edcf`.
+- Private cloud worker source commit: `88e76cf` (the repository also records subsequent runtime state commits).
 - Atelier deployed Pages commit: `61c45bf`.
 - Atelier source commit: `3ec07b7` (source), `6227dd1` (built assets).
-- Helm source commit: `3debed2`.
+- Helm source commit: `ebacb02` (cloud delivery and support sync), after `3debed2` (editor release).
 - Public template latest header commit: `b4c7b6f`. Earlier commits: `f16c3be` (themes), `b340a76` (published-media subpaths).
 - Personal website latest header commit: `338ade3` (Hostinger deployment succeeded). Earlier commits: `2939c0e` (themes; Hostinger deployment succeeded), `88f5a45` (shared media URL handling; Hostinger deployment succeeded).
 
@@ -128,5 +162,5 @@ Raw credential-free results and screenshots are in [readiness evidence](readines
 - Core writing/publishing workflows are exercised in both products. This is not an exhaustive proof of identical behavior across every UI, server-only feature and native platform. Atelier’s owner backend, CV/apps and local video features remain intentional differences.
 - Fresh human GitHub OAuth consent was not completed. Existing authenticated GitHub API access, the hosted activation gate and OAuth relay behavior were checked. The user did not need to sign in again for this work.
 - Windows/Android/iOS devices, OS installer execution, camera/microphone permission prompts and hardware capture were not tested on physical devices. Existing installer downloads and hashes were checked; signed native wrappers were not rebuilt. The user’s separate signing work was preserved.
-- Customer-owned R2 accounts, booking/calendar accounts, merchant onboarding, actual charge/refund delivery and transactional email delivery require their own connected accounts. The presence of a live Chapbook checkout link is not a completed purchase test.
+- Customer-owned R2 accounts, booking/calendar accounts and merchant onboarding require each customer's own connected accounts and checks. Chapbook's own actual sandbox purchase/renewal/refund and production trial email delivery passed; a live-money purchase was deliberately not performed.
 - Third-party service uptime and future provider/model changes remain outside a one-time release check.

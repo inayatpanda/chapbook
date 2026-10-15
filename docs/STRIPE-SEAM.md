@@ -1,164 +1,63 @@
-# Stripe → sales queue → Helm-minted licences (`stripe-webhook.mjs`)
+# Stripe and trial licence delivery
 
-A **stateless** Netlify function that turns a completed Stripe checkout (or a
-refund) into a **record on a private queue repo**. It **never mints** and **never
-holds the licence signing key** — the owner's Helm polls the queue, mints/revokes
-**locally**, and emails the buyer. It stores nothing and shares no state with
-`gh-device.mjs`.
+Production fulfilment runs in the private `inayatpanda/rqai-sales` repository using GitHub Actions. It does not depend on the owner's Mac, Helm app or local timer being awake. Netlify only verifies events and writes queue records; it has no licence-signing key.
 
-> This is a **seam**. No live Stripe/email keys are committed. The function is
-> **inert until `STRIPE_WEBHOOK_SECRET` is set** — without it it verifies nothing
-> and returns `500 not_configured`.
+## Public endpoints
 
-## The chosen model: queue → Helm auto-mint
+- `/.netlify/functions/stripe-webhook`: POST with a valid Stripe signature and `livemode: true`.
+- `/.netlify/functions/trial-request`: validated trial request, canonical-email deduplication and per-instance abuse throttling.
 
-The owner's decision (**2026-07-08**, key model **C** in the sales-pipeline spec):
-**mint on the owner's own hardware via a queue.** The Ed25519 **signing key** is the
-crown jewel of the paid product — anyone holding it can forge unlimited valid keys,
-and the only recovery is re-keying, which invalidates *every* existing customer. So
-it stays **off public hosts**, consistent with the rest of the architecture (AI /
-GitHub tokens are never on Netlify either).
+Stripe destination `we_1TrDFvGciDSC4LkGdBp6Y1dW` uses API version `2026-06-24.dahlia` and listens to:
 
-How it flows:
+- `checkout.session.completed`
+- `checkout.session.async_payment_succeeded`
+- `invoice.paid`
+- `invoice_payment.paid`
+- `charge.refunded`
 
-1. **Checkout completes** → this function verifies the Stripe signature, emails the
-   owner a notification (as before), and **writes `queue/sale-<sessionId>.json`** to
-   the private queue repo `inayatpanda/rqai-sales`. Record:
-   `{ type, product, name, email, amountTotal, currency, sessionId, paymentIntent,
-   subscription, mode, ts }`. Idempotent by filename (a duplicate webhook delivery
-   is a no-op).
-2. **Refund** (`charge.refunded`) → writes `queue/refund-<paymentIntent>.json`
-   `{ type, paymentIntent, chargeId, amountRefunded, email, ts }`. Sales carry
-   `paymentIntent` so a refund can be matched back to the sale it revokes.
-3. **Renewal** (`invoice.paid`) → writes `queue/renewal-<invoiceId>.json`
-   `{ type, subscription, invoiceId, paymentIntent, periodEnd, amountPaid, email, ts }`.
-   The FIRST invoice of a new subscription (`billing_reason: subscription_create`)
-   never re-mints — the checkout event already fulfils the first period — but it
-   queues a minimal **`queue/link-<invoiceId>.json`** `{ type, subscription,
-   invoiceId, paymentIntent, amountTotal, ts }` instead: subscription-mode checkout
-   sessions carry `payment_intent: null`, so without the link a refund of the FIRST
-   charge could never be matched back to the licence. Only `subscription_cycle` /
-   `subscription_update` invoices queue a renewal re-mint.
-4. **Helm's fulfilment worker** (`scripts/fulfil-sales.mjs`, launchd timer every 5 min
-   + on wake — installed by `scripts/install-fulfil.sh`) polls the queue, mints the
-   licence **locally**, emails the buyer their `IPL1.…` key with activation steps, and
-   moves the record to `done/`. **Terms:** `consultantprep` is a ONE-OFF (perpetual
-   key); every other product is an ANNUAL subscription — the key expires one year in
-   (+ 7 days grace) and each paid renewal invoice mints a FRESH key emailed to the
-   buyer (the by-sub index in the queue repo links a Stripe subscription to its
-   current licence; link records index the first period's charge for refunds, waiting
-   for the sale to fulfil first and parking only after 24 h). Refunds `revokeLicence()`
-   + republish the signed revocation list — **note: revoking the key does NOT cancel
-   the Stripe subscription; when refunding a subscriber, also cancel the subscription
-   in Stripe or future renewal invoices will keep minting new keys** (the owner
-   notification repeats this). The licence key never touches Netlify and is never
-   echoed in the HTTP response.
+Only paid or valid zero-total Checkout sessions are fulfilled. An unpaid delayed-payment session waits for its success event. The product identifier comes from `metadata.product` or `client_reference_id`; Chapbook uses `studio`.
 
-**Manual-with-assist is now the FALLBACK, not the model.** If a record cannot be
-fulfilled automatically (unknown product, missing buyer email, an unmatched refund)
-the worker **parks** it (`done/parked-…json` + owner notification) and the owner
-handles it by hand with `npm run licence:mint`. If Helm is asleep the queue simply
-accumulates and drains on the next wake; buyers are told "your key arrives by email
-shortly".
+Both older invoice fields and current `parent.subscription_details` / separate invoice-payment events are supported. First invoices establish payment-to-licence links; subscription-cycle invoices deliver renewed keys. Refund records distinguish cumulative amounts, so a partial refund followed by a full refund cannot be lost as a duplicate.
 
-## Env vars (owner-set in Netlify — NEVER committed)
+## Durable processing and recovery
 
-| Var | Needed | Notes |
-| --- | --- | --- |
-| `STRIPE_WEBHOOK_SECRET` | **required** | `whsec_…` from the Stripe webhook endpoint. Without it the function is inert (`500 not_configured`). |
-| `GITHUB_QUEUE_TOKEN` | **required for auto-mint** | Fine-grained PAT, **contents read/write on `inayatpanda/rqai-sales` ONLY**. Without it the function stays pure manual-with-assist (`mode:"manual"`, nothing queued). |
-| `QUEUE_REPO` | optional | Override the queue repo (default `inayatpanda/rqai-sales`). |
-| `RESEND_API_KEY` | optional | Email provider key (Resend) for the **owner** notification. Without it, purchases are only **logged** to the Netlify function log. |
-| `LICENCE_EMAIL_TO` | optional | Where to notify the owner (defaults to `LICENCE_EMAIL_FROM`). |
-| `LICENCE_EMAIL_FROM` | optional | From address, e.g. `Studio <keys@yourdomain>`. Defaults to a Resend test sender. |
+Queue writes must succeed before Stripe receives HTTP 200. Missing credentials, failed writes and unconfirmed conflicts return HTTP 503 for Stripe to retry. GitHub 409/422 responses are only acknowledged after reading the existing matching record. A transient branch-head conflict gets bounded retries.
 
-There is **no signing-key env var** — by design. The buyer's key email is sent by
-**Helm** (Resend, from the Helm config below), not by this function.
+A queue commit triggers the hosted worker. A half-hour schedule provides a fallback for interrupted runs and deferred retries; GitHub schedules can be delayed. Delivery normally starts within seconds or minutes, but there is no guaranteed dispatch-time SLA.
 
-## Helm config (`config/config.json` — gitignored, never committed)
+The worker persists an AES-256-GCM encrypted ledger before sending any licence email. It reuses the same key after an interruption, uses Resend idempotency keys, writes payment indexes before completion markers, and serialises hosted runs. Buyer email failures retain the order for bounded retries; exhausted retries generate an owner notice for manual support. A provider acceptance ID is recorded, while actual delivery/bounce status is visible in Resend.
 
-The fulfilment worker reads a `fulfil` block:
+Trials last seven days. Email aliases reuse the original trial and expiry. Requests within the resend cooldown do not send another email. Trial emails include the activation link and actual original expiry, so a resend does not promise another seven days. Annual paid keys include seven days of expiry grace; each successful renewal issues a fresh key.
 
-```jsonc
-"fulfil": {
-  "enabled": true,                       // false / absent → the worker is a clear-logged no-op
-  "queueRepo": "inayatpanda/rqai-sales", // optional; this is the default
-  "token": "github_pat_…",               // optional; else `gh auth token`, else config.github.token
-  "resendKey": "re_…",                   // optional; without it the buyer email is a manual owner task
-  "emailFrom": "Inayat Panda <keys@rqai.co.uk>",
-  "notifyTo": "inayatc2002@gmail.com"    // owner notifications (parks, refunds, manual-send)
-}
-```
+A full refund revokes the key linked to that payment. Partial or unverifiable refunds are parked for owner review. Early refund/payment-link events wait for their corresponding sale rather than immediately becoming orphaned. Refunds do not themselves cancel a Stripe subscription; cancel the subscription separately if future renewals should stop.
 
-Auth resolution mirrors `scripts/backup-git.js`: `config.fulfil.token` →
-`gh auth token` (probed on a launchd-safe PATH) → `config.github.token` (last resort).
-The signing key is loaded from `config/.licence-key.json` (gitignored). If neither a
-token nor a signing key is available the worker skips the pass cleanly.
+## Secrets and support records
 
-> **Resend sender caveat — sort this before real sales.** The worker's default From
-> address is Resend's test sender (`onboarding@resend.dev`), which only delivers to
-> **the Resend account owner's own inbox** — a buyer will never receive it. Real
-> buyer delivery needs a **verified domain** in Resend (Domains → add e.g.
-> `rqai.co.uk`, publish the DNS records) and `config.fulfil.emailFrom` set to an
-> address on that domain, e.g. `"Inayat Panda <keys@rqai.co.uk>"`. Until then the
-> worker still mints and records each sale, but treat buyer emails as undeliverable
-> and expect manual-send notifications instead.
+The private workflow uses encrypted Actions secrets for the signing key, Resend key, notification address and revocation-repository credential. Netlify retains its existing webhook secret and queue-only GitHub credential. No payment API secret is needed on the public website.
 
-Install the timer on the owner's Mac:
+The verified sender is `RQAI <hello@send.rqai.co.uk>`, under the Resend account `inayatpanda1@gmail.com`. The existing Resend key is sending-only; a failed domain-list request is not proof that this key cannot send mail.
 
-```bash
-bash scripts/install-fulfil.sh              # install / reinstall + run one pass
-bash scripts/install-fulfil.sh --uninstall  # stop + remove the timer
-node scripts/fulfil-sales.mjs --dry-run     # print intended actions, mutate nothing
-```
+`state/control.json` is authoritative:
 
-## Behaviour summary
+- `cloud`: Actions delivers; Helm's timer only imports the encrypted ledger into its local support database.
+- `paused`: neither worker delivers.
+- `local`: explicit rollback to the original Mac worker, with the cloud workflow disabled first.
 
-| Situation | Response |
-| --- | --- |
-| `STRIPE_WEBHOOK_SECRET` unset | `500 not_configured` |
-| Bad / stale signature | `400 bad_signature` |
-| Event ≠ `checkout.session.completed` / `charge.refunded` / `invoice.paid` | `200 { ignored }` |
-| Checkout with no buyer email | `400 no_buyer_email` |
-| Valid checkout, `GITHUB_QUEUE_TOKEN` set | `200 { minted:false, mode:"queued", queued:true }` |
-| Valid checkout, no queue token | `200 { minted:false, mode:"manual", queued:false }` (logged) |
-| `charge.refunded`, queue token set | `200 { received:true, refundQueued:true }` |
-| `invoice.paid` (subscription_create, has paymentIntent) | `200 { received:true, linkQueued:true }` — first-period refund link |
-| `invoice.paid` (subscription_create, no paymentIntent) | `200 { ignored }` |
-| `invoice.paid` (subscription_cycle/update) | `200 { received:true, renewalQueued:true }` |
+Helm preserves locally minted keys and local revocations during import. Revocation publishers verify and union the existing signed list, so a stale local database cannot undo a cloud revocation. Product registry changes currently need to be reflected in the cloud ledger as well; importing support records is one-way and is not a general bidirectional database sync.
 
-It **never** returns `minted:true` — minting is always on the owner's Helm.
+## Operations
 
-## Owner one-time setup (when you're ready to sell)
+- Actions: <https://github.com/inayatpanda/rqai-sales/actions/workflows/fulfil.yml>
+- Health: `state/health.json` in that private repository contains the last run, counters and remaining queue size.
+- Helm sync: `node scripts/fulfil-sales.mjs`; `--dry-run` reads without importing.
+- Inspect `done/parked-*.json`, failed Actions runs and Resend delivery events when investigating an order.
+- Keep failed or queued orders intact. Do not reset the ledger or mint replacement keys merely because delivery was interrupted.
+- To pause: set `state/control.json` to `paused`. To roll back, disable `FULFIL_ENABLED`, wait for any running cloud job to finish, sync the cloud ledger into Helm, then explicitly choose `local` mode. This restores the Mac dependency.
 
-1. **Per app: a Stripe Product + Payment Link.** Give each app its own Product and
-   its own price. On the Payment Link (or the Product), set
-   **`metadata.product = <licence product id>`** — the id must match a product in the
-   Helm Licences tab (e.g. `topp`, `studio`, `consultantprep`). The worker parks any
-   sale whose `metadata.product` is missing or unknown.
-   **⚠ Term default:** products not listed in `PRODUCT_TERMS`
-   (`scripts/fulfil-sales.mjs`) default to **annual** — any future ONE-OFF product
-   must be added to that map as `'perpetual'` or its keys will expire after a year.
-2. **One webhook endpoint** → `https://<studio-host>/.netlify/functions/stripe-webhook`,
-   subscribed to **`checkout.session.completed`**, **`charge.refunded`** (drives
-   auto-revoke) *and* **`invoice.paid`** (drives subscription renewals). Copy its
-   signing secret into `STRIPE_WEBHOOK_SECRET`. Subscription products use a
-   recurring price on the Payment Link; `consultantprep` stays a one-time price.
-3. **Create the private queue repo** `inayatpanda/rqai-sales`, mint a fine-grained PAT
-   with contents read/write **on that repo only**, and set it as `GITHUB_QUEUE_TOKEN`
-   (Netlify → Site settings → Environment variables). The queue repo is private —
-   records hold buyer name/email, so add a privacy note to the storefront.
-4. (Optional) set `RESEND_API_KEY` + `LICENCE_EMAIL_TO` so purchases also email you.
-5. **On the Mac:** fill in the `config.fulfil` block, then
-   `bash scripts/install-fulfil.sh`. Test with Stripe's test-mode webhook — the sale
-   should land in `queue/`, and within ~5 min move to `done/sale-…json` with the buyer
-   emailed their key.
+## Launch verification, 15 October 2026
 
-## Module boundary (why it deploys cleanly)
+A real Stripe sandbox Checkout, an annual renewal advanced with a test clock, partial/full refunds, email delivery, duplicate recovery and signed revocations were exercised. Sandbox keys and state were isolated under `sandbox/` with an independent signing key. The test subscriptions were cancelled.
 
-This function imports **only `node:crypto`** — no code outside `studio-app/`. An
-earlier auto-mint version imported the signing core from the repo root
-(`../../../scripts/licence-core.mjs`), which Netlify could not bundle, so the function
-502'd on load. Keeping it self-contained — it only ever writes a **queue record**, and
-the signing core lives on the Helm — is what keeps both the deploy and the crown-jewel
-key safe.
+The payment test used Stripe's official CLI with an existing sandbox-only key and a temporary local relay, followed by hosted cloud signing/email. Production Netlify signature verification and the public trial endpoint were tested separately. No live card charge was made. No extra broadly scoped Netlify secret or team-wide Stripe CLI authorization was added.
+
+See [launch verification](launch-readiness-2026-10-15.md) for evidence and the remaining owner/legal and native-device checks.

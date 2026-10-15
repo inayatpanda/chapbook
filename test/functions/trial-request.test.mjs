@@ -108,7 +108,7 @@ test('canonicalEmail strips +tag on any domain', () => {
 });
 test('canonicalEmail collapses dots for gmail/googlemail only', () => {
   assert.strictEqual(canonicalEmail('y.o.u@gmail.com'), 'you@gmail.com');
-  assert.strictEqual(canonicalEmail('y.o.u@googlemail.com'), 'you@googlemail.com');
+  assert.strictEqual(canonicalEmail('y.o.u@googlemail.com'), 'you@gmail.com');
   assert.strictEqual(canonicalEmail('y.o.u@fastmail.com'), 'y.o.u@fastmail.com'); // dots kept off-gmail
 });
 test('canonicalEmail: gmail +tag AND dots both collapse (the abuse vector)', () => {
