@@ -14,5 +14,53 @@
     "url": "https://inayatpanda.github.io/chapbook-readiness-20261015/blog/release-test-a-small-writing-ritual-2/",
     "status": "PASS",
     "width": 390
+  },
+  {
+    "project": "atelier",
+    "title": "Release test - a visual notebook",
+    "slug": "release-test-a-visual-notebook",
+    "url": "https://inayatpanda.github.io/chapbook-readiness-20261015/blog/release-test-a-visual-notebook/",
+    "status": "PASS",
+    "width": 1440
+  },
+  {
+    "project": "atelier",
+    "title": "Release test - a visual notebook",
+    "slug": "release-test-a-visual-notebook",
+    "url": "https://inayatpanda.github.io/chapbook-readiness-20261015/blog/release-test-a-visual-notebook/",
+    "status": "PASS",
+    "width": 390
+  },
+  {
+    "project": "atelier",
+    "title": "Release test - Atelier editing roundtrip",
+    "slug": "release-test-atelier-editing-roundtrip",
+    "url": "https://inayatpanda.github.io/chapbook-readiness-20261015/blog/release-test-atelier-editing-roundtrip/",
+    "status": "PASS",
+    "width": 1440
+  },
+  {
+    "project": "atelier",
+    "title": "Release test - Atelier editing roundtrip",
+    "slug": "release-test-atelier-editing-roundtrip",
+    "url": "https://inayatpanda.github.io/chapbook-readiness-20261015/blog/release-test-atelier-editing-roundtrip/",
+    "status": "PASS",
+    "width": 390
+  },
+  {
+    "project": "chapbook",
+    "title": "Release test - an interactive comparison",
+    "slug": "release-test-an-interactive-comparison",
+    "url": "https://inayatpanda.github.io/chapbook-readiness-20261015/blog/release-test-an-interactive-comparison/",
+    "status": "PASS",
+    "width": 1440
+  },
+  {
+    "project": "chapbook",
+    "title": "Release test - an interactive comparison",
+    "slug": "release-test-an-interactive-comparison",
+    "url": "https://inayatpanda.github.io/chapbook-readiness-20261015/blog/release-test-an-interactive-comparison/",
+    "status": "PASS",
+    "width": 390
   }
 ]

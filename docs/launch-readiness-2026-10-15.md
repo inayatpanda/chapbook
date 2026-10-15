@@ -67,6 +67,7 @@ See [booking setup](booking-and-business-sites.md) for the owner steps and offic
 | Production release gate | 12 passed, 0 skipped | Headers, CSP, activation, XSS, service worker, marketing, routes and live checkout link presence |
 | Owner Helm smoke | Passed | PIN unlock, eight authenticated API reads, nine Atelier views and no uncaught page errors |
 | Real GitHub lifecycle | Passed | Isolated repository creation, publish, takedown, republish, duplicate, delete and due scheduled deployment |
+| Published-page verification | Eight passed | All four live posts at 1440 and 390 pixels; images decode, figures render, sandbox controls switch, no uncaught script errors |
 | Live editor publication | Four posts published | Genuine one-day test licence; actual hosted apps → GitHub → Pages, with editable sidecars |
 
 Browser coverage includes ideas, drafts, revision history, writing threads, untitled recovery, backup export/import and malformed import, publish/schedule/takedown/duplicate/delete, photo uploads and share URLs, unsafe path rejection, interactive presets, 23 figure families, formula slider behavior under production-like CSP, responsive views and offline reopening. These mocked transport tests are distinct from the real GitHub and hosted publishing checks.
@@ -84,12 +85,13 @@ Raw credential-free results and screenshots are in [readiness evidence](readines
 
 ## Release identities
 
+- Chapbook source commit: `2b993f2`.
 - Chapbook production Netlify deploy: `6ad11287a3d390f751496b90`.
 - Atelier deployed Pages commit: `73c28dabd63489a69cec19f934e13cb7aa42c3be`.
 - Atelier source commit: `1b196d6`.
 - Helm source commit: `112936f`.
 - Public template commits: `f16c3be` (themes), `b340a76` (published-media subpaths).
-- Personal website commits: `2939c0e` (themes; Hostinger deployment succeeded), `88f5a45` (shared media URL handling).
+- Personal website commits: `2939c0e` (themes; Hostinger deployment succeeded), `88f5a45` (shared media URL handling; Hostinger deployment succeeded).
 
 ## Remaining limits
 
