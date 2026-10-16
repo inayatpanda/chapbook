@@ -117,3 +117,17 @@ test('canonicalEmail: gmail +tag AND dots both collapse (the abuse vector)', () 
 test('canonicalEmail leaves a plain address unchanged', () => {
   assert.strictEqual(canonicalEmail('plain@example.com'), 'plain@example.com');
 });
+
+test('forged forwarding headers cannot evade the verified connection rate limit',async()=>{
+  const saved=process.env.GITHUB_QUEUE_TOKEN;delete process.env.GITHUB_QUEUE_TOKEN;
+  try{
+    for(let n=0;n<21;n++){
+      const req=post({email:'synthetic@example.invalid',product:'studio'});
+      req.headers.set('x-forwarded-for',`203.0.113.${n}`);
+      req.headers.set('x-nf-client-connection-ip',`192.0.2.${n}`);
+      const response=await handler(req,{ip:'198.51.100.45'});
+      assert.equal(response.status,n<20?500:429);
+    }
+    assert.equal((await handler(post({email:'synthetic@example.invalid'}),{ip:'198.51.100.46'})).status,500);
+  }finally{if(saved!==undefined)process.env.GITHUB_QUEUE_TOKEN=saved;}
+});

@@ -24,6 +24,7 @@
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { makeQueueWriter } from '../lib/enqueue-fulfilment.mjs';
+import { withMigrationGuard } from '../lib/migration-guard.mjs';
 
 const DEFAULT_TOLERANCE_SEC = 300;           // Stripe's replay window
 const DEFAULT_FROM = 'Studio <onboarding@resend.dev>';
@@ -386,7 +387,7 @@ export async function handleStripeWebhook({ rawBody, signature, env = {}, deps =
 }
 
 // ── Netlify Functions v2 entry — (Request) => Response ────────────────────────
-export default async function handler(req) {
+async function handler(req) {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'method_not_allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' } });
   }
@@ -395,3 +396,4 @@ export default async function handler(req) {
   const { status, body } = await handleStripeWebhook({ rawBody, signature, env: { ...process.env, STRIPE_MODE: 'live' }, deps: { pushQueue: makeQueueWriter({ legacyPush: pushToQueue }) } });
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
+export default withMigrationGuard(handler);

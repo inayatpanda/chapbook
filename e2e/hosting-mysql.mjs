@@ -1,5 +1,6 @@
-// Disposable MySQL integration: CHAPBOOK_DB_TEST_CONFIG must identify a local
-// synthetic database. No production endpoints or credentials are used.
+// MySQL integration: local disposable configuration by default. The explicit
+// hosted mode uses saved environment credentials and random synthetic stores;
+// it never reads or deletes application service namespaces.
 import assert from 'node:assert/strict';
 import { readFile, mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -11,8 +12,12 @@ import { createHandler, signingMessage } from '../netlify/functions/fulfil-store
 import { createApp } from '../hosting/server.mjs';
 import { probeStorage } from '../hosting/storage-probe.mjs';
 
-const config=JSON.parse(await readFile(process.env.CHAPBOOK_DB_TEST_CONFIG,'utf8'));
-assert.equal(config.host,'127.0.0.1'); assert.equal(config.database,'chapbook_test');
+const hosted=process.env.CHAPBOOK_HOSTED_QA==='1';
+const config=hosted ? {host:process.env.DB_HOST,port:Number(process.env.DB_PORT||3306),user:process.env.DB_USER,password:process.env.DB_PASSWORD,database:process.env.DB_NAME} : JSON.parse(await readFile(process.env.CHAPBOOK_DB_TEST_CONFIG,'utf8'));
+if(hosted){
+  assert.ok(process.env.CHAPBOOK_DB_TEST_NAME,'Hosted QA requires an explicit expected database');
+  assert.equal(config.database,process.env.CHAPBOOK_DB_TEST_NAME);
+}else{assert.equal(config.host,'127.0.0.1');assert.equal(config.database,'chapbook_test');}
 Object.assign(process.env,{DB_HOST:config.host,DB_PORT:String(config.port),DB_USER:config.user,DB_PASSWORD:config.password,DB_NAME:config.database});
 const pool=await database();
 const name='test-'+randomBytes(8).toString('hex');
@@ -23,11 +28,11 @@ let server,preview,dir;
 try {
   await check('preview probe verifies writes, replay, cleanup and durable marker',async()=>{
     // Keep the stable hosted checkpoint isolated from other local test runs.
-    const makeStore=label=>mysqlStore(label==='preview-probe-checkpoint'?name+'-checkpoint':label);
+    const makeStore=label=>mysqlStore(label==='preview-probe-checkpoint'?name+'-checkpoint':name+'-'+label.slice(-12));
     const first=await probeStorage(makeStore),second=await probeStorage(makeStore);
     assert.deepEqual(first,{status:'passed',checks:8,persistence:'created'});
     assert.deepEqual(second,{status:'passed',checks:8,persistence:'verified'});
-    const [leftovers]=await pool.execute('SELECT COUNT(*) AS n FROM chapbook_records WHERE store_name LIKE ?', ['preview-probe-%']);
+    const [leftovers]=await pool.execute('SELECT COUNT(*) AS n FROM chapbook_records WHERE store_name LIKE ? AND store_name<>?', [name+'-%',name+'-checkpoint']);
     assert.equal(leftovers[0].n,0);
   });
   await check('concurrent inserts create exactly one record',async()=>{
@@ -68,6 +73,9 @@ try {
     assert.equal((await handler(request({op:'del',path:'state/test.json',sha:record.sha}))).status,200);
     assert.equal(await api.get('state/test.json'),null);assert.ok(await api.get('sandbox/state/test.json'));
   });
+  // Hostinger reserves listeners for its managed app runtime. SSH rehearsals
+  // exercise SQL and signed handlers; HTTP is tested on the deployed preview.
+  if(!hosted){
   dir=await mkdtemp(join(tmpdir(),'chapbook-http-'));
   await mkdir(join(dir,'app'));await mkdir(join(dir,'themes-css'));
   await writeFile(join(dir,'app/index.html'),'<h1>Synthetic preview</h1>');
@@ -75,7 +83,7 @@ try {
   await writeFile(join(dir,'themes-css/sample-post.html'),'sample');
   await writeFile(join(dir,'asset.bin'),'0123456789');
   await writeFile(join(dir,'.env'),'NOT_PUBLIC');
-  server=await createApp({root:dir,handlers:{'fulfil-store':handler,'stripe-webhook':async()=>{throw Error('private database failure');}}});
+  server=await createApp({root:dir,preview:false,handlers:{'fulfil-store':handler,'stripe-webhook':async()=>{throw Error('private database failure');}}});
   await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
   await check('static paths, extensionless policies and security headers are preserved',async()=>{
     const r=await fetch(base+'/app/');assert.equal(r.status,200);assert.equal(r.headers.get('x-frame-options'),'DENY');assert.match(r.headers.get('content-security-policy'),/frame-ancestors 'none'/);
@@ -102,7 +110,8 @@ try {
     assert.deepEqual((await (await fetch(staging+'/healthz')).json()).probe,{status:'passed',checks:8});
     assert.equal((await (await fetch(base+'/healthz')).json()).probe,undefined);
   });
-  console.log(`${passed} Hostinger/MySQL checks passed`);
+  }
+  console.log(`${passed} Hostinger/MySQL checks passed${hosted?' (SQL and signed handlers; HTTP checked on managed preview)':''}`);
 } finally {
   if(server)await new Promise(r=>server.close(r));if(preview)await new Promise(r=>preview.close(r));
   await pool.execute('DELETE FROM chapbook_records WHERE store_name IN (?,?,?)',[name,name+'-control',name+'-checkpoint']);await pool.end();

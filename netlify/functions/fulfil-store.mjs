@@ -2,6 +2,7 @@
 // signature from the existing private worker, a short lifetime and replay guard.
 import { createPublicKey, verify } from 'node:crypto';
 import { PUBLIC_KEY } from '../../src/lib/licence-pubkey.js';
+import { withMigrationGuard } from '../lib/migration-guard.mjs';
 import { openFulfilStore, openControlStore, privateStoreAdapter, validPath } from '../lib/fulfil-store.mjs';
 
 export const API_ORIGIN = 'https://chapbook.rqai.co.uk';
@@ -51,4 +52,4 @@ export function createHandler({ store, control, publicKey = PUBLIC_KEY, now = Da
     }
   };
 }
-export default createHandler();
+export default withMigrationGuard(createHandler());

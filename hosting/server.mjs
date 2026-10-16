@@ -89,6 +89,7 @@ export async function createApp({ root = resolve('dist'), preview = process.env.
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   process.env.CHAPBOOK_STORAGE='mysql';
+  process.env.CHAPBOOK_MIGRATION_GUARD='1';
   const server=await createApp(); server.requestTimeout=30000;server.headersTimeout=15000;
   server.listen(Number(process.env.PORT||3000),'0.0.0.0',()=>console.log('Chapbook HTTP server ready'));
 }

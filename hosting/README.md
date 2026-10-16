@@ -81,6 +81,15 @@ an encrypted snapshot, digest reconciliation, resumable import and conflict
 refusal against disposable MySQL service namespaces. It does not contact the
 production store.
 
+For an explicitly identified hosted preview, both scripts also accept
+`CHAPBOOK_HOSTED_QA=1 CHAPBOOK_DB_TEST_NAME=<expected-database>` with the saved
+`DB_*` environment. The SQL suite uses random temporary namespaces; the migration
+suite uses a fresh temporary SQL table, including for conflict tests. Both clean
+their synthetic records. Hostinger SSH does not expose arbitrary HTTP listeners,
+so this mode runs eight SQL/signed-handler checks and the three migration checks;
+the managed preview supplies the separate HTTP checks. These hosted checks passed
+on 16 October 2026. This is a database rehearsal, not a live licence migration.
+
 `hosting/migrate-cli.mjs` is an operator-only tool, never an HTTP endpoint. After
 actually pausing all source writers, `snapshot <encrypted-file> <key-file>
 --writers-paused` reads the explicit `CHAPBOOK_MIGRATION_SOURCE_SITE_ID` using
@@ -96,6 +105,23 @@ validation below still apply. Remove migration recovery files after the agreed
 rollback retention window.
 
 ## Cutover requirements
+
+Before pausing anything, deploy the migration guard with
+`CHAPBOOK_MIGRATION_GUARD=1` on Netlify. The production Node entry enables it
+automatically. The private control-store key `maintenance/cutover.json` is read
+fresh before each account, webhook or metrics operation. `{ "paused": true }`
+returns retryable 503 responses without acknowledging a payment or writing a
+record. Missing state or `{ "paused": false }` allows normal operation; unreadable
+or malformed state fails closed. GitHub's stateless device relay stays available.
+There is no public pause/unlock endpoint.
+
+Drain and pause cloud workers before setting the source flag. Verify the live
+routes return 503, wait for already-running handlers to finish, then capture the
+encrypted snapshot. The copied flag keeps the destination paused too. Reconcile
+every record before unlocking only the destination. Keep the old source paused
+through DNS propagation; Stripe retries its unacknowledged deliveries. A rollback
+after new writes requires pausing the destination and copying its latest complete
+state back, not merely changing DNS to the stale source snapshot.
 
 Before changing production DNS:
 

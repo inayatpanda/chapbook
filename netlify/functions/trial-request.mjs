@@ -22,6 +22,7 @@
 import { createHash } from 'node:crypto';
 import { pushToQueue, canonicalTrialEmail } from './stripe-webhook.mjs';
 import { makeQueueWriter } from '../lib/enqueue-fulfilment.mjs';
+import { withMigrationGuard } from '../lib/migration-guard.mjs';
 
 const DEFAULT_QUEUE_REPO = 'inayatpanda/rqai-sales';
 // Deliberately simple: a token, an @, a token, a dot, a token. Real validation is
@@ -92,7 +93,7 @@ const json = (status, body, origin) =>
   new Response(JSON.stringify(body), { status, headers: corsHeaders(origin) });
 
 // ── Netlify Functions v2 entry — (Request) => Response ────────────────────────
-export default async function handler(req) {
+async function handler(req, context) {
   const origin = req.headers.get('origin') || '';
 
   // CORS preflight.
@@ -120,7 +121,9 @@ export default async function handler(req) {
   }
 
   // Best-effort per-IP throttle (see rateLimited note).
-  const ip = (req.headers.get('x-nf-client-connection-ip') || req.headers.get('x-forwarded-for') || '').split(',')[0].trim();
+  // Both Netlify and the Hostinger adapter supply a verified connection IP.
+  // Never let caller-controlled forwarding headers select the abuse bucket.
+  const ip = context?.ip || 'unknown';
   if (rateLimited(ip)) {
     return json(429, { ok: false, error: 'rate_limited', message: 'Too many trial requests. Try again later.' }, origin);
   }
@@ -154,3 +157,4 @@ export default async function handler(req) {
   console.log(`[trial-request] queued trial-${id} (${product || 'no product'})`);
   return json(200, { ok: true, message: 'Check your email for your 7-day key.' }, origin);
 }
+export default withMigrationGuard(handler);

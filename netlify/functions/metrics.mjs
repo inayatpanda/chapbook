@@ -10,6 +10,7 @@
 //   other methods                                → 405
 //   bad type / malformed body / bad day param    → 400
 import { openStore } from '../lib/storage-provider.mjs';
+import { withMigrationGuard } from '../lib/migration-guard.mjs';
 
 const TYPES = new Set(['activate', 'install', 'visit']);
 
@@ -50,7 +51,7 @@ export function bump(current, type) {
   return c;
 }
 
-export default async (req) => {
+async function handler(req) {
   const store = openStore('metrics');
 
   if (req.method === 'GET') {
@@ -83,4 +84,5 @@ export default async (req) => {
 
   await store.setJSON(day, next); // no PII, no IP, no licence key — by design
   return new Response(null, { status: 204 });
-};
+}
+export default withMigrationGuard(handler);
