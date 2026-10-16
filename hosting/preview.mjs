@@ -2,8 +2,9 @@
 import { createApp } from './server.mjs';
 import { databaseConfigured } from './mysql-store.mjs';
 import { probeStorage } from './storage-probe.mjs';
+import { previewNetwork } from './preview-network.mjs';
 let probe = { status: 'unconfigured' };
-const server = await createApp({preview:true, previewDiagnostics:()=>({probe})});
+const server = await createApp({preview:true, previewDiagnostics:()=>({probe}),previewNetwork});
 server.requestTimeout=30000;server.headersTimeout=15000;
 server.listen(Number(process.env.PORT||3000),'0.0.0.0',async()=>{
   console.log('Chapbook preview ready; account services disabled');

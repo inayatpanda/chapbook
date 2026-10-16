@@ -9,6 +9,7 @@ import stripe from '../netlify/functions/stripe-webhook.mjs';
 import privateStore from '../netlify/functions/fulfil-store.mjs';
 import metrics from '../netlify/functions/metrics.mjs';
 import { databaseConfigured, database } from './mysql-store.mjs';
+import { clientIp, trustProxy } from './client-ip.mjs';
 
 const functions = { 'gh-device': ghDevice, 'trial-request': trial, 'stripe-webhook': stripe, 'fulfil-store': privateStore, metrics };
 const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.json':'application/json', '.svg':'image/svg+xml', '.png':'image/png', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.webp':'image/webp', '.gif':'image/gif', '.ico':'image/x-icon', '.woff2':'font/woff2', '.wasm':'application/wasm', '.mp4':'video/mp4', '.webm':'video/webm', '.webmanifest':'application/manifest+json', '.xml':'application/xml', '.txt':'text/plain; charset=utf-8' };
@@ -19,15 +20,20 @@ export async function securityHeaders(configPath = new URL('../netlify.toml', im
   return blocks.map(block => ({ path: block.match(/for = "([^"]+)"/)[1], headers: Object.fromEntries([...block.matchAll(/^\s{4}([\w-]+) = "([^"]*)"/gm)].map(m=>[m[1],m[2]])) }));
 }
 
-export async function createApp({ root = resolve('dist'), preview = process.env.CHAPBOOK_PREVIEW === '1', handlers = functions, previewDiagnostics = () => ({}) } = {}) {
+export async function createApp({ root = resolve('dist'), preview = process.env.CHAPBOOK_PREVIEW === '1', handlers = functions, previewDiagnostics = () => ({}), previewNetwork = null } = {}) {
   const rules = await securityHeaders();
   const base = await realpath(root);
+  const trustedProxy = trustProxy(process.env.CHAPBOOK_TRUSTED_PROXY || '');
   return createServer(async (req, res) => {
     const respond = (status, message) => { res.writeHead(status, { 'Content-Type':'text/plain; charset=utf-8', 'Cache-Control':'no-store' }); res.end(message); };
     try {
       const url = new URL(req.url, 'https://chapbook.rqai.co.uk');
       for (const rule of rules) if (rule.path === '/*' || rule.path === url.pathname) for (const [key,value] of Object.entries(rule.headers)) res.setHeader(key,value);
       if (preview) res.setHeader('X-Robots-Tag','noindex, nofollow');
+      if (preview && previewNetwork && url.pathname === '/__preview/request-diagnostics' && req.method === 'GET') {
+        res.writeHead(200, {'Content-Type':'application/json','Cache-Control':'no-store'});
+        res.end(JSON.stringify(previewNetwork(req))); return;
+      }
       if (url.pathname === '/healthz') {
         let storage = 'unconfigured';
         if (databaseConfigured()) { try { await (await database()).execute('SELECT 1'); storage='ready'; } catch { storage='unavailable'; } }
@@ -43,7 +49,7 @@ export async function createApp({ root = resolve('dist'), preview = process.env.
         for await (const chunk of req) { bytes+=chunk.length; if(bytes>2_000_000) return respond(413,'Request too large'); chunks.push(chunk); }
         const request = new Request(url, {method:req.method,headers:req.headers,...(!['GET','HEAD'].includes(req.method)?{body:Buffer.concat(chunks)}:{})});
         try {
-          const response = await handlers[name](request, {ip:req.socket.remoteAddress});
+          const response = await handlers[name](request, {ip:clientIp(req, trustedProxy)});
           res.writeHead(response.status,Object.fromEntries(response.headers)); res.end(Buffer.from(await response.arrayBuffer()));
         } catch { respond(503,'Account services temporarily unavailable.'); }
         return;

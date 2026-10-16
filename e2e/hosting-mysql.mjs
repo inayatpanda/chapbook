@@ -83,7 +83,7 @@ try {
     const frame=await fetch(base+'/themes-css/sample-post.html');assert.equal(frame.headers.get('x-frame-options'),'SAMEORIGIN');
   });
   await check('files outside public root and dotfiles are inaccessible',async()=>{
-    for(const path of ['/.env','/%2eenv','/%2e%2e%2fpackage.json','/.netlify/functions/unknown'])assert.equal((await fetch(base+path)).status,404);
+    for(const path of ['/.env','/%2eenv','/%2e%2e%2fpackage.json','/.netlify/functions/unknown','/__preview/request-diagnostics'])assert.equal((await fetch(base+path)).status,404);
   });
   await check('download byte ranges and HEAD responses are correct',async()=>{
     const r=await fetch(base+'/asset.bin',{headers:{range:'bytes=3-5'}});assert.equal(r.status,206);assert.equal(await r.text(),'345');
