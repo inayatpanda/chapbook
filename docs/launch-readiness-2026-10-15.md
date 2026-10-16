@@ -2,16 +2,16 @@
 
 The tested web workflows are deployed. This is a record of verified behavior and remaining account/device checks, not a promise that every possible feature and environment is issue-free.
 
-Latest deployment: Chapbook `b4becd6`, deploy `6ad192ca81c6ad87692ad51c`; Web CI passed. Atelier, the personal site and the synthetic launch site also deployed successfully. The published AI disclosure was checked in all six reading templates. Support-alias delivery and supplier-enquiry submission were verified; detailed account and cleanup evidence is kept in a private operator folder.
+Latest deployment: Chapbook `959d229`, deploy `6ad19a13d7260e894400be9a`; Web CI passed. Atelier, the personal site and the synthetic launch site also deployed successfully. The published AI disclosure was checked in all six reading templates. Support-alias delivery and supplier-enquiry submission were verified; detailed account and cleanup evidence is kept in a private operator folder.
 
 ## Launch decision — retention and AI follow-up, 16 October
 
 **Cloud delivery, deletable storage and daily Chapbook retention are operational without the Mac. General public launch still has the specific outstanding items below.** Company identity details remain deferred at the owner's request.
 
 - Production migration verified 42 licences and seven records; sandbox verified four licences and 20 records. The first daily cleanup succeeded with zero removals; six other-product/unclassified records remain protected for review. Helm reconciled all 42 cloud-managed licences.
-- Rights-request intake, encrypted case records, restricted export, reviewed deletion, interruption recovery and evidence-gated closure pass the worker tests. The support alias has been activated with owner approval; Hostinger and its Gmail forwarded copy are both in scope for erasure.
+- Rights-request intake, encrypted case records, restricted export, reviewed deletion, interruption recovery and evidence-gated closure pass the worker tests. The support alias has been activated with owner approval; New support mail stays in Hostinger; earlier Gmail forwarded copies remain in scope for erasure.
 - Technical AI origin now persists through post publication and specialised figure/interactive editing. Desktop/mobile disclosure notes render in the post body on all themes. Generated image bytes and correct MIME types are preserved.
-- Supplier/AI source review is recorded in [the current review](legal/SUPPLIER-AND-AI-REVIEW-2026-10-16.md). GitHub Pro agreement coverage, provider backup periods, historical Git/log cleanup and forwarded-mail contract/retention evidence remain explicit issues. GitHub case #4864841 and Netlify enquiry are submitted; Hostinger human review has been requested.
+- Supplier/AI source review is recorded in [the current review](legal/SUPPLIER-AND-AI-REVIEW-2026-10-16.md). GitHub Pro agreement coverage, provider backup periods, provider cached-object cleanup and historical forwarded-mail retention evidence remain explicit issues. GitHub case #4864841 and Netlify enquiry are submitted; Hostinger human review has been requested.
 - Latest validation: 1,150 Chapbook tests, 714 Atelier tests and 32 cloud-worker tests. App metadata alone does not prove universal Article 50 marking compliance. Final consumer/identity/ICO/EU-representative and desktop-distribution checks remain in the release checklist.
 
 The earlier legal revision `2026-10-16` is now live (production source `576d20a`, deploy `6ad18b9ee2ec8e1f96493a83`). Subsequent release evidence is appended below. Older sections are historical test evidence, not current staging status.

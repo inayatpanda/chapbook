@@ -53,7 +53,7 @@ Limits requiring explicit review before a claim of full conformity:
 - Isolated cloud read/write/delete drill succeeded (`38840588305`), with no email. Production daily retention is enabled (`38841197490`) and completed on 16 October: zero removals, six records outside Chapbook or needing classification protected for review.
 - Helm reconciled all 42 cloud-managed licences, removing zero current records. Future removed cloud records disappear from its active SQLite copy at the next successful sync.
 - Rights-case tests cover encrypted intake, month-end deadline calculation, a subject-only export, reviewed deletion and refusal to close a case without evidence for all stores.
-- Old Git history and historical logs remain an erasure task. No claim of complete historical removal or automatic support-mail cleanup is made.
+- The approved rewrite removed retired runtime records from reachable private Git history and the known Mac clone. Identified launch-test logs containing references were removed, and cloud delivery was rechecked successfully. Provider cached-object removal and other-device copies still require evidence; no claim of provider-wide historical erasure or automatic support-mail cleanup is made.
 
 ## Sources
 
