@@ -1,16 +1,41 @@
-# Chapbook and Atelier launch verification — 15 October 2026
+# Chapbook and Atelier launch verification — updated 16 October 2026
 
 The tested web workflows are deployed. This is a record of verified behavior and remaining account/device checks, not a promise that every possible feature and environment is issue-free.
 
-## Launch decision — cloud delivery follow-up
+## Launch decision — 16 October follow-up
 
-**Cloud trial and paid-licence delivery are operational without the owner's Mac. A broad public launch still has owner and first-use checks outstanding.**
+**Cloud licence delivery and the fresh-user publishing journey work. General public launch still requires completion of the legal/operational items below.** No claim of comprehensive legal compliance or universal device compatibility is made.
 
-Remaining:
+1. Add the verified contracting trader/controller name, company number and service/registered address. The owner confirmed `rqai.co.uk` and will provide the other details at the end of the week. The new staged legal revision removes the unverified “RQAI Ltd” assertion and clearly identifies the missing identity fields.
+2. Finalise and operate a retention/erasure schedule, including completed records, private Git history, encrypted ledger, local Helm copies and email. Current trial records do **not** auto-delete after seven days. File supplier/transfer assessments and resolve the ICO/EU representative questions in the legal checklist.
+3. Complete model/format provenance review and any applicable machine-readable marking controls. Visible AI notices and human review do not by themselves prove Article 50(2) compliance. Obtain qualified review of the final consumer/privacy/AI terms and operating practices.
+4. If promoting native installers, rebuild final wrappers and test installation/permissions on the physical platforms. Existing downloads and hashes were checked; separate signing work is preserved.
 
-1. Finish fresh-browser GitHub authorization → new-site publication. The owner approved first-run Terms/AUP acceptance, and the genuine cloud-delivered trial activated successfully in Chrome. GitHub returned a real device code and recognised the app's existing public-repository access, then required account verification. The browser is waiting at GitHub's “Confirm access” screen; the verification email account is not signed in among the available inboxes. Existing real publication tests and isolated device-flow tests passed, but do not replace completion of this fresh account-verification walkthrough.
-2. Add the exact registered company name, company number and registered address to the public legal pages. The owner confirmed `rqai.co.uk` and will supply the remaining details at the end of the week. No company details have been invented. Other owner/legal decisions in the existing compliance checklist remain owner responsibilities.
-3. If native installers are promoted, rebuild the wrappers with the final web changes and complete physical-platform installation and permission tests. This report verifies the web release; it does not certify all native devices.
+The registered-business information is already requested; do not invent it or repeatedly ask for it. The latest legal revision and Chapbook Settings corrections are **built/tested locally, not deployed** while Netlify production deployments are paused. The currently live editor already includes the spacing, resizable panels and public-status reopening fixes.
+
+## Fresh browser and editor follow-up — completed
+
+- The owner completed GitHub verification. Its final 404 did not invalidate sign-in: Chapbook received the device approval and listed the public repositories.
+- Through the actual browser UI, created `inayatpanda/chapbook-launch-test-20261016`, selected Petal, saved a synthetic post to GitHub as a draft, then explicitly published it. Its public page rendered the intended heading and three paragraphs.
+- Fixed the ambiguous publication action: drafts now offer **Save draft to GitHub** and **Publish now** separately. Scheduled posts retain their date.
+- Fixed public-post reopening: omitted `draft:false` in Markdown no longer defaults an existing public post back to draft. Actual reopen showed **Live**, **Post loaded** and **Take down**.
+- Deployed calmer editor spacing and draggable Rough draft/settings dividers to Chapbook and Atelier. Verified real pointer resizing, keyboard adjustment, persistence across reload and double-click reset. Dark mode was visually reviewed. The final browser viewport override did not change the actual 1710px viewport, so those captures are not claimed as fresh phone verification.
+- Published three additional synthetic glyph posts for line, 3D and colour modes. Quiet themes use a flat default icon in the reading palette; expressive themes retain 3D. Colour artwork is preserved and 3D conversion includes SVG primitives. The line icon was checked across all six reading surfaces, including Focus hiding decoration. Subsequent live testing exposed and corrected reading-palette bleed into the topic sidebar and a hardcoded dark-theme rail override. Final live checks across all six surfaces retain Petal's dark sidebar ink, with no horizontal overflow; Focus intentionally hides the rail. The isolated site's hourly scheduler is disabled after testing.
+- Settings review found a false “Active” provider badge without a saved key and misleading “Local-only” status despite a selected GitHub repository. Both are corrected in the next Chapbook build; the provider correction also applies to Atelier.
+
+Evidence: [new site](readiness-20261015/cloud/fresh-site-created.jpg), [publication choices](readiness-20261015/cloud/publication-choices.jpg), [resizable panels](readiness-20261015/cloud/editor-dividers.jpg), [dark editor](readiness-20261015/cloud/editor-dark.jpg), [Petal glyph](readiness-20261015/cloud/glyph-petal-default.jpg), [colour glyph](readiness-20261015/cloud/glyph-colour.jpg), and [3D glyph with corrected sidebar](readiness-20261015/cloud/glyph-3d-slate.jpg).
+
+## Hosting and content ownership
+
+- Read-only account inspection confirmed Hostinger **Business**, expiring **13 September 2027**, and Netlify **credit-free / 300 credits**, next usage reset **24 October 2026**. Netlify's API exposes the 75% alert setting but did not provide the detailed usage total here. Official pricing charges 15 credits per successful production deploy; no exact allocation of the reported 75% to this work is claimed.
+- Hostinger Business supports Node.js. The personal site already deploys there. Moving Chapbook requires porting its four endpoints and Netlify Blobs counters, security headers, paths and deployment setup, then testing before any DNS cutover. **No hosting cutover has been performed.**
+- Users' drafts stay in their browser; publication/uploads go directly to their GitHub repository or configured R2 account. Moving the shared Chapbook service does not make RQAI the host of every user's posts or media. Stripe, email and AI remain connected external services. The cloud licence worker can remain on GitHub Actions independently of the website host.
+
+## Legal revision — staged 16 October
+
+The public/in-app document source now distinguishes RQAI-held account/payment/trial/support records from local drafts, private queue/delivery records from the encrypted ledger, pseudonymous trial-email hashes from anonymous aggregate counters, and deletion of a current file from deletion of history/backups. Trial collection and AI-profile/provider notices explain the relevant data flow before use. Settings now has a separate “Records held by RQAI” explanation, a privacy link and an access/deletion request link; it explicitly says forgetting the device does not erase these records. The publication check reminds authors to review personal data and add required AI disclosures. Public policy pages have a readable text measure and section hierarchy. [Local policy preview](readiness-20261015/cloud/privacy-records-preview.jpg).
+
+Reviewed official Commission Article 50 guidance and FAQs, its updated AI literacy guidance, ICO transparency/pseudonymisation guidance and UK consumer-contract information. The document version is `2026-10-16`; material changes trigger fresh on-device acceptance. This draft does not assert unknown transfer mechanisms, completed automatic erasure or verified AI marking.
 
 ## Cloud licence delivery — verified 15 October
 
@@ -87,7 +112,7 @@ The user reported erratic and cumbersome GitHub setup. Both apps now use the sam
 - Existing websites appear first. New-site creation is a disclosure; manual token controls are under Advanced. Atelier now has a close-setup control.
 - Publishing reports that GitHub saved the content and the website is updating, with a direct build-status link. A successful commit is no longer described as proof the website is already live. Atelier also preserves scheduled timestamps on republish and surfaces slug-reservation failures accurately.
 
-Verification: **13 browser scenarios passed per app**, including manual tokens, account changes, failed repository fetches, incompatible/read-only/missing-branch repositories, cancellation, partial creation recovery and publish feedback. The existing **245 browser checks per app** also passed. Live read-only account checks returned **22 editable repositories** and validated both the personal site and synthetic QA site. The real fresh-browser device flow reached GitHub's account verification after recognising existing public-repository access; the owner must complete that verification before the walkthrough can continue. [Verification screen](readiness-20261015/cloud/github-verification-required.jpg).
+Verification: **13 browser scenarios passed per app**, including manual tokens, account changes, failed repository fetches, incompatible/read-only/missing-branch repositories, cancellation, partial creation recovery and publish feedback. The existing **245 browser checks per app** also passed. Live read-only account checks returned **22 editable repositories** and validated both the personal site and synthetic QA site. The fresh-browser device flow subsequently completed after owner verification, and a new Petal site and post were published through the UI. The earlier [verification screen](readiness-20261015/cloud/github-verification-required.jpg) is historical evidence only.
 
 GitHub reference: [device authorization](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow) and [repository discovery](https://docs.github.com/en/rest/repos/repos#list-repositories-for-the-authenticated-user).
 
@@ -117,11 +142,11 @@ See [booking setup](booking-and-business-sites.md) for the owner steps and offic
 
 | Area | Result | Scope |
 |---|---|---|
-| Chapbook automated tests | 1,118 passed | Final source/build, including gallery route consistency |
-| Atelier automated tests | 691 passed | Final editor and portable engine |
+| Chapbook automated tests | 1,135 passed | Staged legal/Settings source/build, including editor dividers and public-post reopening |
+| Atelier automated tests | 708 passed | Final editor and portable engine |
 | Helm automated tests | 1,359 passed | Backend, shared engine and owner features |
-| Website template tests | 78 passed | Theme registry, booking links, cover resolution and existing site logic |
-| Personal-site tests | 63 passed | Existing site logic plus new booking/image helpers |
+| Website template tests | 80 passed | Theme registry, glyph presentation, booking links, cover resolution and existing site logic |
+| Personal-site tests | 65 passed | Existing site logic plus glyph, booking and image helpers |
 | Chapbook browser workflows | 245 passed | Production bundles with disposable in-memory test activation and mocked GitHub transport |
 | Atelier browser workflows | 245 passed | Same browser workflow suite and storage behavior |
 | Paid Gemini features | 23 passed | Real provider calls, including image, interactive, figure, import and text workflows |
@@ -150,18 +175,27 @@ Raw credential-free results and screenshots are in [readiness evidence](readines
 ## Release identities
 
 - Chapbook source commits: `67c9e1a` (GitHub recovery), `2d03ae0` (gallery and written walkthroughs).
-- Chapbook final cloud-delivery/notice production Netlify deploy: `6ad13f59f840889d33b3edcf`.
+- Chapbook latest production editor deploy: `6ad175908c19d584ba00044a` (source `c4c1781`); legal/Settings follow-up is staged locally.
 - Private cloud worker source commit: `88e76cf` (the repository also records subsequent runtime state commits).
-- Atelier deployed Pages commit: `61c45bf`.
-- Atelier source commit: `3ec07b7` (source), `6227dd1` (built assets).
-- Helm source commit: `ebacb02` (cloud delivery and support sync), after `3debed2` (editor release).
-- Public template latest header commit: `b4c7b6f`. Earlier commits: `f16c3be` (themes), `b340a76` (published-media subpaths).
-- Personal website latest header commit: `338ade3` (Hostinger deployment succeeded). Earlier commits: `2939c0e` (themes; Hostinger deployment succeeded), `88f5a45` (shared media URL handling; Hostinger deployment succeeded).
+- Atelier deployed Pages editor commit: `d7f6679` (run `38834534061` succeeded).
+- Atelier editor source `08f8519`, built assets `7fff9cc` (provider readiness and publication notice).
+- Helm current editor sync `5c1742b`; cloud delivery/support source `ebacb02`.
+- Public template latest glyph/reading-palette commit: `1680073`; previous header commit `b4c7b6f`. Earlier commits: `f16c3be` (themes), `b340a76` (published-media subpaths).
+- Personal website glyph updates `7be0142`, `afe3096`, `7814ed1`; previous header commit `338ade3`. Earlier commits: `2939c0e` (themes; Hostinger deployment succeeded), `88f5a45` (shared media URL handling; Hostinger deployment succeeded).
+- New synthetic site `4bd7559` (Pages run `38835053658` succeeded); live six-surface sidebar contrast checks passed.
 
 ## Remaining limits
 
 - Core writing/publishing workflows are exercised in both products. This is not an exhaustive proof of identical behavior across every UI, server-only feature and native platform. Atelier’s owner backend, CV/apps and local video features remain intentional differences.
-- Fresh GitHub account verification is pending. The production trial successfully activated the fresh browser, and the hosted OAuth relay returned a real device code. Existing authenticated GitHub API and publication checks passed; this new browser session is waiting for the owner's GitHub verification code or passkey.
+- Fresh-browser activation, GitHub approval, site creation and first publication completed. Legal identity, retention/erasure, supplier/transfer and AI-marking work remain as listed above.
 - Windows/Android/iOS devices, OS installer execution, camera/microphone permission prompts and hardware capture were not tested on physical devices. Existing installer downloads and hashes were checked; signed native wrappers were not rebuilt. The user’s separate signing work was preserved.
 - Customer-owned R2 accounts, booking/calendar accounts and merchant onboarding require each customer's own connected accounts and checks. Chapbook's own actual sandbox purchase/renewal/refund and production trial email delivery passed; a live-money purchase was deliberately not performed.
 - Third-party service uptime and future provider/model changes remain outside a one-time release check.
+
+## Suggested next UI improvements
+
+1. Settings: four clear groups (Website, AI, Appearance, Privacy & backups), compact buttons and inactive provider cards collapsed until chosen.
+2. A connection summary with selected repository, published URL, last successful check and a specific recovery action; distinguish local draft storage from site hosting.
+3. Privacy & backups: show local-only draft count, last export, and clearly separate local deletion from RQAI-held records and remote published content.
+4. Keep advanced R2/Worker configuration behind a setup guide so it does not dominate ordinary Settings.
+5. Theme previews: let readers compare a homepage and an article, with an explanation of theme-dependent default glyph treatment.

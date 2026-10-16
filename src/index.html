@@ -3461,7 +3461,7 @@
   <div class="legal-consent-card">
     <p class="lc-kicker">Before you begin</p>
     <h1 id="legalConsentTitle">Your choices and Chapbook's terms</h1>
-    <p class="lc-copy">Chapbook is local-first. Drafts stay on this device unless you deliberately connect GitHub, AI or media storage. Review the launch documents below; acceptance is stored on this device with version <code>2026-08-08</code> and a timestamp.</p>
+    <p class="lc-copy">Chapbook is local-first. Drafts stay on this device unless you deliberately connect GitHub, AI or media storage. Review the launch documents below; acceptance is stored on this device with version <code>2026-10-16</code> and a timestamp.</p>
     <p class="lc-ai"><strong>AI is optional and labelled.</strong> Generated replies, edits, images and figures may be inaccurate. Your chosen provider receives the material needed for a request. Keep a human responsible for every final post.</p>
     <label><input id="lcTerms" type="checkbox"><span>I have read and agree to the <a href="/terms" target="_blank" rel="noopener">Terms of Use</a> and <a href="/acceptable" target="_blank" rel="noopener">Acceptable Use Policy</a>.</span></label>
     <label><input id="lcNotices" type="checkbox"><span>I acknowledge the <a href="/privacy" target="_blank" rel="noopener">Privacy Notice</a>, <a href="/ai" target="_blank" rel="noopener">AI Transparency Notice</a> and <a href="/storage" target="_blank" rel="noopener">Device Storage Notice</a>. This is not blanket consent to optional AI or marketing.</span></label>
@@ -3473,7 +3473,7 @@
 </div>
 <script>
 (function(){
-  const VERSION='2026-08-08', KEY='chapbook.legalConsent.v1';
+  const VERSION='2026-10-16', KEY='chapbook.legalConsent.v1';
   window.__CHAPBOOK_LEGAL_VERSION=VERSION;
   const valid=v=>!!(v&&v.version===VERSION&&v.termsAccepted===true&&v.noticesAcknowledged===true&&v.ageConfirmed===true&&typeof v.acceptedAt==='string'&&!Number.isNaN(Date.parse(v.acceptedAt)));
   let accepted=false;
@@ -3903,6 +3903,7 @@
     </div>
 
     <label style="margin-top:1.1rem">AI providers</label>
+    <p class="sub">AI is optional. When you use it, the selected provider receives your prompt and relevant draft, conversation, profile or attached material. Its API retention and training settings apply. <a href="#" onclick="openLegal('ai');return false">AI and privacy details</a>.</p>
     <div id="aiActiveLine" class="ai-active-line"></div>
     <div id="aiProviders"><p class="sub">Loading…</p></div>
 
@@ -3910,12 +3911,12 @@
          key typed into a non-active card. Each provider card's own "Save &amp; use" is the correct,
          unambiguous save (it activates that exact provider). -->
     <div id="settingsMsg" class="msg"></div>
-    <p class="sub" style="margin-top:.6rem">Paste a key and tap <b>Save &amp; use</b> — Chapbook picks that provider's current model automatically. Keys are write-only (never shown again); save a new key before testing it.</p>
+    <p class="sub" style="margin-top:.6rem">Paste a key and tap <b>Save &amp; use</b> — Chapbook picks that provider's current model automatically. Saved keys are hidden in this interface but stored on this device; save a new key before testing it.</p>
 
     <!-- ===== About you / Your voice (the author profile that steers every AI feature) ===== -->
     <div id="profileCard" class="card" style="margin-top:1.1rem">
       <strong style="font:700 1rem var(--font-display)">About you · your voice</strong>
-      <p class="sub" style="margin-top:.35rem">This guides every AI feature — drafts, the writing partner, the goblin, figures. It's a starting point, not a script: the AI captures the spirit, it won't parrot your exact words. Leave a field blank to keep the neutral default.</p>
+      <p class="sub" style="margin-top:.35rem">This guides AI features — drafts, the writing partner, the goblin and figures. Relevant profile details are sent to your selected AI provider when you use those features. Leave a field blank to keep the neutral default; avoid confidential details.</p>
 
       <label style="margin-top:.9rem">What should I call you?</label>
       <input type="text" id="pf-name" autocomplete="off" placeholder="e.g. Sam Rivers — or just Sam" />
@@ -3945,7 +3946,7 @@
           <strong style="font:700 1.05rem var(--font-display)">Connect your storage</strong>
           <span style="font:600 .62rem var(--font-display);letter-spacing:.08em;text-transform:uppercase;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:.14rem .5rem">Advanced · optional</span>
         </div>
-        <p class="sub" style="margin-top:.5rem">Your <b>text and images already live in your GitHub repo — free, forever</b>. There's nothing to set up here for normal writing. You only need this for <b>video or large media</b>: connect your own Cloudflare&nbsp;R2 bucket and clips upload straight to storage <i>you</i> own — no server in between, and nothing stored on anyone else's account.</p>
+        <p class="sub" style="margin-top:.5rem">Your <b>text and images are saved to your own GitHub repository</b>. GitHub's plan limits and terms apply. There's nothing extra to set up here for normal writing. You only need this for <b>video or large media</b>: connect your own Cloudflare&nbsp;R2 bucket and clips upload straight to storage <i>you</i> own — no server in between, and nothing stored on anyone else's account.</p>
         <ol class="sub" style="margin:.55rem 0 0;padding-left:1.15rem;line-height:1.65">
           <li>Create a free Cloudflare account, then an <b>R2 bucket</b> and an API token with <b>Object Read &amp; Write</b>.</li>
           <li>Paste the endpoint, bucket name, keys and public URL into the fields below, then <b>Save R2 keys</b>.</li>
@@ -4013,6 +4014,15 @@
       </div>
       <div id="draftsMsg" class="msg"></div>
       <p class="sub" style="margin-top:.5rem;color:var(--faint)">Export downloads a single JSON of every local draft. Import merges a file back in (same-id drafts are overwritten; everything else is added).</p>
+
+      <div style="margin-top:1.3rem;padding-top:1rem;border-top:1px solid var(--line,#1c2433)">
+        <strong style="font:700 .95rem var(--font-display)">Records held by RQAI</strong>
+        <p class="sub" style="margin-top:.35rem">If you request a trial, buy a licence or contact support, RQAI keeps the information needed to deliver and support that service, including your email, licence status and payment or delivery references. These records are separate from your drafts. Forgetting this device does not delete them.</p>
+        <div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-top:.6rem">
+          <a href="#" onclick="openLegal('privacy');return false">What we keep and why</a>
+          <a href="mailto:support@rqai.co.uk?subject=Chapbook%20privacy%20request">Request access or deletion</a>
+        </div>
+      </div>
 
       <div style="margin-top:1.3rem;padding-top:1rem;border-top:1px solid var(--line,#1c2433)">
         <strong style="font:700 .95rem var(--font-display)">Sign out / forget this device</strong>
@@ -5652,7 +5662,8 @@
 
 <!-- Legal content sources (hidden; cloned into the modal on demand). -->
 <div id="legal-legal" hidden>
-  <p class="meta">Launch documents · Version 2026-08-08 · Effective 8 August 2026.</p>
+  <p class="legal-release-note"><b>Before public launch:</b> RQAI is the product brand at <a href="https://rqai.co.uk">rqai.co.uk</a>. The contracting trader/controller's verified legal name, service address and company details are awaiting confirmation. This document must be completed with those details before general sale.</p>
+  <p class="meta">Launch documents · Version 2026-10-16 · Updated 16 October 2026.</p>
   <p>Chapbook is local-first: drafts remain on this device unless you deliberately connect GitHub, an AI provider or media storage. These documents explain the contract, the limited information RQAI receives, optional third parties and the safeguards expected when AI assists a publication.</p>
   <h4>Documents</h4>
   <ul>
@@ -5667,15 +5678,16 @@
   <h4>Electronic acceptance</h4>
   <p>Before activation or first use, Chapbook requires a positive clickwrap. The user agrees to the Terms and separately acknowledges the Privacy and AI notices. The document version and timestamp are stored on that device. A material legal update changes the version and asks again.</p>
   <h4>Contact</h4>
-  <p>Chapbook is provided by <b>RQAI Ltd</b>, United Kingdom. Email <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a> for support, privacy rights, accessibility or legal notices.</p>
+  <p>Chapbook is provided by <b>RQAI</b>, United Kingdom. Email <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a> for support, privacy rights, accessibility or legal notices.</p>
 </div>
 
 <div id="legal-privacy" hidden>
-  <p class="meta">Privacy Notice · Version 2026-08-08 · Effective 8 August 2026.</p>
+  <p class="legal-release-note"><b>Before public launch:</b> RQAI is the product brand at <a href="https://rqai.co.uk">rqai.co.uk</a>. The contracting trader/controller's verified legal name, service address and company details are awaiting confirmation. This document must be completed with those details before general sale.</p>
+  <p class="meta">Privacy Notice · Version 2026-10-16 · Updated 16 October 2026.</p>
   <p><b>Core promise:</b> RQAI does not receive your local draft library by default, use it to train AI, sell it or monitor your writing. Content leaves your device only when you choose a connected feature.</p>
 
   <h4>Controller and scope</h4>
-  <p><b>RQAI Ltd</b>, United Kingdom, is controller for personal information it actually receives through Chapbook sales, trials, support, website operations and RQAI-operated functions. Contact <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a> with “Chapbook privacy” in the subject. A provider you connect may be an independent controller under its own notice. If you use Chapbook for an organisation or process other people's information, you may be a controller and are responsible for your own lawful basis and notices.</p>
+  <p><b>RQAI</b>, United Kingdom, is controller for personal information it actually receives through Chapbook sales, trials, support, website operations and RQAI-operated functions. Contact <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a> with “Chapbook privacy” in the subject. A provider you connect may be an independent controller under its own notice. If you use Chapbook for an organisation or process other people's information, you may be a controller and are responsible for your own lawful basis and notices.</p>
 
   <h4>What stays on this device</h4>
   <p>Drafts, writing-partner sessions, snapshots, saved ideas and profile data are stored in IndexedDB. Provider configuration, your GitHub token, AI keys, optional R2 credentials, licence and legal-acceptance record are stored in browser local storage (including <code>helm.studio.config.v1</code>) or equivalent app storage. RQAI cannot retrieve local-only data. On a shared or compromised device, browser storage can be exposed; use device access controls and least-privilege tokens.</p>
@@ -5689,7 +5701,7 @@
     <li><b>Crossref and external media:</b> DOI lookups and assets you deliberately fetch reveal normal request metadata to the destination.</li>
   </ul>
 
-  <h4>Information RQAI receives, purpose and lawful basis</h4>
+  <h4 id="rqai-records">Information RQAI receives, purpose and lawful basis</h4>
   <ul>
     <li><b>Purchase/licence details:</b> name, email, Stripe event/customer/payment references, product and licence status — to perform the contract, deliver and support a licence, meet accounting/legal obligations and prevent fraud.</li>
     <li><b>Licence delivery:</b> RQAI's private cloud worker signs and emails keys, including while the owner's computer is offline. The licence ledger is encrypted at rest; authorised local support tools can synchronise these records. Email delivery involves the recipient address and licence key. Your draft library is not part of this process.</li>
@@ -5701,13 +5713,22 @@
   </ul>
   <p>Accepting the Terms is contractual. Acknowledging this notice is not consent to all processing and does not activate AI or publishing.</p>
 
+  <h4>Where those records are kept and who can access them</h4>
+  <p>The private GitHub fulfilment repository holds trial and payment-event records, completed delivery records (including email addresses and delivery identifiers), and indexes needed to recover renewals or refunds. The licence ledger is separately encrypted and contains the recipient, licence key, product, issue/expiry dates and revocation status. This does not mean every queue or delivery record has application-level encryption. Access is limited to the RQAI operator and authorised service credentials. Authorised Helm support tools may keep a local synchronised copy on the operator's computer.</p>
+  <p>Stripe processes card/payment details; Chapbook's licence system receives payment references and status, not full card numbers or card security codes. Resend receives the destination email, message and licence key to deliver email. Owner/support notifications can contain customer and transaction information. A public signed revocation list contains random licence identifiers, not names or email addresses.</p>
+  <p>A hash of an email address used to prevent repeat trials is <b>pseudonymous personal data</b>, not anonymous data. A completed trial does not automatically erase its records. Moving a file out of the active queue also does not erase its history: private Git history, local synchronised copies and supplier backups can retain earlier versions. Erasure requests must consider these copies as well as the current record; we will explain any lawful retention requirement.</p>
+
+  <h4>What you need to provide and where it comes from</h4>
+  <p>An email is needed to send a trial or paid licence. If you do not provide it, we cannot deliver that key. Purchase, renewal and refund information comes from Stripe; delivery status comes from Resend; support information comes from you. Optional AI/profile, GitHub and media-storage connections are your choice. Declining them leaves the corresponding connected feature unavailable and does not authorise an alternative use of your data.</p>
+
   <h4>Recipients and international transfers</h4>
-  <p>RQAI's relevant supplier categories are Netlify (hosting/functions/blobs), GitHub (private fulfilment queue, encrypted licence ledger, hosted delivery worker and optional user publishing), Stripe (payments), Resend (licence and operational email), other communications suppliers and professional advisers or authorities where legally required. Optional AI, GitHub and Cloudflare recipients are selected by you. Providers may process outside the UK/EEA; their adequacy mechanism, UK IDTA/Addendum or standard contractual clauses and transfer-risk controls should be reviewed before confidential/personal data is sent. We do not sell personal information or share it for behavioural advertising.</p>
+  <p>RQAI currently uses Netlify for Chapbook hosting/functions/aggregate counters, GitHub for the private fulfilment queue, encrypted licence ledger and delivery worker, Stripe for payments and Resend for licence/operational email. Authorised communications suppliers, professional advisers or authorities may receive information where needed for the stated purposes or required by law. A proposed Hostinger migration has not changed these current recipients.</p>
+  <p>These suppliers may process information outside the UK/EEA. RQAI is responsible for assessing the transfer mechanism and safeguards for suppliers it appoints; that responsibility is not transferred to you. Contact support for information about the relevant locations, contractual safeguards and how to obtain a copy. The supplier-contract and transfer assessment is part of the launch review. Optional AI, GitHub publishing and Cloudflare accounts you connect have their own contracts and privacy notices; review those before sending confidential or personal data. RQAI does not sell personal information or share it for behavioural advertising.</p>
 
   <h4>Retention</h4>
   <ul>
     <li>Local data: until you delete it, clear site/app data or uninstall; remote copies follow the destination's retention.</li>
-    <li>Trial queue and fulfilment records: for the trial/anti-abuse period and then only as needed for support, fraud prevention or legal claims.</li>
+    <li>Trial and delivery records: retained for trial delivery, recovery, support and the one-trial-per-person restriction. They are not automatically deleted after seven days. Whether an identifiable record is still necessary must be reviewed, taking account of unresolved support, fraud prevention and legal claims; the retention/deletion schedule is an outstanding launch-review item.</li>
     <li>Purchase, licence and accounting records: for the applicable tax and limitation periods (commonly up to six years after the relationship ends in the UK).</li>
     <li>Support correspondence: normally up to 24 months after closure, longer for an unresolved dispute or legal duty.</li>
     <li>Hosting/security logs: for Netlify's configured operational/security period; incident extracts may be retained while an investigation or claim is active.</li>
@@ -5720,6 +5741,7 @@
   <h4>Your rights</h4>
   <p>Subject to legal conditions, UK/EU rights may include access, correction, erasure, restriction, portability, objection, withdrawal of consent and safeguards for significant solely automated decisions. Chapbook does not make such decisions about users. Most drafts are only on your device, so use Export or <b>Settings → Sign out &amp; forget this device</b>. For information RQAI holds, email support. We may verify identity and respond within the statutory period.</p>
   <p><b>Right to object:</b> you may object to processing based on legitimate interests. You have an absolute right to object to direct marketing; Chapbook performs no behavioural advertising.</p>
+  <p>For RQAI-held information, request access, correction or deletion at <a href="mailto:support@rqai.co.uk?subject=Chapbook%20privacy%20request">support@rqai.co.uk</a>. We normally respond within one month, subject to lawful extensions and necessary identity checks. Removing local drafts or uninstalling the app does not erase RQAI's purchase/trial records or your published repository. If a request cannot be fully met, we will explain the reason and available complaint route.</p>
   <p>You may complain to the UK Information Commissioner's Office at <a href="https://ico.org.uk/make-a-complaint/" target="_blank" rel="noopener">ico.org.uk</a> or, where EU GDPR applies, your local supervisory authority.</p>
 
   <h4>Security, deletion and changes</h4>
@@ -5727,11 +5749,12 @@
 </div>
 
 <div id="legal-terms" hidden>
-  <p class="meta">Terms of Use · Version 2026-08-08 · Effective 8 August 2026.</p>
+  <p class="legal-release-note"><b>Before public launch:</b> RQAI is the product brand at <a href="https://rqai.co.uk">rqai.co.uk</a>. The contracting trader/controller's verified legal name, service address and company details are awaiting confirmation. This document must be completed with those details before general sale.</p>
+  <p class="meta">Terms of Use · Version 2026-10-16 · Updated 16 October 2026.</p>
   <p><b>Plain-language summary:</b> Chapbook is a local-first writing/publishing tool. You own your work. Optional accounts have separate terms and costs. AI can be wrong and is not professional advice. Nothing below removes mandatory consumer rights.</p>
 
   <h4>Who we are and agreement</h4>
-  <p>These Terms are between you and <b>RQAI Ltd</b>, United Kingdom (“RQAI”, “we”), for the Chapbook web, PWA and desktop applications. Contact <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a>. Selecting “Agree and continue” is electronic acceptance; the current version and timestamp are stored on your device. The Privacy Notice is information, not blanket consent.</p>
+  <p>These Terms are between you and <b>RQAI</b>, United Kingdom (“RQAI”, “we”), for the Chapbook web, PWA and desktop applications. Contact <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a>. Selecting “Agree and continue” is electronic acceptance; the current version and timestamp are stored on your device. The Privacy Notice is information, not blanket consent.</p>
 
   <h4>Eligibility</h4>
   <p>You must be at least 16 to use Chapbook independently. A user under 18 must have parent/legal-guardian permission. A guardian accepting for a younger user is responsible for supervision, especially public publishing and connected AI.</p>
@@ -5745,6 +5768,8 @@
 
   <h4>Your content, accounts and publishing</h4>
   <p>You retain rights in drafts, posts, recordings, images and prompts. RQAI receives no ownership and only the limited technical permission needed for an action you request. You are responsible for rights, confidentiality, accuracy, backups and the lawfulness of publication. GitHub repositories, domains, AI accounts and R2 buckets are controlled by you; deleting Chapbook does not delete remote copies.</p>
+  <p>A personal licence permits the purchaser to create their own personal or business website. It does not include managed hosting of customers' content, appointment administration or payment processing by RQAI. Your posts and uploads go to the repository or storage account you connect. A public repository can expose drafts committed there, file history and uploaded media even if your website hides a page.</p>
+  <p>If you run a business site, you are responsible for its trader details, customer-facing terms, privacy notices, accessibility and sector-specific claims. Booking links or embeds send visitors to the booking provider you configure; that provider and your business handle appointment data and any payments under their own terms. Do not use a general booking field to collect unnecessary health or other sensitive information. Chapbook's own policies are not a substitute for your site's policies.</p>
 
   <h4>AI and third-party services</h4>
   <p>GitHub, Stripe, Cloudflare and your selected AI provider operate under their own terms, privacy rules, limits and prices. AI output is probabilistic and may be false, biased, incomplete, offensive, infringing or fabricated. It is assistance, not legal, medical, financial, employment or other professional advice. Verify claims, citations, code, permissions and provenance. Keep a human editor responsible for the final post and comply with synthetic-content disclosures described in the <a href="/ai">AI Transparency Notice</a>.</p>
@@ -5757,6 +5782,7 @@
 
   <h4>Availability, changes and termination</h4>
   <p>We use reasonable care but cannot promise uninterrupted operation, every-device compatibility or permanent third-party APIs/models. Export and back up important drafts. We may change features. Material legal/privacy changes receive a new version and renewed acceptance where appropriate. You can stop and erase local data at any time. We may suspend RQAI-operated access for material breach, security risk or legal requirement, with notice where practical.</p>
+  <p>We will give reasonable advance notice of material paid-service or renewal-price changes where practicable, explain when they take effect and how to cancel future renewal. Changes will not remove accrued statutory rights. If a material change adversely affects a consumer's paid service, applicable termination, refund and other remedies remain available. Suspension will be proportionate; you may contact support to challenge it.</p>
 
   <h4>Consumer rights, warranties and liability</h4>
   <p>Chapbook will be provided with reasonable care and skill. Nothing excludes liability that law does not allow us to exclude, including death/personal injury caused by negligence, fraud, data-protection duties and statutory consumer rights. If digital content is faulty, consumers may have repair, replacement, price-reduction or refund remedies.</p>
@@ -5767,7 +5793,7 @@
 </div>
 
 <div id="legal-refunds" hidden>
-  <p class="meta">Refund Policy · Version 2026-08-08 · Effective 8 August 2026.</p>
+  <p class="meta">Refund Policy · Version 2026-10-16 · Updated 16 October 2026.</p>
 
   <p>We want you to be happy with Chapbook. If it isn't right for you, email <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a> within <b>14 days</b> of your purchase for a full refund — no questions asked. The same applies to a renewal charge: if you didn't mean to renew, email us within 14 days of the charge.</p>
 
@@ -5791,7 +5817,7 @@
 </div>
 
 <div id="legal-ai" hidden>
-  <p class="meta">AI Transparency &amp; Responsible Use Notice · Version 2026-08-08 · Effective 8 August 2026.</p>
+  <p class="meta">AI Transparency &amp; Responsible Use Notice · Version 2026-10-16 · Updated 16 October 2026.</p>
   <p><b>You are interacting with AI whenever Chapbook shows an AI/✦ label.</b> Partner replies, draft assistance, editorial passes, generated images, figures, stickers, vector clean-up, PDF/vision import and similar results may be synthetic or inaccurate. Chapbook keeps a human in control of insertion, editing and publication.</p>
 
   <h4>How it works</h4>
@@ -5805,13 +5831,14 @@
     <li><b>Direct interaction:</b> the Partner and AI entry points identify AI from the beginning; replies are labelled and never impersonate a human contributor.</li>
     <li><b>Human review:</b> output is a suggestion. The user decides whether to insert, modify, discard or publish it.</li>
     <li><b>Synthetic content:</b> generation surfaces disclose their AI nature. Users must preserve/add disclosures required by law or platform rules.</li>
-    <li><b>Machine-readable marking:</b> provider capabilities and legal exceptions vary. Chapbook does not promise that every model embeds a durable provenance mark in every text/image export. Applicability and provider/export support must be assessed by model and format.</li>
+    <li><b>Machine-readable marking:</b> this is separate from a visible AI label. Chapbook has not yet verified durable marking across every supported model, generated asset and export. Provider-origin marks can be lost during conversion or editing. Model/format testing and any required preservation or marking controls remain a launch-review item; a policy notice or user acknowledgement does not satisfy that technical duty by itself.</li>
     <li><b>Accessibility:</b> notices use visible words and are not communicated only by colour.</li>
   </ul>
   <p>EU AI Act Article 50 transparency duties apply from 2 August 2026. The limited 2 December 2026 grace period concerns certain pre-existing systems' machine-readable marking, not the obligation to tell people when they are interacting with AI.</p>
 
   <h4>Public-interest text, deepfakes and disclosure</h4>
   <p>If AI-generated/manipulated text is published to inform the public on a matter of public interest, EU law may require clear disclosure unless it received human review/editorial control and a person or organisation holds editorial responsibility. Realistic generated/manipulated image, audio or video may require disclosure as synthetic/deepfake content. Artistic, fictional or satirical context can change how disclosure is displayed but does not automatically excuse deception. The publisher is responsible for the final label.</p>
+  <p>Where disclosure is required, put it where the audience encounters the material: for example, “AI-generated illustration” in the image caption or a clear note beside the relevant text. Do not rely on a remote terms page or a colour-only icon. Human review of public-interest text does not automatically remove disclosure duties for a realistic synthetic image, voice or video. Ordinary spelling or grammar assistance does not mean every post needs a blanket AI label.</p>
 
   <h4>Limitations and human oversight</h4>
   <ul>
@@ -5824,10 +5851,12 @@
 
   <h4>Privacy, AI literacy and reporting</h4>
   <p>Minimise personal data, remove identifiers where practical, review the provider's API retention/training and transfer terms, and complete a DPIA where processing is likely to create high risk. Organisations should train users on privacy, security, bias, model limitations, provenance and fact-checking. Report harmful or incorrectly labelled behaviour to <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a> without including keys or unnecessary confidential content.</p>
+  <h4>Sources and review date</h4>
+  <p>Reviewed 16 October 2026 against the European Commission's <a href="https://digital-strategy.ec.europa.eu/en/policies/guidelines-ai-transparency-obligations" target="_blank" rel="noopener">Article 50 transparency guidance</a>, <a href="https://digital-strategy.ec.europa.eu/en/faqs/transparency-obligations-under-article-50-ai-act" target="_blank" rel="noopener">scope and timing questions</a>, and <a href="https://digital-strategy.ec.europa.eu/en/policies/ai-talent-skills-and-literacy" target="_blank" rel="noopener">AI literacy guidance</a>. These explain obligations and exceptions; they are not a certification of Chapbook. RQAI must assess its own provider duties separately from publishers' duties.</p>
 </div>
 
 <div id="legal-storage" hidden>
-  <p class="meta">Device Storage &amp; Cookies Notice · Version 2026-08-08 · Effective 8 August 2026.</p>
+  <p class="meta">Device Storage &amp; Cookies Notice · Version 2026-10-16 · Updated 16 October 2026.</p>
   <p><b>No advertising trackers:</b> Chapbook does not use behavioural advertising, third-party analytics pixels or social tracking cookies. It uses first-party device storage to provide the local/offline application you request.</p>
   <h4>What is stored</h4>
   <ul>
@@ -5843,7 +5872,7 @@
 </div>
 
 <div id="legal-acceptable" hidden>
-  <p class="meta">Acceptable Use Policy · Version 2026-08-08 · Effective 8 August 2026.</p>
+  <p class="meta">Acceptable Use Policy · Version 2026-10-16 · Updated 16 October 2026.</p>
   <p>Use Chapbook creatively, lawfully and with respect for other people. This policy covers the app, RQAI-operated functions and content processed or published through connected services.</p>
   <h4>You must not</h4>
   <ul>
@@ -5862,7 +5891,7 @@
 </div>
 
 <div id="legal-accessibility" hidden>
-  <p class="meta">Accessibility Statement · Prepared 8 August 2026.</p>
+  <p class="meta">Accessibility Statement · Updated 16 October 2026.</p>
   <p>RQAI wants Chapbook to work with different devices, input methods and assistive technologies. We aim towards WCAG 2.2 AA principles, but this launch statement is not a claim that every screen, creative tool or user-generated post already conforms.</p>
   <h4>Current support</h4>
   <ul><li>Semantic labels/native controls and visible keyboard focus across core journeys;</li><li>keyboard-operable navigation and mobile-sized touch targets;</li><li>light/dark themes and reduced-motion support in key surfaces;</li><li>alt-text editing and a pre-publication accessibility check;</li><li>visible AI disclosures that do not rely only on colour.</li></ul>
@@ -8195,15 +8224,15 @@ async function latestModelFor(id){
 }
 let _aiModels={}; // last-loaded model per provider, to detect changes on save
 
-// Connection status (hosted product). BYOK is the only mode — keys live in this
-// browser, so it always reads "Local-only". Hidden in the local same-origin build.
+// Show the selected publishing destination separately from local draft storage.
 function refreshConnStatus(){
   const row=$('connRow'); if(!row) return;
   const cfg=window.__studioConfig;
   if(!cfg){ row.style.display='none'; return; } // local same-origin build: no connection row
   row.style.display='';
   const st=$('connStatusKeys');
-  st.textContent='Local-only (this device · bring your own keys)'; st.style.color='';
+  const gh=cfg.getGithub ? cfg.getGithub() : {};
+  st.textContent=gh.owner && gh.repo && gh.token ? 'GitHub: '+gh.owner+'/'+gh.repo+' · drafts stored on this device' : 'No publishing repository selected · drafts stored on this device'; st.style.color='';
 }
 window.refreshConnStatus=refreshConnStatus;
 
@@ -8333,7 +8362,7 @@ function renderSettings(s){
     const c=provs[p.id]||{};
     const configured=!!c.configured;
     _aiModels[p.id]=c.model||'';
-    const active = _aiDefault===p.id;
+    const active = configured && _aiDefault===p.id;
     // header control: Active badge if running; "Use this" if configured-but-idle; else "not set"
     const pill = active
       ? '<span class="pill active">● Active</span>'
@@ -14419,7 +14448,8 @@ function renderPrepublish(res, onPublish){
     ? 'This post is scheduled. Saving keeps its publication date and leaves it hidden until then.'
     : savingDraft ? 'This post is a draft. Save it to GitHub, or publish it to your website now.'
     : 'This post will be public after your website finishes rebuilding.';
-  $('ppBody').innerHTML = (intent ? '<p class="pp-intent">'+esc(intent)+'</p>' : '') + issuesHtml + polishHtml + hintsHtml;
+  const editorialNotice = committing ? '<p class="pp-intent"><strong>Before making this public:</strong> review facts, permissions and personal information. If you used AI, add any required disclosure beside the generated text or media. A successful check does not certify accuracy or legal compliance.</p>' : '';
+  $('ppBody').innerHTML = (intent ? '<p class="pp-intent">'+esc(intent)+'</p>' : '') + editorialNotice + issuesHtml + polishHtml + hintsHtml;
   const pub = $('ppPublish');
   const now = $('ppPublishNow');
   now.style.display='none'; now.onclick=null;

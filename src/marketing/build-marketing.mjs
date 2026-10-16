@@ -67,6 +67,8 @@ export function renderLegalPage({ kind, title, inner, nav, footer, year, tpl }) 
   const withBody = template
     .replaceAll('%%LEGAL_TITLE%%', title)
     .replaceAll('%%LEGAL_KIND%%', kind)
-    .replaceAll('<!-- MKT:LEGAL_BODY -->', inner);
+    // The embedded sheet has its own heading hierarchy; standalone pages start
+    // at h1 and use h2 for each policy section.
+    .replaceAll('<!-- MKT:LEGAL_BODY -->', inner.replace(/<h4\b/g, '<h2').replaceAll('</h4>', '</h2>'));
   return injectMarketing(withBody, { nav, footer, trial: '', stripeUrl: '', price: '', year });
 }

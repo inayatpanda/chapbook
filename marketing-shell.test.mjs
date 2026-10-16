@@ -58,7 +58,7 @@ test('_nav.html carries the full nav link set, the trial CTA, and the aria-curre
 // ---- source: footer partial --------------------------------------------------
 test('_footer.html carries the year token, legal links, and the support address', () => {
   const foot = readFileSync('src/marketing/_footer.html', 'utf8');
-  assert.match(foot, /%%YEAR%% RQAI Ltd/);
+  assert.match(foot, /%%YEAR%% RQAI/);
   for (const href of ['/features', '/themes', '/pricing', '/download', '/privacy', '/terms', '/refunds']) {
     assert.ok(foot.includes(`href="${href}"`), `_footer.html missing link ${href}`);
   }

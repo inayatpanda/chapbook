@@ -1,11 +1,11 @@
 # Chapbook launch compliance record
 
-Status date: 8 August 2026
+Status date: 16 October 2026 (original record 8 August)
 
-Document owner: RQAI Ltd
+Document owner: RQAI operator — verified contracting legal identity pending
 
 Product: Chapbook web/PWA and desktop bundles
-Public legal version: `2026-08-08`
+Staged legal version: `2026-10-16`; currently live version remains `2026-08-08` until deployment
 
 This record supports the public Legal Centre and is not a legal opinion or certification. It must be reviewed whenever data flows, providers, pricing, company details, target jurisdictions or AI capabilities change.
 
@@ -21,7 +21,7 @@ Implemented launch controls include mandatory versioned clickwrap before activat
 
 | Priority | Item | Status / required evidence |
 |---|---|
-| P0 | Controller/trader identity | Insert verified Companies House registered name, company number, registered/service address and any VAT details required on checkout/invoices. The repository currently proves only “RQAI Ltd, United Kingdom”. |
+| P0 | Controller/trader identity | Insert verified Companies House registered name, company number, registered/service address and any VAT details required on checkout/invoices. The earlier source asserted “RQAI Ltd” without verification. The staged revision uses the RQAI brand and explicitly marks the trader/controller identity as incomplete. The owner will supply details at the end of the week. |
 | P0 | ICO position | Save the UK data-protection fee self-assessment and registration/reference if applicable. |
 | P0 | Checkout/cancellation | Verify Stripe checkout clearly shows trader, total price/tax, annual auto-renewal, immediate digital supply/cancellation wording and confirmation email. |
 | P0 | Processor contracts | File current DPAs/transfer terms for Netlify, Stripe, GitHub fulfilment queue and RQAI email/support. |
@@ -63,7 +63,7 @@ No behavioural advertising, personal-data sale or third-party analytics is desig
 - Public publication: yes, at the user's deliberate action.
 - International transfers: possible through suppliers and user-selected providers.
 
-A proportionate DPIA is required and maintained because free-form content, AI and public publishing can combine to create high impact despite local-first defaults.
+This is a preliminary DPIA screening and risk record, not an approved DPIA. An accountable privacy reviewer must determine whether a DPIA is mandatory for the actual processing and complete/sign off the assessment where required.
 
 | Risk | Inherent | Controls | Residual | Next action |
 |---|---:|---|---:|---|
@@ -78,7 +78,7 @@ A proportionate DPIA is required and maintained because free-form content, AI an
 | User-generated code escapes preview | High | DOMPurify, raw gates, sandbox/CSP, tests | Low | Keep adversarial XSS release gate |
 | Inaccessible creative/publishing flow | Medium | semantic controls, keyboard/focus work, checks and statement | Medium | Manual AT audit and alternatives |
 
-No unresolved residual high risk requiring ICO prior consultation is identified for the documented intended use. Re-screen before central draft hosting, behavioural analytics, model training, school/workplace administration, biometric inference or consequential decisions.
+No final conclusion on residual high risk or prior consultation is made by this engineering review. AI provenance, retention and supplier-transfer controls still require review. Re-screen before central draft hosting, behavioural analytics, model training, school/workplace administration, biometric inference or consequential decisions.
 
 ## EU AI Act assessment
 
@@ -88,7 +88,7 @@ No unresolved residual high risk requiring ICO prior consultation is identified 
 - RQAI likely provides the Chapbook AI interface/system under its own name and should meet downstream provider transparency/accountability duties.
 - Professional publishers using output may be deployers.
 - Intended system: transparency/limited-risk generative authoring, not prohibited and not Annex III high-risk.
-- Article 4 AI literacy applies to staff/contractors operating/supporting AI.
+- The Commission’s current Article 4 guidance describes an AI literacy obligation after the July 2026 amendments; do not claim a mandatory certification or a prescribed universal competence level. Record practical, role-appropriate measures.
 - Article 50 interaction duties apply from 2 August 2026.
 
 ### Control matrix
@@ -128,6 +128,22 @@ Record participant, date, material version and assessment outcome.
 6. For incidents: contain/revoke, preserve minimal evidence, assess people/data/risk, notify the ICO within 72 hours where required, and notify affected people without undue delay where high risk.
 7. Record corrective action and update this DPIA.
 
+### Stores to cover in an access or erasure request
+
+Match only the verified requester's records; do not send whole databases, credentials or other customers' information. Record the request, identity checks, statutory deadline, applicable exceptions and the actual outcome privately.
+
+| Store | Review/action before confirming completion |
+|---|---|
+| Private fulfilment repository | Search the active queue, completed delivery records and payment/subscription indexes. Editing the current tree is not erasure from Git history. Any history purge needs a planned maintenance window and verified recovery/deployment impact. |
+| Encrypted licence ledger | Review the recipient, licence, expiry and revocation records with the authorised support tool. Separate necessary access/revocation/accounting records from information that can be removed. Do not export signing secrets. |
+| Operator's Helm copy | Account for the synchronised local ledger and backups. The current import is one-way; deleting a cloud record alone does not establish that the local copy disappeared. |
+| Stripe and accounting | Determine which payment records must remain for an identified legal obligation and which optional customer details can be removed. Explain any retained category and period to the requester. |
+| Resend and operator/support mail | Include delivery records, sent messages, owner notifications, inboxes and recoverable/deleted-mail copies subject to provider controls. |
+| Hosting and Actions logs | Review accessible logs, incident extracts, identifiers and the providers' actual log/backup expiry. Distinguish deletion under RQAI's control from a supplier's documented expiry process. |
+| User-owned browser/GitHub/R2 data | Explain that local deletion and remote publication are separate. Provide the relevant user controls; do not imply an RQAI support request deletes the user's repositories or provider accounts. |
+
+Do not report “all data deleted” while a known copy remains. Explain the affected category, reason and period where information must lawfully be retained. Test the eventual procedure on a synthetic identity across every applicable store before treating the retention gate as complete. No real customer records have been purged by this audit.
+
 ## Authoritative sources reviewed
 
 - EU AI Act implementation timeline: https://ai-act-service-desk.ec.europa.eu/en/ai-act/eu-ai-act-implementation-timeline
@@ -140,3 +156,26 @@ Record participant, date, material version and assessment outcome.
 ## Review triggers
 
 Review at least every six months and before: provider/model changes; new RQAI backend storage; analytics/ads; price/renewal change; EU representative change; iOS/Android distribution; central sync; organisation/school features; model training; biometric/health/employment/education decisions; or any material complaint/incident.
+
+## 16 October evidence and unresolved operating controls
+
+- Fresh Chrome trial activation, GitHub approval, new Petal site creation and first public post succeeded. Stripe sandbox purchase, renewal and refund tests and genuine production trial email delivery are complete; see the launch verification report.
+- Current recipients: Netlify app/functions/counters; private GitHub fulfilment queue, completed records and encrypted ledger; GitHub Actions delivery; Resend delivery; Stripe checkout/events; local Helm support copy. The Hostinger Business account is suitable for a prospective app/backend move, but no cutover occurred.
+- The ledger is AES-256-GCM encrypted. Queue/completed records are ordinary JSON in a private repository. Git deletion does not erase history. No blanket encrypted-at-rest claim should be interpreted as application-level encryption of every copy.
+- Trial-email hashes, licence identifiers and payment references remain personal/pseudonymous information in this context. The public revocation list exposes random licence identifiers only.
+- Worker logs mask email addresses in angle brackets, but include transaction/licence identifiers and error paths. Treat them as operational personal data; review log retention as well as raw record retention.
+- Automatic record expiry is not implemented. Seven-day access expiry is not data erasure. Before unrestricted launch, specify trial/delivery, anti-abuse, purchase/accounting, support and log periods, implement review/deletion, test erasure across private history/local copies/email, and record any legal hold. No records were irreversibly purged during this audit.
+- The staged notice discloses this current behaviour. It does not substitute an aspirational deletion promise for an implemented schedule.
+- Supplier DPAs, actual data locations and relevant UK/EU transfer mechanisms have not been verified from contracts. Do not state that all data stays in Europe or that SCCs/adequacy cover every flow without that evidence.
+- RQAI remains responsible for downstream AI-system provider duties. A bring-your-own-key design and publisher acknowledgement do not transfer them away. No complete provider/format provenance matrix or independently verified durable output marking currently exists.
+- Public contract revisions preserve mandatory consumer remedies, explain business-site ownership and booking-provider responsibility, and remove unverified company incorporation wording. Qualified review and identity completion remain outstanding.
+
+Additional primary sources checked 16 October 2026:
+
+- https://digital-strategy.ec.europa.eu/en/policies/guidelines-ai-transparency-obligations
+- https://digital-strategy.ec.europa.eu/en/faqs/transparency-obligations-under-article-50-ai-act
+- https://digital-strategy.ec.europa.eu/en/policies/ai-talent-skills-and-literacy
+- https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/individual-rights/the-right-to-be-informed/what-privacy-information-should-we-provide/
+- https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/data-sharing/anonymisation/pseudonymisation
+- https://www.gov.uk/online-and-distance-selling-for-businesses
+- https://www.legislation.gov.uk/uksi/2013/3134

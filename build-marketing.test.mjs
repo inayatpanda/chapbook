@@ -19,7 +19,9 @@ test('extractLegalBlock returns non-empty inner HTML for all three kinds', () =>
   }
   // spot-check anchors that must survive extraction verbatim
   assert.match(extractLegalBlock(idx, 'privacy'), /local-first/);
-  assert.match(extractLegalBlock(idx, 'terms'), /RQAI Ltd/);
+  assert.match(extractLegalBlock(idx, 'terms'), /RQAI/);
+  assert.match(extractLegalBlock(idx, 'terms'), /verified legal name/);
+  assert.doesNotMatch(extractLegalBlock(idx, 'terms'), /RQAI Ltd/);
   assert.match(extractLegalBlock(idx, 'refunds'), /14 days/);
 });
 

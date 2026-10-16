@@ -7,7 +7,7 @@ const html = readFileSync(new URL('./src/index.html', import.meta.url), 'utf8');
 
 test('first-use gate is mandatory, versioned and uses three separate affirmative checks', () => {
   const gate = html.match(/<div id="legalConsentGate"[\s\S]*?<script>[\s\S]*?<\/script>/)?.[0] || '';
-  assert.match(gate, /2026-08-08/);
+  assert.match(gate, /2026-10-16/);
   assert.match(gate, /chapbook\.legalConsent\.v1/);
   assert.match(gate, /I have read and agree/);
   assert.match(gate, /I acknowledge/);
