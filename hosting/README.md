@@ -62,6 +62,13 @@ atomic SQL operations. Namespace and signature checks remain in the existing
 function handlers. Existing service environment variables are still required;
 the adapter does not provision or copy them.
 
+Existing service secrets can instead live in a mode-0600 environment file in a
+private directory outside the public root. Set `CHAPBOOK_SERVICE_ENV` to that
+absolute path. The Node entry loads it at startup, refuses public/readable files,
+and never logs values. Keep the directory outside `hbuilds/versions` so a deploy
+does not replace it; back it up through the operator's secret-management process.
+Do not place the licence signing key here: signing remains in the cloud worker.
+
 ## Validation
 
 The real MySQL regression suite uses an isolated database and deletes only its
