@@ -37,6 +37,8 @@ The public/in-app document source now distinguishes RQAI-held account/payment/tr
 
 Reviewed official Commission Article 50 guidance and FAQs, its updated AI literacy guidance, ICO transparency/pseudonymisation guidance and UK consumer-contract information. The document version is `2026-10-16`; material changes trigger fresh on-device acceptance. This draft does not assert unknown transfer mechanisms, completed automatic erasure or verified AI marking.
 
+Source revision `9df070e` and test-fixture follow-up `c956e64` are saved on `native-builds`. Hosted [Web CI run 38835638719](https://github.com/inayatpanda/chapbook/actions/runs/38835638719) passed all 1,135 tests, the production build/grep checks and all 16 activation browser checks. The browser suite now explicitly verifies that an August policy acceptance prompts renewed agreement and is replaced by the October version. Its first run exposed a stale expected version in the tests; the corrected fixtures and rerun passed. No Netlify production deployment was triggered.
+
 ## Cloud licence delivery — verified 15 October
 
 - Confirmed the correct Resend account is `inayatpanda1@gmail.com`; `send.rqai.co.uk` is verified. The existing sending-only key works. A restricted domain-list API response was initially misread as an invalid key; no unnecessary rotation was performed.
@@ -181,7 +183,7 @@ Raw credential-free results and screenshots are in [readiness evidence](readines
 - Atelier editor source `08f8519`, built assets `7fff9cc` (provider readiness and publication notice).
 - Helm current editor sync `5c1742b`; cloud delivery/support source `ebacb02`.
 - Public template latest glyph/reading-palette commit: `1680073`; previous header commit `b4c7b6f`. Earlier commits: `f16c3be` (themes), `b340a76` (published-media subpaths).
-- Personal website glyph updates `7be0142`, `afe3096`, `7814ed1`; previous header commit `338ade3`. Earlier commits: `2939c0e` (themes; Hostinger deployment succeeded), `88f5a45` (shared media URL handling; Hostinger deployment succeeded).
+- Personal website glyph updates `7be0142`, `afe3096`, `7814ed1` (latest Hostinger run `38835049269` succeeded); previous header commit `338ade3`. Earlier commits: `2939c0e` (themes; Hostinger deployment succeeded), `88f5a45` (shared media URL handling; Hostinger deployment succeeded).
 - New synthetic site `4bd7559` (Pages run `38835053658` succeeded); live six-surface sidebar contrast checks passed.
 
 ## Remaining limits
