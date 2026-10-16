@@ -124,13 +124,27 @@ console.log(`\nActivation E2E (test key ${TEST_PUBLIC_KEY_HEX.slice(0, 12)}…)\
     try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch { return null; }
   }, LEGAL_STORE);
   check('legal consent records the current version and three affirmative choices',
-    accepted?.version === '2026-08-08'
+    accepted?.version === '2026-10-16'
       && accepted?.termsAccepted === true
       && accepted?.noticesAcknowledged === true
       && accepted?.ageConfirmed === true
       && !Number.isNaN(Date.parse(accepted?.acceptedAt || '')));
   const licenceVisible = await page.evaluate(() => getComputedStyle(document.getElementById('licence')).display !== 'none');
   check('licence gate follows legal acceptance', licenceVisible);
+
+  // A material revision must not treat an older acceptance as current.
+  await page.evaluate((key) => {
+    const prior = JSON.parse(localStorage.getItem(key));
+    prior.version = '2026-08-08';
+    localStorage.setItem(key, JSON.stringify(prior));
+  }, LEGAL_STORE);
+  await page.reload({ waitUntil: 'load' });
+  await page.locator('#legalConsentGate').waitFor({ state: 'visible' });
+  check('an older policy acceptance requires renewed agreement',
+    await page.locator('#lcAccept').isDisabled());
+  await acceptLegalConsent(page);
+  const revisedVersion = await page.evaluate(key => JSON.parse(localStorage.getItem(key)).version, LEGAL_STORE);
+  check('renewed agreement replaces the previous policy version', revisedVersion === '2026-10-16');
   await ctx.close();
 }
 

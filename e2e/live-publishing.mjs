@@ -37,7 +37,7 @@ for(const project of ['chapbook','atelier']){
   await context.addInitScript(({token,owner,repo,licence})=>{
     if(window.top!==window)return;
     localStorage.setItem('helm.studio.licence',licence);
-    localStorage.setItem('chapbook.legalConsent.v1',JSON.stringify({version:'2026-08-08',termsAccepted:true,noticesAcknowledged:true,ageConfirmed:true,acceptedAt:new Date().toISOString()}));
+    localStorage.setItem('chapbook.legalConsent.v1',JSON.stringify({version:'2026-10-16',termsAccepted:true,noticesAcknowledged:true,ageConfirmed:true,acceptedAt:new Date().toISOString()}));
     localStorage.setItem('helm.studio.config.v1',JSON.stringify({ghOwner:owner,ghRepo:repo,ghToken:token,ghBranch:'main',profile:{name:'Release Test Writer',role:'Writer',writesAbout:'Synthetic test content'}}));
     localStorage.setItem('helm.studio.onboarded','1');
   },{token,owner,repo,licence});

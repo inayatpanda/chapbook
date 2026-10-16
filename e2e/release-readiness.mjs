@@ -86,7 +86,7 @@ await context.addInitScript(({licence,geminiKey})=>{
   if(window.top !== window) return;
   if(!localStorage.getItem('readiness.seeded')){
     localStorage.setItem('helm.studio.licence',licence);
-    localStorage.setItem('chapbook.legalConsent.v1',JSON.stringify({version:'2026-08-08',termsAccepted:true,noticesAcknowledged:true,ageConfirmed:true,acceptedAt:new Date().toISOString()}));
+    localStorage.setItem('chapbook.legalConsent.v1',JSON.stringify({version:'2026-10-16',termsAccepted:true,noticesAcknowledged:true,ageConfirmed:true,acceptedAt:new Date().toISOString()}));
     localStorage.setItem('helm.studio.config.v1',JSON.stringify({ghOwner:'writer',ghRepo:'notebook',ghToken:'fixture-token',ghBranch:'main',...(geminiKey?{aiProvider:'google',aiKey:geminiKey,aiModel:'gemini-flash-latest'}:{}),profile:{name:'Readiness Writer',role:'Writer',writesAbout:'notebooks'}}));
     localStorage.setItem('helm.studio.gettingStarted.dismissed','1');localStorage.setItem('helm.studio.onboarded','1');localStorage.setItem('readiness.seeded','1');
   }
