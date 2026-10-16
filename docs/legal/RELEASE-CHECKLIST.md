@@ -1,41 +1,30 @@
-# Chapbook public-release checklist
+# Chapbook public-release checklist — 16 October 2026
 
-## Engineering gate
+## Implemented and verified
 
-- [x] Mandatory clickwrap before activation/app use
-- [x] Separate Terms acceptance and Privacy/AI acknowledgement
-- [x] Public/in-app Legal Centre with eight versioned documents
-- [x] Partner AI notice before first interaction
-- [x] Browser Live dictation and local Whisper correctly distinguished
-- [x] Full `npm run check`: build + 1,135 tests + clean grep gate on 16 October 2026 (staged legal/Settings revision)
-- [ ] Manual keyboard/screen-reader/zoom test on consent, activation, Partner and publish
-- [x] Fresh-profile activation and trial; live checkout reviewed; sandbox purchase/renewal/refund completed
-- [x] Real GitHub create/connect/publication; earlier update/delete checks on isolated QA repository
-- [ ] Provider-by-provider AI provenance/export test
-- [ ] Signed/notarised macOS and Windows installation smoke
+- [x] Versioned public/in-app legal notices, mandatory 18+ confirmation and material-update re-consent tests.
+- [x] Separate Terms acceptance and Privacy/AI acknowledgement; AI notices and on-device versus browser speech disclosures.
+- [x] Chapbook build, 1,150 automated tests and production grep gate pass.
+- [x] Atelier: 714 automated tests, release build and smoke pass; matching AI disclosure and origin preservation.
+- [x] Cloud delivery works without the Mac. Production and sandbox migrations verified; daily retention enabled and first production cycle succeeded.
+- [x] Private request verification, subject-only export, reviewed deletion, interrupted-operation recovery and cross-store closure evidence tested (32 worker tests).
+- [x] Helm cloud-managed support copy reconciled; secure deletion/compaction tested.
+- [x] New GitHub Actions logs expire after seven days. Published retention periods distinguish provider backups and lawful exceptions.
+- [x] Figure/interactive insertion, library save, reopening and parameter rebuild retain technical AI origin; ordinary manual content stays unmarked. Image bytes/MIME and published disclosure tested.
+- [x] Support alias created with owner permission; existing Hostinger/Gmail copies disclosed.
+- [x] Supplier documents reviewed; GitHub (#4864841) and Netlify enquiries submitted. Hostinger enquiry sent, human review requested.
+- [x] Earlier fresh-browser GitHub site creation, publishing, sandbox purchase/renewal/refund and delivery-retry checks passed.
 
-## Legal/operations gate
+## Remaining release decisions/evidence
 
-- [ ] Add verified company number and registered/service address
-- [ ] Counsel sign-off on consumer subscription/refund/privacy/AI Act text
-- [ ] ICO fee/registration assessment recorded
-- [ ] EU representative assessment recorded
-- [ ] Netlify/Stripe/GitHub/email DPA and transfer records filed
-- [ ] Trial/licence/support/log retention schedule implemented, including private Git history, local Helm copies and mail
-- [ ] Rights and incident owner assigned to `support@rqai.co.uk`
-- [ ] Checkout and renewal emails match Terms and cancellation rights
+- [ ] Verified trader/controller company details — owner will supply later this week; do not re-request.
+- [ ] Qualified review of final consumer/privacy/AI terms and cancellation wording; documented ICO fee and EU representative assessments.
+- [ ] GitHub Pro processor coverage or a covered alternative; Netlify/Hostinger backup and individual-erasure confirmations.
+- [ ] Retired Git runtime history, historical job logs, other clones and provider cached-object cleanup completed and evidenced.
+- [ ] Support correspondence closure dates and monthly 24-month review operated across Hostinger and Gmail; supplier terms for forwarded copies reviewed.
+- [ ] Provider/output-format-specific robust marking validation. App metadata is not a C2PA certificate or independent watermark detection. Plain-text copies and edited external assets can lose metadata.
+- [ ] Complete manual assistive-technology/zoom review and signed macOS/Windows installation smoke before claiming those distributions ready.
 
-## Release evidence
+## Current release boundary
 
-- [ ] Bump desktop/app release version and changelog
-- [ ] Commit intended chat/drawing changes with legal release work
-- [ ] Push release candidate and create signed tag
-- [ ] Draft Netlify deploy and run behavioural release gate
-- [ ] Promote production only after preview passes
-- [ ] Live `/legal`, `/privacy`, `/terms`, `/ai`, `/storage`, `/acceptable`, `/accessibility`, `/refunds` return 200
-- [ ] Fresh-profile clickwrap and material-update re-consent pass live
-- [ ] Desktop release assets checksummed/staged and rollback version recorded
-
-## Current staging boundary
-
-The `2026-10-16` revision is built and tested locally. Netlify production deploys are paused because of the credit warning. Do not mark the legal gate complete or general sale ready until identity, retention, supplier/transfer and AI-output marking issues are resolved. The existing public technical service and cloud licence delivery remain operational.
+The legal revision and private storage endpoint are live. The service is technically operational, but this checklist does not declare a general public launch legally complete. See [supplier/AI review](SUPPLIER-AND-AI-REVIEW-2026-10-16.md), the private fulfilment `PRIVACY-RUNBOOK.md`, and the launch report for run/deployment evidence.

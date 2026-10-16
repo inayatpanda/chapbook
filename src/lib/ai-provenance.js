@@ -12,7 +12,8 @@ export function cleanProvenance(value) {
   return [...unique.values()];
 }
 export function postProvenance(doc, meta = {}) {
-  return cleanProvenance([...(meta.aiProvenance || []), ...(doc?.aiProvenance || []), ...(doc?.blocks || []).flatMap(b => b.aiProvenance || [])]);
+  const list = value => Array.isArray(value) ? value : [];
+  return cleanProvenance([...list(meta.aiProvenance), ...list(doc?.aiProvenance), ...list(doc?.blocks).flatMap(b => list(b?.aiProvenance))]);
 }
 export function provenanceMarkup(value) {
   const entries = cleanProvenance(value);

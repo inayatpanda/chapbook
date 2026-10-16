@@ -5,7 +5,7 @@ Status date: 16 October 2026 (original record 8 August)
 Document owner: RQAI operator — verified contracting legal identity pending
 
 Product: Chapbook web/PWA and desktop bundles
-Staged legal version: `2026-10-16`; currently live version remains `2026-08-08` until deployment
+Live legal version: `2026-10-16`; retention and supplier evidence updated in [the 16 October review](SUPPLIER-AND-AI-REVIEW-2026-10-16.md).
 
 This record supports the public Legal Centre and is not a legal opinion or certification. It must be reviewed whenever data flows, providers, pricing, company details, target jurisdictions or AI capabilities change.
 
@@ -21,14 +21,14 @@ Implemented launch controls include mandatory versioned clickwrap before activat
 
 | Priority | Item | Status / required evidence |
 |---|---|
-| P0 | Controller/trader identity | Insert verified Companies House registered name, company number, registered/service address and any VAT details required on checkout/invoices. The earlier source asserted “RQAI Ltd” without verification. The staged revision uses the RQAI brand and explicitly marks the trader/controller identity as incomplete. The owner will supply details at the end of the week. |
+| P0 | Controller/trader identity | Insert verified Companies House registered name, company number, registered/service address and any VAT details required on checkout/invoices. The earlier source asserted “RQAI Ltd” without verification. The live revision uses the RQAI brand and explicitly marks the trader/controller identity as incomplete. The owner will supply details at the end of the week. |
 | P0 | ICO position | Save the UK data-protection fee self-assessment and registration/reference if applicable. |
 | P0 | Checkout/cancellation | Verify Stripe checkout clearly shows trader, total price/tax, annual auto-renewal, immediate digital supply/cancellation wording and confirmation email. |
-| P0 | Processor contracts | File current DPAs/transfer terms for Netlify, Stripe, GitHub fulfilment queue and RQAI email/support. |
+| P0 | Processor contracts | Netlify, Stripe, Resend and Hostinger terms reviewed; GitHub Pro processor coverage and provider backup periods require written confirmation. GitHub case #4864841 and Netlify enquiry submitted. See current supplier review. |
 | P0 | Legal review | UK consumer/privacy counsel signs off subscription, refunds, liability, minors, EU offering, Article 50 role/marking and consumer cancellation flow. |
 | P1 | EU representative | If intentionally offering to EEA users and Article 27's exception is unavailable, appoint/list an EU representative. Record counsel's conclusion. |
 | P1 | AI provenance | Test each text/image/figure export for provider provenance. Add durable `aiGenerated` metadata and C2PA/content credentials where technically applicable. UI notice alone is not proof of Article 50(2) compliance. |
-| P1 | Fulfilment retention | Define and automate retention for trial queue, licence ledger, Stripe-derived records and support mail; current public notice describes purpose-based periods. |
+| P1 | Fulfilment retention | Daily cloud retention enabled and verified, with encrypted rights-case handling and Helm reconciliation. Private Git history and historic logs require cleanup; support mail uses the documented manual process across Hostinger and Gmail. |
 | P1 | Windows trust | Windows installer is unsigned unless a certificate is configured; disclose/test SmartScreen impact before general release. |
 
 ## Record of processing activities (ROPA)
@@ -38,8 +38,8 @@ Implemented launch controls include mandatory versioned clickwrap before activat
 | Site/app delivery | IP, URL, time, browser/security metadata | Deliver and secure Chapbook | Contract/request; legitimate interests | Netlify | Configured operational/security period; verify |
 | Local authoring | Drafts, Partner threads, profile, snapshots, ideas, settings | Offline writing/publishing | On-device under user control; RQAI does not receive by default | None | Until delete/clear/uninstall |
 | Clickwrap | Legal version, timestamp, method, three affirmative flags | Terms/accountability | Contract; legitimate interests | On device only | Until cleared or superseded |
-| Purchase/licensing | Name/email, Stripe event/customer/payment references, product, key/status | Payment, licence delivery, renewals, support, accounting, fraud | Contract; legal obligation; legitimate interests | Stripe, RQAI fulfilment/email | Applicable tax/limitation period, commonly up to six years after end |
-| Trial | Email, product, request time, canonical-email hash, transient IP throttle | Deliver one trial and prevent reset/abuse | Pre-contract steps; legitimate interests | Netlify function, private GitHub queue, RQAI fulfilment/email | Trial/anti-abuse need, then claims/support requirement |
+| Purchase/licensing | Name/email, Stripe event/customer/payment references, product, key/status | Payment, licence delivery, renewals, support, accounting, fraud | Contract; legal obligation; legitimate interests | Stripe, RQAI fulfilment/email | Active licence, then six years after latest issue/expiry/revocation, subject to individual exceptions |
+| Trial | Email, product, request time, canonical-email hash, transient IP throttle | Deliver one trial and prevent reset/abuse | Pre-contract steps; legitimate interests | Private Netlify store, GitHub Actions compute, RQAI fulfilment/email | Identifiable records: 90 days after trial expiry; bounded email hash: 365 days from original trial |
 | Aggregate metrics | Per-day visit/install/activation count | Product operations | Legitimate interests; counters carry no user identifier | Netlify Blobs | Longitudinal aggregate |
 | GitHub device login | Step, GitHub device code/token exchange payload, transient IP throttle | Overcome browser CORS for optional sign-in | User request/contract; security legitimate interests | Netlify relay, GitHub | Relay stores nothing; platform logs apply |
 | User GitHub publishing | Posts/media/repo metadata/token | Publish/manage user's blog | User-GitHub contract | GitHub | User repository/history |
@@ -59,7 +59,7 @@ No behavioural advertising, personal-data sale or third-party analytics is desig
 - Large-scale monitoring or profiling: no.
 - Significant solely automated decisions: no; prohibited by intended use.
 - Special-category data required: no; free-form drafts may contain it.
-- Children likely to access: possible; independent-use age 16, guardian route.
+- Children likely to access: possible; public product restricted to adults 18+; no guardian route.
 - Public publication: yes, at the user's deliberate action.
 - International transfers: possible through suppliers and user-selected providers.
 

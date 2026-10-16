@@ -88,3 +88,11 @@ test('authentication expiry removes only expired nonce receipts', async () => {
   assert.equal(r.status, 200); assert.equal((await r.json()).removed, 1);
   assert.equal(await f.control.get('nonces/old'), null); assert.ok(await f.control.get('nonces/current'));
 });
+test('sandbox writes consult sandbox control and wake only the test worker',async()=>{
+ const calls=[],store=blobs(),control=blobs();
+ const write=makeQueueWriter({store,control,legacyPush:async()=>assert.fail('unexpected legacy write'),fetchImpl:async(url,opts)=>{calls.push({url,body:opts.body});return url.endsWith('/dispatches')?new Response(null,{status:204}):Response.json({content:Buffer.from(JSON.stringify({storage:'blobs-v1'})).toString('base64')});}});
+ await write({path:'sandbox/queue/trial-synthetic.json',record:{type:'trial',email:'synthetic@example.invalid'},token:'test'});
+ assert.ok(calls[0].url.endsWith('/contents/sandbox/state/control.json'));
+ assert.equal(JSON.parse(calls[1].body).event_type,'test-fulfil-licences');
+ assert.ok(await store.get('sandbox/queue/trial-synthetic.json'));assert.equal(await store.get('queue/trial-synthetic.json'),null);
+});

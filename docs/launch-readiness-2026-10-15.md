@@ -2,16 +2,17 @@
 
 The tested web workflows are deployed. This is a record of verified behavior and remaining account/device checks, not a promise that every possible feature and environment is issue-free.
 
-## Launch decision — 16 October follow-up
+## Launch decision — retention and AI follow-up, 16 October
 
-**Cloud licence delivery and the fresh-user publishing journey work. General public launch still requires completion of the legal/operational items below.** No claim of comprehensive legal compliance or universal device compatibility is made.
+**Cloud delivery, deletable storage and daily Chapbook retention are operational without the Mac. General public launch still has the specific outstanding items below.** Company identity details remain deferred at the owner's request.
 
-1. Add the verified contracting trader/controller name, company number and service/registered address. The owner confirmed `rqai.co.uk` and will provide the other details at the end of the week. The new staged legal revision removes the unverified “RQAI Ltd” assertion and clearly identifies the missing identity fields.
-2. Finalise and operate a retention/erasure schedule, including completed records, private Git history, encrypted ledger, local Helm copies and email. Current trial records do **not** auto-delete after seven days. File supplier/transfer assessments and resolve the ICO/EU representative questions in the legal checklist.
-3. Complete model/format provenance review and any applicable machine-readable marking controls. Visible AI notices and human review do not by themselves prove Article 50(2) compliance. Obtain qualified review of the final consumer/privacy/AI terms and operating practices.
-4. If promoting native installers, rebuild final wrappers and test installation/permissions on the physical platforms. Existing downloads and hashes were checked; separate signing work is preserved.
+- Production migration verified 42 licences and seven records; sandbox verified four licences and 20 records. The first daily cleanup succeeded with zero removals; six other-product/unclassified records remain protected for review. Helm reconciled all 42 cloud-managed licences.
+- Rights-request intake, encrypted case records, restricted export, reviewed deletion, interruption recovery and evidence-gated closure pass the worker tests. The support alias has been activated with owner approval; Hostinger and its Gmail forwarded copy are both in scope for erasure.
+- Technical AI origin now persists through post publication and specialised figure/interactive editing. Desktop/mobile disclosure notes render in the post body on all themes. Generated image bytes and correct MIME types are preserved.
+- Supplier/AI source review is recorded in [the current review](legal/SUPPLIER-AND-AI-REVIEW-2026-10-16.md). GitHub Pro agreement coverage, provider backup periods, historical Git/log cleanup and forwarded-mail contract/retention evidence remain explicit issues. GitHub case #4864841 and Netlify enquiry are submitted; Hostinger human review has been requested.
+- Latest validation: 1,150 Chapbook tests, 714 Atelier tests and 32 cloud-worker tests. App metadata alone does not prove universal Article 50 marking compliance. Final consumer/identity/ICO/EU-representative and desktop-distribution checks remain in the release checklist.
 
-The registered-business information is already requested; do not invent it or repeatedly ask for it. The latest legal revision and Chapbook Settings corrections are **built/tested locally, not deployed** while Netlify production deployments are paused. The currently live editor already includes the spacing, resizable panels and public-status reopening fixes.
+The earlier legal revision `2026-10-16` is now live (production source `576d20a`, deploy `6ad18b9ee2ec8e1f96493a83`). Subsequent release evidence is appended below. Older sections are historical test evidence, not current staging status.
 
 ## Fresh browser and editor follow-up — completed
 
@@ -31,7 +32,7 @@ Evidence: [new site](readiness-20261015/cloud/fresh-site-created.jpg), [publicat
 - Hostinger Business supports Node.js. The personal site already deploys there. Moving Chapbook requires porting its four endpoints and Netlify Blobs counters, security headers, paths and deployment setup, then testing before any DNS cutover. **No hosting cutover has been performed.**
 - Users' drafts stay in their browser; publication/uploads go directly to their GitHub repository or configured R2 account. Moving the shared Chapbook service does not make RQAI the host of every user's posts or media. Stripe, email and AI remain connected external services. The cloud licence worker can remain on GitHub Actions independently of the website host.
 
-## Legal revision — staged 16 October
+## Earlier legal revision evidence — 16 October
 
 The public/in-app document source now distinguishes RQAI-held account/payment/trial/support records from local drafts, private queue/delivery records from the encrypted ledger, pseudonymous trial-email hashes from anonymous aggregate counters, and deletion of a current file from deletion of history/backups. Trial collection and AI-profile/provider notices explain the relevant data flow before use. Settings now has a separate “Records held by RQAI” explanation, a privacy link and an access/deletion request link; it explicitly says forgetting the device does not erase these records. The publication check reminds authors to review personal data and add required AI disclosures. Public policy pages have a readable text measure and section hierarchy. [Local policy preview](readiness-20261015/cloud/privacy-records-preview.jpg).
 
@@ -177,7 +178,7 @@ Raw credential-free results and screenshots are in [readiness evidence](readines
 ## Release identities
 
 - Chapbook source commits: `67c9e1a` (GitHub recovery), `2d03ae0` (gallery and written walkthroughs).
-- Chapbook latest production editor deploy: `6ad175908c19d584ba00044a` (source `c4c1781`); legal/Settings follow-up is staged locally.
+- Earlier Chapbook production editor deploy: `6ad175908c19d584ba00044a` (source `c4c1781`); legal/Settings follow-up is staged locally.
 - Private cloud worker source commit: `88e76cf` (the repository also records subsequent runtime state commits).
 - Atelier deployed Pages editor commit: `d7f6679` (run `38834534061` succeeded).
 - Atelier editor source `08f8519`, built assets `7fff9cc` (provider readiness and publication notice).

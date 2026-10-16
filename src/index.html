@@ -5729,7 +5729,7 @@
   <p>An email is needed to send a trial or paid licence. If you do not provide it, we cannot deliver that key. Purchase, renewal and refund information comes from Stripe; delivery status comes from Resend; support information comes from you. Optional AI/profile, GitHub and media-storage connections are your choice. Declining them leaves the corresponding connected feature unavailable and does not authorise an alternative use of your data.</p>
 
   <h4>Recipients and international transfers</h4>
-  <p>RQAI currently uses Netlify for hosting, functions, private fulfilment storage and aggregate counters; GitHub Actions for delivery; Stripe for payments; and Resend for licence/operational email. Authorised communications suppliers, professional advisers or authorities may receive information where needed for the stated purposes or required by law. A proposed Hostinger migration has not changed these current recipients.</p>
+  <p>RQAI currently uses Netlify for hosting, functions, private fulfilment storage and aggregate counters; GitHub Actions for delivery; Stripe for payments; and Resend for licence/operational email. The business support mailbox is hosted by Hostinger; its existing forwarding arrangement also keeps a copy in the operator’s Google Gmail inbox. An erasure review therefore covers both mail systems, including sent mail and recoverable trash. Authorised communications suppliers, professional advisers or authorities may receive information where needed for the stated purposes or required by law. Hostinger does not currently host Chapbook’s application backend or users’ posts.</p>
   <p>These suppliers may process information outside the UK/EEA. RQAI is responsible for assessing the transfer mechanism and safeguards for suppliers it appoints; that responsibility is not transferred to you. Contact support for information about the relevant locations, contractual safeguards and how to obtain a copy. Netlify, Stripe and Resend publish data-processing and international-transfer terms. Resend stores its message and delivery data in the United States, even when email is sent from an EU region. Contract coverage for the current personal GitHub delivery account remains under review before general launch. Optional AI, GitHub publishing and Cloudflare accounts you connect have their own contracts and privacy notices; review those before sending confidential or personal data. RQAI does not sell personal information or share it for behavioural advertising.</p>
 
   <h4>Retention</h4>
@@ -6110,6 +6110,15 @@ function aiOriginResult(path, opts, result){
 }
 function addAiOrigin(block, result, action='generation'){
   if(block) block.aiProvenance = result?.aiProvenance || [{kind:'generated',tool:'AI',action}];
+}
+function copyAiOrigin(target, source){
+  if(target && Array.isArray(source?.aiProvenance) && source.aiProvenance.length) target.aiProvenance=structuredClone(source.aiProvenance);
+  return target;
+}
+function imageDataUri(block){
+  if(/^data:/i.test(block.base64 || '')) return block.base64;
+  const mime=/^image\/(png|jpeg|webp)$/.test(block.mimeType || '') ? block.mimeType : 'image/jpeg';
+  return 'data:' + mime + ';base64,' + block.base64;
 }
 function updateAiDisclosure(){
   for(const id of ['aiDisclosure','mAiDisclosure']){const input=$(id); if(input && document.activeElement!==input) input.value=meta.aiDisclosure||'';}
@@ -12073,7 +12082,7 @@ function edImage(b, isSel){
     // Preview
     const img = document.createElement('img');
     img.className = 'be-img-preview';
-    img.src = b.base64 ? 'data:image/jpeg;base64,' + b.base64 : (b.src || b.url || '');
+    img.src = b.base64 ? imageDataUri(b) : (b.src || b.url || '');
     img.alt = b.alt || '';
     wrap.appendChild(img);
 
@@ -15556,6 +15565,7 @@ let _tplLibFamily   = null;     // current family object
 let _tplLibParams   = {};       // params object kept in sync with the form
 let _tplLibInsertAt = null;     // where to insert into doc.blocks (insert mode)
 let _tplLibDomId    = '';       // domId used for the current build
+let _tplLibOrigin   = [];      // retained across parameter rebuilds
 let _tplLibBuilt    = null;     // last successfully-built block (for Insert/Update)
 let _tplLibDebounce = null;     // preview debounce timer
 let _tplLibSeq      = 0;        // guards out-of-order async previews
@@ -15579,7 +15589,7 @@ async function openTplLib(atIndex){
   _activeForm = _tplLibFormCtx;
   _tplLibMode = 'insert'; _tplLibEditId = null;
   _tplLibInsertAt = atIndex;
-  _tplLibFamily = null; _tplLibParams = {}; _tplLibBuilt = null;
+  _tplLibFamily = null; _tplLibParams = {}; _tplLibBuilt = null; _tplLibOrigin = [];
   _tplLibStandalone = false;
   { const sh = $('tplLibSheet'); if(sh) sh.classList.remove('maker-standalone'); const t = $('tplLibTitle'); if(t) t.textContent = 'Insert interactive'; }
   _tplLibPlacement = { placement:'standard' };
@@ -15627,7 +15637,8 @@ async function openTplLibForEdit(block){
   _tplLibInsertAt = null;
   _tplLibStandalone = false;
   { const sh = $('tplLibSheet'); if(sh) sh.classList.remove('maker-standalone'); const t = $('tplLibTitle'); if(t) t.textContent = 'Insert interactive'; }
-  _tplLibFamily = null; _tplLibParams = {}; _tplLibBuilt = null;
+  _tplLibFamily = null; _tplLibParams = {}; _tplLibBuilt = null; _tplLibOrigin = [];
+  _tplLibOrigin = block.aiProvenance || [];
   _tplLibPlacement = { placement: block.placement || 'standard' };
   _tplLibDomId = block.domId || ('pg-' + block.template.familyId + '-' + Math.random().toString(36).slice(2, 8));
   $('tplLibInsertBtn').textContent = 'Update';
@@ -15758,6 +15769,7 @@ async function chooseTplLibFamily(id, presetName){
   if(!fam) return;
   setTplLibInventMode(false);
   _tplLibFamily = fam;
+  _tplLibOrigin = [];
   _tplLibDomId = 'pg-' + fam.id + '-' + Math.random().toString(36).slice(2, 8);
   $('tplLibBrowse').style.display = 'none';
   $('tplLibBuild').style.display = 'block';
@@ -15774,11 +15786,12 @@ async function chooseTplLibFamily(id, presetName){
 /* AI describe → build: open the build view for a family prefilled with the
    suggested params, in insert mode. Mirrors chooseTplLibFamily/openTplLibForEdit
    but takes params straight from /playgrounds/suggest instead of a preset. */
-function openTplLibSuggested(familyId, params){
+function openTplLibSuggested(familyId, params, origin=[]){
   const fam = (_tplLibFamilies || []).find(f => f.id === familyId);
   if(!fam) return false;
   setTplLibInventMode(false);
   _tplLibFamily = fam;
+  _tplLibOrigin = [];
   _tplLibDomId = 'pg-' + fam.id + '-' + Math.random().toString(36).slice(2, 8);
   $('tplLibBrowse').style.display = 'none';
   $('tplLibBuild').style.display = 'block';
@@ -15786,6 +15799,7 @@ function openTplLibSuggested(familyId, params){
   $('tplLibFamDesc').textContent = fam.description || '';
   ($('tplLibSheet').querySelector('.surface-body') || $('tplLibSheet')).scrollTop = 0;
   renderTplLibPresets(fam);
+  _tplLibOrigin = origin;
   // backfill the suggested params with schema defaults so every key is present
   _tplLibParams = deepMerge(schemaDefault(fam.paramsSchema), structuredClone(params || {}));
   rebuildTplLibForm();
@@ -15819,7 +15833,7 @@ async function doTplLibSuggest(){
     });
     const familyId = r && r.familyId;
     if(!familyId){ throw new Error('No matching interactive — pick a template below instead.'); }
-    const ok = openTplLibSuggested(familyId, (r && r.params) || {});
+    const ok = openTplLibSuggested(familyId, (r && r.params) || {}, r?.aiProvenance || []);
     if(!ok){ throw new Error('That interactive ("' + familyId + '") isn’t available — pick a template below instead.'); }
     setMsg('', false);
   }catch(e){
@@ -15861,7 +15875,8 @@ function openTplLibInvented(r){
   _tplLibFamily = null; _tplLibParams = {};
   _tplLibMode = 'insert'; _tplLibEditId = null;
   _tplLibDomId = block.domId || ('pg-' + Math.random().toString(36).slice(2, 8));
-  _tplLibBuilt = { domId: _tplLibDomId, html: block.html || '', css: block.css || '', js: block.js || '' };
+  _tplLibOrigin = block.aiProvenance || r.aiProvenance || [];
+  _tplLibBuilt = copyAiOrigin({ domId: _tplLibDomId, html: block.html || '', css: block.css || '', js: block.js || '' }, {aiProvenance:_tplLibOrigin});
   $('tplLibBrowse').style.display = 'none';
   $('tplLibBuild').style.display = 'block';
   ($('tplLibSheet').querySelector('.surface-body') || $('tplLibSheet')).scrollTop = 0;
@@ -16437,7 +16452,7 @@ async function runTplLibPreview(){
       body: JSON.stringify({ familyId: _tplLibFamily.id, params: _tplLibParams, domId: _tplLibDomId }),
     });
     if(seq !== _tplLibSeq) return;          // a newer preview superseded this one
-    _tplLibBuilt = r && r.block;
+    _tplLibBuilt = copyAiOrigin(r && r.block, {aiProvenance:_tplLibOrigin});
     if(!_tplLibBuilt) throw new Error('No block returned');
     renderTplLibPreviewFrame(_tplLibBuilt);
     $('tplLibInsertBtn').disabled = false;
@@ -16513,6 +16528,7 @@ async function insertTplLibBlock(){
     b.html  = _tplLibBuilt.html || '';
     b.css   = _tplLibBuilt.css || '';
     b.js    = _tplLibBuilt.js || '';
+    copyAiOrigin(b, _tplLibBuilt);
     if(tpl) b.template = tpl;
     renderBlocks();
     selectBlock(b.id);
@@ -16531,6 +16547,7 @@ async function insertTplLibBlock(){
     js: _tplLibBuilt.js || '',
     placement: (_tplLibPlacement && _tplLibPlacement.placement) || 'standard',
   };
+  copyAiOrigin(b, _tplLibBuilt);
   if(tpl) b.template = tpl;
   const at = _tplLibInsertAt;
   doc.blocks.splice(at == null ? doc.blocks.length : at, 0, b);
@@ -16623,7 +16640,7 @@ function openInteractiveMakerFromSaved(item){
   // Load the saved build into the invented-build view (reuses openTplLibInvented).
   openTplLibInvented({
     block: { domId: d.domId || ('pg-' + Math.random().toString(36).slice(2, 8)),
-             title: item.name || 'Interactive', html: d.html || '', css: d.css || '', js: d.js || '' },
+             title: item.name || 'Interactive', html: d.html || '', css: d.css || '', js: d.js || '', aiProvenance:d.aiProvenance },
     notes: 'Loaded “' + (item.name || 'interactive') + '” from your Library. Describe a change below, or Save it as a new copy.',
     jsError: null,
   });
@@ -16637,7 +16654,7 @@ window.openInteractiveMakerFromSaved = openInteractiveMakerFromSaved;
 function exportInteractiveHtml(){
   if(!_tplLibBuilt || !(_tplLibBuilt.html || _tplLibBuilt.js)){ toast('Build an interactive first, then Export'); return; }
   const nameHint = ($('tplLibFamName')?.textContent || 'interactive').replace(/^[^\w]+/, '').trim() || 'interactive';
-  const htmlDoc = tplLibSrcdoc(_tplLibBuilt).replace('<head>', '<head>' + (_tplLibBuilt.aiProvenance ? '<meta name="ai-origin" content="generated">' : ''));
+  const htmlDoc = tplLibSrcdoc(_tplLibBuilt).replace('<head>', '<head>' + (_tplLibBuilt.aiProvenance?.length ? '<meta name="ai-origin" content="' + (_tplLibBuilt.aiProvenance.some(x=>x.kind==='generated')?'generated':'assisted') + '">' : ''));
   const blob = new Blob([htmlDoc], { type: 'text/html' });
   const fname = nameHint.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'interactive';
   const file = new File([blob], fname + '.html', { type: 'text/html' });
@@ -16698,6 +16715,7 @@ let _figFamilies = null;     // cached GET /figures families
 let _figFamily   = null;     // current family object
 let _figParams   = {};       // params object kept in sync with the form
 let _figInsertAt = null;     // where to insert into doc.blocks (insert mode)
+let _figOrigin   = [];      // retained across parameter rebuilds
 let _figBuilt    = null;     // last successfully-built { svg, animation }
 let _figAnimate  = 'none';   // chosen animation mode ('draw'|'none' static; 'motion'|'none' motion)
 let _figDebounce = null;     // preview debounce timer
@@ -16739,7 +16757,7 @@ async function openFigLib(atIndex){
   _activeForm = _figFormCtx;
   _figMode = 'insert'; _figEditId = null;
   _figInsertAt = atIndex;
-  _figFamily = null; _figParams = {}; _figBuilt = null; _figAnimate = 'none'; _figRaw = false;
+  _figFamily = null; _figParams = {}; _figBuilt = null; _figOrigin = []; _figAnimate = 'none'; _figRaw = false;
   _figHandEdited = false;
   _figBase = null;
   _figStandalone = false;
@@ -16789,7 +16807,8 @@ async function openFigLibForEdit(block){
   _figInsertAt = null;
   _figStandalone = false;
   { const sh = $('figSheet'); if(sh){ sh.classList.remove('maker-standalone'); } const t = $('figSheetTitle'); if(t) t.textContent = 'Insert figure'; }
-  _figFamily = null; _figParams = {}; _figBuilt = null; _figRaw = false; _figHandEdited = false;
+  _figFamily = null; _figParams = {}; _figBuilt = null; _figOrigin = []; _figRaw = false; _figHandEdited = false;
+  _figOrigin = block.aiProvenance || [];
   _figAnimate = block.animation || 'none';
   _figPlacement = { placement: (block.placement && block.placement !== 'default') ? block.placement : 'standard' };
   $('figInsertBtn').textContent = 'Update';
@@ -16885,6 +16904,7 @@ async function chooseFigFamily(id, presetName){
   if(!fam) return;
   _activeForm = _figFormCtx;
   _figFamily = fam;
+  _figOrigin = [];
   _figRaw = false;
   _figBase = null;   // template figures never carry a still backdrop
   { const famOnly = $('figFamilyOnly'); if(famOnly) famOnly.style.display = ''; $('figRegenBtn').hidden = true; }
@@ -16986,7 +17006,7 @@ async function runFigPreview(){
       body: JSON.stringify({ familyId: _figFamily.id, params: _figParams, animate: _figAnimate }),
     });
     if(seq !== _figSeq) return;          // a newer preview superseded this one
-    _figBuilt = r && r.block;
+    _figBuilt = copyAiOrigin(r && r.block, {aiProvenance:_figOrigin});
     if(!_figBuilt || !_figBuilt.svg) throw new Error('No figure returned');
     renderFigPreviewFrame(_figBuilt.svg);
     $('figInsertBtn').disabled = false;
@@ -17038,6 +17058,7 @@ async function insertFigBlock(){
     const b = doc.blocks.find(x => x.id === _figEditId);
     if(!b){ closeFigLib(); return; }
     b.svg = _figBuilt.svg;
+    copyAiOrigin(b, _figBuilt);
     b.animation = _figBuilt.animation || _figAnimate || 'none';
     b.alt = alt; b.caption = caption;
     b.placement = placement;
@@ -17062,6 +17083,7 @@ async function insertFigBlock(){
     animation: _figBuilt.animation || _figAnimate || 'none',
     placement,
   };
+  copyAiOrigin(b, _figBuilt);
   if(_figBuilt.kind) b.kind = _figBuilt.kind;   // sticker marker (retro die-cut)
   if(fig) b.figure = fig;
   if(base) b.base = base;
@@ -17131,7 +17153,8 @@ function openFigSuggested(block, notes){
   // Optional still backdrop (Keep-backdrop figures): { base64, alt }. Flows onto the
   // inserted block so it publishes the image + the animated overlay over it.
   _figBase = (block.base && block.base.base64) ? { base64: block.base.base64, alt: block.base.alt || '' } : null;
-  _figBuilt = { svg: block.svg, animation: block.animation || 'none', kind: block.kind || null };
+  _figOrigin = block.aiProvenance || [];
+  _figBuilt = copyAiOrigin({ svg: block.svg, animation: block.animation || 'none', kind: block.kind || null }, block);
   _figAnimate = block.animation || 'none';
   // hide family-only controls (no preset / params form for a bespoke svg)
   const famOnly = $('figFamilyOnly'); if(famOnly) famOnly.style.display = 'none';
@@ -18106,7 +18129,7 @@ function openFlipbookMaker(){
   _activeForm = _figFormCtx;
   _figStandalone = true;
   _figMode = 'insert'; _figEditId = null; _figInsertAt = null;
-  _figFamily = null; _figParams = {}; _figBuilt = null; _figAnimate = 'motion'; _figRaw = false;
+  _figFamily = null; _figParams = {}; _figBuilt = null; _figOrigin = []; _figAnimate = 'motion'; _figRaw = false;
   _figHandEdited = false; _figBase = null;
   const sh = $('figSheet'); if(sh) sh.classList.add('maker-standalone');
   const title = $('figSheetTitle'); if(title) title.textContent = 'Make a flipbook';
@@ -20264,7 +20287,8 @@ async function runFigTweak(){
       const block = r && r.block;
       if(!block || !block.svg) throw new Error('No figure returned');
       if(r.params) _figParams = r.params;            // keep the form/insert path in sync
-      _figBuilt = { svg: block.svg, animation: block.animation || _figAnimate || 'none' };
+      _figOrigin = block.aiProvenance || _figOrigin;
+      _figBuilt = copyAiOrigin({ svg: block.svg, animation: block.animation || _figAnimate || 'none' }, {aiProvenance:_figOrigin});
       if(typeof rebuildFigForm === 'function' && _figFamily.paramsSchema) rebuildFigForm();
       renderFigPreviewFrame(_figBuilt.svg);
     }else{
@@ -20280,7 +20304,8 @@ async function runFigTweak(){
       if(!block || !block.svg) throw new Error('No figure returned');
       _figRaw = true;
       _figLastGen = { mode: 'invent', description };  // regenerate now reflects the refined description
-      _figBuilt = { svg: block.svg, animation: block.animation || _figAnimate || 'none' };
+      _figOrigin = block.aiProvenance || _figOrigin;
+      _figBuilt = copyAiOrigin({ svg: block.svg, animation: block.animation || _figAnimate || 'none' }, {aiProvenance:_figOrigin});
       renderFigPreviewFrame(_figBuilt.svg);
     }
     $('figInsertBtn').disabled = false;
@@ -21757,7 +21782,7 @@ function _postImageChoices(){
   const abs = (file) => org ? org + rel(file) : rel(file);
   for(const b of (doc.blocks || [])){
     if(b.type === 'image'){
-      const src = b.base64 ? 'data:image/jpeg;base64,'+b.base64 : (b.src || (b.file ? abs(b.file) : ''));
+      const src = b.base64 ? imageDataUri(b) : (b.src || (b.file ? abs(b.file) : ''));
       const ref = b.file ? rel(b.file) : (b.src && /^https?:|^\//.test(b.src) ? b.src : '');
       if(src) out.push({ thumb: src, ref });
     }
@@ -22183,6 +22208,7 @@ async function saveCurrentFigureToLibrary(){
   const base = (_figBase && _figBase.base64) ? { base64:_figBase.base64, alt:_figBase.alt||alt||'' } : null;
   // data == the figure block fields insertFigBlock would write (minus a block id).
   const data = { svg:_figBuilt.svg, alt, caption, animation:(_figBuilt.animation||_figAnimate||'none'), placement };
+  copyAiOrigin(data, _figBuilt);
   if(_figBuilt.kind) data.kind = _figBuilt.kind;
   if(fig) data.figure = fig;
   if(base) data.base = base;
@@ -22202,6 +22228,7 @@ async function saveCurrentInteractiveToLibrary(){
     domId:_tplLibBuilt.domId, html:_tplLibBuilt.html||'', css:_tplLibBuilt.css||'', js:_tplLibBuilt.js||'',
     placement:(_tplLibPlacement && _tplLibPlacement.placement)||'standard',
   };
+  copyAiOrigin(data, _tplLibBuilt);
   if(tpl) data.template = tpl;
   const suggested = (_tplLibFamily && (_tplLibFamily.name||_tplLibFamily.id)) || 'My interactive';
   const name = await helmPrompt({ title: 'Name this interactive', value: suggested, okText: 'Save to Library' });

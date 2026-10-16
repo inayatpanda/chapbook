@@ -406,14 +406,14 @@ export function renderPreviewHtml(blocks, ctx = {}) {
   // A fresh in-browser upload stores RAW base64 (no data: prefix — see resize.js), so wrap
   // it as a data URL or the <img src> won't render in the preview. An already-prefixed data:
   // URL (e.g. an AI-generated image) passes through untouched.
-  const asDataUri = (s) => /^data:/i.test(s) ? s : `data:image/jpeg;base64,${s}`;
+  const asDataUri = (s, mime) => /^data:/i.test(s) ? s : `data:${/^image\/(png|jpeg|webp)$/.test(mime || '') ? mime : 'image/jpeg'};base64,${s}`;
   // A fresh data URL (owned upload in progress) wins; then a reference `url` to an
   // already-committed image; then the editor src; finally the conventional per-slug
   // path. url/file are root-relative, so prefix the preview origin for them.
   // A reference `url` is normally a root-relative same-site path (prefix the preview
   // origin); an ABSOLUTE url (e.g. an illustration on R2) is used verbatim — prefixing
   // the origin would corrupt it into `https://sitehttps://…`.
-  const imgSrc = (b) => b.base64 ? asDataUri(b.base64) : b.url ? (/^https?:\/\//i.test(b.url) ? b.url : `${origin}${b.url}`) : (b.src || `${origin}/images/posts/${slug}/${b.file}`);
+  const imgSrc = (b) => b.base64 ? asDataUri(b.base64, b.mimeType) : b.url ? (/^https?:\/\//i.test(b.url) ? b.url : `${origin}${b.url}`) : (b.src || `${origin}/images/posts/${slug}/${b.file}`);
   const figure = (b) => {
     const cap = b.caption ? `<figcaption>${escHtml(b.caption)}</figcaption>` : '';
     const cls = figureClasses(b).join(' ');
@@ -446,7 +446,7 @@ export function renderPreviewHtml(blocks, ctx = {}) {
         // The preview builds the .gallery wrapper itself (no rehype pass), so placement
         // lands directly as the image-path classes — mirroring what rehype-gallery does
         // on the published site from the serialiser's `p=` sentinel token.
-        return `<div class="gallery${placementClass(b)}"${resizeAttrs(b)}>${ims.map((im) => `<figure><img src="${escAttr(im.base64 ? asDataUri(im.base64) : `${origin}/images/${slug}/${im.file}`)}" alt="${escAttr(im.alt)}">${im.alt ? `<figcaption>${escHtml(im.alt)}</figcaption>` : ''}</figure>`).join('')}</div>`;
+        return `<div class="gallery${placementClass(b)}"${resizeAttrs(b)}>${ims.map((im) => `<figure><img src="${escAttr(im.base64 ? asDataUri(im.base64, im.mimeType) : `${origin}/images/${slug}/${im.file}`)}" alt="${escAttr(im.alt)}">${im.alt ? `<figcaption>${escHtml(im.alt)}</figcaption>` : ''}</figure>`).join('')}</div>`;
       }
       case 'embed': {
         const ra = resizeAttrs(b);
