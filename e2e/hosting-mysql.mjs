@@ -9,6 +9,7 @@ import { database, mysqlStore } from '../hosting/mysql-store.mjs';
 import { privateStoreAdapter } from '../netlify/lib/fulfil-store.mjs';
 import { createHandler, signingMessage } from '../netlify/functions/fulfil-store.mjs';
 import { createApp } from '../hosting/server.mjs';
+import { probeStorage } from '../hosting/storage-probe.mjs';
 
 const config=JSON.parse(await readFile(process.env.CHAPBOOK_DB_TEST_CONFIG,'utf8'));
 assert.equal(config.host,'127.0.0.1'); assert.equal(config.database,'chapbook_test');
@@ -20,6 +21,15 @@ let passed=0;
 async function check(label,fn){await fn();passed++;console.log('PASS '+label);}
 let server,preview,dir;
 try {
+  await check('preview probe verifies writes, replay, cleanup and durable marker',async()=>{
+    // Keep the stable hosted checkpoint isolated from other local test runs.
+    const makeStore=label=>mysqlStore(label==='preview-probe-checkpoint'?name+'-checkpoint':label);
+    const first=await probeStorage(makeStore),second=await probeStorage(makeStore);
+    assert.deepEqual(first,{status:'passed',checks:8,persistence:'created'});
+    assert.deepEqual(second,{status:'passed',checks:8,persistence:'verified'});
+    const [leftovers]=await pool.execute('SELECT COUNT(*) AS n FROM chapbook_records WHERE store_name LIKE ?', ['preview-probe-%']);
+    assert.equal(leftovers[0].n,0);
+  });
   await check('concurrent inserts create exactly one record',async()=>{
     const writes=await Promise.all(Array.from({length:20},(_,i)=>store.setJSON('queue/once.json',{i},{onlyIfNew:true})));
     assert.equal(writes.filter(x=>x.modified).length,1);
@@ -85,14 +95,16 @@ try {
     const r=request({op:'get',path:'sandbox/state/test.json'});
     const result=await fetch(base+'/.netlify/functions/fulfil-store',{method:'POST',headers:r.headers,body:await r.text()});assert.equal(result.status,200);assert.equal((await result.json()).record.sandbox,true);
   });
-  preview=await createApp({root:dir,preview:true});await new Promise(r=>preview.listen(0,'127.0.0.1',r));const staging='http://127.0.0.1:'+preview.address().port;
+  preview=await createApp({root:dir,preview:true,previewDiagnostics:()=>({probe:{status:'passed',checks:8}})});await new Promise(r=>preview.listen(0,'127.0.0.1',r));const staging='http://127.0.0.1:'+preview.address().port;
   await check('preview cannot create trials, payments or read private records',async()=>{
     for(const endpoint of ['trial-request','stripe-webhook','fulfil-store'])assert.equal((await fetch(staging+'/.netlify/functions/'+endpoint,{method:'POST',body:'{}'})).status,503);
     assert.equal((await fetch(staging+'/app/')).headers.get('x-robots-tag'),'noindex, nofollow');
+    assert.deepEqual((await (await fetch(staging+'/healthz')).json()).probe,{status:'passed',checks:8});
+    assert.equal((await (await fetch(base+'/healthz')).json()).probe,undefined);
   });
   console.log(`${passed} Hostinger/MySQL checks passed`);
 } finally {
   if(server)await new Promise(r=>server.close(r));if(preview)await new Promise(r=>preview.close(r));
-  await pool.execute('DELETE FROM chapbook_records WHERE store_name IN (?,?)',[name,name+'-control']);await pool.end();
+  await pool.execute('DELETE FROM chapbook_records WHERE store_name IN (?,?,?)',[name,name+'-control',name+'-checkpoint']);await pool.end();
   if(dir)await rm(dir,{recursive:true,force:true});
 }

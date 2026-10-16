@@ -21,6 +21,13 @@ always disables account services, private records, trial requests and payment
 webhooks, and sends `X-Robots-Tag: noindex, nofollow`. It needs no secrets or
 customer data. `/healthz` identifies this as a preview.
 
+With a database connected, the preview runs eight synthetic storage checks once
+at startup. `/healthz` reports only the aggregate result. The checks use random,
+isolated namespaces and ephemeral signing keys; temporary records are removed
+even on failure. One non-personal `preview-probe-checkpoint/durability.json`
+marker remains to verify persistence after the next restart or deployment.
+No public endpoint can trigger writes or read the database records.
+
 ## Persistent storage
 
 The deployment directory is replaceable. Private data must use a dedicated

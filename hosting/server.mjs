@@ -19,7 +19,7 @@ export async function securityHeaders(configPath = new URL('../netlify.toml', im
   return blocks.map(block => ({ path: block.match(/for = "([^"]+)"/)[1], headers: Object.fromEntries([...block.matchAll(/^\s{4}([\w-]+) = "([^"]*)"/gm)].map(m=>[m[1],m[2]])) }));
 }
 
-export async function createApp({ root = resolve('dist'), preview = process.env.CHAPBOOK_PREVIEW === '1', handlers = functions } = {}) {
+export async function createApp({ root = resolve('dist'), preview = process.env.CHAPBOOK_PREVIEW === '1', handlers = functions, previewDiagnostics = () => ({}) } = {}) {
   const rules = await securityHeaders();
   const base = await realpath(root);
   return createServer(async (req, res) => {
@@ -32,7 +32,7 @@ export async function createApp({ root = resolve('dist'), preview = process.env.
         let storage = 'unconfigured';
         if (databaseConfigured()) { try { await (await database()).execute('SELECT 1'); storage='ready'; } catch { storage='unavailable'; } }
         res.writeHead(preview || storage === 'ready' ? 200 : 503, {'Content-Type':'application/json','Cache-Control':'no-store'});
-        res.end(JSON.stringify({status:preview?'preview':storage==='ready'?'ready':'unavailable',storage})); return;
+        res.end(JSON.stringify({status:preview?'preview':storage==='ready'?'ready':'unavailable',storage,...(preview?previewDiagnostics():{})})); return;
       }
       const name = url.pathname.match(/^\/\.netlify\/functions\/([a-z-]+)$/)?.[1];
       if (name && Object.hasOwn(handlers,name)) {
