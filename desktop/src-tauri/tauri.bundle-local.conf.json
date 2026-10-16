@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "build": {
-    "frontendDist": "../../dist",
+    "frontendDist": "../../native-dist",
     "devUrl": null
   },
   "app": {
