@@ -13622,13 +13622,14 @@ async function startNewPost(seedDoc){
 }
 window.startNewPost = startNewPost;
 
-function metaFromData(slug, data){
+function metaFromData(slug, data, defaultDraft = true){
   const r = data || {};
   return {
     title: r.title || slug,
     tags:  r.tags  || [],
     accent: r.accent || '#2dd4bf',
-    draft: r.draft != null ? !!r.draft : true,
+    // Published Markdown omits draft:false; local legacy drafts stay private by default.
+    draft: r.draft != null ? !!r.draft : defaultDraft,
     description: r.description || '',
     theme: r.theme || 'dark',
     // Reading template (six keys). Prefer the explicit `template:`; fall back from a
@@ -13662,10 +13663,10 @@ async function openBlockEditor(slug){
   try{
     const r = await api('/posts/'+slug+'/blocks');
     doc = r.doc || { version:1, blocks:[] };
-    meta = metaFromData(slug, r.data);
+    meta = metaFromData(slug, r.data, r.source === 'draft' && !r.publishedAt);
     $('editorTitle').value = meta.title;
     setMetaDescUI(meta.description);
-    setSaveState('saved','Draft · saved');
+    setSaveState('saved','Post loaded');
     resetSessionWords();     // the reopened words are the baseline, not "this session's"
     renderBlocks();
     updateWordCount();   // editor-open: count the freshly-loaded post's words
@@ -13701,12 +13702,12 @@ async function offerDraftRecovery(slug, savedAt){
     await api('/posts/'+slug+'/blocks', { method:'DELETE' });
     const r = await api('/posts/'+slug+'/blocks');
     doc = (r && r.doc) || { version:1, blocks:[] };
-    meta = metaFromData(slug, r && r.data);
+    meta = metaFromData(slug, r && r.data, r?.source === 'draft' && !r?.publishedAt);
     $('editorTitle').value = meta.title; setMetaDescUI(meta.description);
     resetSessionWords();   // the discarded draft's words never counted as "this session"
     renderBlocks(); await loadEditorSettings();
     updateWordCount();   // reloaded the published version — refresh the readout (no markDirty here)
-    setSaveState('saved','Draft · saved'); _dirty=false;
+    setSaveState('saved','Post loaded'); _dirty=false;
   }catch(e){ showError(e, { title:'Couldn’t discard the draft' }); }
 }
 
@@ -14019,7 +14020,7 @@ async function reserveSlug({ surface = false } = {}){
    A provisional record ('__untitled__') exists iff GET /blocks reports source
    'draft' for it (a committed post can never own that slug). */
 async function provisionalDraftExists(){
-  try{ const r = await api('/posts/'+PROVISIONAL_SLUG+'/blocks'); return !!(r && r.source === 'draft'); }
+  try{ const r = await api('/posts/'+PROVISIONAL_SLUG+'/blocks'); return !!(r && r.source === 'draft' && !r.publishedAt); }
   catch{ return false; }
 }
 
@@ -14169,7 +14170,7 @@ function sweepOrphanUntitledThread(){
       let blocksDraft;
       try{
         const r = await api('/posts/'+PROVISIONAL_SLUG+'/blocks');
-        blocksDraft = !!(r && r.source === 'draft');
+        blocksDraft = !!(r && r.source === 'draft' && !r.publishedAt);
       }catch(e){
         if(e && e.status === 404) blocksDraft = false;   // the store ANSWERED: record provably absent
         else return;                                     // unreadable → cannot prove orphanhood → abort

@@ -1,3 +1,4 @@
+import { initEditorPanels } from './core/editorPanels.js';
 import * as professionalForm from './core/professionalForm.js';
 if(typeof window!=='undefined') window.__studioProfessional = professionalForm;
 // Entry — wires the browser seams + portable core into the client-side router and exposes
@@ -698,3 +699,5 @@ if (typeof window !== 'undefined') {
   window.__studioEd25519 = { verify: ed25519Verify };
   refresh();
 }
+
+initEditorPanels();
