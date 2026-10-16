@@ -1,6 +1,10 @@
 use tauri_plugin_opener::OpenerExt;
 
 fn browser_url(url: &tauri::Url) -> bool {
+  if url.scheme() == "mailto" {
+    let raw = url.as_str().to_ascii_lowercase();
+    return url.path().contains('@') && !raw.contains("%0a") && !raw.contains("%0d");
+  }
   matches!(url.scheme(), "http" | "https")
     && url.has_host() && url.username().is_empty() && url.password().is_none()
 }
@@ -94,7 +98,8 @@ mod tests {
     for url in ["https://github.com/login/device", "https://example.com/post", "http://localhost:8080/"] {
       assert!(browser_url(&url.parse().unwrap()));
     }
-    for url in ["file:///etc/passwd", "javascript:alert(1)", "data:text/html,test", "https://name:secret@example.com/"] {
+    assert!(browser_url(&"mailto:support@rqai.co.uk?subject=Chapbook%20privacy%20request".parse().unwrap()));
+    for url in ["file:///etc/passwd", "javascript:alert(1)", "data:text/html,test", "https://name:secret@example.com/", "mailto:support@rqai.co.uk?subject=bad%0aheader", "mailto:"] {
       assert!(!browser_url(&url.parse().unwrap()));
     }
   }

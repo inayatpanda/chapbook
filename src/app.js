@@ -576,7 +576,7 @@ async function saveDownloadNatively(kind, href, downloadAttr) {
     const path = await dialog.save({ defaultPath: filename, filters: dialogFiltersFor(filename) });
     if (!path) return;                     // user cancelled the Save dialog — silent, no error
     await fs.writeFile(path, read.bytes);
-    nativeToast('Saved ' + filename);
+    nativeToast('Saved ' + path.split(/[\\/]/).pop());
   } catch (e) {
     nativeToast('Save failed' + (e && e.message ? ': ' + e.message : ''));
   }

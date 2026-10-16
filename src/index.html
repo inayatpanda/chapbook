@@ -3510,7 +3510,7 @@
   <p class="sub" style="margin-top:14px">No key yet? <a href="https://buy.stripe.com/5kQeVd0C06t7aSLf3IgUM05?client_reference_id=studio" target="_blank" rel="noopener noreferrer">Buy a key &rarr;</a></p>
   <!-- Commercial/trust footer — reachable BEFORE activation (this gate shows first). -->
   <nav class="legal-foot" aria-label="Support and legal">
-    <a href="/download">Apps</a>
+    <a href="https://chapbook.rqai.co.uk/download">Apps</a>
     <a href="mailto:support@rqai.co.uk">Support</a>
     <a href="/legal">Legal centre</a>
     <a href="#" onclick="openLegal('privacy');return false">Privacy</a>
@@ -4061,7 +4061,7 @@
 </section>
     <!-- Support + legal footer (also on the activation screen). -->
     <nav class="legal-foot in-app" aria-label="Support and legal">
-      <a href="/download">Apps</a>
+      <a href="https://chapbook.rqai.co.uk/download">Apps</a>
       <a href="mailto:support@rqai.co.uk">Support</a>
       <a href="/legal">Legal centre</a>
       <a href="#" onclick="openLegal('privacy');return false">Privacy</a>
@@ -7390,7 +7390,7 @@ window.openLegal=openLegal; window.closeLegal=closeLegal;
 // URLs. Read the included notices in the same accessible sheet, offline, before
 // accepting. This also keeps the web gate's checked choices intact while reading.
 document.addEventListener('click',e=>{
-  const link=e.target.closest?.('#legalConsentGate a, #legalSheet a');
+  const link=e.target.closest?.('a[href]');
   const kind=link?.getAttribute('href')?.match(/^\/(legal|privacy|terms|refunds|ai|storage|acceptable|accessibility)(?:#.*)?$/)?.[1];
   if(!kind) return;
   e.preventDefault(); e.stopPropagation(); openLegal(kind);
