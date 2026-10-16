@@ -9,7 +9,7 @@
 //   GET  ?day=YYYY-MM-DD                         → that day's JSON (or {}) — Helm pulls this
 //   other methods                                → 405
 //   bad type / malformed body / bad day param    → 400
-import { getStore } from '@netlify/blobs';
+import { openStore } from '../lib/storage-provider.mjs';
 
 const TYPES = new Set(['activate', 'install', 'visit']);
 
@@ -51,7 +51,7 @@ export function bump(current, type) {
 }
 
 export default async (req) => {
-  const store = getStore('metrics');
+  const store = openStore('metrics');
 
   if (req.method === 'GET') {
     const day = new URL(req.url).searchParams.get('day');

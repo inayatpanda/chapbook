@@ -1,11 +1,11 @@
 // Personal fulfilment records live in a deletable site store, never a public URL.
 // One region is explicit on every open; compute/worker locations are disclosed separately.
-import { getStore } from '@netlify/blobs';
+import { openStore } from './storage-provider.mjs';
 import { createHash, randomUUID } from 'node:crypto';
 
 export const STORE_REGION = 'eu-central-1';
-export const openFulfilStore = () => getStore({ name: 'rqai-fulfilment-v1', region: STORE_REGION, consistency: 'strong' });
-export const openControlStore = () => getStore({ name: 'rqai-fulfilment-control-v1', region: STORE_REGION, consistency: 'strong' });
+export const openFulfilStore = () => openStore('rqai-fulfilment-v1');
+export const openControlStore = () => openStore('rqai-fulfilment-control-v1');
 export function validPath(path, { directory = false } = {}) {
   if (typeof path !== 'string' || path.length > 240 || !/^(?:sandbox\/)?(?:queue|done|state|privacy)(?:\/|$)/.test(path)) return false;
   if (path.split('/').some(part => !part || part === '.' || part === '..' || !/^[A-Za-z0-9_.-]+$/.test(part))) return false;
