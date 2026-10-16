@@ -3311,6 +3311,8 @@
   .legal-foot.in-app{justify-content:flex-start;margin-top:1.1rem}
 
   /* Legal modal — unified surface sheet on touch; a centred prose modal on desktop. */
+  #legalScrim{z-index:30001}
+  #legalSheet{z-index:30002}
   @media (min-width:900px) and (pointer:fine){
     .legal-sheet{left:50%;right:auto;bottom:auto;top:50%;transform:translate(-50%,-46%);
       width:min(680px,92vw);border-radius:16px;border:1px solid var(--line);box-shadow:var(--shadow);
@@ -7359,25 +7361,46 @@ $('goblinScrim').addEventListener('click',closeGoblin);
    a public-product concern; the Helm owner tool doesn't ship this. */
 
 /* B6 — legal/support modal. openLegal(kind) clones #legal-<kind> into the sheet. */
+let legalReturnFocus=null;
 function openLegal(kind){
   const src=$('legal-'+kind); if(!src) return;
+  if(!$('legalSheet').classList.contains('open')) legalReturnFocus=document.activeElement;
   const titles={legal:'Legal centre',privacy:'Privacy notice',terms:'Terms of use',refunds:'Refund policy',ai:'AI transparency',storage:'Device storage & cookies',acceptable:'Acceptable use',accessibility:'Accessibility statement'};
   $('legalTitle').textContent = titles[kind] || 'Chapbook';
   $('legalBody').innerHTML = src.innerHTML;
   $('legalBody').scrollTop = 0;
   $('legalScrim').classList.add('open');
   $('legalSheet').classList.add('open');
+  $('legalSheet').inert=false;
   $('legalSheet').setAttribute('aria-hidden','false');
+  const gate=$('legalConsentGate'); if(gate&&!gate.hidden) gate.inert=true;
+  $('legalCloseBtn').focus();
 }
 function closeLegal(){
   $('legalScrim').classList.remove('open');
   $('legalSheet').classList.remove('open');
+  $('legalSheet').inert=true;
   $('legalSheet').setAttribute('aria-hidden','true');
+  const gate=$('legalConsentGate'); if(gate) gate.inert=false;
+  if(legalReturnFocus?.isConnected) legalReturnFocus.focus();
+  legalReturnFocus=null;
 }
 window.openLegal=openLegal; window.closeLegal=closeLegal;
+// The bundled app has no HTTP extensionless routing or browser tabs for tauri:
+// URLs. Read the included notices in the same accessible sheet, offline, before
+// accepting. This also keeps the web gate's checked choices intact while reading.
+document.addEventListener('click',e=>{
+  const link=e.target.closest?.('#legalConsentGate a, #legalSheet a');
+  const kind=link?.getAttribute('href')?.match(/^\/(legal|privacy|terms|refunds|ai|storage|acceptable|accessibility)(?:#.*)?$/)?.[1];
+  if(!kind) return;
+  e.preventDefault(); e.stopPropagation(); openLegal(kind);
+},true);
 $('legalScrim') && $('legalScrim').addEventListener('click',closeLegal);
 $('legalCloseBtn') && $('legalCloseBtn').addEventListener('click',closeLegal);
-document.addEventListener('keydown',e=>{ if(e.key==='Escape' && $('legalSheet') && $('legalSheet').classList.contains('open')) closeLegal(); });
+document.addEventListener('keydown',e=>{
+  const sheet=$('legalSheet'); if(!sheet?.classList.contains('open')) return;
+  if(e.key==='Escape'){e.preventDefault();closeLegal();return;}
+});
 
 /* H4 — export EVERY local draft store to one portable JSON. Pure envelope from
    window.__studioDrafts; IndexedDB read + download are here. */
@@ -22032,7 +22055,9 @@ function _sfLeave(el){
       if (is !== was){ was = is; (is ? _sfEnter : _sfLeave)(el); }
     }).observe(el, { attributes: true, attributeFilter: ['class', 'hidden'] });
   };
-  document.querySelectorAll('.picker-sheet').forEach(el => watch(el, e => e.classList.contains('open')));
+  // Legal reading manages focus synchronously so reopening a notice works even
+  // before the accessibility observer has removed the previous inert state.
+  document.querySelectorAll('.picker-sheet:not(#legalSheet)').forEach(el => watch(el, e => e.classList.contains('open')));
   document.querySelectorAll('.pp-overlay').forEach(el => watch(el, e => !e.hidden));
 })();
 
@@ -22041,6 +22066,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key !== 'Tab') return;
   const cmdkOpen = !$('cmdkScrim')?.hidden && $('cmdk');
   const layers = [
+    $('legalSheet')?.classList.contains('open') && $('legalSheet'),
     cmdkOpen,
     ...[...document.querySelectorAll('.pp-overlay:not([hidden])')].map(o => o.querySelector('.pp-card')).reverse(),
     ...[...document.querySelectorAll('.picker-sheet.open')].reverse(),
