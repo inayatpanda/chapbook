@@ -1,4 +1,5 @@
 // Dependency-free frontmatter for the known blog fields + a managed gallery block.
+import { cleanProvenance } from './ai-provenance.js';
 const GALLERY_START = '<!-- gallery:start -->';
 const GALLERY_END = '<!-- gallery:end -->';
 
@@ -20,6 +21,8 @@ export function parse(md) {
       data.tags = inner.trim()
         ? inner.split(',').map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean)
         : [];
+    } else if (key === 'aiProvenance') {
+      try { data.aiProvenance = cleanProvenance(JSON.parse(val)); } catch { data.aiProvenance = []; }
     } else if (key === 'citations') {
       // Structured references stored as a single-line JSON array: [{id,text},…].
       try { const arr = JSON.parse(val); data.citations = Array.isArray(arr) ? arr : []; }
@@ -64,12 +67,16 @@ const q = (s) => '"' + oneLine(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + 
 const KNOWN_KEYS = new Set([
   'title', 'description', 'image', 'date', 'tags', 'citations', 'series', 'seriesPart',
   'accent', 'glyph', 'template', 'theme', 'draft', 'publishAt',
+  'aiProvenance', 'aiDisclosure',
 ]);
 
 export function serialise({ data, body }) {
   const lines = [];
   if (data.title != null) lines.push(`title: ${q(data.title)}`);
   if (data.description != null) lines.push(`description: ${q(data.description)}`);
+  const origin = cleanProvenance(data.aiProvenance);
+  if (origin.length) lines.push(`aiProvenance: ${JSON.stringify(origin)}`);
+  if (data.aiDisclosure) lines.push(`aiDisclosure: ${q(String(data.aiDisclosure).slice(0, 500))}`);
   // Optional featured / OG share image (root-relative or absolute URL). Only
   // written when set — absent means the build's generated /og/<slug>.png is used.
   if (data.image) lines.push(`image: ${q(data.image)}`);

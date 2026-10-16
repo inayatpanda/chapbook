@@ -21,6 +21,7 @@
 
 import { createHash } from 'node:crypto';
 import { pushToQueue, canonicalTrialEmail } from './stripe-webhook.mjs';
+import { makeQueueWriter } from '../lib/enqueue-fulfilment.mjs';
 
 const DEFAULT_QUEUE_REPO = 'inayatpanda/rqai-sales';
 // Deliberately simple: a token, an @, a token, a dot, a token. Real validation is
@@ -138,7 +139,7 @@ export default async function handler(req) {
   const record = { type: 'trial', email, product, ts: new Date().toISOString() };
 
   try {
-    const q = await pushToQueue({ path: `queue/trial-${id}.json`, record, token, repo });
+    const q = await makeQueueWriter({ legacyPush: pushToQueue })({ path: `queue/trial-${id}.json`, record, token, repo });
     // pushToQueue maps 422 (already exists) → { ok:true, already:true } — the abuse
     // guard: a repeat request neither resets the trial nor errors.
     if (!q.ok) {

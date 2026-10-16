@@ -3465,7 +3465,7 @@
     <p class="lc-ai"><strong>AI is optional and labelled.</strong> Generated replies, edits, images and figures may be inaccurate. Your chosen provider receives the material needed for a request. Keep a human responsible for every final post.</p>
     <label><input id="lcTerms" type="checkbox"><span>I have read and agree to the <a href="/terms" target="_blank" rel="noopener">Terms of Use</a> and <a href="/acceptable" target="_blank" rel="noopener">Acceptable Use Policy</a>.</span></label>
     <label><input id="lcNotices" type="checkbox"><span>I acknowledge the <a href="/privacy" target="_blank" rel="noopener">Privacy Notice</a>, <a href="/ai" target="_blank" rel="noopener">AI Transparency Notice</a> and <a href="/storage" target="_blank" rel="noopener">Device Storage Notice</a>. This is not blanket consent to optional AI or marketing.</span></label>
-    <label><input id="lcAge" type="checkbox"><span>I am at least 16, or a parent/legal guardian is accepting for me and supervising my use. If I am under 18, I have that adult's permission.</span></label>
+    <label><input id="lcAge" type="checkbox"><span>I am at least 18 years old.</span></label>
     <p class="lc-copy">Selecting “Agree and continue” is electronic acceptance. If you do not agree, do not use Chapbook.</p>
     <button class="lc-accept" id="lcAccept" type="button" disabled>Agree and continue</button>
     <p id="lcError" class="lc-error" role="alert"></p>
@@ -3905,6 +3905,7 @@
     <label style="margin-top:1.1rem">AI providers</label>
     <p class="sub">AI is optional. When you use it, the selected provider receives your prompt and relevant draft, conversation, profile or attached material. Its API retention and training settings apply. <a href="#" onclick="openLegal('ai');return false">AI and privacy details</a>.</p>
     <div id="aiActiveLine" class="ai-active-line"></div>
+    <p class="sub">Gemini API requires users aged 18 or over and an API project with billing enabled for UK, EEA and Swiss use. A Gemini chat subscription is separate. Do not use it for clinical practice or medical advice.</p>
     <div id="aiProviders"><p class="sub">Loading…</p></div>
 
     <!-- The global "Save keys" button was removed: with a single-key config it silently dropped a
@@ -4017,7 +4018,7 @@
 
       <div style="margin-top:1.3rem;padding-top:1rem;border-top:1px solid var(--line,#1c2433)">
         <strong style="font:700 .95rem var(--font-display)">Records held by RQAI</strong>
-        <p class="sub" style="margin-top:.35rem">If you request a trial, buy a licence or contact support, RQAI keeps the information needed to deliver and support that service, including your email, licence status and payment or delivery references. These records are separate from your drafts. Forgetting this device does not delete them.</p>
+        <p class="sub" style="margin-top:.35rem">If you request a trial, buy a licence or contact support, RQAI keeps the information needed to deliver and support that service, including your email, licence status and payment or delivery references. These records are separate from your drafts. Forgetting this device does not delete them. Identifiable Chapbook trial records are normally removed 90 days after expiry; paid records and specific exceptions have longer periods explained below.</p>
         <div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-top:.6rem">
           <a href="#" onclick="openLegal('privacy');return false">What we keep and why</a>
           <a href="mailto:support@rqai.co.uk?subject=Chapbook%20privacy%20request">Request access or deletion</a>
@@ -4761,6 +4762,9 @@
         <button class="chip on" id="mStatusDraftChip">Draft</button>
         <button class="chip" id="mStatusLiveChip">Live</button>
       </div>
+      <label for="mAiDisclosure" class="mset-label">AI disclosure</label>
+      <textarea id="mAiDisclosure" rows="3" maxlength="500" placeholder="Optional public note about AI-generated content" style="width:100%;box-sizing:border-box;background:var(--bg);color:var(--ink);padding:.7rem;border:1px solid var(--line);border-radius:10px"></textarea>
+      <p class="sub">Published above the post. Add captions beside realistic synthetic images.</p>
       <div class="mset-label">Description (SEO)</div>
       <div id="mMetaDescWrap" style="margin-bottom:.8rem">
         <textarea id="mMetaDesc" rows="3" placeholder="Used as the page description. Leave blank to auto-derive."></textarea>
@@ -4883,6 +4887,9 @@
             <button class="seo-suggest" id="seoSuggestBtn" type="button">✦ Suggest</button>
             <div id="metaDescHint"></div>
           </div>
+          <label for="aiDisclosure" style="display:block;margin-top:1.2rem;font-weight:600">AI disclosure</label>
+          <textarea id="aiDisclosure" rows="3" maxlength="500" placeholder="For example: AI-generated illustration; text reviewed by the author." style="width:100%;box-sizing:border-box;margin-top:.5rem;padding:.7rem;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit"></textarea>
+          <p class="sub" style="font-size:.78rem">This note appears above the published post. Add a caption beside realistic synthetic media. Routine spelling help does not need a blanket label.</p>
           <h4 id="postActionsHdr" style="display:none">Actions</h4>
           <div id="postActionBtns" style="display:none;flex-direction:column;gap:.4rem;margin-top:.2rem">
             <button class="btn ghost" id="railTakedownBtn" style="font-size:.8rem;padding:.5em .8em;margin-top:0">Take down</button>
@@ -5705,7 +5712,7 @@
   <ul>
     <li><b>Purchase/licence details:</b> name, email, Stripe event/customer/payment references, product and licence status — to perform the contract, deliver and support a licence, meet accounting/legal obligations and prevent fraud.</li>
     <li><b>Licence delivery:</b> RQAI's private cloud worker signs and emails keys, including while the owner's computer is offline. The licence ledger is encrypted at rest; authorised local support tools can synchronise these records. Email delivery involves the recipient address and licence key. Your draft library is not part of this process.</li>
-    <li><b>Trial request:</b> typed email, product and request time in a private GitHub queue; a one-way canonical-email hash prevents repeat trials. The function temporarily uses an IP address for rate limiting — contract steps and legitimate interests in abuse prevention.</li>
+    <li><b>Trial request:</b> typed email, product and request time in a private fulfilment store; a canonical-email hash limits repeat trials for one year from the original issue date. The function temporarily uses an IP address for rate limiting — contract steps and legitimate interests in abuse prevention.</li>
     <li><b>Operational request data:</b> Netlify and its infrastructure may process IP address, URL, time, browser and security metadata to deliver and secure the site — contract and legitimate interests in reliability/security.</li>
     <li><b>Support:</b> email address, message and attachments you send — contract steps, legitimate interests in support/claims and legal obligation where applicable.</li>
     <li><b>Anonymous totals:</b> per-day visit/install/activation counters in Netlify Blobs contain no IP, token, licence or user identifier — service measurement and legitimate interests.</li>
@@ -5714,29 +5721,30 @@
   <p>Accepting the Terms is contractual. Acknowledging this notice is not consent to all processing and does not activate AI or publishing.</p>
 
   <h4>Where those records are kept and who can access them</h4>
-  <p>The private GitHub fulfilment repository holds trial and payment-event records, completed delivery records (including email addresses and delivery identifiers), and indexes needed to recover renewals or refunds. The licence ledger is separately encrypted and contains the recipient, licence key, product, issue/expiry dates and revocation status. This does not mean every queue or delivery record has application-level encryption. Access is limited to the RQAI operator and authorised service credentials. Authorised Helm support tools may keep a local synchronised copy on the operator's computer.</p>
-  <p>Stripe processes card/payment details; Chapbook's licence system receives payment references and status, not full card numbers or card security codes. Resend receives the destination email, message and licence key to deliver email. Owner/support notifications can contain customer and transaction information. A public signed revocation list contains random licence identifiers, not names or email addresses.</p>
-  <p>A hash of an email address used to prevent repeat trials is <b>pseudonymous personal data</b>, not anonymous data. A completed trial does not automatically erase its records. Moving a file out of the active queue also does not erase its history: private Git history, local synchronised copies and supplier backups can retain earlier versions. Erasure requests must consider these copies as well as the current record; we will explain any lawful retention requirement.</p>
+  <p>Trial and payment-event records, completed delivery records and renewal/refund indexes are kept in private Netlify object storage. Its configured storage region is Frankfurt, Germany. The licence ledger is separately encrypted and includes recipient, licence key, product, dates and revocation status. The private GitHub Actions worker reads these records temporarily to deliver licences. Access is limited to the RQAI operator and authorised service credentials. The storage region does not mean all supplier processing stays in Europe.</p>
+  <p>Authorised Helm support tools keep a synchronised local copy. Cloud-managed records removed by retention are removed from that copy at its next successful sync. The cloud process runs independently of the operator's computer. Stripe receives payment details; Chapbook receives references and status, not full card numbers or card security codes. Resend receives the recipient address, message and licence key. New operational notifications omit customer details. Public revocation checks use random licence identifiers.</p>
+  <p>An email hash is <b>pseudonymous personal data</b>, not anonymous data. Historical private Git records, older notifications, local backups and supplier backups require separate cleanup or expiry. We track those copies when handling erasure and do not describe a current-record deletion as erasure of every historical copy. Random revocation identifiers may remain necessary to prevent reuse of revoked keys.</p>
 
   <h4>What you need to provide and where it comes from</h4>
   <p>An email is needed to send a trial or paid licence. If you do not provide it, we cannot deliver that key. Purchase, renewal and refund information comes from Stripe; delivery status comes from Resend; support information comes from you. Optional AI/profile, GitHub and media-storage connections are your choice. Declining them leaves the corresponding connected feature unavailable and does not authorise an alternative use of your data.</p>
 
   <h4>Recipients and international transfers</h4>
-  <p>RQAI currently uses Netlify for Chapbook hosting/functions/aggregate counters, GitHub for the private fulfilment queue, encrypted licence ledger and delivery worker, Stripe for payments and Resend for licence/operational email. Authorised communications suppliers, professional advisers or authorities may receive information where needed for the stated purposes or required by law. A proposed Hostinger migration has not changed these current recipients.</p>
-  <p>These suppliers may process information outside the UK/EEA. RQAI is responsible for assessing the transfer mechanism and safeguards for suppliers it appoints; that responsibility is not transferred to you. Contact support for information about the relevant locations, contractual safeguards and how to obtain a copy. The supplier-contract and transfer assessment is part of the launch review. Optional AI, GitHub publishing and Cloudflare accounts you connect have their own contracts and privacy notices; review those before sending confidential or personal data. RQAI does not sell personal information or share it for behavioural advertising.</p>
+  <p>RQAI currently uses Netlify for hosting, functions, private fulfilment storage and aggregate counters; GitHub Actions for delivery; Stripe for payments; and Resend for licence/operational email. Authorised communications suppliers, professional advisers or authorities may receive information where needed for the stated purposes or required by law. A proposed Hostinger migration has not changed these current recipients.</p>
+  <p>These suppliers may process information outside the UK/EEA. RQAI is responsible for assessing the transfer mechanism and safeguards for suppliers it appoints; that responsibility is not transferred to you. Contact support for information about the relevant locations, contractual safeguards and how to obtain a copy. Netlify, Stripe and Resend publish data-processing and international-transfer terms. Resend stores its message and delivery data in the United States, even when email is sent from an EU region. Contract coverage for the current personal GitHub delivery account remains under review before general launch. Optional AI, GitHub publishing and Cloudflare accounts you connect have their own contracts and privacy notices; review those before sending confidential or personal data. RQAI does not sell personal information or share it for behavioural advertising.</p>
 
   <h4>Retention</h4>
   <ul>
     <li>Local data: until you delete it, clear site/app data or uninstall; remote copies follow the destination's retention.</li>
-    <li>Trial and delivery records: retained for trial delivery, recovery, support and the one-trial-per-person restriction. They are not automatically deleted after seven days. Whether an identifiable record is still necessary must be reviewed, taking account of unresolved support, fraud prevention and legal claims; the retention/deletion schedule is an outstanding launch-review item.</li>
-    <li>Purchase, licence and accounting records: for the applicable tax and limitation periods (commonly up to six years after the relationship ends in the UK).</li>
+    <li>Chapbook trial licence and completed-delivery records: daily cleanup removes identifiable records 90 days after the trial expires. A minimal email hash remains until one year after the original trial to prevent repeated trial resets. Access expires after seven days; that is separate from data deletion. Unresolved orders, disputes, legal holds and unclassified older records are reviewed before removal.</li>
+    <li>Chapbook paid-licence and linked delivery records: while the licence is active, then six years after the latest expiry, revocation or issue date for accounting and claims, subject to a specific legal hold. Stripe may retain records it must keep for its own legal duties.</li>
     <li>Support correspondence: normally up to 24 months after closure, longer for an unresolved dispute or legal duty.</li>
-    <li>Hosting/security logs: for Netlify's configured operational/security period; incident extracts may be retained while an investigation or claim is active.</li>
+    <li>Delivery-worker logs: seven days for new runs. Resend email and delivery logs: 30 days, with backups lasting seven days; earlier removal requires a request to Resend. Netlify security logs and infrastructure backups follow its operational policies; incident extracts may remain for a specific investigation or claim.</li>
+    <li>Encrypted migration recovery copy: seven days. Count-only deletion receipts: one year. Rights-request case records: normally 24 months after closure; unresolved cases and legal holds remain subject to review.</li>
     <li>Anonymous daily counters: may be retained for longitudinal product measurement because they contain no user identifier.</li>
   </ul>
 
   <h4>Sensitive information and children</h4>
-  <p>Chapbook does not ask for special-category data. Avoid sending health, biometric, political, religious, sexual-orientation or other sensitive information to AI unless you have an Article 6 basis and, where applicable, an Article 9 condition. Do not record people covertly. Chapbook is not directed to children under 16; younger use requires parent/legal-guardian acceptance and supervision.</p>
+  <p>Chapbook does not ask for special-category data. Avoid sending health, biometric, political, religious, sexual-orientation or other sensitive information to AI unless you have an Article 6 basis and, where applicable, an Article 9 condition. Do not record people covertly. Chapbook is intended for adults aged 18 and over and is not offered for use by children.</p>
 
   <h4>Your rights</h4>
   <p>Subject to legal conditions, UK/EU rights may include access, correction, erasure, restriction, portability, objection, withdrawal of consent and safeguards for significant solely automated decisions. Chapbook does not make such decisions about users. Most drafts are only on your device, so use Export or <b>Settings → Sign out &amp; forget this device</b>. For information RQAI holds, email support. We may verify identity and respond within the statutory period.</p>
@@ -5757,7 +5765,7 @@
   <p>These Terms are between you and <b>RQAI</b>, United Kingdom (“RQAI”, “we”), for the Chapbook web, PWA and desktop applications. Contact <a href="mailto:support@rqai.co.uk">support@rqai.co.uk</a>. Selecting “Agree and continue” is electronic acceptance; the current version and timestamp are stored on your device. The Privacy Notice is information, not blanket consent.</p>
 
   <h4>Eligibility</h4>
-  <p>You must be at least 16 to use Chapbook independently. A user under 18 must have parent/legal-guardian permission. A guardian accepting for a younger user is responsible for supervision, especially public publishing and connected AI.</p>
+  <p>You must be at least 18 to use Chapbook. Connected providers can impose additional account, billing, location and permitted-use conditions. Gemini API use in the UK, EEA and Switzerland requires a billing-enabled API project; a paid chat subscription is a separate service. Do not use Gemini for clinical practice or medical advice.</p>
 
   <h4>Licence, price and renewal</h4>
   <p>Unless a checkout clearly says otherwise, a Chapbook purchase is a yearly, personal, non-transferable subscription covering the purchaser's own devices. Stripe shows the price, billing interval, taxes and renewal before purchase. The emailed signed key remains valid for the paid period. Do not share, resell or circumvent it. An automatic renewal issues a fresh key; a cancellation or failed payment stops future access after the paid period.</p>
@@ -5831,7 +5839,7 @@
     <li><b>Direct interaction:</b> the Partner and AI entry points identify AI from the beginning; replies are labelled and never impersonate a human contributor.</li>
     <li><b>Human review:</b> output is a suggestion. The user decides whether to insert, modify, discard or publish it.</li>
     <li><b>Synthetic content:</b> generation surfaces disclose their AI nature. Users must preserve/add disclosures required by law or platform rules.</li>
-    <li><b>Machine-readable marking:</b> this is separate from a visible AI label. Chapbook has not yet verified durable marking across every supported model, generated asset and export. Provider-origin marks can be lost during conversion or editing. Model/format testing and any required preservation or marking controls remain a launch-review item; a policy notice or user acknowledgement does not satisfy that technical duty by itself.</li>
+    <li><b>Machine-readable marking:</b> this is separate from a visible AI label. Newly generated blocks carry technical origin metadata through local drafts, publishing sidecars, Markdown and HTML. The editor offers a visible post disclosure and adds a default AI caption to generated images. Generated image bytes are published without re-encoding, preserving any provider marks they contain. These application marks are not a signed C2PA credential or a universal detector. Plain-text copying, screenshots, external editing and some legacy or manual imports cannot be relied on to preserve provenance; add a visible disclosure where required. Provider/format coverage and robustness still need review before claiming complete Article 50 conformity.</li>
     <li><b>Accessibility:</b> notices use visible words and are not communicated only by colour.</li>
   </ul>
   <p>EU AI Act Article 50 transparency duties apply from 2 August 2026. The limited 2 December 2026 grace period concerns certain pre-existing systems' machine-readable marking, not the obligation to tell people when they are interacting with AI.</p>
@@ -6085,9 +6093,32 @@ function classifyError({ status, payload, raw } = {}){
    by the BYOK client-side router (window.__studioApi), which does the GitHub/AI
    work locally in the browser — no server, no tunnel. Every failure is routed
    through classifyError() → a friendly, typed Error. */
+// Keep origin information with accepted content; do not record prompts or keys.
+function aiOriginResult(path, opts, result){
+  const route = String(path).split('?')[0];
+  if(!/^\/(?:ai\/(?:draft|social-pack|structure|alt-text|seo|rewrite|generate-image|read-document)|draft|thread\/turn|social\/repurpose|playgrounds\/(?:suggest|tweak|invent)|figures\/(?:suggest|tweak|invent|sticker|vectorise|label-suggest))$/.test(route)) return result;
+  let input = {}; try{ input = typeof opts.body==='string' ? JSON.parse(opts.body) : (opts.body||{}); }catch{}
+  if(route==='/ai/read-document' && /wordprocessingml|msword/.test(input.mimeType||'')) return result;
+  if(!result || typeof result!=='object') return result;
+  const assisted = /structure|alt-text|seo|read-document|vectorise/.test(route) || (route==='/ai/rewrite' && input.action!=='expand') || (route==='/thread/turn' && input.ask==='tighten');
+  const aiProvenance = [{kind:assisted?'assisted':'generated',tool:'AI',action:route.slice(1)}];
+  const tag = block => ({...block, aiProvenance});
+  return {...result, aiProvenance,
+    ...(result.block ? {block:tag(result.block)} : {}),
+    ...(Array.isArray(result.blocks) ? {blocks:result.blocks.map(tag)} : {}),
+    ...(result.doc ? {doc:{...result.doc, aiProvenance, blocks:(result.doc.blocks||[]).map(tag)}} : {})};
+}
+function addAiOrigin(block, result, action='generation'){
+  if(block) block.aiProvenance = result?.aiProvenance || [{kind:'generated',tool:'AI',action}];
+}
+function updateAiDisclosure(){
+  for(const id of ['aiDisclosure','mAiDisclosure']){const input=$(id); if(input && document.activeElement!==input) input.value=meta.aiDisclosure||'';}
+}
+for(const id of ['aiDisclosure','mAiDisclosure']) $(id)?.addEventListener('input',e=>{meta.aiDisclosure=e.target.value.slice(0,500);updateAiDisclosure();markDirty();});
+
 const api=async(path,opts={})=>{
   if(window.__studioApi){
-    try{ return await window.__studioApi(path,opts); }
+    try{ return aiOriginResult(path,opts,await window.__studioApi(path,opts)); }
     catch(err){ throw classifyError({ raw: err, status: err && err.status }); }
   }
   // The client router isn't ready yet — surface a friendly error rather than hang.
@@ -10324,7 +10355,7 @@ function chatSyncInput(){
     _chatRebuildT = setTimeout(async () => {
       try{
         const r = await api('/playgrounds/build', { method:'POST', body: JSON.stringify({ familyId: b.template.familyId, params: b.template.params, domId: b.domId }) });
-        if(r && r.block){ b.html = r.block.html; b.css = r.block.css; b.js = r.block.js; chatPaint(); }
+        if(r && r.block){ if(r.block.aiProvenance) addAiOrigin(b,r.block); b.html = r.block.html; b.css = r.block.css; b.js = r.block.js; chatPaint(); }
       }catch(_){ /* offline — params kept, rebuild happens on next edit */ }
     }, 450);
   }
@@ -11564,11 +11595,13 @@ window.__threadRenderTurns = renderTurns;
    the turn's own text. Same path either way - title set + input dispatch + accepted. */
 function acceptThreadTurn(t, chosenText){
   if(t.kind !== 'insertable' || t.state !== 'open') return;
+  const acceptedOrigin = {aiProvenance:[{kind:t.retry?.ask==='tighten'?'assisted':'generated',tool:'AI',action:'partner-accepted'}]};
   const ask = (t.retry && t.retry.ask) || '';
   const clean = String(chosenText != null ? chosenText : (t.text || '')).trim();
   if(ask === 'title'){
     const inp = $('editorTitle');
     if(inp){
+      meta.aiProvenance = acceptedOrigin.aiProvenance;
       inp.value = clean.replace(/^["']|["']$/g, '');
       inp.dispatchEvent(new Event('input'));   // the real listener: meta.title + markDirty + slug debounce
     }
@@ -11577,7 +11610,7 @@ function acceptThreadTurn(t, chosenText){
     const f = i >= 0 ? chatFieldFor(doc.blocks[i]) : null;
     pushHistory();   // a content/structure change - one ⌘Z step
     if(ask === 'tighten' && f && f.field !== 'title'){
-      const b = doc.blocks[i];                  // tighten REPLACES the block's text
+      const b = doc.blocks[i]; addAiOrigin(b, acceptedOrigin); // tighten REPLACES the block's text
       if(f.field === 'html') b.html = inlineMdToHtml(clean).replace(/\n/g, '<br>');
       else if(f.field === 'text') b.text = clean;
       else b.caption = clean;
@@ -11585,6 +11618,7 @@ function acceptThreadTurn(t, chosenText){
         && !String(doc.blocks[i].html || '').replace(/<br\s*\/?>/gi, '').replace(/<[^>]+>/g, '').trim()){
       // 'Draft this block' accepted onto a still-empty text block FILLS it (the sheet
       // promised "the draft will fill it"); textToHtml keeps Doc mode's paragraph shape
+      addAiOrigin(doc.blocks[i], acceptedOrigin);
       doc.blocks[i].html = textToHtml(clean);
     } else {                                    // continue / draft-below (and any other insert) lands after its block
       let at = i >= 0 ? i + 1 : doc.blocks.length;
@@ -11598,6 +11632,7 @@ function acceptThreadTurn(t, chosenText){
         for(let j = 0; j < doc.blocks.length; j++) if(prior.has(doc.blocks[j].id)) at = j + 1;
       }
       const nb = { id: mkId(), type: 'text', html: ask === 'draft' ? textToHtml(clean) : inlineMdToHtml(clean).replace(/\n/g, '<br>') };
+      addAiOrigin(nb, acceptedOrigin);
       doc.blocks.splice(at, 0, nb);
       t.acceptedBlockId = nb.id;   // later accepts for this anchor chain after this block
     }
@@ -12965,7 +13000,7 @@ function edPlayground(b, isSel){
         try{
           const r = await api('/playgrounds/build', { method:'POST', body: JSON.stringify({ familyId: fam.id, params, domId: b.domId }) });
           if(r && r.block){
-            b.html = r.block.html; b.css = r.block.css; b.js = r.block.js;
+            if(r.block.aiProvenance) addAiOrigin(b,r.block); b.html = r.block.html; b.css = r.block.css; b.js = r.block.js;
             if(r.block.domId) b.domId = r.block.domId;
             markDirty();
             if(on) renderPreview();   // refresh ONLY this block's iframe — keeps input focus
@@ -13026,7 +13061,7 @@ function edPlayground(b, isSel){
       try{
         const r = await api('/playgrounds/tweak', { method:'POST', body: JSON.stringify({ familyId: b.template.familyId, params: b.template.params || {}, instruction: instruction.trim() }) });
         if(r.block){
-          b.html = r.block.html; b.css = r.block.css; b.js = r.block.js;
+          if(r.block.aiProvenance) addAiOrigin(b,r.block); b.html = r.block.html; b.css = r.block.css; b.js = r.block.js;
           if(r.block.domId) b.domId = r.block.domId;
           b.template.params = r.params || b.template.params;
           renderBlocks(); markDirty(); toast('Interactive adjusted ✓');
@@ -13484,6 +13519,7 @@ function renderBlockEl(b, idx){
 }
 
 function renderBlocks(){
+  updateAiDisclosure();
   const host = $('blockList');
   if(!host) return;
   host.innerHTML = '';
@@ -13667,6 +13703,8 @@ function metaFromData(slug, data, defaultDraft = true){
       : (r.theme === 'parchment' ? 'parchment' : 'observatory'),
     glyph: r.glyph || '',
     image: r.image || '',
+    aiDisclosure: r.aiDisclosure || '',
+    aiProvenance: Array.isArray(r.aiProvenance) ? r.aiProvenance : [],
     citations: Array.isArray(r.citations) ? r.citations.filter(c=>c&&c.id).map(c=>({id:String(c.id),text:String(c.text==null?'':c.text)})) : [],
     series: r.series || '',
     seriesPart: Number.isFinite(Number(r.seriesPart)) && String(r.seriesPart).trim() !== '' ? Number(r.seriesPart) : null,
@@ -13742,6 +13780,7 @@ async function offerDraftRecovery(slug, savedAt){
 
 /* ── load topics + wire settings rail ───────────────────────────────────── */
 async function loadEditorSettings(){
+  updateAiDisclosure();
   let topics = _topicsCache;
   if(!topics){
     try{ topics = await api('/topics'); _topicsCache = topics; }catch{ topics = []; }
@@ -14606,6 +14645,8 @@ $('editorPassPanel')?.addEventListener('click', e=>{ if(e.target===$('editorPass
 function publishMeta(){
   return {
     title: meta.title.trim(),
+    aiDisclosure: meta.aiDisclosure || '',
+    aiProvenance: meta.aiProvenance || [],
     tags: meta.tags,
     accent: meta.accent,
     theme: meta.theme || 'dark',
@@ -16596,7 +16637,7 @@ window.openInteractiveMakerFromSaved = openInteractiveMakerFromSaved;
 function exportInteractiveHtml(){
   if(!_tplLibBuilt || !(_tplLibBuilt.html || _tplLibBuilt.js)){ toast('Build an interactive first, then Export'); return; }
   const nameHint = ($('tplLibFamName')?.textContent || 'interactive').replace(/^[^\w]+/, '').trim() || 'interactive';
-  const htmlDoc = tplLibSrcdoc(_tplLibBuilt);
+  const htmlDoc = tplLibSrcdoc(_tplLibBuilt).replace('<head>', '<head>' + (_tplLibBuilt.aiProvenance ? '<meta name="ai-origin" content="generated">' : ''));
   const blob = new Blob([htmlDoc], { type: 'text/html' });
   const fname = nameHint.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'interactive';
   const file = new File([blob], fname + '.html', { type: 'text/html' });
@@ -20743,6 +20784,7 @@ async function doAiDraft(){
     // still on screen (samePost above) and its block still present (captured ref).
     const b = doc.blocks.find(x => x.id === reqBlockId);
     if(!b){ aiFeedback('aiDraftMsg', 'That block is no longer here.', 'err'); return; }
+    addAiOrigin(b, j, 'draft');
     const draftHtml = textToHtml(j.post || '');
     const cur = (b.html || '').replace(/<br\s*\/?>/gi,'').trim();
     b.html = cur ? (b.html.replace(/(<br\s*\/?>)+\s*$/i,'') + '<br><br>' + draftHtml) : draftHtml;
@@ -20969,8 +21011,11 @@ async function doGenImage(b, inp, runBtn, toggleBtn, msgEl){
       ? await window.__studioR2.image({ prompt })
       : await api('/ai/generate-image', { method:'POST', body: JSON.stringify({ prompt }) });
     if(r && r.base64){
+      addAiOrigin(b, r, 'image-generation');
+      if(!b.caption) b.caption = 'AI-generated illustration';
+      b.mimeType = r.mimeType || 'image/png';
       b.base64 = r.base64;                 // publishes via the existing single-image pipeline
-      b.file = b.id + '.jpg';
+      b.file = b.id + ({'image/png':'.png','image/webp':'.webp','image/jpeg':'.jpg'}[b.mimeType] || '.png');
       if(!b.placement) b.placement = 'standard';
       markDirty();
       genImageMsg(msgEl, '', '');
@@ -21015,7 +21060,7 @@ async function doStructure(){
     const mapped = incoming
       .filter(blk => blk && STRUCT_OK_TYPES.includes(blk.type))
       .map(blk => {
-        const out = { id: mkId(), type: blk.type };
+        const out = { id: mkId(), type: blk.type, ...(blk.aiProvenance ? {aiProvenance:blk.aiProvenance} : {}) };
         if(blk.type === 'heading'){ out.level = blk.level || 2; out.text = blk.text || ''; }
         else if(blk.type === 'text' || blk.type === 'quote'){ out.html = inlineMdToHtml(blk.html || ''); if(blk.cite != null) out.cite = blk.cite; }
         else if(blk.type === 'image'){ Object.assign(out, defaults('image')); }
@@ -21347,6 +21392,8 @@ async function runInlineAi(action, btn){
       const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
       range.deleteContents(); range.insertNode(document.createTextNode(out));
       sel.removeAllRanges();
+      const owner=doc.blocks.find(b=>b.id===block.closest('.block')?.dataset.id);
+      addAiOrigin(owner, r, 'rewrite');
       block.dispatchEvent(new Event('input', { bubbles:true }));   // sync block model
       if(typeof markDirty==='function') markDirty();
       toast('Rewritten ✓');

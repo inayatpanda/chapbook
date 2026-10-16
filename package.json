@@ -19,17 +19,17 @@
     "stage:emoji": "node scripts/stage-emoji.mjs"
   },
   "dependencies": {
-    "@netlify/blobs": "^8",
+    "@netlify/blobs": "10.7.13",
     "acorn": "8.19.0",
     "aws4fetch": "^1.0.20",
-    "dompurify": "3.4.13"
+    "dompurify": "3.4.17"
   },
   "devDependencies": {
     "@tauri-apps/plugin-clipboard-manager": "^2.3.2",
     "@tauri-apps/plugin-dialog": "^2.7.2",
     "@tauri-apps/plugin-fs": "^2.5.1",
     "@tauri-apps/plugin-http": "^2.5.9",
-    "esbuild": "^0.23",
+    "esbuild": "0.28.2",
     "playwright": "^1.62.1"
   }
 }

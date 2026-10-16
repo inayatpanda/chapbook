@@ -1,6 +1,7 @@
 // Block document -> site markdown body. Pure, no I/O, no deps.
 import { sanitise, SAFE_IMAGE_DATA_URL } from './figures/svg.js';
 import { sanitiseHtml } from './sanitise.js';
+import { provenanceMarkup, cleanProvenance } from './ai-provenance.js';
 
 const KNOWN = new Set(['heading', 'text', 'image', 'quote', 'divider', 'raw', 'gallery', 'embed', 'playground', 'table', 'figure', 'video']);
 
@@ -383,7 +384,12 @@ function appendCitationDefs(body, citations) {
 }
 
 export function serialiseBlocks(blocks, ctx = {}) {
-  const body = blocks.map((b) => serialiseBlock(b, ctx)).filter((s) => s !== '').join('\n\n') + '\n';
+  const body = blocks.map((b) => {
+    const text = serialiseBlock(b, ctx);
+    const origin = cleanProvenance(b.aiProvenance);
+    if (!text || !origin.length) return text;
+    return provenanceMarkup(origin) + `<div data-ai-origin="${origin.some(x => x.kind === 'generated') ? 'generated' : 'assisted'}">\n\n${text}\n\n</div>`;
+  }).filter((s) => s !== '').join('\n\n') + '\n';
   return appendCitationDefs(body, ctx.citations);
 }
 

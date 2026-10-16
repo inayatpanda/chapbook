@@ -11,7 +11,7 @@ test('first-use gate is mandatory, versioned and uses three separate affirmative
   assert.match(gate, /chapbook\.legalConsent\.v1/);
   assert.match(gate, /I have read and agree/);
   assert.match(gate, /I acknowledge/);
-  assert.match(gate, /at least 16/);
+  assert.match(gate, /at least 18/);
   assert.equal((gate.match(/type="checkbox"/g) || []).length, 3);
   assert.match(gate, /id="lcAccept"[^>]*disabled/);
   assert.match(gate, /method:'clickwrap'/);

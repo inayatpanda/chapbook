@@ -23,6 +23,7 @@
 // With STRIPE_WEBHOOK_SECRET absent the function is INERT (500 not_configured).
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { makeQueueWriter } from '../lib/enqueue-fulfilment.mjs';
 
 const DEFAULT_TOLERANCE_SEC = 300;           // Stripe's replay window
 const DEFAULT_FROM = 'Studio <onboarding@resend.dev>';
@@ -212,14 +213,10 @@ export async function notifyOwner({ to, from = DEFAULT_FROM, name, email, apiKey
     body: JSON.stringify({
       from,
       to,
-      subject: `New Studio purchase — ${name || email}`,
+      subject: 'New Chapbook purchase',
       text:
-        `New Studio-access purchase.\n\n` +
-        `Name:  ${name || '(none given)'}\n` +
-        `Email: ${email}\n\n` +
-        `Mint their key on your Mac:\n\n  ${mintCommand({ name, email })}\n\n` +
-        `(add \`--expires YYYY-MM-DD\` for a fixed term), then email the printed ` +
-        `IPL1.… key to ${email}.\n`,
+        'A Chapbook purchase was received. The cloud worker handles licence delivery. ' +
+        'Use the private fulfilment health report and Helm for support; customer details are omitted from this notification.',
     }),
   });
   return { ok: !!(res && res.ok), status: res ? res.status : 0 };
@@ -395,6 +392,6 @@ export default async function handler(req) {
   }
   const rawBody = await req.text();                       // exact bytes — needed for signature verification
   const signature = req.headers.get('stripe-signature') || '';
-  const { status, body } = await handleStripeWebhook({ rawBody, signature, env: { ...process.env, STRIPE_MODE: 'live' } });
+  const { status, body } = await handleStripeWebhook({ rawBody, signature, env: { ...process.env, STRIPE_MODE: 'live' }, deps: { pushQueue: makeQueueWriter({ legacyPush: pushToQueue }) } });
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }

@@ -23,6 +23,8 @@ const DIST = 'dist';
 //   3. that pointer's bundled app.js fallback owner in dist/studio.js.
 const ALLOWED = [
   { text: 'https://inayatpanda.com/licences/revoked.json', reason: 'licence revoke-list URL' },
+  { text: 'Do not use it for clinical practice or medical advice.', reason: 'Gemini API permitted-use restriction' },
+  { text: 'Do not use Gemini for clinical practice or medical advice.', reason: 'Gemini API permitted-use restriction' },
 ];
 
 // Forbidden patterns (case-sensitive, exactly as specified by the release contract).

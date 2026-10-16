@@ -5,6 +5,7 @@ import { parse, serialise, readGallery, writeGallery } from '../lib/frontmatter.
 import * as blocks from '../lib/blocks.js';
 import { SAFE_IMAGE_DATA_URL } from '../lib/figures/svg.js';
 import { slugify as slugPure } from './slug.js';
+import { postProvenance, provenanceMarkup } from '../lib/ai-provenance.js';
 
 const BLOG_DIR = 'src/content/blog';
 const postPath = (slug) => `${BLOG_DIR}/${slug}.md`;
@@ -247,15 +248,20 @@ export function makePosts(gh) {
         }
         return b;
       });
-      const storedDoc = { version: 1, blocks: storedBlocks };
+      const aiProvenance = postProvenance(doc, meta);
+      const storedDoc = { version: 1, blocks: storedBlocks, ...(aiProvenance.length ? { aiProvenance } : {}) };
       // References → footnote definitions (serialiser) + persisted frontmatter, so the
       // editor restores the full list on re-open. Mirrors server/posts.js.
       const citations = (Array.isArray(meta.citations) ? meta.citations : [])
         .filter((c) => c && c.id)
         .map((c) => ({ id: String(c.id), text: String(c.text == null ? '' : c.text) }));
-      const body = blocks.serialiseBlocks(storedBlocks, { slug, citations });
+      const disclosure = String(meta.aiDisclosure || '').replace(/[<>\r\n]/g, ' ').slice(0, 500).trim();
+      const disclosureHtml = disclosure ? `<p class="ai-disclosure" data-ai-disclosure="true">${disclosure.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}</p>\n\n` : '';
+      const body = provenanceMarkup(aiProvenance) + disclosureHtml + blocks.serialiseBlocks(storedBlocks, { slug, citations });
       const md = serialise({ data: {
         title: meta.title, description: (meta.description || '').slice(0, 155) || meta.title,
+        ...(aiProvenance.length ? { aiProvenance } : {}),
+        ...(disclosure ? { aiDisclosure: disclosure } : {}),
         date: meta.date || todayISO(), tags: meta.tags || [],
         ...(meta.series && String(meta.series).trim() ? { series: String(meta.series).trim() } : {}),
         ...(meta.series && String(meta.series).trim() && Number.isFinite(Number(meta.seriesPart)) ? { seriesPart: Number(meta.seriesPart) } : {}),
