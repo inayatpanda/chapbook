@@ -114,6 +114,50 @@ try {
     await page.screenshot({path:`${artifacts}/navigation-${width}.png`});
   }
   await page.setViewportSize({width:1440,height:1000});
+  await check('Settings has four accessible groups and optional storage stays collapsed',async()=>{
+    await page.evaluate(async()=>{window.go('settings');await window.loadSettings();});
+    assert.equal(await page.locator('.settings-nav a').count(),4);
+    assert.equal(await page.locator('.settings-storage').getAttribute('open'),null);
+    assert.match(await page.locator('#connRow').innerText(),/writer\/notebook/);
+    await page.locator('.settings-nav a').filter({hasText:'Privacy'}).focus();
+    await page.keyboard.press('Enter');
+    assert.equal(await page.evaluate(()=>document.activeElement.id),'settingsPrivacyTitle');
+    await page.waitForFunction(()=>document.querySelector('#settingsBackupStatus').textContent.includes('saved items'));
+  });
+  await check('Settings connection check verifies the selected site without changing it',async()=>{
+    const before=await page.evaluate(()=>window.__studioConfig.getGithub());
+    await page.locator('#settingsCheckBtn').click();
+    await page.waitForFunction(()=>document.querySelector('#settingsConnectionCheck').textContent.includes('read successfully'));
+    assert.equal(await page.locator('#settingsSiteLink').getAttribute('href'),'https://writer.github.io/notebook');
+    assert.deepEqual(await page.evaluate(()=>window.__studioConfig.getGithub()),before);
+    await page.evaluate(()=>{window.__studioConfig.saveRepo({owner:'writer',repo:'changed',branch:'main'});window.refreshConnStatus();});
+    assert.ok(!(await page.locator('#settingsSiteLink').isVisible()));
+    assert.match(await page.locator('#settingsConnectionCheck').innerText(),/Connection changed/);
+    await page.evaluate(g=>window.__studioConfig.saveRepo(g),before);
+  });
+  await check('Inactive AI providers expand with the keyboard and have labelled fields',async()=>{
+    const card=page.locator('.ai-card[data-id="google"]');
+    assert.equal(await card.getAttribute('open'),null);
+    await card.locator('summary').first().focus(); await page.keyboard.press('Enter');
+    assert.ok(await card.getByLabel('API key',{exact:true}).isVisible());
+    assert.ok(await card.getByRole('button',{name:'Save & use',exact:true}).isVisible());
+    await card.locator('summary').first().focus(); await page.keyboard.press('Enter');
+    assert.ok(!(await card.getByLabel('API key',{exact:true}).isVisible()));
+  });
+  await check('Settings reflows at 320 CSS pixels in light and dark mode',async()=>{
+    await page.setViewportSize({width:320,height:800});
+    for(const mode of ['light','dark']){
+      await page.evaluate(mode=>document.documentElement.dataset.theme=mode,mode);
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2));
+      await page.locator('.settings-nav a').first().click();
+      await page.screenshot({path:`${artifacts}/settings-${mode}-320.png`,animations:'disabled'});
+    }
+    await page.setViewportSize({width:1440,height:1000});
+    await page.evaluate(()=>document.documentElement.dataset.theme='light');
+    await page.evaluate(()=>window.scrollTo(0,0));
+    assert.equal(await page.locator('.picker-sheet.open').count(),0);
+    await page.screenshot({path:`${artifacts}/settings-desktop.png`,animations:'disabled'});
+  });
   await check('idea inbox create, update, delete',async()=>{
     const idea=await api('/ideas',{text:'A test idea'});assert.ok(idea.id);
     await api('/ideas/'+idea.id,{text:'Revised idea'},'PUT');assert.ok((await api('/ideas')).some(x=>x.text==='Revised idea'));
