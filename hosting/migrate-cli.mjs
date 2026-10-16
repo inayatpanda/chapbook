@@ -13,8 +13,13 @@ async function main() {
   if (action === 'snapshot') {
     const siteID = process.env.CHAPBOOK_MIGRATION_SOURCE_SITE_ID, token = process.env.NETLIFY_AUTH_TOKEN;
     if (!/^[a-f0-9-]{36}$/.test(siteID || '') || !token) throw Error('Explicit source site and Netlify token are required');
-    const inventory = await listStores({ siteID, token });
-    if (inventory.stores.some(name => !SERVICE_STORES.includes(name))) throw Error('Unreviewed source stores exist; inspect the inventory before migration');
+    // Netlify lists regional and default stores separately. Check both and
+    // refuse a known name in an unexpected region rather than silently omit it.
+    for (const region of [null,'eu-central-1']) {
+      const inventory = await listStores({ siteID, token, ...(region ? { region } : {}) });
+      const expected = region ? SERVICE_STORES.filter(name=>name!=='metrics') : ['metrics'];
+      if (inventory.stores.some(name => !expected.includes(name))) throw Error('Unreviewed source stores exist; inspect the inventory before migration');
+    }
     const snapshot = await captureStores(name => getStore({ name, siteID, token, consistency: 'strong', ...(name === 'metrics' ? {} : { region: 'eu-central-1' }) }));
     const key = randomBytes(32);
     // Both files must be new. Key stays separate from the encrypted snapshot.
