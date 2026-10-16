@@ -16,7 +16,7 @@ export const TOUR_STEPS = [
   { id: 'interactive', section: 'write', title: 'Make it interactive',
     body: 'Tap ✦ Interactive to drop in a poll, quiz, chart or timeline — pick a template, set a title, done. Or sketch a flipbook in ◆ Figure → Draw.' },
   { id: 'publish', section: 'posts', title: 'Publish',
-    body: 'Happy with it? Publish. Your post commits to your repo and GitHub Pages rebuilds your blog automatically.' },
+    body: 'Open Publish to review the checks, then choose Publish now to put the post on your website. Save draft to GitHub keeps it unpublished. Your website updates after its build finishes.' },
 ];
 
 // localStorage keys — namespaced like the existing helm.studio.* flags.
