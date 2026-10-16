@@ -1,6 +1,6 @@
-# Supplier confirmations ready to send
+# Supplier enquiries — sent 16 October 2026
 
-Prepared 16 October 2026. These are drafts; no message has been sent. They contain the service domain, plan and technical configuration, not customer records, keys, logs or attachments.
+The owner approved sending all three enquiries below, and their submission was verified. Supplier answers remain pending. Account screenshots, correspondence and detailed operational evidence are held separately from this public repository. The messages contain service configuration, not customer records or credentials.
 
 ## GitHub Support — processor agreement for personal Pro Actions
 

@@ -18,3 +18,6 @@ src/stt-worker.js
 # Cached multicolour emoji assets (staged into dist/ by scripts/stage-emoji.mjs,
 # fetched from a CDN at deploy time). Disposable, and far too big for git.
 vendor/emoji/
+
+# Private operator mailbox-routing evidence; keep out of public source.
+docs/readiness-20261015/cloud/forwarding-review.png

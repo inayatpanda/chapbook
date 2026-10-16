@@ -2,6 +2,8 @@
 
 The tested web workflows are deployed. This is a record of verified behavior and remaining account/device checks, not a promise that every possible feature and environment is issue-free.
 
+Latest deployment: Chapbook `b4becd6`, deploy `6ad192ca81c6ad87692ad51c`; Web CI passed. Atelier, the personal site and the synthetic launch site also deployed successfully. The published AI disclosure was checked in all six reading templates. Support-alias delivery and supplier-enquiry submission were verified; detailed account and cleanup evidence is kept in a private operator folder.
+
 ## Launch decision — retention and AI follow-up, 16 October
 
 **Cloud delivery, deletable storage and daily Chapbook retention are operational without the Mac. General public launch still has the specific outstanding items below.** Company identity details remain deferred at the owner's request.
@@ -42,7 +44,7 @@ Source revision `9df070e` and test-fixture follow-up `c956e64` are saved on `nat
 
 ## Cloud licence delivery — verified 15 October
 
-- Confirmed the correct Resend account is `inayatpanda1@gmail.com`; `send.rqai.co.uk` is verified. The existing sending-only key works. A restricted domain-list API response was initially misread as an invalid key; no unnecessary rotation was performed.
+- Confirmed the owner’s Resend account and verified `send.rqai.co.uk`. The existing sending-only key works. A restricted domain-list API response was initially misread as an invalid key; no unnecessary rotation was performed.
 - Migrated 41 existing licences and 16 products into an authenticated encrypted cloud ledger in the private sales repository. Cloud processing now owns fulfilment. Helm's existing timer imports support records and never competes to mint or email while the shared control is `cloud`.
 - Hosted trial, real Stripe sandbox Checkout, annual renewal advanced with a test clock, partial/full refunds, retry/idempotency and signed revocations passed. The partial refund retained access; the completed refund revoked the renewed key. Test subscriptions were cancelled.
 - Verified a genuine production trial through the public endpoint, Resend's **delivered** receipt, the shipped signature verifier and Helm's authenticated support ledger. The cloud ledger now contains 42 licences. The production receipt is `01a14155-0aba-7205-aa9c-e88e7bc654e5`; no key is included in this report.
