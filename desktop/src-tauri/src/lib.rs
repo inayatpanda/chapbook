@@ -5,6 +5,14 @@ fn browser_url(url: &tauri::Url) -> bool {
     && url.has_host() && url.username().is_empty() && url.password().is_none()
 }
 
+fn app_url(url: &tauri::Url) -> bool {
+  let origin = url.origin().ascii_serialization();
+  origin == "https://chapbook.rqai.co.uk"
+    || (url.scheme() == "tauri" && url.host_str() == Some("localhost"))
+    || matches!(origin.as_str(), "http://tauri.localhost" | "https://tauri.localhost")
+    || url.as_str() == "about:blank"
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -29,10 +37,13 @@ pub fn run() {
     // is unavailable on the custom-scheme origin, so copy buttons route through this plugin.
     .plugin(tauri_plugin_clipboard_manager::init())
     .setup(|app| {
-      let handle = app.handle().clone();
-      let navigation_handle = handle.clone();
+      let navigation_handle = app.handle().clone();
       let config = app.config().app.windows.first().ok_or("Missing main window configuration")?;
-      tauri::WebviewWindowBuilder::from_config(app, config)?
+      let window = tauri::WebviewWindowBuilder::from_config(app, config)?;
+      #[cfg(desktop)]
+      let window = {
+        let handle = app.handle().clone();
+        window
         .on_new_window(move |url, _| {
           if browser_url(&url) {
             if let Err(error) = handle.opener().open_url(url.as_str(), None::<&str>) {
@@ -41,11 +52,10 @@ pub fn run() {
           }
           tauri::webview::NewWindowResponse::Deny
         })
+      };
+      window
         .on_navigation(move |url| {
-          if url.origin().ascii_serialization() == "https://chapbook.rqai.co.uk"
-            || url.scheme() == "tauri" || url.as_str() == "about:blank" {
-            return true;
-          }
+          if app_url(url) { return true; }
           if browser_url(url) {
             if let Err(error) = navigation_handle.opener().open_url(url.as_str(), None::<&str>) {
               log::warn!("Could not open browser: {error}");
@@ -69,7 +79,16 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-  use super::browser_url;
+  use super::{browser_url, app_url};
+  #[test]
+  fn keeps_each_supported_app_origin_inside_the_window() {
+    for url in ["tauri://localhost/app/index.html", "http://tauri.localhost/app/index.html", "https://tauri.localhost/app/index.html", "https://chapbook.rqai.co.uk/app/", "about:blank"] {
+      assert!(app_url(&url.parse().unwrap()));
+    }
+    for url in ["https://github.com/login/device", "http://tauri.localhost.example.com/", "tauri://example.com/", "http://localhost:8000/", "https://chapbook.rqai.co.uk.example.com/"] {
+      assert!(!app_url(&url.parse().unwrap()));
+    }
+  }
   #[test]
   fn opens_web_links_without_allowing_local_schemes_or_embedded_credentials() {
     for url in ["https://github.com/login/device", "https://example.com/post", "http://localhost:8080/"] {
