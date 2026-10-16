@@ -2,8 +2,8 @@
 // Runs AFTER `npm run build` (which wipes dist/) and BEFORE `netlify deploy`
 // — see the deploy:draft / deploy:prod scripts in package.json.
 //
-// Source of truth: the newest `desktop-v*` GitHub release on this repo (drafts
-// included — CI publishes drafts; the notarized mac DMG is uploaded there too).
+// Source of truth: the newest published stable `desktop-v*` GitHub release.
+// An explicit CHAPBOOK_DESKTOP_TAG may stage a draft for release validation.
 // Assets are fetched via `gh api` (works for draft releases, unlike plain
 // `gh release download`), renamed to STABLE filenames the page links to, and
 // described in downloads/manifest.json (version + size + sha-256) which the
@@ -29,18 +29,18 @@ const WANTED = [
 
 const gh = (args, opts = {}) => execFileSync('gh', args, { encoding: 'utf8', ...opts });
 
-// Newest desktop-v* release, drafts included (created_at from the API, so this
+// Newest published desktop-v* release (published_at from the API, so this
 // script stays clock-free and deterministic for a given release state).
 const releases = JSON.parse(gh(['api', `repos/${REPO}/releases`]));
 const rel = releases
-  .filter((r) => r.tag_name?.startsWith('desktop-v'))
-  .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))[0];
-if (!rel) {
-  console.error('stage-installers: no desktop-v* release found on', REPO);
+  .filter((r) => r.tag_name?.startsWith('desktop-v') && !r.draft && !r.prerelease)
+  .sort((a, b) => (a.published_at < b.published_at ? 1 : -1))[0];
+if (!rel && !process.env.CHAPBOOK_DESKTOP_TAG) {
+  console.error('stage-installers: no published desktop-v* release found on', REPO);
   process.exit(1);
 }
-const tag = process.env.CHAPBOOK_DESKTOP_TAG || rel.tag_name;
-const release = tag === rel.tag_name ? rel : releases.find((r) => r.tag_name === tag);
+const tag = process.env.CHAPBOOK_DESKTOP_TAG || rel?.tag_name;
+const release = tag === rel?.tag_name ? rel : releases.find((r) => r.tag_name === tag);
 if (!release) {
   console.error(`stage-installers: release ${tag} not found on`, REPO);
   process.exit(1);
