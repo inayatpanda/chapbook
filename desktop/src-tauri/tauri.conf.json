@@ -11,6 +11,7 @@
     "windows": [
       {
         "label": "main",
+        "create": false,
         "title": "Chapbook",
         "url": "https://chapbook.rqai.co.uk/app",
         "width": 1200,

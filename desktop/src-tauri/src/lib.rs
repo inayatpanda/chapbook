@@ -1,11 +1,17 @@
+use tauri_plugin_opener::OpenerExt;
+
+fn browser_url(url: &tauri::Url) -> bool {
+  matches!(url.scheme(), "http" | "https")
+    && url.has_host() && url.username().is_empty() && url.password().is_none()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
-    // Opens external http(s) links (onboarding "Create one", the device-flow "Open GitHub",
-    // etc.) in the system browser — the webview itself has no browser and Tauri blocks
-    // external navigation. The plugin also injects a click interceptor for target="_blank"
-    // links; the app adds a native-only delegated interceptor (src/app.js) for full coverage.
-    .plugin(tauri_plugin_opener::init())
+    // The hosted editor has no remote IPC capability. Do not inject the plugin's
+    // click handler: it cancels links before invoking an IPC command the page
+    // cannot use. Desktop new-window handling below opens ordinary web links.
+    .plugin(tauri_plugin_opener::Builder::new().open_js_links_on_click(false).build())
     // Native-only fetch bridge (frontend: src/lib/nativeFetch.js). The WKWebView custom-scheme
     // origin (tauri://localhost) cannot complete webview `fetch()` to remote hosts, so the app
     // routes external API calls (GitHub, the AI providers, the device-flow relay) through this
@@ -23,6 +29,31 @@ pub fn run() {
     // is unavailable on the custom-scheme origin, so copy buttons route through this plugin.
     .plugin(tauri_plugin_clipboard_manager::init())
     .setup(|app| {
+      let handle = app.handle().clone();
+      let navigation_handle = handle.clone();
+      let config = app.config().app.windows.first().ok_or("Missing main window configuration")?;
+      tauri::WebviewWindowBuilder::from_config(app, config)?
+        .on_new_window(move |url, _| {
+          if browser_url(&url) {
+            if let Err(error) = handle.opener().open_url(url.as_str(), None::<&str>) {
+              log::warn!("Could not open browser: {error}");
+            }
+          }
+          tauri::webview::NewWindowResponse::Deny
+        })
+        .on_navigation(move |url| {
+          if url.origin().ascii_serialization() == "https://chapbook.rqai.co.uk"
+            || url.scheme() == "tauri" || url.as_str() == "about:blank" {
+            return true;
+          }
+          if browser_url(url) {
+            if let Err(error) = navigation_handle.opener().open_url(url.as_str(), None::<&str>) {
+              log::warn!("Could not open browser: {error}");
+            }
+          }
+          false
+        })
+        .build()?;
       if cfg!(debug_assertions) {
         app.handle().plugin(
           tauri_plugin_log::Builder::default()
@@ -34,4 +65,18 @@ pub fn run() {
     })
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+  use super::browser_url;
+  #[test]
+  fn opens_web_links_without_allowing_local_schemes_or_embedded_credentials() {
+    for url in ["https://github.com/login/device", "https://example.com/post", "http://localhost:8080/"] {
+      assert!(browser_url(&url.parse().unwrap()));
+    }
+    for url in ["file:///etc/passwd", "javascript:alert(1)", "data:text/html,test", "https://name:secret@example.com/"] {
+      assert!(!browser_url(&url.parse().unwrap()));
+    }
+  }
 }
