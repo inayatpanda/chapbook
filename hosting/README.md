@@ -11,10 +11,14 @@ Deploy `dist/`, `hosting/`, `netlify/functions/`, `netlify/lib/`,
 `.env`, `.git`, operator records, local databases or test credentials.
 
 Use Hostinger **Web Apps / Node.js**, not the PHP/HTML website importer. The
-deployment entry is `hosting/server.mjs`; `npm start` runs it. Use Node 24 and the
+deployment entry is **`hosting/start.mjs`**; `npm start` runs it. Use Node 24 and the
 host-provided `PORT`. The server serves only `dist/` and retains the existing
 `/.netlify/functions/...` URLs so the app and worker do not need a simultaneous
 route change.
+
+Hostinger imports the entry through its own launcher, so a `process.argv[1]` or
+`require.main` check will not start the application. `start.mjs` starts explicitly;
+`server.mjs` remains importable for tests without opening a listener.
 
 For the initial public preview use **`hosting/preview.mjs`** instead. This entry
 always disables account services, private records, trial requests and payment

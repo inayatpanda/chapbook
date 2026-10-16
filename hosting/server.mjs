@@ -88,10 +88,15 @@ export async function createApp({ root = resolve('dist'), preview = process.env.
   });
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+export async function startApp() {
   await loadServiceEnv();
   process.env.CHAPBOOK_STORAGE='mysql';
   process.env.CHAPBOOK_MIGRATION_GUARD='1';
   const server=await createApp(); server.requestTimeout=30000;server.headersTimeout=15000;
-  server.listen(Number(process.env.PORT||3000),'0.0.0.0',()=>console.log('Chapbook HTTP server ready'));
+  await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(Number(process.env.PORT||3000),'0.0.0.0',resolve);});
+  console.log('Chapbook HTTP server ready');
+  return server;
+}
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  await startApp();
 }
