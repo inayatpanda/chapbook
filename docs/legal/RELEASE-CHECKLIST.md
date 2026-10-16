@@ -12,6 +12,7 @@
 - [x] New GitHub Actions logs expire after seven days. Published retention periods distinguish provider backups and lawful exceptions.
 - [x] Figure/interactive insertion, library save, reopening and parameter rebuild retain technical AI origin; ordinary manual content stays unmarked. Image bytes/MIME and published disclosure tested.
 - [x] Support alias created with owner permission; existing Hostinger/Gmail copies disclosed.
+- [x] Automatic Gmail forwarding removed with owner approval; new support mail stays in Hostinger, and historical copies remain in scope for review.
 - [x] Supplier documents reviewed; GitHub (#4864841) and Netlify enquiries submitted. Hostinger enquiry sent, human review requested.
 - [x] Earlier fresh-browser GitHub site creation, publishing, sandbox purchase/renewal/refund and delivery-retry checks passed.
 
@@ -20,7 +21,7 @@
 - [ ] Verified trader/controller company details — owner will supply later this week; do not re-request.
 - [ ] Qualified review of final consumer/privacy/AI terms and cancellation wording; documented ICO fee and EU representative assessments.
 - [ ] GitHub Pro processor coverage or a covered alternative; Netlify/Hostinger backup and individual-erasure confirmations.
-- [ ] Retired Git runtime history, historical job logs, other clones and provider cached-object cleanup completed and evidenced.
+- [ ] Provider cached-object cleanup and other device backup review completed; the approved private Git rewrite, known Mac clone cleanup and identified historical launch-log cleanup are complete.
 - [ ] Support correspondence closure dates and monthly 24-month review operated across Hostinger and Gmail; supplier terms for forwarded copies reviewed.
 - [ ] Provider/output-format-specific robust marking validation. App metadata is not a C2PA certificate or independent watermark detection. Plain-text copies and edited external assets can lose metadata.
 - [ ] Complete manual assistive-technology/zoom review and signed macOS/Windows installation smoke before claiming those distributions ready.
