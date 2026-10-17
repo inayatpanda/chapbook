@@ -24,14 +24,22 @@ jobs:
   installer:
     runs-on: windows-latest
     timeout-minutes: 15
+    # GitHub hides draft releases from tokens without push access. This is the
+    # same short-lived repo permission used by the desktop release workflow.
+    # The token is provided only to the download step, never to the app/test.
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag || 'desktop-v1.0.10' }}
+      EXPECTED_SHA256: ${{ inputs.installer_sha256 || '23fd8b2d359b22e31c9df1f7834e871a24d616c44224ab57e950fb868c6a9184' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Download the exact release candidate
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ inputs.release_tag || 'desktop-v1.0.10' }}
-          EXPECTED_SHA256: ${{ inputs.installer_sha256 || '23fd8b2d359b22e31c9df1f7834e871a24d616c44224ab57e950fb868c6a9184' }}
         run: |
           if ($env:RELEASE_TAG -notmatch '^desktop-v\d+\.\d+\.\d+$') { throw 'Unexpected release tag' }
           if ($env:EXPECTED_SHA256 -notmatch '^[a-fA-F0-9]{64}$') { throw 'Expected SHA-256 is required' }
@@ -39,6 +47,11 @@ jobs:
           $asset = "Chapbook_${version}_x64-setup.exe"
           gh release download $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --pattern $asset --dir candidate
           if ($LASTEXITCODE -ne 0) { throw 'Release download failed' }
+      - name: Install, start and uninstall without credentials
+        shell: pwsh
+        run: |
+          $version = $env:RELEASE_TAG.Substring('desktop-v'.Length)
+          $asset = "Chapbook_${version}_x64-setup.exe"
           ./scripts/windows-release-smoke.ps1 -Installer "candidate/$asset" -ExpectedSha256 $env:EXPECTED_SHA256 -ExpectedVersion $version
       - name: Preserve installation and startup evidence
         if: always()
