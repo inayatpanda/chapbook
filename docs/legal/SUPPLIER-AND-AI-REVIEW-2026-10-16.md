@@ -2,6 +2,14 @@
 
 Engineering review complete for the sources and configurations identified below. This is evidence of checks, not a certification or a substitute for resolving the listed contract and output-format gaps. Company identity details are deferred at the owner's request.
 
+Update, 18 October: the Hostinger website/Node hosting plan has moved to the UK;
+hPanel identifies Germany as its backup country. Chapbook's production domain
+and live licence records remain on Netlify pending the separate service cutover.
+The UK preview passed real MySQL and synthetic licence/privacy workflow checks.
+Expiry of old India/Singapore hosting copies and complete managed Node backup
+coverage still need written confirmation. This location change does not establish
+UK-only processing or resolve the outstanding supplier-contract questions.
+
 ## Actual supplier checks
 
 | Supplier / current use | Agreement and transfer evidence | Retention / verified configuration | Decision |

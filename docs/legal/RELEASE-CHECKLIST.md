@@ -1,10 +1,10 @@
-# Chapbook public-release checklist — 16 October 2026
+# Chapbook public-release checklist — updated 18 October 2026
 
 ## Implemented and verified
 
 - [x] Versioned public/in-app legal notices, mandatory 18+ confirmation and material-update re-consent tests.
 - [x] Separate Terms acceptance and Privacy/AI acknowledgement; AI notices and on-device versus browser speech disclosures.
-- [x] Chapbook build, 1,150 automated tests and production grep gate pass.
+- [x] Chapbook build, automated tests and production grep gate pass; Web CI for `e86f183` succeeded on 17 October.
 - [x] Atelier: 714 automated tests, release build and smoke pass; matching AI disclosure and origin preservation.
 - [x] Cloud delivery works without the Mac. Production and sandbox migrations verified; daily retention enabled and first production cycle succeeded.
 - [x] Private request verification, subject-only export, reviewed deletion, interrupted-operation recovery and cross-store closure evidence tested (32 worker tests).
@@ -24,10 +24,16 @@
 - [ ] Provider cached-object cleanup and other device backup review completed; the approved private Git rewrite, known Mac clone cleanup and identified historical launch-log cleanup are complete.
 - [ ] Support correspondence closure dates and monthly 24-month review operated across Hostinger and Gmail; supplier terms for forwarded copies reviewed.
 - [ ] Provider/output-format-specific robust marking validation. App metadata is not a C2PA certificate or independent watermark detection. Plain-text copies and edited external assets can lose metadata.
-- [ ] Complete manual assistive-technology/zoom review and signed macOS/Windows installation smoke before claiming those distributions ready.
+- [x] Signed, notarized universal macOS candidate installation/startup checks; Windows 1.0.10 install, process-startup and uninstall smoke on a clean hosted runner.
+- [x] Theme gallery keyboard filtering and actual 200% browser zoom checked without horizontal overflow.
+- [ ] Windows signing/SmartScreen behavior and interactive UI; manual assistive-technology review, Intel hardware and Android/iOS device checks before claiming every distribution ready. The Windows candidate remains unsigned; 1.0.10 is still a draft release.
+- [x] Hostinger plan moved to the UK, with Germany backups. Affected sites, DNS, private-file permissions and seven deployment jobs verified; all eleven paused workflows restored.
+- [x] UK MySQL concurrency, signed storage requests, encrypted migration rehearsal and seven synthetic licence/refund/retention/rights workflows passed. Synthetic email was captured locally, not sent.
+- [x] Existing queue and webhook credentials verified and installed privately; live startup now rejects masked credential exports.
+- [ ] Separate Chapbook production cutover: approval, source write fencing, final encrypted snapshot/import/reconciliation, domain/TLS/proxy verification and real delivery check. The site and live licence records remain on Netlify; the UK backend stays in preview.
 
 ## Current release boundary
 
 The legal revision and private storage endpoint are live. The service is technically operational, but this checklist does not declare a general public launch legally complete. See [supplier/AI review](SUPPLIER-AND-AI-REVIEW-2026-10-16.md), the private fulfilment `PRIVACY-RUNBOOK.md`, and the launch report for run/deployment evidence.
 
-The latest source release is `959d229`. Its Web CI and live disclosure checks passed. The support address passed a synthetic delivery check and all three approved supplier enquiries were submitted. Private case records, mailbox-routing decisions and historical-data cleanup evidence are maintained in the operator's private review, rather than published here.
+The latest verified hosting change is `e86f183` (Web CI run `39078132318`). The Windows installation smoke passed in run `39076569851`; this is not a full interactive device test. The support address passed a synthetic delivery check and all three approved supplier enquiries were submitted. Private case records, mailbox-routing decisions and historical-data cleanup evidence are maintained in the operator's private review, rather than published here.
