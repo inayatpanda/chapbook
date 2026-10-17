@@ -10,7 +10,7 @@ import privateStore from '../netlify/functions/fulfil-store.mjs';
 import metrics from '../netlify/functions/metrics.mjs';
 import { databaseConfigured, database } from './mysql-store.mjs';
 import { clientIp, trustProxy } from './client-ip.mjs';
-import { loadServiceEnv } from './service-env.mjs';
+import { loadServiceEnv, assertLiveServiceEnv } from './service-env.mjs';
 
 const functions = { 'gh-device': ghDevice, 'trial-request': trial, 'stripe-webhook': stripe, 'fulfil-store': privateStore, metrics };
 const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.json':'application/json', '.svg':'image/svg+xml', '.png':'image/png', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.webp':'image/webp', '.gif':'image/gif', '.ico':'image/x-icon', '.woff2':'font/woff2', '.wasm':'application/wasm', '.mp4':'video/mp4', '.webm':'video/webm', '.webmanifest':'application/manifest+json', '.xml':'application/xml', '.txt':'text/plain; charset=utf-8' };
@@ -90,6 +90,7 @@ export async function createApp({ root = resolve('dist'), preview = process.env.
 
 export async function startApp() {
   await loadServiceEnv();
+  assertLiveServiceEnv();
   process.env.CHAPBOOK_STORAGE='mysql';
   process.env.CHAPBOOK_MIGRATION_GUARD='1';
   const server=await createApp(); server.requestTimeout=30000;server.headersTimeout=15000;

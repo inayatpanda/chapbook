@@ -3,7 +3,20 @@ import assert from 'node:assert/strict';
 import {mkdtemp,mkdir,writeFile,chmod,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {loadServiceEnv} from './service-env.mjs';
+import {loadServiceEnv,assertLiveServiceEnv} from './service-env.mjs';
+
+test('live startup rejects missing, masked and malformed service credentials without revealing them',()=>{
+ const valid={GITHUB_QUEUE_TOKEN:'github_pat_'+ 'a'.repeat(60),STRIPE_WEBHOOK_SECRET:'whsec_'+ 'b'.repeat(32)};
+ assert.doesNotThrow(()=>assertLiveServiceEnv(valid));
+ for(const key of Object.keys(valid)) for(const value of [undefined,'********************','masked-production-value','invalid\nsecret']) {
+  assert.throws(()=>assertLiveServiceEnv({...valid,[key]:value}),error=>{
+   assert.equal(error.message,'Live account services require valid queue and webhook credentials');
+   return true;
+  });
+ }
+ assert.doesNotThrow(()=>assertLiveServiceEnv({CHAPBOOK_PREVIEW:'1'}));
+ assert.throws(()=>assertLiveServiceEnv({}),/require valid/);
+});
 
 test('service environment loads only a private file outside the public directory',async()=>{
  const dir=await mkdtemp(join(tmpdir(),'chapbook-env-')),root=join(dir,'dist'),file=join(dir,'private.env');
