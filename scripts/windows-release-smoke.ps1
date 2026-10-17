@@ -32,12 +32,16 @@ try {
     $install = Start-Process -FilePath $installerPath -ArgumentList "/S /D=$installPath" -PassThru
     if (-not $install.WaitForExit(180000)) { throw 'Installer timed out' }
     if ($install.ExitCode -ne 0) { throw "Installer exited $($install.ExitCode)" }
-    $exe = Join-Path $installPath 'Chapbook.exe'
-    if (-not (Test-Path $exe)) { throw 'Installed executable is missing' }
+    # Tauri's product name and Cargo binary name need not match (this package's
+    # binary is app.exe). Identify the installed program, not a guessed filename.
+    $programs = @(Get-ChildItem $installPath -Filter '*.exe' -File | Where-Object Name -NotMatch '^uninstall')
+    if ($programs.Count -ne 1) { throw 'Expected one installed application executable' }
+    $exe = $programs[0].FullName
     $versionInfo = (Get-Item $exe).VersionInfo
     if ($versionInfo.ProductVersion -notlike "$ExpectedVersion*") { throw 'Installed product version mismatch' }
     $evidence.checks.install = 'pass'
     $evidence.installedProductVersion = $versionInfo.ProductVersion
+    $evidence.installedExecutable = $programs[0].Name
     $evidence.installedFileCount = @(Get-ChildItem $installPath -Recurse -File).Count
     $evidence.installedBytes = (Get-ChildItem $installPath -Recurse -File | Measure-Object Length -Sum).Sum
     if ($evidence.installedBytes -lt 80000000) { throw 'Unexpectedly small bundle; verify packaged local assets/model' }
@@ -63,7 +67,7 @@ try {
             $remove = Start-Process -FilePath $uninstaller -ArgumentList "/S _?=$installPath" -PassThru
             if (-not $remove.WaitForExit(120000)) { throw 'Uninstaller timed out' }
             if ($remove.ExitCode -ne 0) { throw "Uninstaller exited $($remove.ExitCode)" }
-            if (Test-Path (Join-Path $installPath 'Chapbook.exe')) { throw 'Application remained after uninstall' }
+            if ($exe -and (Test-Path $exe)) { throw 'Application remained after uninstall' }
             $evidence.checks.uninstall = 'pass'
         } elseif ($evidence.checks.install -eq 'pass') {
             throw 'Installed uninstaller is missing'
