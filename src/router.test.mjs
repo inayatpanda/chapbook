@@ -188,3 +188,20 @@ test('thread turn: recentReactions in the body reaches the system prompt', async
   assert.match(calls[0].system, /lean toward what the author liked/i);
   assert.match(calls[0].system, /open with the storm/);
 });
+
+// Native regression: an autosaved, never-published post was absent from every list.
+test('local draft recovery lists autosaves offline, omits provisional slots and drops published records', async () => {
+  const { memoryBackend } = await import('./seams/storage.js');
+  const storage = memoryBackend();
+  const posts = { listPosts: async () => { throw Error('offline'); }, publishBlocks: async () => ({commit:'synthetic'}) };
+  const {api} = makeRouter({storage, posts});
+  await storage.put('blockdrafts', {id:'older', meta:{title:'Older draft'}, savedAt:'2026-10-17', doc:{blocks:[]}});
+  await storage.put('blockdrafts', {id:'newer', meta:{title:'<img src=x onerror=alert(1)>'}, savedAt:'2026-10-18', doc:{blocks:[]}});
+  await storage.put('blockdrafts', {id:'__untitled__', meta:{}, doc:{blocks:[]}});
+  const listed = await api('/local-drafts');
+  assert.deepEqual(listed.map(d => d.slug), ['newer','older']);
+  assert.equal(listed[0].title, '<img src=x onerror=alert(1)>');
+  assert.equal(listed[0].doc, undefined);
+  await api('/posts/newer/publish', {method:'POST',body:JSON.stringify({doc:{blocks:[]},meta:{}})});
+  assert.deepEqual((await api('/local-drafts')).map(d => d.slug), ['older']);
+});

@@ -35,7 +35,7 @@
 - [x] Matching-commit public release gate passed all 12 checks, with zero failures/skips (run `39102389097`); 1,163 local tests passed. Pretty-URL handling matches the original site.
 - [x] Final notice version `2026-10-18`, service worker `chapbook-ae0d2563`, app and health responses verified at the UK origin.
 - [x] Final release run `39103185563` succeeded: 1,163 tests, all 16 authenticated activation checks, and all 12 public gate checks with zero failures/skips. Browser fixtures were corrected to the deployed notice version; no further runtime change was needed.
-- [ ] Some local resolver caches still return the retired Netlify CNAME; authoritative DNS and independent Google/Cloudflare resolution already point to Hostinger.
+- [x] DNS propagation confirmed on 18 October at 20:03 UTC: the Mac resolver, Cloudflare and Google resolve Hostinger; normal HTTPS `/healthz` returns ready/storage ready without an origin override.
 
 ## Current release boundary
 

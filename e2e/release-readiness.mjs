@@ -177,6 +177,22 @@ try {
     assert.equal((await api('/posts/readiness/blocks')).doc.blocks[0].html,doc.blocks[0].html);
     assert.equal((await api('/posts/readiness/versions')).versions[0].label,'First version');
   });
+  await check('local draft is visible in Write and Posts after reload, including when GitHub fails',async()=>{
+    await page.evaluate(()=>goSection('write'));
+    await page.locator('#writeLocalDrafts').getByRole('button',{name:/Readiness/}).waitFor();
+    await page.locator('#writeLocalDrafts').getByRole('button',{name:/Readiness/}).click();
+    await page.waitForFunction(()=>document.querySelector('#editorTitle')?.value==='Readiness');
+    await page.reload();await page.locator('#app').waitFor({state:'visible'});
+    const offline=route=>route.abort();
+    await context.route('https://api.github.com/**',offline);
+    try{
+      await page.evaluate(()=>goSection('posts'));
+      const resume=page.locator('#postsLocalDrafts').getByRole('button',{name:/Readiness/});
+      await resume.waitFor(); await resume.click();
+      await page.waitForFunction(()=>document.querySelector('#editorTitle')?.value==='Readiness');
+      assert.equal((await api('/posts/readiness/blocks')).doc.blocks[0].html,doc.blocks[0].html);
+    }finally{await context.unroute('https://api.github.com/**',offline);}
+  });
   await check('chat thread persists in IndexedDB',async()=>{
     await api('/thread/readiness',{mode:'chat',turns:[]},'PUT');
     assert.ok(await api('/thread/readiness'));
@@ -210,7 +226,7 @@ try {
   await check('draft backup downloads valid portable JSON without credentials',async()=>{
     await page.evaluate(()=>window.go('settings'));
     const download=page.waitForEvent('download');
-    await page.getByRole('button',{name:/Export drafts/}).click();
+    await page.locator('#v-settings').getByRole('button',{name:/Export drafts/}).click();
     const file=await download;const text=await readFile(await file.path(),'utf8');
     const data=JSON.parse(text);assert.equal(data.format,'chapbook-drafts');assert.ok(data.count>=2);
     assert.ok(data.stores.blockdrafts.length);assert.ok(!text.includes('fixture-token'));

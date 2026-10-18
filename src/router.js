@@ -162,6 +162,15 @@ export function makeRouter(deps) {
       );
     }
 
+    // Local autosaves must remain discoverable before the first GitHub commit,
+    // including when GitHub is offline. Return only listing metadata here.
+    if (a === 'local-drafts' && !b && method === 'GET') {
+      return (await storage.all('blockdrafts'))
+        .filter(draft => draft.id && draft.id !== '__untitled__')
+        .map(draft => ({ slug: draft.id, title: draft.meta?.title || draft.id, savedAt: draft.savedAt || '' }))
+        .sort((x, y) => y.savedAt.localeCompare(x.savedAt));
+    }
+
     // ---- posts (github seam) ----
     if (a === 'posts' && !b && method === 'GET') return posts.listPosts();
     if (a === 'topics') return posts.getTopics();

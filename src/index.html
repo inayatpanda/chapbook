@@ -3422,6 +3422,10 @@
     .legal-sheet.surface--sheet{width:min(680px,92vw);border-radius:var(--surface-radius);
       border-bottom:1px solid var(--line)}
   }
+/* Local recovery links stay readable at phone and magnified widths. */
+.local-draft-row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.5rem 1rem;width:100%;text-align:left;margin:.6rem 0;padding:1rem;cursor:pointer;color:var(--ink);font:inherit}
+.local-draft-row strong{overflow-wrap:anywhere;min-width:0}
+#writeLocalDrafts,#postsLocalDrafts{margin:1.5rem 0 2rem}
 </style>
 <link rel="stylesheet" href="/premium.css" />
 <!-- Baked-in licence verify key (hex Ed25519 public key). Patched by `npm run licence:init`
@@ -3557,6 +3561,7 @@
     <!-- P3c: recoverable titleless draft. Populated by refreshUntitledRecovery() when a
          body-first post was autosaved under the provisional slug; hidden otherwise. -->
     <div id="untitledRecovery" hidden></div>
+    <section id="writeLocalDrafts" aria-label="Saved on this device" hidden></section>
     <div class="btn-row" style="margin-bottom:1.25rem">
       <button class="btn" type="button" onclick="openNewPost()">＋ Start a new post</button>
       <!-- Goblin idea-spark lives in Write: it throws blog-post ideas at you when
@@ -3729,6 +3734,7 @@
       <button type="button" data-view="calendar" role="tab" aria-selected="false">Calendar</button>
     </div>
     <!-- LIST view (the original list + its controls) -->
+    <section id="postsLocalDrafts" aria-label="Saved on this device" hidden></section>
     <div id="postsListWrap">
     <input id="postSearch" class="pm-search" type="search" placeholder="Search title, slug or topic…" autocomplete="off" />
     <div class="pm-controls">
@@ -7693,7 +7699,39 @@ function setRowDeleting(row,btn){
 function _postsCacheKey(){ try{ const g=window.__studioConfig&&window.__studioConfig.getGithub&&window.__studioConfig.getGithub(); return g?('chapbook.posts.v1.'+(g.owner||'')+'/'+(g.repo||'')+'/'+(g.branch||'')):null; }catch{ return null; } }
 function _readPostsCache(){ try{ const k=_postsCacheKey(); if(!k) return null; const raw=localStorage.getItem(k); const arr=raw?JSON.parse(raw):null; return Array.isArray(arr)?arr:null; }catch{ return null; } }
 function _writePostsCache(list){ try{ const k=_postsCacheKey(); if(k&&Array.isArray(list)) localStorage.setItem(k, JSON.stringify(list)); }catch{} }
+// Autosaves are local records, separate from the GitHub post listing. Keep a
+// direct recovery route in both Write and Posts; GitHub failures cannot hide it.
+async function refreshLocalDrafts(){
+  const hosts = [$('writeLocalDrafts'), $('postsLocalDrafts')].filter(Boolean);
+  if(!hosts.length) return;
+  try{
+    const drafts = await api('/local-drafts');
+    for(const host of hosts){
+      host.replaceChildren(); host.hidden = !drafts.length;
+      if(!drafts.length) continue;
+      const heading = document.createElement('h2');
+      heading.textContent = 'Saved on this device'; host.append(heading);
+      const note = document.createElement('p'); note.className = 'sub';
+      note.textContent = 'Unpublished drafts and local edits. Open one to continue writing or send it to your website.';
+      host.append(note);
+      for(const draft of drafts){
+        const row = document.createElement('button'); row.type = 'button'; row.className = 'draftItem local-draft-row';
+        const title = document.createElement('strong'); title.textContent = draft.title;
+        const when = document.createElement('span'); when.className = 'sub';
+        when.textContent = draft.savedAt ? 'Saved '+relTime(draft.savedAt) : 'Saved locally';
+        row.append(title,when); row.addEventListener('click',()=>openBlockEditor(draft.slug)); host.append(row);
+      }
+    }
+  }catch{
+    for(const host of hosts){
+      host.hidden=false; host.replaceChildren();
+      const retry=document.createElement('button'); retry.type='button'; retry.className='btn ghost';
+      retry.textContent='Could not read local drafts — retry'; retry.addEventListener('click',refreshLocalDrafts); host.append(retry);
+    }
+  }
+}
 async function loadPosts(){
+  refreshLocalDrafts();
   const list=$('postsList');
   // Instant paint from the cache, THEN refresh in the background. The refreshed result is the
   // true repo state and overwrites the cache — so correctness is preserved; the cache only
@@ -14250,6 +14288,7 @@ window.openUntitledDraft = openUntitledDraft;
 /* Surface (or hide) the titleless-draft recovery card on the New-post landing.
    Called on boot into #v-newpost (enterNewPost) and after any provisional change. */
 async function refreshUntitledRecovery(){
+  refreshLocalDrafts();
   const host = $('untitledRecovery'); if(!host) return;
   let saved = null;
   try{ saved = await api('/posts/'+PROVISIONAL_SLUG+'/blocks'); }catch{ saved = null; }
