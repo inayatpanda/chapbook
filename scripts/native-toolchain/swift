@@ -1,0 +1,10 @@
+#!/bin/sh
+# swift-rs 1.0.7 passes iOS target flags to Swift directly. Xcode 27's new
+# default backend overrides them with the host target; scope the legacy backend
+# to this project's iOS build, without modifying Xcode or the Cargo registry.
+SWIFT_REAL=$(xcrun --find swift)
+if [ "$1" = build ]; then
+  shift
+  exec "$SWIFT_REAL" build --build-system native "$@"
+fi
+exec "$SWIFT_REAL" "$@"

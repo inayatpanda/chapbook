@@ -17,6 +17,19 @@
 -->
 <plist version="1.0">
 <dict>
+	<!-- iOS 27 validates this static configuration before calling Tao's delegate. -->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key><true/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array><dict>
+				<key>UISceneConfigurationName</key><string>TaoScene</string>
+				<key>UISceneDelegateClassName</key><string>TaoSceneDelegate</string>
+			</dict></array>
+		</dict>
+	</dict>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Chapbook uses the microphone for on-device dictation. Audio is processed on this device and never uploaded.</string>
 	<key>NSCameraUsageDescription</key>

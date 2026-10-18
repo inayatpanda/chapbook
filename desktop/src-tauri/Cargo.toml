@@ -33,3 +33,7 @@ tauri-plugin-fs = "2"
 # Native "Copy" support: navigator.clipboard.writeText is unavailable on the tauri:// origin,
 # so the copy shim (src/app.js installNativeClipboardShim) routes through this plugin.
 tauri-plugin-clipboard-manager = "2"
+
+[patch.crates-io]
+# Upstream iOS scene lifetime fix, isolated from unrelated Tao API changes.
+tao = { path = "../vendor/tao" }
