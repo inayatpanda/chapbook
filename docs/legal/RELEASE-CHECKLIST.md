@@ -24,7 +24,7 @@
 - [ ] Provider cached-object cleanup and other device backup review completed; the approved private Git rewrite, known Mac clone cleanup and identified historical launch-log cleanup are complete.
 - [ ] Support correspondence closure dates and monthly 24-month review operated across Hostinger and Gmail; supplier terms for forwarded copies reviewed.
 - [ ] Provider/output-format-specific robust marking validation. App metadata is not a C2PA certificate or independent watermark detection. Plain-text copies and edited external assets can lose metadata.
-- [x] Signed, notarized universal macOS candidate installation/startup checks; Windows 1.0.12 install, process-startup and uninstall smoke on a clean hosted runner.
+- [x] Signed, notarized universal macOS candidate installation/startup checks; Windows 1.0.13 install, process-startup and uninstall smoke on a clean hosted runner.
 - [x] Theme gallery keyboard filtering and actual 200% browser zoom checked without horizontal overflow.
 - [ ] Windows signing/SmartScreen behavior and interactive UI; manual assistive-technology review, Intel hardware and Android/iOS device checks before claiming every distribution ready. The Windows candidate remains unsigned; 1.0.13 is still a draft release; public installers remain 1.0.9.
 - [x] Hostinger plan moved to the UK, with Germany backups. Affected sites, DNS, private-file permissions and seven deployment jobs verified; all eleven paused workflows restored.
@@ -39,12 +39,13 @@
 
 - [x] Saved local drafts are discoverable and reopenable in Chapbook and Atelier; 251 browser checks pass for each, including offline reload and GitHub failure. Helm’s matching authenticated route and 1,362 checks pass.
 - [x] Mac native keyboard entry, backup export/import and readable consent checked in 1.0.11. Android 1.0.12 upgrade retains the licence; iOS 1.0.12 launches with the iOS 27 scene fix.
-- [ ] Final 1.0.13 native preview, draft-recovery and mobile sign-in/editor checks; publish updated installers only after validation.
+- [x] Final signed/notarized universal Mac 1.0.13 launch, draft recovery, preview and retained settings verified. Actual native synthetic draft save → publish → public page passed; Windows 1.0.13 install/start/uninstall passed.
+- [ ] Android GitHub authorization and iOS activation/editor walkthroughs need owner interaction. Both 1.0.13 builds are installed and launch; updated installers remain a draft until the remaining validation is resolved.
 
 ## Current release boundary
 
 The legal revision and private storage endpoint are live. The service is technically operational, but this checklist does not declare a general public launch legally complete. See [supplier/AI review](SUPPLIER-AND-AI-REVIEW-2026-10-16.md), the private fulfilment `PRIVACY-RUNBOOK.md`, and the launch report for run/deployment evidence.
 
-The migrated backend and route fix are `785def1` (Web CI and all public checks passed in run `39102389097`); the hosting notice and draft-recovery source `249d0c5` are deployed (all 12 public gate checks pass). Production trial run `39102622954` and Resend delivery were verified after migration, with zero errors and an empty queue. The Windows 1.0.12 installation smoke passed in run `39165104298`; this is not a full interactive device test. The support address passed a synthetic delivery check and all three approved supplier enquiries were submitted. Private case records, mailbox-routing decisions and historical-data cleanup evidence are maintained in the operator's private review, rather than published here.
+The migrated backend and route fix are `785def1` (Web CI and all public checks passed in run `39102389097`); the hosting notice and draft-recovery source `249d0c5` are deployed (all 12 public gate checks pass). Production trial run `39102622954` and Resend delivery were verified after migration, with zero errors and an empty queue. The Windows 1.0.13 installation smoke passed in run `39167122820`; this is not a full interactive device test. The support address passed a synthetic delivery check and all three approved supplier enquiries were submitted. Private case records, mailbox-routing decisions and historical-data cleanup evidence are maintained in the operator's private review, rather than published here.
 
 The owner confirmed on 18 October that Chapbook has no users yet. This is first-launch preparation; preserved licence and test records must not be described as evidence of an existing Chapbook customer base.
