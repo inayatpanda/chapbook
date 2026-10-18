@@ -64,6 +64,14 @@ export async function createApp({ root = resolve('dist'), preview = process.env.
       if(file!==base && !file.startsWith(base+sep)) return respond(404,'Not found');
       let info;
       try {info=await stat(file);} catch { if(!extname(file)){file+='.html';info=await stat(file);}else throw Error('not found'); }
+      // Match the existing pretty URLs when a page and its asset directory
+      // share a name (themes.html and themes/). Keep real directory redirects.
+      if (info.isDirectory() && !path.endsWith('/')) {
+        try {
+          const page = await stat(file+'.html');
+          if (page.isFile()) { file+='.html'; info=page; }
+        } catch { /* No sibling page: use the directory index below. */ }
+      }
       if(info.isDirectory()) {
         if(!path.endsWith('/')) {res.writeHead(308,{Location:path+'/'+url.search});res.end();return;}
         file=resolve(file,'index.html');info=await stat(file);

@@ -1,11 +1,26 @@
 # Hostinger deployment adapter
 
-This is a migration candidate, not the current production deployment. Production
-continues to use Netlify unless `CHAPBOOK_STORAGE=mysql` is explicitly selected.
+Chapbook production moved to Hostinger on 18 October 2026. The Node app and
+private MySQL records run on the UK hosting plan; hPanel identifies Germany as
+the backup country. The cloud licence-signing worker remains in GitHub Actions.
+The retired Netlify site is disabled and must not be re-enabled with stale data.
+
+The `blobs-v1` worker setting names the signed storage API contract; it does not
+select Netlify after this cutover. The production Node entry selects MySQL.
+
+Hostinger environment edits redeploy its last uploaded source archive. Upload a
+complete current package before relying on runtime fixes; SSH-only edits are not
+preserved by that operation. Keep `CHAPBOOK_SERVICE_ENV` outside deployment
+versions, update its absolute path after a domain rename, and retain mode 0600.
+Production uses `hosting/start.mjs` with `CHAPBOOK_PREVIEW=0`.
 
 ## Runtime
 
 Build the website with the existing production build and asset-staging steps.
+Run `npm run check`, `node scripts/assert-deployable.mjs`,
+`npm run stage:installers`, `npm run stage:stt`, and `npm run stage:emoji` before
+packaging. The old `deploy:draft` and `deploy:prod` commands now refuse to run,
+so they cannot accidentally publish stale data or consume Netlify credits.
 Deploy `dist/`, `hosting/`, `netlify/functions/`, `netlify/lib/`,
 `src/lib/licence-pubkey.js`, `netlify.toml`, and the package manifests. Do not upload
 `.env`, `.git`, operator records, local databases or test credentials.
@@ -117,7 +132,7 @@ rollback retention window.
 
 ## Cutover requirements
 
-Before pausing anything, deploy the migration guard with
+For a future guarded migration, before pausing anything deploy the migration guard with
 `CHAPBOOK_MIGRATION_GUARD=1` on Netlify. The production Node entry enables it
 automatically. The private control-store key `maintenance/cutover.json` is read
 fresh before each account, webhook or metrics operation. `{ "paused": true }`
@@ -125,6 +140,16 @@ returns retryable 503 responses without acknowledging a payment or writing a
 record. Missing state or `{ "paused": false }` allows normal operation; unreadable
 or malformed state fails closed. GitHub's stateless device relay stays available.
 There is no public pause/unlock endpoint.
+
+For the 18 October cutover, the old Netlify deployment could not be updated
+because of its credit limit. Its provider-level project disable was used instead:
+all 101 recorded ready aliases were verified blocked, the three cloud workflows
+were paused, and in-flight handlers were drained for 65 seconds. All 59 snapshot
+records reconciled exactly in MySQL, including after a managed redeployment.
+The old project remains disabled; it is not a second writable source. Retired
+source and encrypted recovery copies require review after seven days (25 October
+2026). Rights requests received meanwhile must include those copies. Do not
+delete the Netlify account or other sites as part of this one-site retirement.
 
 Drain and pause cloud workers before setting the source flag. Verify the live
 routes return 503, wait for already-running handlers to finish, then capture the

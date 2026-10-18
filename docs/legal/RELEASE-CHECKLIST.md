@@ -30,7 +30,9 @@
 - [x] Hostinger plan moved to the UK, with Germany backups. Affected sites, DNS, private-file permissions and seven deployment jobs verified; all eleven paused workflows restored.
 - [x] UK MySQL concurrency, signed storage requests, encrypted migration rehearsal and seven synthetic licence/refund/retention/rights workflows passed. Synthetic email was captured locally, not sent.
 - [x] Existing queue and webhook credentials verified and installed privately; live startup now rejects masked credential exports.
-- [ ] Separate Chapbook production cutover: approval, source write fencing, final encrypted snapshot/import/reconciliation, domain/TLS/proxy verification and real delivery check. The site and live licence records remain on Netlify; the UK backend stays in preview.
+- [x] Owner-approved Chapbook production cutover: 101 Netlify aliases fenced, all 59 encrypted snapshot records reconciled in UK MySQL, domain/TLS/proxy checks passed and all three cloud workflows restored. Production run `39101984249` and sandbox run `39102038648` succeeded; Resend confirmed the sandbox test licence delivered to the RQAI mailbox. No queue/errors remained.
+- [ ] Retired Netlify source and encrypted migration recovery expiry review on 25 October; include them in any intervening rights request. Provider-held backups remain a separate confirmation.
+- [ ] DNS propagation and final matching-commit release gate after the pretty-URL compatibility fix. The first gate passed 10 checks; `/themes` needed direct serving and the old test commit expected the previous service-worker cache hash.
 
 ## Current release boundary
 

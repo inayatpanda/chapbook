@@ -144,15 +144,9 @@ test('build.mjs: bundles both stt entry points and ships them to dist root', () 
   assert.match(build, /'stt\.js', 'stt-worker\.js'/, 'both bundles must be copied to dist/');
 });
 
-test('package.json: stage-stt wired into both deploys + runnable standalone', () => {
+test('package.json: pinned STT assets remain independently stageable for Hostinger', () => {
   const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
   assert.equal(pkg.scripts['stage:stt'], 'node scripts/stage-stt.mjs');
-  for (const s of ['deploy:draft', 'deploy:prod']) {
-    assert.ok(pkg.scripts[s].includes('node scripts/stage-stt.mjs'),
-      `${s} must stage the STT assets after build`);
-    assert.ok(pkg.scripts[s].indexOf('stage-stt') < pkg.scripts[s].indexOf('netlify deploy'),
-      `${s} must stage BEFORE deploying`);
-  }
 });
 
 test('index.html: the inline module loads the engine from /stt.js', () => {
