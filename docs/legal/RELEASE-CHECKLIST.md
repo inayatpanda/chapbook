@@ -32,10 +32,13 @@
 - [x] Existing queue and webhook credentials verified and installed privately; live startup now rejects masked credential exports.
 - [x] Owner-approved Chapbook production cutover: 101 Netlify aliases fenced, all 59 encrypted snapshot records reconciled in UK MySQL, domain/TLS/proxy checks passed and all three cloud workflows restored. Production run `39101984249` and sandbox run `39102038648` succeeded; Resend confirmed the sandbox test licence delivered to the RQAI mailbox. No queue/errors remained.
 - [ ] Retired Netlify source and encrypted migration recovery expiry review on 25 October; include them in any intervening rights request. Provider-held backups remain a separate confirmation.
-- [ ] DNS propagation and final matching-commit release gate after the pretty-URL compatibility fix. The first gate passed 10 checks; `/themes` needed direct serving and the old test commit expected the previous service-worker cache hash.
+- [x] Matching-commit public release gate passed all 12 checks, with zero failures/skips (run `39102389097`); 1,163 local tests passed. Pretty-URL handling matches the original site.
+- [ ] Final notice-version release verification and local DNS cache expiry.
 
 ## Current release boundary
 
 The legal revision and private storage endpoint are live. The service is technically operational, but this checklist does not declare a general public launch legally complete. See [supplier/AI review](SUPPLIER-AND-AI-REVIEW-2026-10-16.md), the private fulfilment `PRIVACY-RUNBOOK.md`, and the launch report for run/deployment evidence.
 
-The latest verified hosting change is `e86f183` (Web CI run `39078132318`). The Windows installation smoke passed in run `39076569851`; this is not a full interactive device test. The support address passed a synthetic delivery check and all three approved supplier enquiries were submitted. Private case records, mailbox-routing decisions and historical-data cleanup evidence are maintained in the operator's private review, rather than published here.
+The migrated backend and route fix are `785def1` (Web CI and all public checks passed in run `39102389097`). The Windows installation smoke passed in run `39076569851`; this is not a full interactive device test. The support address passed a synthetic delivery check and all three approved supplier enquiries were submitted. Private case records, mailbox-routing decisions and historical-data cleanup evidence are maintained in the operator's private review, rather than published here.
+
+The owner confirmed on 18 October that Chapbook has no users yet. This is first-launch preparation; preserved licence and test records must not be described as evidence of an existing Chapbook customer base.
