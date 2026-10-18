@@ -278,6 +278,17 @@ try {
     await api('/posts/'+duplicate.slug,null,'DELETE');assert.ok(!gh.files.has(`src/content/blog/${duplicate.slug}.md`));
   });
   await check('preview preserves formatting',async()=>assert.match((await api('/posts/readiness/preview',{doc})).html,/<strong>formatting<\/strong>/));
+  await check('live preview displays the title and body inside its isolated frame',async()=>{
+    await page.evaluate(()=>window.startNewPost({version:1,blocks:[{id:'preview-body',type:'text',html:'<p>Preview content survives the frame boundary.</p>'}]}));
+    await page.locator('#editorTitle').fill('Preview check');
+    await page.locator('#previewBtn').click();
+    const iframe=page.locator('#previewBody iframe');
+    assert.equal(await iframe.getAttribute('sandbox'),'allow-scripts allow-popups');
+    const frame=page.frameLocator('#previewBody iframe');
+    await frame.getByRole('heading',{name:'Preview check',exact:true}).waitFor();
+    assert.match(await frame.locator('body').innerText(),/Preview content survives the frame boundary/);
+    await page.locator('#previewCloseBtn').click();
+  });
   await check('darkroom uploads photo and metadata to the selected post',async()=>{
     await page.evaluate(()=>window.openDarkroom());
     await page.locator('#dkPost option[value="readiness"]').waitFor({state:'attached'});

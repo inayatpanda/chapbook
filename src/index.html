@@ -13874,7 +13874,9 @@ async function openBlockEditor(slug){
     if(r.source === 'draft' && r.draftSavedAt){
       const draftT = Date.parse(r.draftSavedAt) || 0;
       const pubT = r.publishedAt ? (Date.parse(r.publishedAt) || 0) : 0;
-      if(!pubT || draftT > pubT){ offerDraftRecovery(slug, r.draftSavedAt); }
+      // A new/offline draft has no verified remote version to restore.
+      // Never offer a discard action that could erase its only saved copy.
+      if(pubT && draftT > pubT){ offerDraftRecovery(slug, r.draftSavedAt); }
     }
     return true;   // the post's doc/meta loaded — safe for callers to act on the editor state
   }catch(e){

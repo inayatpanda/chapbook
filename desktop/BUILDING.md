@@ -15,6 +15,8 @@ PATH="$(pwd)/../scripts/native-toolchain:$PATH" npm run tauri -- ios build \
 
 The process-scoped Swift wrapper selects SwiftPM's native backend. Xcode 27's default backend otherwise overrides the iOS flags passed by swift-rs with the Mac SDK. It does not modify Xcode or the shared Cargo registry.
 
+Before repeating a simulator build, move the previous `src-tauri/gen/apple/build/arm64-sim/Chapbook.app` into a dated recovery directory. Tauri otherwise can finish compiling the new archive but fail when moving it over the existing non-empty output bundle. Check the bundle version before installation; a rename error leaves the previous output in place. The newly compiled bundle is under `src-tauri/gen/apple/build/app_iOS.xcarchive/Products/Applications/Chapbook.app`.
+
 `src-tauri/Info.ios.plist` is the durable source of the scene configuration and camera, photo and microphone usage descriptions. Do not edit generated plist files. The scene manifest is required for launch when built with the iOS 27 SDK. The vendored Tao backport fixes the lifetime of the scene configuration returned to UIKit; see `vendor/tao/CHAPBOOK-PATCH.md` for the upstream change and removal condition.
 
 A successful build is not a successful launch. Install on a simulator, open the app, accept the approved test terms, and exercise activation, draft recovery and file operations. Physical-device checks and distribution signing remain separate checks.

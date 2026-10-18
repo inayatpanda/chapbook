@@ -10,14 +10,14 @@ const openStart = html.indexOf('async function openBlockEditor(');
 const openEnd = html.indexOf('window.openBlockEditor = openBlockEditor;', openStart);
 assert.ok(metaStart > 0 && metaEnd > metaStart && openEnd > openStart);
 
-async function open(result) {
+async function open(result, recovery = () => {}) {
   const fields = new Map();
   const c = vm.createContext({
     window: {}, VALID_TEMPLATES: ['observatory'],
     $: id => { if (!fields.has(id)) fields.set(id, {}); return fields.get(id); },
     chatRelease() {}, resetSessionWords() {}, setSaveState() {}, setAskMode() {},
     loadThread: async () => {}, go() {}, setMetaDescUI() {}, renderBlocks() {},
-    updateWordCount() {}, loadEditorSettings: async () => {}, offerDraftRecovery() {},
+    updateWordCount() {}, loadEditorSettings: async () => {}, offerDraftRecovery: recovery,
     api: async () => result,
     showError: e => { throw e; },
   });
@@ -50,3 +50,20 @@ test('legacy local edits of an existing public post retain its public status', a
   const loaded = await open({ source: 'draft', doc: { version: 1, blocks: [] }, data: { title: 'Existing post' }, publishedAt: '2026-10-16' });
   assert.equal(loaded.draft, false);
 });
+
+for (const [name, publishedAt, expectPrompt] of [
+  ['new local draft', null, false],
+  ['offline draft with unknown remote date', undefined, false],
+  ['invalid remote date', 'not-a-date', false],
+  ['newer local edits of a known remote post', '2026-10-17T09:00:00Z', true],
+  ['older local autosave', '2026-10-19T09:00:00Z', false],
+]) {
+  test(`${name} offers discard only when a remote version is known`, async () => {
+    const recoveries = [];
+    await open({ source: 'draft', data: { title: 'Saved work', draft: true },
+      doc: { version: 1, blocks: [{ id: 'a', type: 'text', html: 'The only saved copy.' }] },
+      draftSavedAt: '2026-10-18T09:00:00Z', publishedAt },
+      (...args) => recoveries.push(args));
+    assert.equal(recoveries.length, expectPrompt ? 1 : 0);
+  });
+}

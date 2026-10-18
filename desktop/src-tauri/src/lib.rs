@@ -14,7 +14,9 @@ fn app_url(url: &tauri::Url) -> bool {
   origin == "https://chapbook.rqai.co.uk"
     || (url.scheme() == "tauri" && url.host_str() == Some("localhost"))
     || matches!(origin.as_str(), "http://tauri.localhost" | "https://tauri.localhost")
-    || url.as_str() == "about:blank"
+    // WKWebView also sends sandboxed iframe documents through this callback.
+    // Keep previews inside their opaque-origin sandbox; they have no native IPC.
+    || matches!(url.as_str(), "about:blank" | "about:srcdoc")
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -86,10 +88,10 @@ mod tests {
   use super::{browser_url, app_url};
   #[test]
   fn keeps_each_supported_app_origin_inside_the_window() {
-    for url in ["tauri://localhost/app/index.html", "http://tauri.localhost/app/index.html", "https://tauri.localhost/app/index.html", "https://chapbook.rqai.co.uk/app/", "about:blank"] {
+    for url in ["tauri://localhost/app/index.html", "http://tauri.localhost/app/index.html", "https://tauri.localhost/app/index.html", "https://chapbook.rqai.co.uk/app/", "about:blank", "about:srcdoc"] {
       assert!(app_url(&url.parse().unwrap()));
     }
-    for url in ["https://github.com/login/device", "http://tauri.localhost.example.com/", "tauri://example.com/", "http://localhost:8000/", "https://chapbook.rqai.co.uk.example.com/"] {
+    for url in ["https://github.com/login/device", "http://tauri.localhost.example.com/", "tauri://example.com/", "http://localhost:8000/", "https://chapbook.rqai.co.uk.example.com/", "about:srcdoc.evil", "about:config", "data:text/html,test"] {
       assert!(!app_url(&url.parse().unwrap()));
     }
   }
