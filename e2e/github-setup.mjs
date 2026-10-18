@@ -47,7 +47,7 @@ async function scenario(name, run, options={}){
    if (window.top !== window) return;
    if(!localStorage.getItem('setup.seeded')){
     localStorage.setItem('helm.studio.licence',licence);
-    localStorage.setItem('chapbook.legalConsent.v1',JSON.stringify({version:'2026-10-16',termsAccepted:true,noticesAcknowledged:true,ageConfirmed:true,acceptedAt:new Date().toISOString()}));
+    localStorage.setItem('chapbook.legalConsent.v1',JSON.stringify({version:'2026-10-18',termsAccepted:true,noticesAcknowledged:true,ageConfirmed:true,acceptedAt:new Date().toISOString()}));
     localStorage.setItem('helm.studio.config.v1',JSON.stringify({ghOwner:'writer',ghRepo:'notebook',ghBranch:'main',ghToken:'original-token',ghLogin:'writer',ghAuthMethod:'device',profile:{name:'Writer'}}));
     localStorage.setItem('helm.studio.onboarded','1');localStorage.setItem('helm.studio.gettingStarted.dismissed','1');localStorage.setItem('setup.seeded','1');
    }

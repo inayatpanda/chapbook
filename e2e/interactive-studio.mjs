@@ -30,7 +30,7 @@ const context = await browser.newContext({ viewport: { width:1440, height:900 } 
 await context.route('https://api.github.com/user', route => route.fulfill({ status:200, contentType:'application/json', body:'{"login":"e2e"}' }));
 await context.addInitScript(({ licence }) => {
   localStorage.setItem('helm.studio.licence', licence);
-  localStorage.setItem('chapbook.legalConsent.v1', JSON.stringify({ version:'2026-10-16', termsAccepted:true, noticesAcknowledged:true, ageConfirmed:true, acceptedAt:new Date().toISOString() }));
+  localStorage.setItem('chapbook.legalConsent.v1', JSON.stringify({ version:'2026-10-18', termsAccepted:true, noticesAcknowledged:true, ageConfirmed:true, acceptedAt:new Date().toISOString() }));
   localStorage.setItem('helm.studio.config.v1', JSON.stringify({ ghOwner:'e2e', ghRepo:'chapbook-test', ghBranch:'main', ghToken:'test-token' }));
   localStorage.setItem('helm.studio.gettingStarted.dismissed', '1');
   localStorage.setItem('helm.studio.onboarded', '1');

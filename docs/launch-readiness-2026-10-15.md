@@ -1,8 +1,19 @@
-# Chapbook and Atelier launch verification — updated 16 October 2026
+# Chapbook and Atelier launch verification — updated 18 October 2026
 
 The tested web workflows are deployed. This is a record of verified behavior and remaining account/device checks, not a promise that every possible feature and environment is issue-free.
 
-Latest deployment: Chapbook `959d229`, deploy `6ad19a13d7260e894400be9a`; Web CI passed. Atelier, the personal site and the synthetic launch site also deployed successfully. The published AI disclosure was checked in all six reading templates. Support-alias delivery and supplier-enquiry submission were verified; detailed account and cleanup evidence is kept in a private operator folder.
+Latest web deployment: Chapbook `9e40967`, uploaded to the UK Hostinger service as `chapbook-hostinger-live-notice-20261018.zip` (18 October, 06:08 UTC). Public notice version `2026-10-18` explains UK hosting and Germany backups. The owner confirmed there are no Chapbook users yet; preserved production records are owner/test records, not evidence of an existing customer base. Earlier dated sections below retain their original test scope.
+
+## Production hosting cutover — completed 18 October
+
+- The approved whole-plan relocation to the UK completed first; affected sites and all eleven deployment workflows were restored. Chapbook's separate production migration then fenced 101 Netlify aliases and reconciled all 59 encrypted source records into UK MySQL before writes resumed.
+- The domain and TLS now serve Hostinger. Netlify remains disabled, and the old deploy commands refuse to publish there. Authoritative DNS plus independent Google/Cloudflare resolvers return Hostinger; some local resolver caches still return the old Netlify CNAME. Do not re-enable the stale source to work around propagation.
+- The signing key stays in GitHub Actions. Production worker `39102622954` processed the actual public trial request successfully; Resend confirmed delivery to the RQAI support mailbox, with zero errors and an empty queue. Sandbox worker `39102038648` delivered a synthetic licence. No live-money payment was made.
+- Signed API read/write/delete and expired-trial erasure passed in isolated verification run `39102324242`. The production retention plan preserves six other-product/unclassified records for review. The seven-day migration recovery window ends on 25 October and requires safe-removal review; provider backups remain separately tracked.
+- The migrated route fix passed all 12 public release checks with zero failures/skips in `39102389097`; 1,163 unit checks passed. The final notice build is under the matching release verification recorded in the checklist. Installer range downloads, protected paths, webhook signature verification and proxy spoof resistance passed.
+- The final activation test exposed stale expected notice dates in five browser fixtures; these were updated to the current version. This changed test setup/expectations, not the deployed app.
+
+Atelier, the personal site and synthetic launch sites retain their previously verified deployments. Company details, supplier answers, qualified legal review and remaining native/manual checks are still listed in [the release checklist](legal/RELEASE-CHECKLIST.md).
 
 ## Launch decision — retention and AI follow-up, 16 October
 
@@ -31,7 +42,7 @@ Evidence: [new site](readiness-20261015/cloud/fresh-site-created.jpg), [publicat
 ## Hosting and content ownership
 
 - Read-only account inspection confirmed Hostinger **Business**, expiring **13 September 2027**, and Netlify **credit-free / 300 credits**, next usage reset **24 October 2026**. Netlify's API exposes the 75% alert setting but did not provide the detailed usage total here. Official pricing charges 15 credits per successful production deploy; no exact allocation of the reported 75% to this work is claimed.
-- Hostinger Business supports Node.js. The personal site already deploys there. Moving Chapbook requires porting its four endpoints and Netlify Blobs counters, security headers, paths and deployment setup, then testing before any DNS cutover. **No hosting cutover has been performed.**
+- Hostinger Business supports Node.js. Chapbook now runs on its UK Node service with durable MySQL storage; the personal site also deploys there. The ported endpoints, counters, security headers, paths and migration were verified before the approved production cutover on 18 October. Earlier Netlify deployment identifiers are historical evidence.
 - Users' drafts stay in their browser; publication/uploads go directly to their GitHub repository or configured R2 account. Moving the shared Chapbook service does not make RQAI the host of every user's posts or media. Stripe, email and AI remain connected external services. The cloud licence worker can remain on GitHub Actions independently of the website host.
 
 ## Earlier legal revision evidence — 16 October
@@ -193,7 +204,7 @@ Raw credential-free results and screenshots are in [readiness evidence](readines
 
 - Core writing/publishing workflows are exercised in both products. This is not an exhaustive proof of identical behavior across every UI, server-only feature and native platform. Atelier’s owner backend, CV/apps and local video features remain intentional differences.
 - Fresh-browser activation, GitHub approval, site creation and first publication completed. Legal identity, retention/erasure, supplier/transfer and AI-marking work remain as listed above.
-- Windows/Android/iOS devices, OS installer execution, camera/microphone permission prompts and hardware capture were not tested on physical devices. Existing installer downloads and hashes were checked; signed native wrappers were not rebuilt. The user’s separate signing work was preserved.
+- The signed, notarized universal macOS 1.0.10 candidate was installed and opened; Windows installation/process/uninstall smoke passed on a clean hosted runner. Windows signing and interactive UI, manual assistive technology, Intel hardware and Android/iOS physical-device checks remain open. Release 1.0.10 remains a draft; public installers remain 1.0.9. The user’s separate signing work was preserved.
 - Customer-owned R2 accounts, booking/calendar accounts and merchant onboarding require each customer's own connected accounts and checks. Chapbook's own actual sandbox purchase/renewal/refund and production trial email delivery passed; a live-money purchase was deliberately not performed.
 - Third-party service uptime and future provider/model changes remain outside a one-time release check.
 

@@ -4,7 +4,7 @@
 
 - [x] Versioned public/in-app legal notices, mandatory 18+ confirmation and material-update re-consent tests.
 - [x] Separate Terms acceptance and Privacy/AI acknowledgement; AI notices and on-device versus browser speech disclosures.
-- [x] Chapbook build, automated tests and production grep gate pass; Web CI for `e86f183` succeeded on 17 October.
+- [x] Chapbook build, automated tests and production grep gate pass; 1,163 checks passed for the final notice source on 18 October.
 - [x] Atelier: 714 automated tests, release build and smoke pass; matching AI disclosure and origin preservation.
 - [x] Cloud delivery works without the Mac. Production and sandbox migrations verified; daily retention enabled and first production cycle succeeded.
 - [x] Private request verification, subject-only export, reviewed deletion, interrupted-operation recovery and cross-store closure evidence tested (32 worker tests).
@@ -33,12 +33,14 @@
 - [x] Owner-approved Chapbook production cutover: 101 Netlify aliases fenced, all 59 encrypted snapshot records reconciled in UK MySQL, domain/TLS/proxy checks passed and all three cloud workflows restored. Production run `39101984249` and sandbox run `39102038648` succeeded; Resend confirmed the sandbox test licence delivered to the RQAI mailbox. No queue/errors remained.
 - [ ] Retired Netlify source and encrypted migration recovery expiry review on 25 October; include them in any intervening rights request. Provider-held backups remain a separate confirmation.
 - [x] Matching-commit public release gate passed all 12 checks, with zero failures/skips (run `39102389097`); 1,163 local tests passed. Pretty-URL handling matches the original site.
-- [ ] Final notice-version release verification and local DNS cache expiry.
+- [x] Final notice version `2026-10-18`, service worker `chapbook-ae0d2563`, app and health responses verified at the UK origin.
+- [ ] Final authenticated browser/release gate rerun after correcting old notice-version expectations.
+- [ ] Some local resolver caches still return the retired Netlify CNAME; authoritative DNS and independent Google/Cloudflare resolution already point to Hostinger.
 
 ## Current release boundary
 
 The legal revision and private storage endpoint are live. The service is technically operational, but this checklist does not declare a general public launch legally complete. See [supplier/AI review](SUPPLIER-AND-AI-REVIEW-2026-10-16.md), the private fulfilment `PRIVACY-RUNBOOK.md`, and the launch report for run/deployment evidence.
 
-The migrated backend and route fix are `785def1` (Web CI and all public checks passed in run `39102389097`). The Windows installation smoke passed in run `39076569851`; this is not a full interactive device test. The support address passed a synthetic delivery check and all three approved supplier enquiries were submitted. Private case records, mailbox-routing decisions and historical-data cleanup evidence are maintained in the operator's private review, rather than published here.
+The migrated backend and route fix are `785def1` (Web CI and all public checks passed in run `39102389097`); final hosting notice `9e40967` is deployed. Production trial run `39102622954` and Resend delivery were verified after migration, with zero errors and an empty queue. The Windows installation smoke passed in run `39076569851`; this is not a full interactive device test. The support address passed a synthetic delivery check and all three approved supplier enquiries were submitted. Private case records, mailbox-routing decisions and historical-data cleanup evidence are maintained in the operator's private review, rather than published here.
 
 The owner confirmed on 18 October that Chapbook has no users yet. This is first-launch preparation; preserved licence and test records must not be described as evidence of an existing Chapbook customer base.

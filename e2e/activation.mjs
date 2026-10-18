@@ -124,7 +124,7 @@ console.log(`\nActivation E2E (test key ${TEST_PUBLIC_KEY_HEX.slice(0, 12)}…)\
     try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch { return null; }
   }, LEGAL_STORE);
   check('legal consent records the current version and three affirmative choices',
-    accepted?.version === '2026-10-16'
+    accepted?.version === '2026-10-18'
       && accepted?.termsAccepted === true
       && accepted?.noticesAcknowledged === true
       && accepted?.ageConfirmed === true
@@ -144,7 +144,7 @@ console.log(`\nActivation E2E (test key ${TEST_PUBLIC_KEY_HEX.slice(0, 12)}…)\
     await page.locator('#lcAccept').isDisabled());
   await acceptLegalConsent(page);
   const revisedVersion = await page.evaluate(key => JSON.parse(localStorage.getItem(key)).version, LEGAL_STORE);
-  check('renewed agreement replaces the previous policy version', revisedVersion === '2026-10-16');
+  check('renewed agreement replaces the previous policy version', revisedVersion === '2026-10-18');
   await ctx.close();
 }
 
