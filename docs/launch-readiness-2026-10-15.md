@@ -2,18 +2,28 @@
 
 The tested web workflows are deployed. This is a record of verified behavior and remaining account/device checks, not a promise that every possible feature and environment is issue-free.
 
-Latest web deployment: Chapbook `9e40967`, uploaded to the UK Hostinger service as `chapbook-hostinger-live-notice-20261018.zip` (18 October, 06:08 UTC). Public notice version `2026-10-18` explains UK hosting and Germany backups. The owner confirmed there are no Chapbook users yet; preserved production records are owner/test records, not evidence of an existing customer base. Earlier dated sections below retain their original test scope.
+Latest web deployment: Chapbook `249d0c5`, uploaded to the UK Hostinger service as `chapbook-hostinger-safe-recovery-20261018.zip` (18 October, 21:04 UTC). Public notice version `2026-10-18` explains UK hosting and Germany backups. The owner confirmed there are no Chapbook users yet; preserved production records are owner/test records, not evidence of an existing customer base. Earlier dated sections below retain their original test scope.
 
 ## Production hosting cutover — completed 18 October
 
 - The approved whole-plan relocation to the UK completed first; affected sites and all eleven deployment workflows were restored. Chapbook's separate production migration then fenced 101 Netlify aliases and reconciled all 59 encrypted source records into UK MySQL before writes resumed.
-- The domain and TLS now serve Hostinger. Netlify remains disabled, and the old deploy commands refuse to publish there. Authoritative DNS plus independent Google/Cloudflare resolvers return Hostinger; some local resolver caches still return the old Netlify CNAME. Do not re-enable the stale source to work around propagation.
+- The domain and TLS now serve Hostinger. Netlify remains disabled, and the old deploy commands refuse to publish there. Authoritative DNS, independent Google/Cloudflare resolvers and the Mac resolver return Hostinger. Normal HTTPS health checks pass without an origin override; the propagation check completed at 20:03 UTC on 18 October.
 - The signing key stays in GitHub Actions. Production worker `39102622954` processed the actual public trial request successfully; Resend confirmed delivery to the RQAI support mailbox, with zero errors and an empty queue. Sandbox worker `39102038648` delivered a synthetic licence. No live-money payment was made.
 - Signed API read/write/delete and expired-trial erasure passed in isolated verification run `39102324242`. The production retention plan preserves six other-product/unclassified records for review. The seven-day migration recovery window ends on 25 October and requires safe-removal review; provider backups remain separately tracked.
 - The migrated route fix passed all 12 public release checks with zero failures/skips in `39102389097`; 1,163 unit checks passed. The final notice build subsequently passed run `39103185563`: 1,163 tests, 16 authenticated activation checks and all 12 public gate checks, zero failures/skips. Installer range downloads, protected paths, webhook signature verification and proxy spoof resistance passed.
 - The final activation test exposed stale expected notice dates in five browser fixtures; these were updated to the current version. This changed test setup/expectations, not the deployed app.
 
 Atelier, the personal site and synthetic launch sites retain their previously verified deployments. Company details, supplier answers, qualified legal review and remaining native/manual checks are still listed in [the release checklist](legal/RELEASE-CHECKLIST.md).
+
+## Native and draft recovery follow-up — 18 October
+
+- Native testing found that newly saved block drafts were missing from the Write/Posts lists. Chapbook and Atelier now list “Saved on this device” drafts with safe titles and reopening controls. Helm provides the same metadata through an authenticated route. Offline reload and GitHub-failure recovery are covered by the browser suite.
+- Chapbook passed 1,169 unit checks and 251 browser checks. The deployed source passed all 12 public release checks, with zero failures/skips. The deployed guard also prevents offering to discard the sole local copy when no remote version is known.
+- Atelier passed 720 unit checks and 251 browser checks. Deployment `e424727` completed in Pages run `39165952715`; the live editor includes draft recovery. Helm source `8c55672` passed 1,362 checks, and `8af8649` synchronizes the matching draft-protection UI; its running protected draft route returned 401 without authentication and metadata-only results after authentication.
+- The Mac 1.0.11 candidate passed signing, notarization and universal-binary verification. Actual native keyboard entry, backup export and one-item backup import passed. Native zoom and readable light/dark consent are fixed. Version 1.0.12 passed signed/notarized universal-binary verification and reopening of both typed and imported drafts. Its actual preview test exposed a navigation handler rejecting `about:srcdoc`. Version 1.0.13 allows that internal document while preserving the sandbox, and includes the sole-copy draft guard; final native validation is in progress.
+- Windows 1.0.12 passed independently hashed installation, responding-process startup and uninstall in run `39165104298`. Its installer remains unsigned. This does not claim an interactive Windows or assistive-technology pass.
+- Android 1.0.12 was signed with the existing production certificate and installed as an upgrade; its owner licence persisted. iOS 1.0.12 compiled with Xcode 27 and launched successfully in an iOS 27 simulator after the scene-lifecycle fix. The owner-approved 18 October terms were accepted on Mac, Android and iOS. Mobile sign-in/editor workflows remain in progress; simulator keyboard forwarding is unreliable. Physical-device validation remains separate.
+- The new native 1.0.13 release remains a draft, and public installers remain 1.0.9 while the final checks run. Company identity and external supplier/legal evidence remain deferred/open as explicitly recorded below.
 
 ## Launch decision — retention and AI follow-up, 16 October
 
@@ -204,7 +214,7 @@ Raw credential-free results and screenshots are in [readiness evidence](readines
 
 - Core writing/publishing workflows are exercised in both products. This is not an exhaustive proof of identical behavior across every UI, server-only feature and native platform. Atelier’s owner backend, CV/apps and local video features remain intentional differences.
 - Fresh-browser activation, GitHub approval, site creation and first publication completed. Legal identity, retention/erasure, supplier/transfer and AI-marking work remain as listed above.
-- The signed, notarized universal macOS 1.0.10 candidate was installed and opened; Windows installation/process/uninstall smoke passed on a clean hosted runner. Windows signing and interactive UI, manual assistive technology, Intel hardware and Android/iOS physical-device checks remain open. Release 1.0.10 remains a draft; public installers remain 1.0.9. The user’s separate signing work was preserved.
+- The signed, notarized universal macOS 1.0.11 candidate was installed and exercised; Windows 1.0.12 installation/process/uninstall smoke passed on a clean hosted runner. Windows signing and interactive UI, manual assistive technology, Intel hardware and Android/iOS physical-device checks remain open. Release 1.0.13 remains a draft; public installers remain 1.0.9. The user’s separate signing work was preserved.
 - Customer-owned R2 accounts, booking/calendar accounts and merchant onboarding require each customer's own connected accounts and checks. Chapbook's own actual sandbox purchase/renewal/refund and production trial email delivery passed; a live-money purchase was deliberately not performed.
 - Third-party service uptime and future provider/model changes remain outside a one-time release check.
 
