@@ -649,12 +649,8 @@ function installNativeFetchBridgeBoot() {
   installNativeFetchBridge(window, location, () => import('@tauri-apps/plugin-http').then((m) => m.fetch));
 }
 
-// Native-only viewport zoom lock. The static <meta name="viewport"> intentionally ships WITHOUT
-// maximum-scale/user-scalable so ALL web browsers keep pinch-zoom (Android Chrome honours
-// user-scalable=no on the web and would lose accessibility zoom). Inside the Tauri wrappers we
-// append the lock at boot so the native app can't be pinch-zoomed and feels app-like. Web build:
-// isNativeOrigin is false → viewportContentFor returns the base content unchanged (strict no-op).
-function applyNativeViewportLock() {
+// Native readers must retain magnification, just like readers of the website.
+function applyNativeAccessibleViewport() {
   try {
     if (typeof document === 'undefined' || typeof location === 'undefined') return;
     const meta = document.querySelector('meta[name="viewport"]');
@@ -665,7 +661,7 @@ function applyNativeViewportLock() {
 
 if (typeof window !== 'undefined') {
   installNativeFetchBridgeBoot();     // native-only; strict no-op on the web (must precede refresh())
-  applyNativeViewportLock();          // native-only: lock pinch-zoom; web keeps accessibility zoom
+  applyNativeAccessibleViewport();    // remove legacy native pinch-zoom restrictions
   installNativeExternalLinkOpener(); // native-only; strict no-op on the web
   installNativeBlobUrlRegistry();     // native-only: capture Blob objects so exports read bytes CSP-free
   installNativeDownloadInterceptor(); // native-only: <a download> blob:/data: exports → OS Save dialog

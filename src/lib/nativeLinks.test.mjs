@@ -43,17 +43,17 @@ test('externalUrlToOpen — resolves relative external-looking hrefs against the
   assert.equal(externalUrlToOpen('/foo', tauriProto), null, 'root-relative resolves to same origin');
 });
 
-test('viewportContentFor — web keeps pinch-zoom, native gets the zoom lock', () => {
+test('viewportContentFor — native magnification survives initial load and legacy locks', () => {
   const base = 'width=device-width, initial-scale=1, viewport-fit=cover';
   // Web: untouched (Android Chrome would drop accessibility zoom if we added user-scalable=no).
   assert.equal(viewportContentFor(web, base), base, 'hosted web is left zoomable');
   assert.equal(viewportContentFor(null, base), base, 'no location → treat as web');
-  // Native (both origin shapes): the lock is appended.
+  // All native origin shapes retain zoom; old snapshots can have a lock already.
   const locked = base + ', maximum-scale=1, user-scalable=no';
-  assert.equal(viewportContentFor(tauriProto, base), locked, 'tauri: protocol gets the lock');
-  assert.equal(viewportContentFor(tauriHttp, base), locked, 'http://tauri.localhost gets the lock');
-  // Idempotent — never doubles the lock if it is already present.
-  assert.equal(viewportContentFor(tauriProto, locked), locked, 'already-locked content is unchanged');
+  assert.equal(viewportContentFor(tauriProto, base), base, 'tauri: protocol retains zoom');
+  assert.equal(viewportContentFor(tauriHttp, base), base, 'http://tauri.localhost retains zoom');
+  assert.equal(viewportContentFor(tauriProto, locked), base, 'legacy lock is removed');
+  assert.equal(viewportContentFor(tauriHttp, base + ', Maximum-Scale = 1, User-Scalable = no'), base);
   // Falls back to a sane default when no base is supplied.
   assert.equal(viewportContentFor(web, ''), 'width=device-width, initial-scale=1, viewport-fit=cover', 'empty base → default');
 });

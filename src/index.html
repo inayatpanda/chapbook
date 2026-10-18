@@ -2,12 +2,7 @@
 <html lang="en" data-product="chapbook">
 <head>
 <meta charset="utf-8" />
-<!-- APP viewport (the #app document, NOT a marketing page). The zoom lock (maximum-scale=1 +
-     user-scalable=no) is applied at boot by JS ONLY on the native origin (see app.js
-     applyNativeViewportLock / nativeLinks.viewportContentFor) so the NATIVE webview feels like
-     an app. It is deliberately NOT in this static meta: Android Chrome on the WEB honours
-     user-scalable=no and would lose pinch-zoom accessibility. All web browsers therefore keep
-     pinch-zoom; native = app-like. -->
+<!-- Keep magnification available on the website and in the native wrappers. -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#04060c" />
 <link rel="manifest" href="/manifest.json" />
@@ -3446,17 +3441,17 @@
       background:var(--bg,#080c16);color:var(--ink,#f4f7fd)}
     .legal-consent-gate[hidden]{display:none}
     .legal-consent-card{width:min(560px,100%);margin:auto;padding:clamp(1.1rem,4vw,1.65rem);border:1px solid var(--line,#1c2433);
-      border-radius:18px;background:var(--panel,#0b1120);box-shadow:0 24px 70px rgba(0,0,0,.55)}
+      border-radius:18px;background:var(--surface,#0b1120);box-shadow:var(--shadow,0 24px 70px rgba(0,0,0,.2))}
     .legal-consent-card h1{font:700 clamp(1.45rem,5vw,1.85rem)/1.18 var(--font-display,'Space Grotesk');margin:.2rem 0 .55rem}
     .legal-consent-card .lc-kicker{margin:0;color:var(--teal,#2dd4bf);font:700 .68rem var(--font-display,'Space Grotesk');letter-spacing:.09em;text-transform:uppercase}
-    .legal-consent-card .lc-copy{color:var(--faint,#aebbd2);font-size:.88rem;line-height:1.55}
+    .legal-consent-card .lc-copy{color:var(--mut,#aebbd2);font-size:.88rem;line-height:1.55}
     .legal-consent-card .lc-ai{padding:.8rem .9rem;border-left:3px solid var(--teal,#2dd4bf);background:var(--surface-2,#101827);font-size:.83rem;line-height:1.5}
     .legal-consent-card label{display:grid;grid-template-columns:1.3rem 1fr;gap:.7rem;align-items:start;margin:.65rem 0;padding:.8rem;
-      border:1px solid var(--line,#1c2433);border-radius:12px;background:var(--bg,#080c16);font-size:.85rem;line-height:1.5;cursor:pointer}
+      border:1px solid var(--line,#1c2433);border-radius:12px;background:var(--bg,#080c16);color:var(--ink,#f4f7fd);font-size:.85rem;line-height:1.5;font-weight:400;letter-spacing:normal;text-transform:none;cursor:pointer}
     .legal-consent-card input{width:1.1rem;height:1.1rem;margin-top:.15rem;accent-color:var(--teal,#2dd4bf)}
     .legal-consent-card a{color:var(--cyan,#22d3ee);font-weight:650;text-underline-offset:.15em}
     .legal-consent-card .lc-accept{width:100%;min-height:48px;margin-top:.5rem;border:0;border-radius:12px;
-      color:#042018;background:linear-gradient(95deg,var(--teal,#2dd4bf),var(--cyan,#22d3ee));font:700 .95rem var(--font-display,'Space Grotesk');cursor:pointer}
+      color:var(--bg,#080c16);background:var(--ink,#f4f7fd);font:700 .95rem var(--font-display,'Space Grotesk');cursor:pointer}
     .legal-consent-card .lc-accept:disabled{opacity:.42;cursor:not-allowed}
     .legal-consent-card .lc-error{min-height:1.1rem;margin:.5rem 0 0;color:#fb7185;font-size:.8rem}
   </style>

@@ -119,6 +119,30 @@ console.log(`\nActivation E2E (test key ${TEST_PUBLIC_KEY_HEX.slice(0, 12)}…)\
     appHidden: getComputedStyle(document.getElementById('app')).display === 'none',
   }));
   check('a fresh browser is stopped by the legal consent gate', firstGate.legalVisible && firstGate.appHidden);
+  // First-run text must remain readable before the user can reach Settings.
+  // This catches a missing panel token falling back to navy in the light theme.
+  for (const theme of ['light', 'dark']) {
+    const contrast = await page.evaluate(theme => {
+      const root = document.documentElement, previous = root.getAttribute('data-theme');
+      root.setAttribute('data-theme', theme);
+      const rgba = value => (value.match(/[\d.]+/g) || []).map(Number);
+      const over = (fg, bg) => fg.slice(0, 3).map((v, i) => v * (fg[3] ?? 1) + bg[i] * (1 - (fg[3] ?? 1)));
+      const backdrop = el => {
+        const chain = []; for (let n = el; n; n = n.parentElement) chain.unshift(n);
+        return chain.reduce((bg, n) => over(rgba(getComputedStyle(n).backgroundColor), bg), [255, 255, 255]);
+      };
+      const luminance = rgb => rgb.map(v => v / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4)
+        .reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+      const ratios = ['#legalConsentTitle', '.lc-copy', '.lc-ai', '.legal-consent-card label', '.lc-accept'].map(selector => {
+        const el = document.querySelector(selector), bg = backdrop(el);
+        const a = luminance(over(rgba(getComputedStyle(el).color), bg)), b = luminance(bg);
+        return (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+      });
+      if (previous === null) root.removeAttribute('data-theme'); else root.setAttribute('data-theme', previous);
+      return Math.min(...ratios);
+    }, theme);
+    check(`first-run ${theme} text meets 4.5:1 contrast`, contrast >= 4.5, `minimum ${contrast.toFixed(2)}:1`);
+  }
   await acceptLegalConsent(page);
   const accepted = await page.evaluate((key) => {
     try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch { return null; }
