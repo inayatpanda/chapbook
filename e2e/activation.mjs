@@ -122,9 +122,13 @@ console.log(`\nActivation E2E (test key ${TEST_PUBLIC_KEY_HEX.slice(0, 12)}…)\
   // First-run text must remain readable before the user can reach Settings.
   // This catches a missing panel token falling back to navy in the light theme.
   for (const theme of ['light', 'dark']) {
-    const contrast = await page.evaluate(theme => {
+    const contrast = await page.evaluate(async theme => {
       const root = document.documentElement, previous = root.getAttribute('data-theme');
       root.setAttribute('data-theme', theme);
+      // Measure the settled palette, not intermediate colours during a theme fade.
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      await Promise.all(document.getAnimations().filter(a => a.constructor.name === 'CSSTransition')
+        .map(a => a.finished.catch(() => {})));
       const rgba = value => (value.match(/[\d.]+/g) || []).map(Number);
       const over = (fg, bg) => fg.slice(0, 3).map((v, i) => v * (fg[3] ?? 1) + bg[i] * (1 - (fg[3] ?? 1)));
       const backdrop = el => {
