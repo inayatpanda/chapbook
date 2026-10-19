@@ -81,14 +81,14 @@ export async function readDocument({ system, instruction, fileBase64, mimeType, 
   catch { throw Object.assign(new Error(`AI returned non-JSON output: ${text.slice(0, 120)}`), { code: 'AI_PARSE', text }); }
 }
 
-// gpt-image-1 accepts only this fixed set of sizes; anything else 400s. Map unknown
+// Use the documented standard image sizes; map unknown
 // sizes (or none) to the 1024x1024 default; pass valid ones through unchanged.
 const IMAGE_SIZES = new Set(['1024x1024', '1536x1024', '1024x1536', 'auto']);
 
 export async function generateImage({ prompt, size, model, key, baseUrl }, fetchImpl = fetch) {
   const url = 'https://api.openai.com/v1/images/generations';
   const body = {
-    model: model || 'gpt-image-1',
+    model: model || 'gpt-image-2.5-flare',
     prompt,
     size: IMAGE_SIZES.has(size) ? size : '1024x1024',
     n: 1,

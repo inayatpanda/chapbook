@@ -81,8 +81,8 @@ export function makeAi(cfg, fetchImpl = fetch, { timeoutMs = 120_000 } = {}) {
       if (!adapter.capabilities?.image) throw Object.assign(new Error(`${a.provider} cannot generate images`), { code: 'AI_CAP' });
       // NEVER forward the configured CHAT model to an image endpoint: it's a text model
       // (e.g. gpt-4o / gemini-*), which /images/generations rejects with a 400. Pass
-      // model:undefined so each adapter picks its OWN image default (openai → gpt-image-1,
-      // google → imagen-3.0-*), which is exactly what those fallbacks are for.
+      // model:undefined so each adapter picks its OWN image default (openai → gpt-image-2.5-flare,
+      // google → Gemini image generation), which is exactly what those fallbacks are for.
       return adapter.generateImage({ prompt, size, model: undefined, key: a.key }, browserFetch);
     },
     // Document import (PDF / image → structured blocks). studio.importDocument calls this;
