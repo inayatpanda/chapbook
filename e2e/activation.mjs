@@ -182,6 +182,24 @@ console.log(`\nActivation E2E (test key ${TEST_PUBLIC_KEY_HEX.slice(0, 12)}…)\
   const r = await activate(page, 'IPL1.invalid');
   check('a malformed key is refused', r.gateVisible && /valid key/i.test(r.message), JSON.stringify(r.message));
   check('a refused key is NOT stored', r.stored === '');
+  for (const theme of ['light', 'dark']) {
+    const contrast = await page.evaluate(async theme => {
+      document.documentElement.setAttribute('data-theme', theme);
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      await Promise.all(document.getAnimations().filter(a => a.constructor.name === 'CSSTransition')
+        .map(a => a.finished.catch(() => {})));
+      const el = document.getElementById('licMsg');
+      const rgba = value => (value.match(/[\d.]+/g) || []).map(Number);
+      const over = (fg, bg) => fg.slice(0, 3).map((v, i) => v * (fg[3] ?? 1) + bg[i] * (1 - (fg[3] ?? 1)));
+      const chain = []; for (let n = el; n; n = n.parentElement) chain.unshift(n);
+      const bg = chain.reduce((colour, n) => over(rgba(getComputedStyle(n).backgroundColor), colour), [255, 255, 255]);
+      const luminance = rgb => rgb.map(v => v / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4)
+        .reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+      const a = luminance(over(rgba(getComputedStyle(el).color), bg)), b = luminance(bg);
+      return (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+    }, theme);
+    check(`activation errors meet 4.5:1 contrast in ${theme} mode`, contrast >= 4.5, `${contrast.toFixed(2)}:1`);
+  }
   await ctx.close();
 }
 
@@ -215,6 +233,18 @@ console.log(`\nActivation E2E (test key ${TEST_PUBLIC_KEY_HEX.slice(0, 12)}…)\
 }
 
 // 6. THE ONE THAT MATTERS: a good licence opens the gate.
+// All-products keys use the same signature, storage and revocation checks.
+{
+  const { ctx, page } = await freshPage();
+  const key = mintTestLicence({ product: 'all' });
+  const r = await activate(page, key);
+  check('a signed all-products licence opens the gate and is stored', !r.gateVisible && r.stored === key);
+  await page.reload({ waitUntil: 'load' });
+  await settle(page);
+  check('an all-products licence remains activated after reload', await page.locator('#licence').isHidden());
+  await ctx.close();
+}
+
 {
   const { ctx, page, errors } = await freshPage();
   const key = mintTestLicence({ name: 'E2E Test User' });
@@ -239,6 +269,42 @@ console.log(`\nActivation E2E (test key ${TEST_PUBLIC_KEY_HEX.slice(0, 12)}…)\
 }
 
 // 8. A licence does not leak between browsers (it is per-device by design).
+{
+  const { ctx, page } = await freshPage();
+  await activate(page, mintTestLicence());
+  await page.evaluate(() => window.startOnboardingQA());
+  const dialog = page.getByRole('dialog', { name: 'A quick hello' });
+  check('the first-run profile panel is an accessible dialog', await dialog.isVisible());
+  check('the profile panel focuses its first input', await page.locator('#qa-name').evaluate(el => el === document.activeElement));
+  await page.locator('#qa-name').press('Shift+Tab');
+  check('backward tab stays inside the profile dialog', await page.locator('#qaSave').evaluate(el => el === document.activeElement));
+  await page.locator('#qaSave').press('Tab');
+  check('forward tab wraps inside the profile dialog', await page.locator('#qa-name').evaluate(el => el === document.activeElement));
+  for (const theme of ['light', 'dark']) {
+    const minimum = await page.evaluate(async theme => {
+      document.documentElement.setAttribute('data-theme', theme);
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      await Promise.all(document.getAnimations().filter(a => a.constructor.name === 'CSSTransition')
+        .map(a => a.finished.catch(() => {})));
+      const rgba = value => (value.match(/[\d.]+/g) || []).map(Number);
+      const over = (fg, bg) => fg.slice(0, 3).map((v, i) => v * (fg[3] ?? 1) + bg[i] * (1 - (fg[3] ?? 1)));
+      const luminance = rgb => rgb.map(v => v / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4)
+        .reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+      return Math.min(...['#qaTitle', '#qaOverlay .qsub', '#qaOverlay label', '#qaSkip'].map(selector => {
+        const el = document.querySelector(selector), chain = [];
+        for (let n = el; n; n = n.parentElement) chain.unshift(n);
+        const bg = chain.reduce((colour, n) => over(rgba(getComputedStyle(n).backgroundColor), colour), [255, 255, 255]);
+        const a = luminance(over(rgba(getComputedStyle(el).color), bg)), b = luminance(bg);
+        return (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+      }));
+    }, theme);
+    check(`profile dialog text meets 4.5:1 in ${theme} mode`, minimum >= 4.5, `${minimum.toFixed(2)}:1`);
+  }
+  await page.locator('#qa-name').press('Escape');
+  check('Escape dismisses the optional profile dialog', await dialog.count() === 0);
+  await ctx.close();
+}
+
 {
   const { ctx, page } = await freshPage();
   const gate = await page.evaluate(() => getComputedStyle(document.getElementById('licence')).display !== 'none');
