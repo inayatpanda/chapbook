@@ -205,9 +205,9 @@ export function renderOnboarding() {
     /* Palette comes from the app's theme tokens (defined on :root / :root[data-theme="light"]
        in index.html) so the overlay HONOURS light & dark with proper contrast instead of the
        old hardcoded dark hexes. The overlay is appended to <body>, so it inherits those vars. */
-    #byok-overlay{position:fixed;inset:0;z-index:9999;background:var(--bg,#04060c);overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;padding:1rem;
+    #byok-overlay{position:fixed;inset:0;z-index:9999;background:var(--bg,#04060c);overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;padding:max(1rem,env(safe-area-inset-top,0px)) max(1rem,env(safe-area-inset-right,0px)) max(1rem,env(safe-area-inset-bottom,0px)) max(1rem,env(safe-area-inset-left,0px));
       font:15px/1.5 'Inter',system-ui,sans-serif;color:var(--ink,#f4f7fd)}
-    #byok-overlay .bc{position:relative;width:min(440px,100%);min-width:0;margin:auto;background:linear-gradient(180deg,var(--surface-2,#0f1730),var(--surface,#0b1120));border:1px solid var(--line,rgba(140,160,200,.18));
+    #byok-overlay .bc{position:relative;width:min(440px,100%);min-width:0;flex-shrink:0;margin:auto;background:linear-gradient(180deg,var(--surface-2,#0f1730),var(--surface,#0b1120));border:1px solid var(--line,rgba(140,160,200,.18));
       border-radius:18px;padding:1.4rem 1.5rem;box-shadow:var(--shadow,0 24px 70px rgba(0,0,0,.6))}
     #byok-overlay .byok-x{position:absolute;top:.55rem;right:.55rem;width:44px;height:44px;margin:0;padding:0;
       border-radius:11px;border:1px solid var(--line-2,rgba(140,160,200,.25));background:var(--bg-1,rgba(8,12,22,.6));color:var(--mut,#aebbd2);

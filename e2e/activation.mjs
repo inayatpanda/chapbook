@@ -276,6 +276,18 @@ console.log(`\nActivation E2E (test key ${TEST_PUBLIC_KEY_HEX.slice(0, 12)}…)\
   });
   check('phone setup inputs avoid iOS focus zoom', mobileSetup.minFont >= 16, `${mobileSetup.minFont}px`);
   check('phone setup card fits inside its horizontal padding', mobileSetup.contained);
+  // Desktop Chromium has no device notch. Substitute only the hardware inset
+  // in the shipped stylesheet, so the real panel rules must place its controls.
+  await page.setViewportSize({ width: 320, height: 480 });
+  const setupSafeTop = await page.evaluate(() => {
+    const overlay = document.querySelector('#byok-overlay');
+    const style = overlay.querySelector('style');
+    style.textContent = style.textContent.replaceAll('env(safe-area-inset-top,0px)', '59px');
+    overlay.scrollTop = 0;
+    return overlay.querySelector('.bc').getBoundingClientRect().top;
+  });
+  check('setup heading remains below the phone status area', setupSafeTop >= 59, `${setupSafeTop}px`);
+
   await ctx.close();
 }
 
@@ -297,6 +309,16 @@ console.log(`\nActivation E2E (test key ${TEST_PUBLIC_KEY_HEX.slice(0, 12)}…)\
     return rect.left >= 16 && rect.right <= innerWidth - 16;
   });
   check('phone profile dialog fits inside its horizontal padding', mobileProfile);
+  await page.setViewportSize({ width: 320, height: 480 });
+  const profileSafeTop = await page.evaluate(() => {
+    const overlay = document.querySelector('#qaOverlay');
+    const style = overlay.querySelector('style');
+    style.textContent = style.textContent.replaceAll('env(safe-area-inset-top,0px)', '59px');
+    overlay.scrollTop = 0;
+    return overlay.querySelector('.qc').getBoundingClientRect().top;
+  });
+  check('profile heading remains below the phone status area', profileSafeTop >= 59, `${profileSafeTop}px`);
+
   for (const theme of ['light', 'dark']) {
     const minimum = await page.evaluate(async theme => {
       document.documentElement.setAttribute('data-theme', theme);
