@@ -25,6 +25,10 @@ on:
         description: 'Deployed origin to run the full release gate against (e.g. a draft deploy URL). Leave blank to run checks only.'
         required: false
         type: string
+      build_stamp:
+        description: 'Build stamp embedded in the deployed package, when present (for matching service-worker hashes).'
+        required: false
+        type: string
 
 # A newer push to the same branch/PR makes an in-flight run pointless.
 concurrency:
@@ -111,6 +115,8 @@ jobs:
 
       # check 5 greps the LOCAL dist/, so it has to exist before the gate runs.
       - run: npm run build
+        env:
+          STUDIO_BUILD_STAMP: ${{ inputs.build_stamp }}
 
       # Without a browser the two mandatory checks (service-worker activation, XSS)
       # SKIP and the gate exits 2. The gate resolves it with `await import('playwright')`,
