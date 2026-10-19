@@ -1,6 +1,6 @@
 # Chapbook launch compliance record
 
-Status date: 16 October 2026 (original record 8 August)
+Historical status: 16 October 2026 (original record 8 August). Hosting and release facts below are superseded by the [current release checklist](RELEASE-CHECKLIST.md) and [19 October supplier/AI follow-up](SUPPLIER-AND-AI-REVIEW-2026-10-16.md#follow-up-audit--19-october-2026). The live legal notice is now `2026-10-18`; Chapbook production is on UK Hostinger with Germany backups.
 
 Document owner: RQAI operator — verified contracting legal identity pending
 

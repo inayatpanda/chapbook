@@ -4,8 +4,8 @@
 
 - [x] Versioned public/in-app legal notices, mandatory 18+ confirmation and material-update re-consent tests.
 - [x] Separate Terms acceptance and Privacy/AI acknowledgement; AI notices and on-device versus browser speech disclosures.
-- [x] Chapbook build, automated tests and production grep gate pass; 1,178 checks and 34 hosted activation/setup checks passed, including all-products licences, profile contrast and phone setup safe areas.
-- [x] Atelier: 720 automated tests, release build and smoke pass; matching AI disclosure and origin preservation.
+- [x] Chapbook build, automated tests and production grep gate pass; 1,182 checks and 34 hosted activation/setup checks passed, including all-products licences, profile contrast and phone setup safe areas.
+- [x] Atelier: 724 automated tests, release build and smoke pass; matching AI disclosure and origin preservation.
 - [x] Cloud delivery works without the Mac. Production and sandbox migrations verified; daily retention enabled and first production cycle succeeded.
 - [x] Private request verification, subject-only export, reviewed deletion, interrupted-operation recovery and cross-store closure evidence tested (32 worker tests).
 - [x] Helm cloud-managed support copy reconciled; secure deletion/compaction tested.
@@ -19,11 +19,13 @@
 ## Remaining release decisions/evidence
 
 - [ ] Verified trader/controller company details — owner will supply later this week; do not re-request.
-- [ ] Qualified review of final consumer/privacy/AI terms and cancellation wording; documented ICO fee and EU representative assessments.
+- [x] Provisional ICO fee and EEA representative assessments documented against current official guidance; final decisions require the actual entity, whole-business processing and intended targeting.
+- [ ] Qualified review of final consumer/privacy/AI terms and cancellation wording; final ICO fee/representative decisions and any resulting registration or appointment.
 - [ ] GitHub Pro processor coverage or a covered alternative; Netlify/Hostinger backup and individual-erasure confirmations.
 - [ ] Provider cached-object cleanup and other device backup review completed; the approved private Git rewrite, known Mac clone cleanup and identified historical launch-log cleanup are complete.
 - [ ] Support correspondence closure dates and monthly 24-month review operated across Hostinger and Gmail; supplier terms for forwarded copies reviewed.
-- [ ] Provider/output-format-specific robust marking validation. App metadata is not a C2PA certificate or independent watermark detection. Plain-text copies and edited external assets can lose metadata.
+- [x] Current provider/output matrix reviewed. Real Gemini image has a trusted C2PA signature and exact-byte publishing preservation. Known generated social exports retain a visible disclosure; edited Copy all and queue persistence pass regression tests.
+- [ ] Remaining robust marking evidence: independent SynthID detector, configured OpenAI real asset, API text and derived/interactive output paths. App labels/metadata are not independent watermark proof or a general conformity certificate.
 - [x] Signed, notarized universal macOS candidate installation/startup checks; Windows 1.0.17 install, process-startup and uninstall smoke on a clean hosted runner.
 - [x] Theme gallery keyboard filtering and actual 200% browser zoom checked without horizontal overflow.
 - [ ] Windows signing/SmartScreen behavior and interactive UI; manual assistive-technology review, Intel hardware and Android/iOS device checks before claiming every distribution ready. Windows 1.0.17 remains unsigned and the download page discloses this; the 1.0.17 Mac/Windows/Android release is published. No iOS installer is released.
@@ -54,10 +56,20 @@
 
 - [x] Final Hostinger 1.0.17 public gate `39200986931`: all 12 checks ran and passed; 1,178 tests and 34 activation/setup checks passed. All three full public installer downloads match the independently verified hashes.
 
+## 19 October follow-up
+
+- [x] Supplier enquiries followed up: GitHub #4864841, Netlify #1145303 and Hostinger #24468774. Replies resolving the specific contractual/backup questions are still outstanding.
+- [x] Production delivery health and daily retention checked on 19 October; no queued errors, six protected review records, all 32 worker tests pass.
+- [x] Authoritative hPanel configuration shows Chapbook ALIAS to `chapbook.rqai.co.uk.cdn.hstgr.net`, TTL 300; system, Cloudflare and Google DNS resolve and normal HTTPS health is ready.
+- [x] Atelier source `961be3b` / `studio-v107` is live through deployment `372651d`; Helm mirror `31879b5` includes the matching changes; its backend restarted gracefully and returned healthy.
+- [x] Chapbook source `2a55e66` is live on UK Hostinger, cache `chapbook-c5614550`. Public verification `39205299216` passed 1,182 tests, 34 activation/setup checks and all 12 public checks. Full hosted installer hashes match the preserved 1.0.17 release.
+- [x] Mac 1.0.18 candidate is signed, notarized, universal and installed; About explicitly confirms the running version and the new Settings guidance is present with retained setup/saved work. Windows candidate installation/startup/uninstall passed `39204770785`.
+- [ ] Android 1.0.18 signing requires the existing signing credential; permission to locate/use it is pending. iOS 1.0.18 compiled, installed and launched with activation retained, but is simulator-only. Native 1.0.18 remains a draft release; public downloads stay at verified 1.0.17.
+
 ## Current release boundary
 
 The legal revision and private storage endpoint are live. The service is technically operational, but this checklist does not declare a general public launch legally complete. See [supplier/AI review](SUPPLIER-AND-AI-REVIEW-2026-10-16.md), the private fulfilment `PRIVACY-RUNBOOK.md`, and the launch report for run/deployment evidence.
 
-The migrated backend and route fix are `785def1` (Web CI and all public checks passed in run `39102389097`); the latest app source `fc0f350` and native 1.0.17 downloads are deployed, with all three full public installer hashes verified. Final run `39200986931` passes all 1,178 tests, 34 activation/setup checks and 12 public checks, with zero failures/skips. Production trial run `39102622954` and Resend delivery were verified after migration, with zero errors and an empty queue. The Windows 1.0.17 installation smoke passed in run `39199559584`; this is not a full interactive device test. The support address passed a synthetic delivery check and all three approved supplier enquiries were submitted. Private case records, mailbox-routing decisions and historical-data cleanup evidence are maintained in the operator's private review, rather than published here.
+The migrated backend and route fix are `785def1` (Web CI and all public checks passed in run `39102389097`); the latest app source `2a55e66` and preserved native 1.0.17 downloads are deployed, with all three full public installer hashes verified. Final run `39205299216` passes all 1,182 tests, 34 activation/setup checks and 12 public checks, with zero failures/skips. Production trial run `39102622954` and Resend delivery were verified after migration, with zero errors and an empty queue. The Windows 1.0.17 installation smoke passed in run `39199559584`; this is not a full interactive device test. The support address passed a synthetic delivery check and all three approved supplier enquiries were submitted. Private case records, mailbox-routing decisions and historical-data cleanup evidence are maintained in the operator's private review, rather than published here.
 
 The owner confirmed on 18 October that Chapbook has no users yet. This is first-launch preparation; preserved licence and test records must not be described as evidence of an existing Chapbook customer base.
