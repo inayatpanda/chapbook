@@ -8,18 +8,27 @@ function canonical(email) {
   const domain = rawDomain === 'googlemail.com' ? 'gmail.com' : rawDomain;
   return `${(domain === 'gmail.com' ? local.replaceAll('.', '') : local).split('+')[0]}@${domain}`;
 }
-export function makeQueueWriter({ legacyPush, store, control, fetchImpl = fetch } = {}) {
+export function makeQueueWriter({ legacyPush, store, control, fetchImpl = fetch, worker = process.env.FULFIL_WORKER } = {}) {
   return async args => {
     const { path, record, token, repo = 'inayatpanda/rqai-sales' } = args;
     if (!validPath(path) || !/^(?:sandbox\/)?queue\//.test(path) || !/^[\w.-]+\/[\w.-]+$/.test(repo)) throw new Error('Invalid queue destination');
     const sandbox = path.startsWith('sandbox/');
+    let adapter;
     const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
-    const response = await fetchImpl(`https://api.github.com/repos/${repo}/contents/${sandbox ? 'sandbox/' : ''}state/control.json`, { headers, signal: AbortSignal.timeout(10_000) });
-    if (!response.ok) throw new Error('Fulfilment control unavailable');
-    const file = await response.json();
-    const config = JSON.parse(Buffer.from(file.content, 'base64').toString());
-    if (config.storage !== 'blobs-v1') return legacyPush(args);
-    const adapter = privateStoreAdapter(store || openFulfilStore(), control || openControlStore());
+    let config;
+    if (worker === 'hostinger') {
+      adapter = privateStoreAdapter(store || openFulfilStore(), control || openControlStore());
+      config = (await adapter.get(`${sandbox ? 'sandbox/' : ''}state/control.json`))?.record;
+      if (config?.mode !== 'hostinger' || config.storage !== 'blobs-v1') throw new Error('Fulfilment control unavailable');
+    } else {
+      if (worker && worker !== 'github') throw new Error('Unknown fulfilment worker');
+      const response = await fetchImpl(`https://api.github.com/repos/${repo}/contents/${sandbox ? 'sandbox/' : ''}state/control.json`, { headers, signal: AbortSignal.timeout(10_000) });
+      if (!response.ok) throw new Error('Fulfilment control unavailable');
+      const file = await response.json();
+      config = JSON.parse(Buffer.from(file.content, 'base64').toString());
+      if (config.storage !== 'blobs-v1') return legacyPush(args);
+    }
+    adapter ||= privateStoreAdapter(store || openFulfilStore(), control || openControlStore());
     let already = false;
     const current = await adapter.get(path);
     if (current) {
@@ -36,7 +45,7 @@ export function makeQueueWriter({ legacyPush, store, control, fetchImpl = fetch 
     }
     // Durability is independent of the wake-up. The half-hour schedule recovers
     // a missed dispatch, so a transient dispatch error cannot lose an order.
-    try {
+    if (worker !== 'hostinger') try {
       const wake = await fetchImpl(`https://api.github.com/repos/${repo}/dispatches`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ event_type: sandbox ? 'test-fulfil-licences' : 'fulfil-licences' }), signal: AbortSignal.timeout(10_000) });
       if (!wake.ok) console.error('[fulfilment] durable record saved; worker wake-up deferred');
     } catch { console.error('[fulfilment] durable record saved; worker wake-up deferred'); }

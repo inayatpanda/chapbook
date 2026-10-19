@@ -96,3 +96,16 @@ test('sandbox writes consult sandbox control and wake only the test worker',asyn
  assert.equal(JSON.parse(calls[1].body).event_type,'test-fulfil-licences');
  assert.ok(await store.get('sandbox/queue/trial-synthetic.json'));assert.equal(await store.get('queue/trial-synthetic.json'),null);
 });
+
+test('Hostinger queue uses private control with no GitHub call and keeps sandbox isolated', async () => {
+  const store = blobs(), control = blobs();
+  const write = makeQueueWriter({ store, control, worker: 'hostinger', fetchImpl: () => assert.fail('No GitHub dependency'), legacyPush: () => assert.fail('No Git writes') });
+  const args = { path: 'sandbox/queue/trial-local.json', record: { type: 'trial', email: 'synthetic@example.invalid' } };
+  await assert.rejects(write(args), /control unavailable/);
+  await store.setJSON('state/control.json', { mode: 'hostinger', storage: 'blobs-v1' });
+  await assert.rejects(write(args), /control unavailable/);
+  await store.setJSON('sandbox/state/control.json', { mode: 'hostinger', storage: 'blobs-v1' });
+  assert.deepEqual(await write(args), { ok: true, already: false });
+  assert.deepEqual(await write(args), { ok: true, already: true });
+  assert.equal(await store.get('queue/trial-local.json'), null);
+});

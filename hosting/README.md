@@ -2,7 +2,7 @@
 
 Chapbook production moved to Hostinger on 18 October 2026. The Node app and
 private MySQL records run on the UK hosting plan; hPanel identifies Germany as
-the backup country. The cloud licence-signing worker remains in GitHub Actions.
+the backup country. The private licence-signing worker also runs on UK Hostinger, scheduled every minute.
 The retired Netlify site is disabled and must not be re-enabled with stale data.
 
 The `blobs-v1` worker setting names the signed storage API contract; it does not
@@ -86,7 +86,7 @@ private directory outside the public root. Set `CHAPBOOK_SERVICE_ENV` to that
 absolute path. The Node entry loads it at startup, refuses public/readable files,
 and never logs values. Keep the directory outside `hbuilds/versions` so a deploy
 does not replace it; back it up through the operator's secret-management process.
-Do not place the licence signing key here: signing remains in the cloud worker.
+Do not place the licence signing key here: signing uses a separate private worker directory. Set `FULFIL_WORKER=hostinger` for the local durable queue; the backend then requires no GitHub queue token. The private API control must select `mode: hostinger`, otherwise queue writes fail closed.
 
 ## Validation
 

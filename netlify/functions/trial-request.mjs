@@ -129,7 +129,7 @@ async function handler(req, context) {
   }
 
   const token = process.env.GITHUB_QUEUE_TOKEN;
-  if (!token) {
+  if (!token && process.env.FULFIL_WORKER !== 'hostinger') {
     console.error('[trial-request] INERT: GITHUB_QUEUE_TOKEN is not set — cannot queue.');
     return json(500, { ok: false, error: 'not_configured' }, origin);
   }

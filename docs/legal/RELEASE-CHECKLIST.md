@@ -1,5 +1,20 @@
 # Chapbook public-release checklist — updated 19 October 2026
 
+## Launch decision — 19 October clarification
+
+The unchecked historical items below are **not all public-launch blockers**. Apart from the deferred company identity, the substantive unresolved decisions are:
+
+1. **Licence-processing execution:** the owner approved transfer of signing/email credentials to UK Hostinger. The private runner is installed and active, the old Actions delivery/maintenance workflows are disabled, and a one-minute Hostinger cron has independently processed the synthetic sale and refund. Backend queue removal of GitHub and final rollout checks are being completed; final evidence will be appended below.
+2. **Generative AI scope:** on 19 October the owner explicitly chose “Keep all AI routes available for now” after the narrower option and its trade-off were explained. No provider/model route is disabled. Interaction notices, visible disclosures, origin preservation and trusted original Gemini image credentials are verified. Robust marking/detection is not established for every enabled text/model/derived-output route. That is a recorded unresolved assessment, not a claim of conformity or an issue cured by owner acceptance. Standard editing is assessed separately from substantive generation. Independent detector service errors are inconclusive.
+
+Final ICO fee and any EEA representative decision still depend on the legal entity, business processing and intended market; these cannot be invented from the domain name. Qualified legal review is recommended assurance, not a universal statutory prerequisite to publishing a website.
+
+**Follow-ups rather than automatic whole-product gates:** specific supplier backup expiry answers, provider cached-history cleanup, the 23/25 October recovery expiry reviews, ongoing monthly mailbox review, optional Windows signing, additional physical-device/accessibility coverage, and independent detector retries. Keep these tracked and accurately disclosed. For backups, ICO guidance permits a period before overwrite where data is genuinely beyond use; this does not permit unknown retention forever or restoring erased records. The existing restore/reconciliation procedure remains required. No provider-wide erasure claim is made.
+
+DNS and HTTPS were rechecked in this review: Chapbook resolves to Hostinger CDN addresses and `/healthz` returns `ready` / storage `ready`; the existing public revocation URL returns HTTP 200. Website and database migration are complete; the private worker now also runs on UK Hostinger.
+
+Sources rechecked: [GitHub contract applicability](https://github.com/customer-terms), [Hostinger DPA](https://www.hostinger.com/legal/dpa), [ICO backup erasure](https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/individual-rights/individual-rights/right-to-erasure/), [Commission Article 50 FAQ](https://digital-strategy.ec.europa.eu/en/faqs/transparency-obligations-under-article-50-ai-act). The Commission describes a limited pre-2-August-system grace period; July source commits alone do not prove the current service qualifies, so this release does not rely on that exception.
+
 ## Implemented and verified
 
 - [x] Versioned public/in-app legal notices, mandatory 18+ confirmation and material-update re-consent tests.
@@ -16,7 +31,7 @@
 - [x] Supplier documents reviewed; GitHub (#4864841) and Netlify enquiries submitted. Hostinger enquiry sent, human review requested.
 - [x] Earlier fresh-browser GitHub site creation, publishing, sandbox purchase/renewal/refund and delivery-retry checks passed.
 
-## Remaining release decisions/evidence
+## Detailed evidence and follow-ups (classification above governs)
 
 - [ ] Verified trader/controller company details — owner will supply later this week; do not re-request.
 - [x] Provisional ICO fee and EEA representative assessments documented against current official guidance; final decisions require the actual entity, whole-business processing and intended targeting.

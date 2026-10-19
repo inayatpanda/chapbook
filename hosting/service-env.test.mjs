@@ -30,3 +30,11 @@ test('service environment loads only a private file outside the public directory
   assert.equal(process.env.CHAPBOOK_ENV_TEST_ONLY,undefined);
  }finally{delete process.env.CHAPBOOK_ENV_TEST_ONLY;await rm(dir,{recursive:true,force:true});}
 });
+
+test('explicit Hostinger worker needs Stripe verification but no GitHub queue secret', () => {
+ const env={FULFIL_WORKER:'hostinger',STRIPE_WEBHOOK_SECRET:'whsec_'+'b'.repeat(32)};
+ assert.doesNotThrow(()=>assertLiveServiceEnv(env));
+ assert.throws(()=>assertLiveServiceEnv({...env,STRIPE_WEBHOOK_SECRET:'masked'}));
+ assert.throws(()=>assertLiveServiceEnv({...env,FULFIL_WORKER:'unknown'}));
+ assert.throws(()=>assertLiveServiceEnv({...env,FULFIL_WORKER:'github'}));
+});

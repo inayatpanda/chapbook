@@ -255,7 +255,7 @@ export async function handleStripeWebhook({ rawBody, signature, env = {}, deps =
   const pushQueue = deps.pushQueue || pushToQueue;
 
   const queueOrRetry = async ({ label, path, record }) => {
-    if (!queueToken) {
+    if (!queueToken && env.FULFIL_WORKER !== 'hostinger') {
       console.error(`[stripe-webhook] ${label} queue unavailable: GITHUB_QUEUE_TOKEN is not set`);
       return { ok: false, response: { status: 503, body: { received: false, error: 'queue_unavailable' } } };
     }
