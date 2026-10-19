@@ -2,7 +2,16 @@
 
 The tested web workflows are deployed. This is a record of verified behavior and remaining account/device checks, not a promise that every possible feature and environment is issue-free.
 
-Latest app deployment: Chapbook `cb5ddba`, uploaded to the UK Hostinger service as `chapbook-hostinger-activation-fix-20261019.zip` (19 October, 00:24 UTC). Public notice version `2026-10-18` explains UK hosting and Germany backups. The owner confirmed there are no Chapbook users yet; preserved production records are owner/test records, not evidence of an existing customer base. Earlier dated sections below retain their original test scope.
+Latest app deployment: Chapbook `557f5f8`, uploaded to the UK Hostinger service as `chapbook-hostinger-final-1.0.15-20261019.zip` (19 October, 01:08 UTC). Public Mac, Windows and Android downloads are version 1.0.15. Public notice version `2026-10-18` explains UK hosting and Germany backups. The owner confirmed there are no Chapbook users yet; preserved production records are owner/test records, not evidence of an existing customer base. Earlier dated sections below retain their original test scope.
+
+## Final mobile layout and distribution pass — 19 October
+
+- Additional Android Settings/backup checks found a sticky header overlapping the status bar after scrolling. Source `557f5f8` keeps both app/editor toolbars below the safe area and paints the status-bar backdrop. Actual Android 1.0.15 scrolling verifies the correction. The final web build is `v20261019-557f5f8`, cache `chapbook-aa439659`.
+- Final run `39184079739` passes all 1,178 checks, 29 authenticated activation checks and all 12 public gate checks, with zero failures/skips. All three full hosted installer downloads match their independently verified SHA-256 hashes; normal HTTPS health reports ready/storage ready. Latest cloud delivery run `39183583912` succeeded. Chapbook Web CI `39182063437` also passes all 1,178 checks. Atelier source `4d9987b`, cache `studio-v104`, deployment `5780962` and Pages run `39182195865` are live; Helm sync `fe075ca` carries the same fix.
+- Android backup export produced a valid 1,918-byte JSON containing the synthetic post and no licence key. Native picker import recognized and restored all three entries without duplicates. The 1.0.15 upgrade preserves licence/Terms/setup; the 1.0.14 writing/publication walkthrough below remains the full workflow evidence.
+- [Release 1.0.15](https://github.com/inayatpanda/chapbook/releases/tag/desktop-v1.0.15) supersedes 1.0.14. Desktop build/notarization run `39182063288` and Windows install/start/uninstall run `39183248974` succeeded. The final Mac artifact passed local strict signature, Gatekeeper and stapled ticket checks, plus launch, retained drafts/panel widths and preview. The user's installed `/Applications/Chapbook.app` was upgraded from 1.0.9 to 1.0.15, retaining app data and an old-app recovery copy.
+- The iOS 1.0.15 simulator build is installed and launches with the existing accepted Terms. Automated paste leaves the activation field empty; an actual attempt reports “Enter your licence key.” Manual paste/activation remains the concrete blocker, and no iOS installer is publicly distributed.
+- The public Windows download now explicitly discloses that it is unsigned and offers the browser app if Windows blocks it. Physical-device, interactive Windows, assistive-technology and legal/supplier limits remain in the release checklist.
 
 ## Activation and final installer follow-up — 19 October
 
