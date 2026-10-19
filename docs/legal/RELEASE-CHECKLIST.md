@@ -44,7 +44,7 @@
 - [x] Mac 1.0.15 final signed/notarized universal installer launch, retained setup/drafts/panel widths and actual live preview passed; Windows 1.0.15 smoke run `39183248974` passed.
 - [x] Valid signed all-products licences activate; unsupported product scopes, expired keys and forged signatures remain rejected. First-run profile and activation error contrast plus keyboard behavior pass the hosted tests.
 - [x] iOS 1.0.15 launches and activates with the signed all-products owner licence, with 18 October Terms retained. Device Hub Capture Keyboard resolved simulator input; clipboard cleared afterward.
-- [ ] iOS GitHub authorization awaits the owner’s specific approval for this installation, then editor/publication verification. No iOS public installer is included.
+- [ ] iOS GitHub authorization was explicitly approved and submitted; GitHub requires fresh owner account verification at Confirm access before the editor/publication walkthrough. No iOS public installer is included.
 - [x] Final public gate `39184079739`: 1,178 checks, 29 activation checks and 12 public checks passed, zero failures/skips. The 1.0.15 Hostinger downloads match all three verified artifact hashes. Atelier `4d9987b` / `studio-v104` and Helm UI sync `fe075ca` include the matching profile and mobile safe-area fixes.
 
 - [x] Native Android backup export/import and final 1.0.15 safe-area scrolling checks passed. The installed Mac application is now 1.0.15, with licence and drafts retained.
