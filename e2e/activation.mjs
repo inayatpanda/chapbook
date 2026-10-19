@@ -265,6 +265,17 @@ console.log(`\nActivation E2E (test key ${TEST_PUBLIC_KEY_HEX.slice(0, 12)}…)\
   // this overlay is what the audit meant by "blocked at the licence gate" — it is the
   // starting line for the publish journey that is still to be built.
   check('lands on GitHub onboarding, the next step in the journey', after.onboarding);
+  await page.setViewportSize({ width: 320, height: 740 });
+  const mobileSetup = await page.evaluate(() => {
+    const overlay = document.querySelector('#byok-overlay');
+    const card = overlay.querySelector('.bc').getBoundingClientRect();
+    return {
+      minFont: Math.min(...[...overlay.querySelectorAll('input,select')].map(el => parseFloat(getComputedStyle(el).fontSize))),
+      contained: card.left >= 16 && card.right <= innerWidth - 16,
+    };
+  });
+  check('phone setup inputs avoid iOS focus zoom', mobileSetup.minFont >= 16, `${mobileSetup.minFont}px`);
+  check('phone setup card fits inside its horizontal padding', mobileSetup.contained);
   await ctx.close();
 }
 
@@ -280,6 +291,12 @@ console.log(`\nActivation E2E (test key ${TEST_PUBLIC_KEY_HEX.slice(0, 12)}…)\
   check('backward tab stays inside the profile dialog', await page.locator('#qaSave').evaluate(el => el === document.activeElement));
   await page.locator('#qaSave').press('Tab');
   check('forward tab wraps inside the profile dialog', await page.locator('#qa-name').evaluate(el => el === document.activeElement));
+  await page.setViewportSize({ width: 320, height: 740 });
+  const mobileProfile = await dialog.evaluate(el => {
+    const rect = el.getBoundingClientRect();
+    return rect.left >= 16 && rect.right <= innerWidth - 16;
+  });
+  check('phone profile dialog fits inside its horizontal padding', mobileProfile);
   for (const theme of ['light', 'dark']) {
     const minimum = await page.evaluate(async theme => {
       document.documentElement.setAttribute('data-theme', theme);

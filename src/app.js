@@ -207,7 +207,7 @@ export function renderOnboarding() {
        old hardcoded dark hexes. The overlay is appended to <body>, so it inherits those vars. */
     #byok-overlay{position:fixed;inset:0;z-index:9999;background:var(--bg,#04060c);overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;padding:1rem;
       font:15px/1.5 'Inter',system-ui,sans-serif;color:var(--ink,#f4f7fd)}
-    #byok-overlay .bc{position:relative;width:min(440px,94vw);margin:auto;background:linear-gradient(180deg,var(--surface-2,#0f1730),var(--surface,#0b1120));border:1px solid var(--line,rgba(140,160,200,.18));
+    #byok-overlay .bc{position:relative;width:min(440px,100%);min-width:0;margin:auto;background:linear-gradient(180deg,var(--surface-2,#0f1730),var(--surface,#0b1120));border:1px solid var(--line,rgba(140,160,200,.18));
       border-radius:18px;padding:1.4rem 1.5rem;box-shadow:var(--shadow,0 24px 70px rgba(0,0,0,.6))}
     #byok-overlay .byok-x{position:absolute;top:.55rem;right:.55rem;width:44px;height:44px;margin:0;padding:0;
       border-radius:11px;border:1px solid var(--line-2,rgba(140,160,200,.25));background:var(--bg-1,rgba(8,12,22,.6));color:var(--mut,#aebbd2);
@@ -220,7 +220,7 @@ export function renderOnboarding() {
     #byok-overlay h2 b{background:var(--grad,linear-gradient(120deg,#2dd4bf,#22d3ee 55%,#818cf8));-webkit-background-clip:text;background-clip:text;color:transparent}
     #byok-overlay p{color:var(--mut,#aebbd2);font-size:.86rem;margin:.1rem 0 1rem}
     #byok-overlay label{display:block;font:600 .68rem 'Space Grotesk',system-ui;letter-spacing:.08em;text-transform:uppercase;color:var(--mut,#aebbd2);margin:.7rem 0 .25rem}
-    #byok-overlay input,#byok-overlay select{width:100%;background:var(--bg-1,#080c16);border:1px solid var(--line,rgba(140,160,200,.18));border-radius:10px;color:var(--ink,#f4f7fd);padding:.6em .7em;font:inherit}
+    #byok-overlay input,#byok-overlay select{width:100%;background:var(--bg-1,#080c16);border:1px solid var(--line,rgba(140,160,200,.18));border-radius:10px;color:var(--ink,#f4f7fd);padding:.6em .7em;font:inherit;font-size:max(16px,1rem)}
     #byok-overlay input::placeholder{color:var(--faint,#6f7e98)}
     #byok-overlay input:focus,#byok-overlay select:focus{outline:none;border-color:var(--acc,#22d3ee);box-shadow:var(--ring,0 0 0 3px rgba(34,211,238,.22))}
     #byok-overlay .row{display:flex;gap:.5rem}#byok-overlay .row>*{flex:1}
