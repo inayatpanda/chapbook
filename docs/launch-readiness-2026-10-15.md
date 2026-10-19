@@ -1,8 +1,20 @@
-# Chapbook and Atelier launch verification — updated 18 October 2026
+# Chapbook and Atelier launch verification — updated 19 October 2026
 
 The tested web workflows are deployed. This is a record of verified behavior and remaining account/device checks, not a promise that every possible feature and environment is issue-free.
 
-Latest web deployment: Chapbook `249d0c5`, uploaded to the UK Hostinger service as `chapbook-hostinger-safe-recovery-20261018.zip` (18 October, 21:04 UTC). Public notice version `2026-10-18` explains UK hosting and Germany backups. The owner confirmed there are no Chapbook users yet; preserved production records are owner/test records, not evidence of an existing customer base. Earlier dated sections below retain their original test scope.
+Latest app deployment: Chapbook `cb5ddba`, uploaded to the UK Hostinger service as `chapbook-hostinger-activation-fix-20261019.zip` (19 October, 00:24 UTC). Public notice version `2026-10-18` explains UK hosting and Germany backups. The owner confirmed there are no Chapbook users yet; preserved production records are owner/test records, not evidence of an existing customer base. Earlier dated sections below retain their original test scope.
+
+## Activation and final installer follow-up — 19 October
+
+- Fixed rejection of valid signed all-products licences. Chapbook accepts `studio`, `trial` and `all`; unscoped, unrelated, expired and forged licences remain rejected. The actual all-products regression failed before the change and passed afterward. No owner licence or credentials were committed.
+- Fixed the first-run profile dialog's light-mode contrast, added dialog semantics and keyboard focus/Escape handling, and improved activation error contrast. Chapbook and Atelier share the fix. All 1,178 checks and 29 hosted activation checks pass; measured light/dark profile contrast is 5.19/7.90 and activation error contrast 6.37/7.04.
+- Web CI `39179663868` and public gate `39180954856` succeeded. The public gate passes all 12 checks with zero failures/skips. Its first attempt had a CI/deployed build-stamp mismatch; the workflow now accepts the exact deployed stamp. App build `v20261019-cb5ddba` uses cache `chapbook-94b25b9e`.
+- Atelier source `58aa983` / cache `studio-v103` is live via deployment `c2d71f3`, Pages run `39179978142`. Helm UI sync `88d2e87` preserves the owner's separate signing changes.
+- Final Mac 1.0.14 passed strict code-signature verification, Gatekeeper and stapled notarization validation. It launched from the release disk image's app and retained the licence, GitHub setup, typed drafts and splitter widths; the draft preview rendered correctly. Earlier native typing, backup import/export and actual publication checks are retained below.
+- Android 1.0.14 is signed with the existing certificate and preserves licence, Terms, GitHub connection and a typed local draft across upgrade. Actual device sign-in, repo selection, on-screen typing, saved-draft reopening, preview, GitHub draft save and publication passed. [Android synthetic post](https://inayatpanda.github.io/chapbook-launch-test-20261016/blog/androi/) is HTTP 200 with the intended title/body; publication commit `6cd9fb9f9c49d696d18fa263fe3c3677eed356bb`, Pages run `39180809060`.
+- Windows 1.0.14 passed hash verification, clean install, responding-process startup and uninstall in run `39181088446`. It remains unsigned; interactive Windows and SmartScreen behavior are not claimed as verified. The download page explicitly states this and offers the browser app.
+- [Native release 1.0.14](https://github.com/inayatpanda/chapbook/releases/tag/desktop-v1.0.14) contains the tested Mac, Windows and Android assets. No iOS installer is included. The iOS 1.0.14 simulator build is installed and launches; owner activation and editor verification remain pending because automated keyboard/clipboard delivery is unreliable. Earlier iOS gate rejection was a real product-scope bug, now fixed in the shared gate, not evidence of an invalid owner key.
+- DNS was reconfirmed on 19 October via the Mac, Cloudflare and Google resolvers; HTTPS health reports ready/storage ready. Cloud delivery continues without the Mac. GitHub supplier case #4864841 still has no supplier response; company identity and the remaining external/manual evidence in the release checklist are not declared complete.
 
 ## Production hosting cutover — completed 18 October
 
@@ -24,7 +36,7 @@ Atelier, the personal site and synthetic launch sites retain their previously ve
 - Windows 1.0.13 passed independently hashed installation, responding-process startup and uninstall in run `39167122820`. Its installer remains unsigned. This does not claim an interactive Windows or assistive-technology pass.
 - Android 1.0.13 was signed with the existing production certificate and installed as an upgrade; its owner licence persisted. iOS 1.0.13 compiled with Xcode 27 and launched successfully in an iOS 27 simulator after the scene-lifecycle fix. The owner-approved 18 October terms were accepted on Mac, Android and iOS. Mobile sign-in/editor workflows await specific GitHub authorization and manual iOS activation; simulator keyboard forwarding is unreliable. Physical-device validation remains separate.
 - Actual Mac 1.0.13 walkthrough: reopened the imported synthetic backup, saved it to the isolated GitHub repository as a draft, published it, and verified the public page plus the native LIVE listing. [Published native test post](https://inayatpanda.github.io/chapbook-launch-test-20261016/blog/native-import-check-20261018/); Pages run `39166878694` succeeded. The final signed installer retained the licence, connection, saved drafts and resized panel width across restart.
-- The new native 1.0.13 release remains a draft, and public installers remain 1.0.9 while the final checks run. Company identity and external supplier/legal evidence remain deferred/open as explicitly recorded below.
+- At the end of the 18 October checks, native 1.0.13 remained a draft and public installers were 1.0.9. The 19 October follow-up above supersedes that status. Company identity and external supplier/legal evidence remain deferred/open as explicitly recorded below.
 
 ## Launch decision — retention and AI follow-up, 16 October
 
@@ -215,7 +227,7 @@ Raw credential-free results and screenshots are in [readiness evidence](readines
 
 - Core writing/publishing workflows are exercised in both products. This is not an exhaustive proof of identical behavior across every UI, server-only feature and native platform. Atelier’s owner backend, CV/apps and local video features remain intentional differences.
 - Fresh-browser activation, GitHub approval, site creation and first publication completed. Legal identity, retention/erasure, supplier/transfer and AI-marking work remain as listed above.
-- The signed, notarized universal macOS 1.0.13 candidate was installed and exercised; Windows 1.0.13 installation/process/uninstall smoke passed on a clean hosted runner. Windows signing and interactive UI, manual assistive technology, Intel hardware and Android/iOS physical-device checks remain open. Release 1.0.13 remains a draft; public installers remain 1.0.9. The user’s separate signing work was preserved.
+- The signed, notarized universal macOS 1.0.13 candidate was installed and exercised; Windows 1.0.13 installation/process/uninstall smoke passed on a clean hosted runner. Windows signing and interactive UI, manual assistive technology, Intel hardware and Android/iOS physical-device checks remain open. Those 18 October release limits are superseded by the 1.0.14 follow-up above. The user’s separate signing work was preserved.
 - Customer-owned R2 accounts, booking/calendar accounts and merchant onboarding require each customer's own connected accounts and checks. Chapbook's own actual sandbox purchase/renewal/refund and production trial email delivery passed; a live-money purchase was deliberately not performed.
 - Third-party service uptime and future provider/model changes remain outside a one-time release check.
 
